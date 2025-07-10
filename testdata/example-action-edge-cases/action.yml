@@ -1,0 +1,57 @@
+---
+name: "Edge Case Action"
+description: "Composite action testing edge YAML and schema features (anchors, aliases, special values)."
+author: "edgecase@example.com"
+branding:
+  icon: "zap"
+  color: "yellow"
+inputs:
+  input_with_anchor:
+    description: "Input using YAML anchor"
+    required: false
+    default: &anchored_val "anchored-default"
+  input_with_alias:
+    description: "Input using YAML alias"
+    required: false
+    default: *anchored_val
+  input_with_bool_string:
+    description: "Input that looks like a boolean"
+    required: false
+    default: "false"
+  input_with_number_string:
+    description: "Input that looks like a number"
+    required: false
+    default: "123"
+  input_with_special_chars:
+    description: "Special chars: !@#$%^&*()[]{}"
+    required: false
+    default: "!@#$%^&*()[]{}"
+outputs:
+  output_with_anchor:
+    description: "Output using YAML anchor"
+    value: &output_val "anchored-output"
+  output_with_alias:
+    description: "Output using YAML alias"
+    value: *output_val
+  output_with_special_chars:
+    description: "Output: []{}!@#"
+    value: "${{ steps.special.outputs.value }}"
+runs:
+  using: "composite"
+  steps:
+    - name: "Step with env and alias"
+      run: echo "${{ inputs.input_with_alias }}"
+      shell: bash
+      env:
+        ANCHORED: *anchored_val
+    - name: "Step with boolean string"
+      run: echo "${{ inputs.input_with_bool_string }}"
+      shell: bash
+    - name: "Step with number string"
+      run: echo "${{ inputs.input_with_number_string }}"
+      shell: bash
+    - name: "Step with special chars"
+      id: special
+      run: |
+        echo "value=${{ inputs.input_with_special_chars }}" >> $GITHUB_OUTPUT
+      shell: bash

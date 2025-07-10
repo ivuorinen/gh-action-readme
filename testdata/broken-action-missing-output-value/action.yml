@@ -1,0 +1,20 @@
+name: "Broken Action - Missing Output Value"
+description: "This action is intentionally broken: an output is missing the required 'value' field."
+author: "test@example.com"
+branding:
+  icon: "x"
+  color: "red"
+inputs:
+  foo:
+    description: "A test input"
+    required: false
+outputs:
+  # noinspection YAMLSchemaValidation
+  missing_value:
+    description: "This output is missing the 'value' field"
+runs:
+  using: "composite"
+  steps:
+    - name: "Test step"
+      run: echo "Testing output without value"
+      shell: bash

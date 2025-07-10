@@ -1,0 +1,17 @@
+---
+name: Anchor Action
+description: Action with anchors/aliases
+runs:
+  main: index.js
+  using: node20
+
+inputs:
+  defaults: &defaults
+    description: Default description
+    required: false
+  foo:
+    <<: *defaults
+    description: Overridden description
+    required: true
+  bar:
+    <<: *defaults

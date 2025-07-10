@@ -8,11 +8,6 @@ on:
   workflow_call:
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: read
-  statuses: read
-
 jobs:
   stale:
     name: 🧹 Clean up stale issues and PRs
@@ -20,6 +15,8 @@ jobs:
 
     permissions:
       contents: write # only for delete-branch option
+      packages: read
+      statuses: read
       issues: write
       pull-requests: write
     steps:

@@ -1,0 +1,113 @@
+---
+version: "2"
+run:
+  timeout: 5m
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofumpt # Detects whether code was gofumpt-ed.
+    - goimports # Detects whether code was goimports-ed.
+    - golines # Detects whether code was golines-ed.
+    - gofmt # Detects whether code was gofmt-ed.
+  exclusions:
+    generated: strict
+linters:
+  enable:
+    - asasalint # Detects "[]any" used as argument for variadic "func(...any)".
+    - bodyclose # Detects http.Response.Body not being closed.
+    - copyloopvar # Detects places where loop variables are copied.
+    - depguard # Detects usage of packages that are not allowed in the codebase.
+    - dogsled # Detects assignments with too many blank identifiers.
+    - dupword # Detects duplicate words.
+    - durationcheck # Duration values are being multiplied in possibly erroneous ways.
+    - errcheck # Detects unhandled errors.
+    - errchkjson # Detects unsupported types passed to json encoding functions.
+    - exhaustive # Detects missing options in enum switch statements.
+    - exptostd # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
+    - fatcontext # Detects nested contexts in loops and function literals.
+    - forbidigo # Detects uses of the "unsafe" package.
+    - gocheckcompilerdirectives # Detects invalid go compiler directive comments (//go:).
+    - gocritic # Metalinter; detects bugs, performance, and styling issues.
+    - gocyclo # Detects functions with cyclomatic complexity greater than a specified threshold.
+    - gosec # Detects security problems.
+    - govet # Detects suspicious constructs in Go code.
+    - iface # Detects incorrect use of interfaces.
+    - importas # Enforces consistent import aliases.
+    - ineffassign # Detects ineffectual assignments.
+    - makezero # Finds slice declarations with non-zero initial length.
+    - mirror # Detects wrong mirror patterns of bytes/strings usage.
+    - misspell # Detects commonly misspelled English words in comments.
+    - nakedret # Detects uses of naked returns.
+    - nilnesserr # Detects returning nil errors. It combines the features of nilness and nilerr,
+    - nlreturn # Detects functions that return a newline character.
+    - nosprintfhostport # Detects misuse of Sprintf to construct a host with port in a URL.
+    - nolintlint # Detects ill-formed or insufficient nolint directives.
+    - perfsprint # Detects fmt.Sprintf uses that can be replaced with a faster alternative.
+    - prealloc # Detects slice declarations that could potentially be pre-allocated.
+    - predeclared # Detects code that shadows one of Go's predeclared identifiers
+    - reassign # Detects reassigning a top-level variable in another package.
+    - revive # Metalinter; drop-in replacement for golint.
+    - spancheck # Detects mistakes with OpenTelemetry/Census spans.
+    - staticcheck # Metalinter; detects bugs, performance issues, and style problems.
+    - thelper # Detects test helpers without t.Helper().
+    - tparallel # Detects inappropriate usage of t.Parallel().
+    - unconvert # Detects unnecessary type conversions.
+    - unparam # Detects unused function parameters.
+    - unused # Detects unused variables, constants, functions, and types.
+    - usestdlibvars # Detects the possibility to use variables/constants from the Go std.
+    - usetesting # Reports uses of functions with replacement inside the testing package.
+    - wastedassign # Detects wasted assignment statements.
+  disable:
+    - errcheck
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/docker/distribution/uuid
+              desc: Use github.com/google/uuid instead.
+            - pkg: io/ioutil
+              desc: The io/ioutil package has been deprecated, see https://go.dev/doc/go1.16#ioutil
+    gocyclo:
+      min-complexity: 16
+    govet:
+      enable:
+        - shadow
+      settings:
+        shadow:
+          strict: true
+    lll:
+      line-length: 100
+    nakedret:
+      # Disallow naked returns if func has more lines of code than this setting.
+      # Default: 30
+      max-func-lines: 30
+    staticcheck:
+      checks:
+        - all
+    revive:
+      rules:
+        - name: empty-block
+          # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#empty-block
+        - name: empty-lines
+          # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#empty-lines
+        - name: import-shadowing
+          # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#import-shadowing
+        - name: line-length-limit
+          # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#line-length-limit
+          arguments:
+            - 100
+        - name: unused-receiver
+          # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unused-receiver
+        - name: use-any
+          # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#use-any
+  exclusions:
+    generated: strict
+
+    # Log a warning if an exclusion rule is unused.
+    # Default: false
+    warn-unused: true

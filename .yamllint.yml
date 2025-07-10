@@ -1,13 +1,96 @@
 ---
+# yamllint configuration for gh-action-readme
+# See: https://yamllint.readthedocs.io/en/stable/configuration.html
+
+$schema: "./.github/schemas/yamllint.json"
+
 extends: default
 
+ignore: |
+  *.template.yaml
+  .github/workflows/ci.yml
+  .markdownlint.yml
+  testdata/broken-action-duplicate-key/
+  testdata/broken-action-extra-field/
+  testdata/broken-action-missing-output-value/
+  testdata/broken-action-missing-steps/
+
 rules:
+  # Indentation: 2 spaces
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+  # Line length: 100 characters, but allow long lines for URLs and comments
   line-length:
     max: 200
     level: warning
-  truthy:
-    check-keys: false
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+    ignore: |
+      #.*        # Ignore comments
+      .*https?://.*  # Ignore lines with URLs
+
+  # Require final newline
+  new-lines:
+    type: unix
+
+  # Trailing spaces not allowed
+  trailing-spaces: enable
+
+  # Document start marker is required
+  document-start:
+    present: true
+
+  # Comments: allow 1 space before comments, but require starting space after #
   comments:
+    require-starting-space: true
     min-spaces-from-content: 1
-  trailing-spaces:
-    level: warning
+    ignore-shebangs: true
+  # Comments indentation: disable to allow any indentation level
+  comments-indentation: disable
+
+  # Forbid duplicate keys
+  key-duplicates: enable
+
+  # Forbid empty values in mappings and sequences
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: true
+    forbid-in-block-sequences: false
+
+  # Forbid octal values
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+
+  # Forbid non-explicit truthy values except true/false
+  truthy:
+    allowed-values:
+      - "true"
+      - "false"
+      - "on" # Used in action.yml
+    check-keys: true
+
+  # Forbid flow mappings and sequences except for empty ones
+  braces:
+    max-spaces-inside: 1
+    min-spaces-inside: 0
+  brackets:
+    max-spaces-inside: 1
+    min-spaces-inside: 0
+
+  # Enforce colons and commas spacing
+  colons:
+    max-spaces-before: 0
+    max-spaces-after: 1
+  commas:
+    max-spaces-before: 0
+    min-spaces-after: 1
+    max-spaces-after: 1
+
+  # Enforce at most 2 consecutive empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 0

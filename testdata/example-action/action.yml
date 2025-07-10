@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+name: "Typical Action"
+description: "A typical GitHub Action demonstrating common fields."
+author: "octocat@example.com"
+branding:
+  icon: "terminal"
+  color: "blue"
+inputs:
+  username:
+    description: "GitHub username"
+    required: true
+  greeting:
+    description: "Greeting message"
+    required: false
+    default: "Hello"
+outputs:
+  message:
+    description: "The output message"
+    value: "${{ steps.set_output.outputs.message }}"
+runs:
+  using: "composite"
+  steps:
+    - name: "Print greeting"
+      run: echo "${{ inputs.greeting }}, ${{ inputs.username }}!"
+      shell: bash
+    - name: "Set output"
+      id: set_output
+      run: echo "message=${{ inputs.greeting }}, ${{ inputs.username }}!" >> $GITHUB_OUTPUT
+      shell: bash

@@ -1,0 +1,9 @@
+---
+name: "Minimal Composite Action"
+description: "A minimal, strictly conforming composite GitHub Action."
+runs:
+  using: "composite"
+  steps:
+    - name: "Say Hello"
+      run: echo "Hello from minimal composite action!"
+      shell: bash

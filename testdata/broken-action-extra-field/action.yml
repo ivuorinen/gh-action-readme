@@ -1,0 +1,22 @@
+name: "Broken Action - Extra Field"
+description: "This action is intentionally broken by including an unknown field at the root."
+branding:
+  icon: "zap"
+  color: "blue"
+inputs:
+  foo:
+    description: "A test input"
+    required: false
+outputs:
+  bar:
+    description: "A test output"
+    value: "${{ steps.test.outputs.bar }}"
+runs:
+  using: "composite"
+  steps:
+    - name: "Test Step"
+      id: test
+      run: echo "bar=42" >> $GITHUB_OUTPUT
+      shell: bash
+# noinspection YAMLSchemaValidation
+extra_field: "this field is not allowed by the schema"

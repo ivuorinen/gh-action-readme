@@ -1,0 +1,14 @@
+---
+defaults:
+  name: GitHub Action
+  description: A reusable GitHub Action.
+  runs: {}
+  branding:
+    icon: activity
+    color: blue
+  version: main
+github_org: your-org
+template: templates/readme
+header: templates/header
+footer: templates/footer
+schema: schemas/action.schema.json

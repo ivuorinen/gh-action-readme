@@ -1,0 +1,36 @@
+# https://github.com/DavidAnson/markdownlint/blob/main/schema/markdownlint-config-schema.json
+# markdownlint configuration for gh-action-readme
+
+$schema: "./.github/schemas/markdownlint-config-schema.json"
+
+default: true
+
+# Enforce 2-space indentation for lists and code blocks
+MD007:
+  indent: 2
+
+# Enforce 100 character line length, but allow long lines for URLs and tables
+MD013:
+  line_length: 100
+  tables: false
+  code_blocks: false
+  headings: false
+  strict: false
+
+# Require final newline
+MD047: true
+
+# Allow trailing spaces in code blocks and lists (for compatibility with EditorConfig)
+MD009:
+  br_spaces: 2
+  strict: false
+
+# Allow inline HTML (used for some badges and formatting)
+MD033: false
+
+# Allow first header to be any level (README.md may start with # Project)
+MD041: false
+# You can add per-file overrides here if needed, e.g.:
+# overrides:
+#   - files: ["README.md"]
+#     MD013: false

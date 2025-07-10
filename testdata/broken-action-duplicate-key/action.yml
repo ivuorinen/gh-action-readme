@@ -1,0 +1,20 @@
+name: "Broken Duplicate Key"
+description: "This action.yml is intentionally broken with a duplicate key."
+runs:
+  using: "composite"
+  steps:
+    - name: "Step 1"
+      run: echo "Hello"
+      shell: bash
+    - name: "Step 2"
+      run: echo "World"
+      shell: bash
+outputs:
+  # noinspection YAMLDuplicatedKeys
+  result:
+    description: "Result output"
+    value: "foo"
+  # noinspection YAMLDuplicatedKeys
+  result:  # Duplicate key!
+    description: "Duplicate result output"
+    value: "bar"

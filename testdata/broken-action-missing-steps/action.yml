@@ -1,0 +1,7 @@
+name: "Broken Composite Action - Missing Steps"
+description: "This composite action is intentionally broken: 'steps' array is missing under 'runs'."
+author: "broken@example.com"
+# noinspection YAMLSchemaValidation
+runs:
+  using: "composite"
+  # steps: []  # Intentionally omitted for negative test
