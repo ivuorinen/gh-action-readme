@@ -27,8 +27,5 @@ coverage.ci.out
 # Logs
 *.log
 
-# Vendor
-go.sum
-
 # Other
 internal/simulate-error
