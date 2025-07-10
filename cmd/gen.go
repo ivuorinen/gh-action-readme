@@ -328,7 +328,13 @@ func processGenDryRun(
 			Repo:         repoRel,
 			Version:      ver,
 		}
+		if action == nil {
+			logrus.Errorf("Dry-run: Skipping %s because action is nil", actionPath)
+			errs = append(errs, "action is nil")
+			continue
+		}
 		out, renderErr := internal.RenderReadme(action, tmplOpts)
+
 		if renderErr != nil {
 			logrus.Errorf(
 				"Dry-run: Failed to render for %s (%s): %v",
