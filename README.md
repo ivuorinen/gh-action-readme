@@ -11,6 +11,8 @@ and outputs human-friendly, up-to-date documentation with usage examples, badges
 > If multiple `action.yml` files are found in the same directory,
 > only one will be processed and documented.
 
+For upcoming features and ideas, see [TODO.md](TODO.md).
+
 ## 🛠️ Setting Up Your Development Environment
 
 To ensure code quality and consistency, follow these steps before contributing:
@@ -99,6 +101,7 @@ The Makefile is platform-agnostic and will install required tools for your OS an
 - Generates `README.md` and/or HTML (with custom header/footer)
 - Customizable Go text/template system for all fields
 - Usage examples, badges, and summary sections by default
+- Lists external action dependencies with links and version info
 - Easy to update action schema and templates (uses [SchemaStore.org][s])
 - Designed for both interactive and automated/CI workflows
 - Configurable GitHub org/user for examples and badges
@@ -111,32 +114,32 @@ The Makefile is platform-agnostic and will install required tools for your OS an
 Generate a README for all found `action.yml` files (uses org from config):
 
 ```shell
-gh-action-readme gen --config config.yaml
+gh-action-readme gen --config config.yaml .
 ```
 
 Override org on CLI:
 
 ```shell
-gh-action-readme gen --org my-github-org --format md
+gh-action-readme gen --org my-github-org --format md .
 ```
 
 Override action version on CLI:
 
 ```shell
-gh-action-readme gen --version v2
+gh-action-readme gen --version v2 .
 ```
 
 Generate HTML docs with a header/footer:
 
 ```shell
-gh-action-readme gen --format html
+gh-action-readme gen --format html .
 ```
 
 Run in CI pipeline:
 
 ```yaml
 - name: Generate action documentation
-  run: gh-action-readme gen --autofill-missing --org myorg
+  run: gh-action-readme gen --autofill-missing --org myorg .
 ```
 
 ## CLI Flags Reference
@@ -152,6 +155,7 @@ Below is a summary of the most important CLI flags for each subcommand:
 | `gen`           | `--version`          | GitHub Action version tag or branch (overrides config)                | from config    |
 | `gen`           | `--md-output`        | Output filename for Markdown                                          | `README.md`    |
 | `gen`           | `--html-output`      | Output filename for HTML                                              | `README.html`  |
+| `gen`           | `[root]`             | Root directory to search for `action.yml` files          | `.`            |
 | `validate`      | `--config`           | Path to `config.yaml`                                                 | `config.yaml`  |
 | `validate`      | `--autofill-missing` | Autofill missing fields using config defaults (in-memory only)        | `false`        |
 | `validate`      | `--fix-missing`      | Autofill and write missing fields back to action.yml                  | `false`        |
@@ -171,10 +175,17 @@ For a full list of flags and options, run `gh-action-readme <command> --help`.
   - `.Org` — GitHub org/user (from config or CLI)
   - `.Repo` — Repository/folder (relative path for uses)
   - `.Version` — Action version/tag/branch (from config or CLI)
+  - `{version}` placeholder in templates is replaced with the actual version.
+  - `.LongDescription` contains text between `# docs:start` and `# docs:end` comments.
+    Paragraph breaks are preserved and, when rendering HTML, the text is converted from Markdown.
+  - `.Dependencies` — slice of actions referenced in composite steps.
+    Each element has `Name`, `Version`, `Ref`, `Pinned`, and `Local` fields.
 - **Header/Footer:**
   - Templates for header and footer are optional and can be customized per format (Markdown/HTML).
   - If a header or footer template file is missing, it is silently skipped (with a warning in logs).
   - Header and footer content is prepended/appended to the main template output.
+  - The main README template path can also be overridden via `config.yaml` using
+    the `template`, `header`, and `footer` fields.
 - **Custom template functions:**
   - Advanced users can extend template rendering with custom Go template functions by modifying
     the codebase (see developer notes).
@@ -184,7 +195,7 @@ For a full list of flags and options, run `gh-action-readme <command> --help`.
 Advanced users can add custom Go template functions for use in templates:
 
 1. **Edit `internal/template.go`:**
-   Use the `RenderReadmeWithFuncs` function and pass a `template.FuncMap` with your custom functions.
+   Set `TemplateOptions.Funcs` with a `template.FuncMap` when calling `RenderReadme`.
 
 2. **Register your function:**
    Example:
@@ -193,7 +204,8 @@ Advanced users can add custom Go template functions for use in templates:
    funcs := template.FuncMap{
        "toUpper": strings.ToUpper,
    }
-   RenderReadmeWithFuncs(action, opts, funcs)
+   opts.Funcs = funcs
+   RenderReadme(action, opts)
    ```
 
    Then use `{{.Name | toUpper}}` in your template.
@@ -209,7 +221,7 @@ Advanced users can add custom Go template functions for use in templates:
 - `cmd/` — CLI subcommands and helpers (one file per command, shared helpers)
 - `internal/` — Core logic (parser, validator, template, config, html)
 - `templates/` — Format-specific templates for README/HTML/header/footer
-- `schemas/` — Official `action.yml` schema (auto-updatable from SchemaStore)
+- `schemas/` — Official `action.yml` schema (embedded in the binary and auto-updatable from SchemaStore)
 - `README.md`, `LICENSE`, `config.yaml`, etc.
 
 ## Developer Notes
@@ -217,7 +229,8 @@ Advanced users can add custom Go template functions for use in templates:
 - All CLI commands are implemented in `cmd/` for clarity and maintainability.
 - Shared helpers are DRY and use Go's standard library where possible.
 - Linting is enforced with `golangci-lint` and the codebase is fully compliant.
-- The schema is updated from [SchemaStore.org][s] for maximum compatibility.
+- The schema is embedded and updated from [SchemaStore.org][s] for maximum compatibility.
+- Paths like `schemas/action.schema.json` are resolved from the project root.
 
 ## License
 

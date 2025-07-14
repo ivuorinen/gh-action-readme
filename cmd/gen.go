@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/schemas"
 )
 
 // GenCmd returns the cobra.Command for the "gen" subcommand.
@@ -29,16 +30,19 @@ func GenCmd() *cobra.Command {
 		dryRun          bool
 	)
 	cmd := &cobra.Command{
-		Use:   "gen",
+		Use:   "gen [root]",
 		Short: "Generate README.md and/or HTML for all action.yml files.",
 		Long: `Generate documentation for all found action.yml files.
+
+The optional [root] argument specifies the directory to scan for action.yml files.
+If omitted, the current directory is used.
 
 Supports multiple formats (Markdown, HTML) in one run.
 
 Usage examples:
 
   # Generate Markdown README for all actions (uses org from config)
-  gh-action-readme gen --config config.yaml
+  gh-action-readme gen --config config.yaml .
 
   # Generate both Markdown and HTML docs
   gh-action-readme gen --format=md,html
@@ -58,15 +62,21 @@ Usage examples:
     --footer templates/footer.html.tmpl
 
   # Run in CI pipeline (non-interactive)
-  gh-action-readme gen --autofill-missing --org myorg
+  gh-action-readme gen --autofill-missing --org myorg .
 
 For more, see README.md or run with --help.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			rootDir := "."
+			if len(args) > 0 {
+				rootDir = args[len(args)-1]
+			}
+
 			return runGenCommand(
 				formatsStr, org, configPath, outputDir, versionOverride,
 				mdOutputName, htmlOutputName, relaxedMode, stopOnErrors, dryRun,
+				rootDir,
 			)
 		},
 	}
@@ -132,6 +142,7 @@ func runGenCommand(
 	formatsStr, org, configPath, outputDir, versionOverride,
 	mdOutputName, htmlOutputName string,
 	relaxedMode, stopOnErrors, dryRun bool,
+	rootDir string,
 ) error {
 	cfg, cfgErr := getConfig(configPath)
 	if cfgErr != nil {
@@ -142,7 +153,7 @@ func runGenCommand(
 	orgVal := getOrg(cfg, org)
 	ver := getVersion(cfg, versionOverride)
 	formats := extractFormats(formatsStr)
-	actionFiles := findActionYMLFiles(".")
+	actionFiles := findActionYMLFiles(rootDir)
 
 	results := runGenWorkers(
 		actionFiles, formats, cfg, orgVal, ver,
@@ -231,7 +242,12 @@ func runGenWorkerTask(
 	if !relaxedMode {
 		schemaPath := cfg.Schema
 		if schemaPath == "" {
-			schemaPath = "schemas/action.schema.json"
+			schemaPath = schemas.RelPath
+		}
+		if !filepath.IsAbs(schemaPath) {
+			if root, err := findProjectRoot(); err == nil {
+				schemaPath = filepath.Join(root, schemaPath)
+			}
 		}
 		schemaErrs, schemaErr := internal.ValidateActionYMLSchema(
 			actionPath,
@@ -320,17 +336,18 @@ func processGenDryRun(
 	repoRel = filepath.ToSlash(repoRel)
 	for _, format := range formats {
 		tmplOpts := internal.TemplateOptions{
-			TemplateBase: cfg.Template,
-			HeaderBase:   cfg.Header,
-			FooterBase:   cfg.Footer,
-			Format:       format,
-			Org:          orgVal,
-			Repo:         repoRel,
-			Version:      ver,
+			TemplateContent: cfg.Template,
+			HeaderBase:      cfg.Header,
+			FooterBase:      cfg.Footer,
+			Format:          format,
+			Org:             orgVal,
+			Repo:            repoRel,
+			Version:         ver,
 		}
 		if action == nil {
 			logrus.Errorf("Dry-run: Skipping %s because action is nil", actionPath)
 			errs = append(errs, "action is nil")
+
 			continue
 		}
 		out, renderErr := internal.RenderReadme(action, tmplOpts)

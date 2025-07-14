@@ -3,6 +3,7 @@ package internal
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -14,15 +15,18 @@ func TestRenderReadmeMarkdownOrgRepoVersion(t *testing.T) {
 		Inputs: map[string]ActionInput{
 			"foo": {Description: "Foo input", Required: true},
 		},
+		Dependencies: []ActionDependency{
+			{Name: "actions/checkout", Version: "v4", Ref: "v4", Pinned: false},
+		},
 	}
 	opts := TemplateOptions{
-		TemplateBase: filepath.Join(root, "templates/readme"),
-		HeaderBase:   filepath.Join(root, "templates/header"),
-		FooterBase:   filepath.Join(root, "templates/footer"),
-		Format:       "md",
-		Org:          "testorg",
-		Repo:         "monorepo/someaction",
-		Version:      "release-tag",
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		HeaderBase:      filepath.Join(root, "templates/header"),
+		FooterBase:      filepath.Join(root, "templates/footer"),
+		Format:          "md",
+		Org:             "testorg",
+		Repo:            "monorepo/someaction",
+		Version:         "release-tag",
 	}
 	out, err := RenderReadme(action, opts)
 	if err != nil {
@@ -34,6 +38,9 @@ func TestRenderReadmeMarkdownOrgRepoVersion(t *testing.T) {
 	if want := "testorg/monorepo/someaction@release-tag"; !contains(out, want) {
 		t.Errorf("expected uses block: %s", want)
 	}
+	if !contains(out, "Dependencies") || !contains(out, "actions/checkout") {
+		t.Errorf("expected dependencies table in output: %s", out)
+	}
 }
 
 func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
@@ -44,15 +51,18 @@ func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
 		Inputs: map[string]ActionInput{
 			"foo": {Description: "Foo input", Required: true},
 		},
+		Dependencies: []ActionDependency{
+			{Name: "actions/setup-node", Version: "v4", Ref: "v4", Pinned: false},
+		},
 	}
 	opts := TemplateOptions{
-		TemplateBase: filepath.Join(root, "templates/readme"),
-		HeaderBase:   filepath.Join(root, "templates/header"),
-		FooterBase:   filepath.Join(root, "templates/footer"),
-		Format:       "html",
-		Org:          "testorghtml",
-		Repo:         "foo/bar/action",
-		Version:      "main",
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		HeaderBase:      filepath.Join(root, "templates/header"),
+		FooterBase:      filepath.Join(root, "templates/footer"),
+		Format:          "html",
+		Org:             "testorghtml",
+		Repo:            "foo/bar/action",
+		Version:         "main",
 	}
 	out, err := RenderReadme(action, opts)
 	if err != nil {
@@ -63,6 +73,39 @@ func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
 	}
 	if want := "testorghtml/foo/bar/action@main"; !contains(out, want) {
 		t.Errorf("expected uses block: %s", want)
+	}
+	if !contains(out, "<table>") || !contains(out, "<thead>") {
+		t.Errorf("expected tables for inputs/outputs: %s", out)
+	}
+	if !contains(out, "Dependencies") || !contains(out, "actions/setup-node") {
+		t.Errorf("expected dependencies table in HTML output: %s", out)
+	}
+}
+
+func TestRenderReadme_LocalDependency(t *testing.T) {
+	root := findProjectRoot(t)
+	action := &ActionYML{
+		Name:        "MyAction",
+		Description: "desc",
+		Dependencies: []ActionDependency{
+			{Name: "path/local", Local: true},
+		},
+		Runs: map[string]any{"using": "composite"},
+	}
+	opts := TemplateOptions{
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		Format:          "md",
+		Org:             "org",
+		Repo:            "repo/action",
+		Version:         "v1",
+	}
+	out, err := RenderReadme(action, opts)
+	if err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+	want := "https://github.com/org/repo/action/tree/v1/path/local"
+	if !contains(out, want) {
+		t.Errorf("expected local dependency link: %s", out)
 	}
 }
 
@@ -86,13 +129,13 @@ func TestRenderReadme_EdgeCases(t *testing.T) {
 		// No author, no custom fields
 	}
 	opts := TemplateOptions{
-		TemplateBase: filepath.Join(root, "templates/readme"),
-		HeaderBase:   filepath.Join(root, "templates/header"),
-		FooterBase:   filepath.Join(root, "templates/footer"),
-		Format:       "md",
-		Org:          "edgeorg",
-		Repo:         "edge/repo",
-		Version:      "edge",
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		HeaderBase:      filepath.Join(root, "templates/header"),
+		FooterBase:      filepath.Join(root, "templates/footer"),
+		Format:          "md",
+		Org:             "edgeorg",
+		Repo:            "edge/repo",
+		Version:         "edge",
 	}
 	out, err := RenderReadme(action, opts)
 	if err != nil {
@@ -108,6 +151,59 @@ func TestRenderReadme_EdgeCases(t *testing.T) {
 		t.Errorf("inputs missing in output")
 	}
 	// Should not error or panic on missing author/custom fields
+}
+
+func TestRenderReadme_VersionPlaceholder(t *testing.T) {
+	tmp := t.TempDir()
+	tmplPath := filepath.Join(tmp, "readme.md.tmpl")
+	err := os.WriteFile(tmplPath, []byte("Version: {version}"), 0o600)
+	if err != nil {
+		t.Fatalf("failed to write temp template: %v", err)
+	}
+	action := &ActionYML{Name: "x", Description: "y", Runs: map[string]any{"using": "node20"}}
+	opts := TemplateOptions{
+		TemplateContent: strings.TrimSuffix(tmplPath, ".md.tmpl"),
+		Format:          "md",
+		Version:         "v1.2.3",
+	}
+	out, err := RenderReadme(action, opts)
+	if err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+	if !contains(out, "v1.2.3") {
+		t.Errorf("version placeholder not replaced: %s", out)
+	}
+}
+
+func TestParseActionYML_DocsBlock(t *testing.T) {
+	root := findProjectRoot(t)
+	path := filepath.Join(root, "testdata/example-action-docs/action.yml")
+	action, err := ParseActionYML(path)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	want := "This is a longer description for testing.\n\nIt spans multiple lines."
+	if action.LongDescription != want {
+		t.Errorf("unexpected long description: %q", action.LongDescription)
+	}
+}
+
+func TestParseActionYML_Dependencies(t *testing.T) {
+	root := findProjectRoot(t)
+	path := filepath.Join(root, "testdata/example-action-complex/action.yml")
+	action, err := ParseActionYML(path)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if len(action.Dependencies) != 4 {
+		t.Fatalf("expected 4 dependencies, got %d", len(action.Dependencies))
+	}
+	if action.Dependencies[0].Name != "actions/checkout" || !action.Dependencies[0].Pinned {
+		t.Errorf("unexpected dependency parsing: %+v", action.Dependencies[0])
+	}
+	if !action.Dependencies[3].Local {
+		t.Errorf("expected last dependency to be local: %+v", action.Dependencies[3])
+	}
 }
 
 // findProjectRoot walks up from the current directory until it finds go.mod.

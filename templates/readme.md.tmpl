@@ -7,10 +7,12 @@
 {{end}}
 
 > {{.Description}}
+{{if .LongDescription}}
 
-{{if .Author}}
-**Author:** {{.Author}}
+{{.LongDescription}}
+
 {{end}}
+
 
 ## Usage
 
@@ -39,6 +41,20 @@
 | --- | ----------- |
 {{- range $key, $output := .Outputs }}
 | {{$key}} | {{$output.Description}} |
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- if .Dependencies }}
+## Dependencies
+
+| Action | Version |
+| --- | --- |
+{{- range .Dependencies }}
+| {{- if .Local -}}
+[{{ .Name }}](https://github.com/{{ $.Org }}/{{ $.Repo }}/tree/{{ $.Version }}/{{ .Name }}) | {{ $.Version }} |
+{{- else -}}
+[{{ .Name }}](https://github.com/{{ .Name }}) | {{ .Version }}{{ if .Pinned }} \U1F512{{ end }} |
 {{- end }}
 {{- end }}
 {{- end }}

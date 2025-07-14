@@ -101,13 +101,13 @@ func generateDocsForAction(opts generateDocsOptions) error {
 	var errs []string
 	for _, format := range opts.formats {
 		tmplOpts := internal.TemplateOptions{
-			TemplateBase: opts.cfg.Template,
-			HeaderBase:   opts.cfg.Header,
-			FooterBase:   opts.cfg.Footer,
-			Format:       format,
-			Org:          opts.org,
-			Repo:         repoRel,
-			Version:      opts.ver,
+			TemplateContent: opts.cfg.Template,
+			HeaderBase:      opts.cfg.Header,
+			FooterBase:      opts.cfg.Footer,
+			Format:          format,
+			Org:             opts.org,
+			Repo:            repoRel,
+			Version:         opts.ver,
 		}
 		out, renderErr := internal.RenderReadme(opts.action, tmplOpts)
 		if renderErr != nil {

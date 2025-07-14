@@ -11,14 +11,12 @@ import (
 
 // Config holds configuration loaded from config.yaml.
 type Config struct {
-	DefaultValues    DefaultValues `yaml:"defaults"`
-	GitHubOrg        string        `yaml:"github_org"`
-	Template         string        `yaml:"template"`
-	Header           string        `yaml:"header"`
-	Footer           string        `yaml:"footer"`
-	Schema           string        `yaml:"schema"`
-	MainTemplatePath string        `yaml:"main_template_path"`
-	HTMLTemplatePath string        `yaml:"html_template_path"`
+	DefaultValues DefaultValues `yaml:"defaults"`
+	GitHubOrg     string        `yaml:"github_org"`
+	Template      string        `yaml:"template"`
+	Header        string        `yaml:"header"`
+	Footer        string        `yaml:"footer"`
+	Schema        string        `yaml:"schema"`
 }
 
 // LoadConfig loads the configuration from the given YAML file path.

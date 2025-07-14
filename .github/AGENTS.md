@@ -185,7 +185,7 @@ each linter.
 │   ├── template.go
 │   └── validator.go
 ├── templates/          # Go text/template files for Markdown and HTML output
-├── schemas/            # JSON schema for action.yml (auto-updatable)
+├── schemas/            # JSON schema for action.yml (embedded and auto-updatable)
 ├── testdata/           # Example actions and test cases
 ├── main.go             # CLI entrypoint (wires up commands)
 ├── config.yaml         # Default config for templates, org, etc.
@@ -269,7 +269,7 @@ and use that directory as the base for `schemas/action.schema.json`.
 Advanced users can add custom Go template functions for use in templates:
 
 1. **Edit `internal/template.go`:**
-   Use the `RenderReadmeWithFuncs` function and pass a `template.FuncMap` with your custom functions.
+   Set `TemplateOptions.Funcs` with a `template.FuncMap` when calling `RenderReadme`.
 
 2. **Register your function:**
    Example:
@@ -278,7 +278,8 @@ Advanced users can add custom Go template functions for use in templates:
    functions := template.FuncMap{
        "toUpper": strings.ToUpper,
    }
-   RenderReadmeWithFuncs(action, opts, functions)
+   opts.Funcs = functions
+   RenderReadme(action, opts)
    ```
 
    Then use `{{.Name | toUpper}}` in your template.
@@ -378,4 +379,4 @@ _For humans: See `README.md` for user-facing documentation and usage examples._
 
 ## Notice for Agents
 
-A `TODO.md` file has been added to the project root. It contains a detailed plan for upcoming changes and improvements. Please refer to it for guidance on tasks and priorities.
+A `TODO.md` file has been added to the project root. It contains a detailed plan for upcoming changes, improvements, and explains the feature roadmap. Please refer to it for guidance on tasks and priorities.

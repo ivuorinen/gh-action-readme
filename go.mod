@@ -7,6 +7,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/xeipuuv/gojsonschema v1.2.0
+	github.com/yuin/goldmark v1.7.12
 	gopkg.in/yaml.v3 v3.0.1
 )
 
