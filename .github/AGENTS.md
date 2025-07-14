@@ -379,4 +379,4 @@ _For humans: See `README.md` for user-facing documentation and usage examples._
 
 ## Notice for Agents
 
-A `TODO.md` file has been added to the project root. It contains a detailed plan for upcoming changes and improvements. Please refer to it for guidance on tasks and priorities.
+A `TODO.md` file has been added to the project root. It contains a detailed plan for upcoming changes, improvements, and explains the feature roadmap. Please refer to it for guidance on tasks and priorities.

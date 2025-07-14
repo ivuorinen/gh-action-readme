@@ -11,6 +11,8 @@ and outputs human-friendly, up-to-date documentation with usage examples, badges
 > If multiple `action.yml` files are found in the same directory,
 > only one will be processed and documented.
 
+For upcoming features and ideas, see [TODO.md](TODO.md).
+
 ## 🛠️ Setting Up Your Development Environment
 
 To ensure code quality and consistency, follow these steps before contributing:
