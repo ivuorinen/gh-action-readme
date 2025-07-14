@@ -114,32 +114,32 @@ The Makefile is platform-agnostic and will install required tools for your OS an
 Generate a README for all found `action.yml` files (uses org from config):
 
 ```shell
-gh-action-readme gen --config config.yaml
+gh-action-readme gen --config config.yaml .
 ```
 
 Override org on CLI:
 
 ```shell
-gh-action-readme gen --org my-github-org --format md
+gh-action-readme gen --org my-github-org --format md .
 ```
 
 Override action version on CLI:
 
 ```shell
-gh-action-readme gen --version v2
+gh-action-readme gen --version v2 .
 ```
 
 Generate HTML docs with a header/footer:
 
 ```shell
-gh-action-readme gen --format html
+gh-action-readme gen --format html .
 ```
 
 Run in CI pipeline:
 
 ```yaml
 - name: Generate action documentation
-  run: gh-action-readme gen --autofill-missing --org myorg
+  run: gh-action-readme gen --autofill-missing --org myorg .
 ```
 
 ## CLI Flags Reference
@@ -155,6 +155,7 @@ Below is a summary of the most important CLI flags for each subcommand:
 | `gen`           | `--version`          | GitHub Action version tag or branch (overrides config)                | from config    |
 | `gen`           | `--md-output`        | Output filename for Markdown                                          | `README.md`    |
 | `gen`           | `--html-output`      | Output filename for HTML                                              | `README.html`  |
+| `gen`           | `[root]`             | Root directory to search for `action.yml` files          | `.`            |
 | `validate`      | `--config`           | Path to `config.yaml`                                                 | `config.yaml`  |
 | `validate`      | `--autofill-missing` | Autofill missing fields using config defaults (in-memory only)        | `false`        |
 | `validate`      | `--fix-missing`      | Autofill and write missing fields back to action.yml                  | `false`        |

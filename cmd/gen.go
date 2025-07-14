@@ -30,16 +30,19 @@ func GenCmd() *cobra.Command {
 		dryRun          bool
 	)
 	cmd := &cobra.Command{
-		Use:   "gen",
+		Use:   "gen [root]",
 		Short: "Generate README.md and/or HTML for all action.yml files.",
 		Long: `Generate documentation for all found action.yml files.
+
+The optional [root] argument specifies the directory to scan for action.yml files.
+If omitted, the current directory is used.
 
 Supports multiple formats (Markdown, HTML) in one run.
 
 Usage examples:
 
   # Generate Markdown README for all actions (uses org from config)
-  gh-action-readme gen --config config.yaml
+  gh-action-readme gen --config config.yaml .
 
   # Generate both Markdown and HTML docs
   gh-action-readme gen --format=md,html
@@ -59,15 +62,21 @@ Usage examples:
     --footer templates/footer.html.tmpl
 
   # Run in CI pipeline (non-interactive)
-  gh-action-readme gen --autofill-missing --org myorg
+  gh-action-readme gen --autofill-missing --org myorg .
 
 For more, see README.md or run with --help.
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			rootDir := "."
+			if len(args) > 0 {
+				rootDir = args[len(args)-1]
+			}
+
 			return runGenCommand(
 				formatsStr, org, configPath, outputDir, versionOverride,
 				mdOutputName, htmlOutputName, relaxedMode, stopOnErrors, dryRun,
+				rootDir,
 			)
 		},
 	}
@@ -133,6 +142,7 @@ func runGenCommand(
 	formatsStr, org, configPath, outputDir, versionOverride,
 	mdOutputName, htmlOutputName string,
 	relaxedMode, stopOnErrors, dryRun bool,
+	rootDir string,
 ) error {
 	cfg, cfgErr := getConfig(configPath)
 	if cfgErr != nil {
@@ -143,7 +153,7 @@ func runGenCommand(
 	orgVal := getOrg(cfg, org)
 	ver := getVersion(cfg, versionOverride)
 	formats := extractFormats(formatsStr)
-	actionFiles := findActionYMLFiles(".")
+	actionFiles := findActionYMLFiles(rootDir)
 
 	results := runGenWorkers(
 		actionFiles, formats, cfg, orgVal, ver,

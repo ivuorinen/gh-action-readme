@@ -500,7 +500,7 @@ schema: "` + schemaDir + `/action.schema.json"
 		t.Fatalf("chdir: %v", err)
 	}
 	root := newTestRootCmd()
-	runCmd(root, "gen", "--config", configPath)
+	runCmd(root, "gen", "--config", configPath, ".")
 	if !strings.Contains(logBuf.String(), "Generated documentation for") {
 		t.Errorf("gen output missing: %s", logBuf.String())
 	}
@@ -692,7 +692,7 @@ schema: "schemas/action.schema.json"
 		t.Fatalf("chdir: %v", err)
 	}
 	root := newTestRootCmd()
-	cmdOut := runCmd(root, "gen", "--config", configPath)
+	cmdOut := runCmd(root, "gen", "--config", configPath, ".")
 	if !strings.Contains(logBuf.String(), "not found") && !strings.Contains(cmdOut, "not found") {
 		t.Errorf(
 			"expected error for unknown flag, got: log: %s, cmd: %s",
@@ -707,7 +707,7 @@ func TestGenCommand_MissingConfig(t *testing.T) {
 	logrus.SetOutput(logBuf)
 	defer logrus.SetOutput(os.Stderr)
 	root := newTestRootCmd()
-	cmdOut := runCmd(root, "gen", "--config", "doesnotexist.yaml")
+	cmdOut := runCmd(root, "gen", "--config", "doesnotexist.yaml", ".")
 	t.Logf("logBuf: %q", logBuf.String())
 	t.Logf("cmdOut: %q", cmdOut)
 	if !strings.Contains(logBuf.String(), "Failed to load config") &&
@@ -725,7 +725,7 @@ func TestGenCommand_InvalidFlag(t *testing.T) {
 	logrus.SetOutput(logBuf)
 	defer logrus.SetOutput(os.Stderr)
 	root := newTestRootCmd()
-	cmdOut := runCmd(root, "gen", "--notaflag")
+	cmdOut := runCmd(root, "gen", "--notaflag", ".")
 	if !strings.Contains(logBuf.String(), "unknown flag") &&
 		!strings.Contains(logBuf.String(), "flag provided but not defined") &&
 		!strings.Contains(cmdOut, "unknown flag") &&
