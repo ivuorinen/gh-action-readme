@@ -175,8 +175,8 @@ For a full list of flags and options, run `gh-action-readme <command> --help`.
   - `{version}` placeholder in templates is replaced with the actual version.
   - `.LongDescription` contains text between `# docs:start` and `# docs:end` comments.
     Paragraph breaks are preserved and, when rendering HTML, the text is converted from Markdown.
-  - `.Dependencies` — slice of external actions used in composite steps.
-    Each element has `Name`, `Version`, `Ref`, and `Pinned` fields.
+  - `.Dependencies` — slice of actions referenced in composite steps.
+    Each element has `Name`, `Version`, `Ref`, `Pinned`, and `Local` fields.
 - **Header/Footer:**
   - Templates for header and footer are optional and can be customized per format (Markdown/HTML).
   - If a header or footer template file is missing, it is silently skipped (with a warning in logs).

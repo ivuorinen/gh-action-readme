@@ -51,6 +51,7 @@ type ActionDependency struct {
 	Version string
 	Ref     string
 	Pinned  bool
+	Local   bool
 }
 
 // ParseActionYML parses the action.yml file at the given path and returns a pointer to ActionYML.
@@ -126,6 +127,7 @@ func parseDependenciesFromFile(path string) ([]ActionDependency, error) {
 	if err != nil {
 		return nil, err
 	}
+	projectRoot, _ := FindProjectRoot()
 	re := regexp.MustCompile(`(?i)uses:\s*(\S+)(?:\s*#\s*(.+))?`)
 	shaRE := regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 	lines := strings.Split(string(data), "\n")
@@ -144,27 +146,39 @@ func parseDependenciesFromFile(path string) ([]ActionDependency, error) {
 		if len(m) > 2 {
 			comment = strings.TrimSpace(m[2])
 		}
-		if strings.HasPrefix(spec, "./") ||
+		local := strings.HasPrefix(spec, "./") ||
 			strings.HasPrefix(spec, "../") ||
-			strings.HasPrefix(spec, "/") {
-			continue // local action reference
-		}
-		parts := strings.SplitN(spec, "@", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		name := parts[0]
-		ref := parts[1]
-		pinned := shaRE.MatchString(ref)
+			strings.HasPrefix(spec, "/")
+
+		name := spec
+		ref := ""
+		pinned := false
 		version := comment
-		if version == "" {
-			version = ref
+
+		if !local {
+			parts := strings.SplitN(spec, "@", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			name = parts[0]
+			ref = parts[1]
+			pinned = shaRE.MatchString(ref)
+			if version == "" {
+				version = ref
+			}
+		} else if projectRoot != "" {
+			abs := filepath.Join(filepath.Dir(path), spec)
+			if rel, relErr := filepath.Rel(projectRoot, abs); relErr == nil {
+				name = filepath.ToSlash(rel)
+			}
 		}
+
 		deps = append(deps, ActionDependency{
 			Name:    name,
 			Version: version,
 			Ref:     ref,
 			Pinned:  pinned,
+			Local:   local,
 		})
 	}
 

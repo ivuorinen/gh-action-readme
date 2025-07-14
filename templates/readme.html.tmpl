@@ -61,8 +61,13 @@
   <tbody>
   {{range .Dependencies}}
     <tr>
+      {{- if .Local -}}
+      <td><a href="https://github.com/{{$.Org}}/{{$.Repo}}/tree/{{$.Version}}/{{.Name}}">{{.Name}}</a></td>
+      <td>{{$.Version}}</td>
+      {{- else -}}
       <td><a href="https://github.com/{{.Name}}">{{.Name}}</a></td>
       <td>{{.Version}}{{if .Pinned}} 🔒{{end}}</td>
+      {{- end }}
     </tr>
   {{end}}
   </tbody>

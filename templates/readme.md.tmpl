@@ -51,7 +51,11 @@
 | Action | Version |
 | --- | --- |
 {{- range .Dependencies }}
-| [{{ .Name }}](https://github.com/{{ .Name }}) | {{ .Version }}{{ if .Pinned }} \U1F512{{ end }} |
+| {{- if .Local -}}
+[{{ .Name }}](https://github.com/{{ $.Org }}/{{ $.Repo }}/tree/{{ $.Version }}/{{ .Name }}) | {{ $.Version }} |
+{{- else -}}
+[{{ .Name }}](https://github.com/{{ .Name }}) | {{ .Version }}{{ if .Pinned }} \U1F512{{ end }} |
+{{- end }}
 {{- end }}
 {{- end }}
 

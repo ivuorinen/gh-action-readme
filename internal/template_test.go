@@ -82,6 +82,33 @@ func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
 	}
 }
 
+func TestRenderReadme_LocalDependency(t *testing.T) {
+	root := findProjectRoot(t)
+	action := &ActionYML{
+		Name:        "MyAction",
+		Description: "desc",
+		Dependencies: []ActionDependency{
+			{Name: "path/local", Local: true},
+		},
+		Runs: map[string]any{"using": "composite"},
+	}
+	opts := TemplateOptions{
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		Format:          "md",
+		Org:             "org",
+		Repo:            "repo/action",
+		Version:         "v1",
+	}
+	out, err := RenderReadme(action, opts)
+	if err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+	want := "https://github.com/org/repo/action/tree/v1/path/local"
+	if !contains(out, want) {
+		t.Errorf("expected local dependency link: %s", out)
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) > 0 && substr != "" && (len(substr) <= len(s)) && stringContains(s, substr)
 }
@@ -168,11 +195,14 @@ func TestParseActionYML_Dependencies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if len(action.Dependencies) != 3 {
-		t.Fatalf("expected 3 dependencies, got %d", len(action.Dependencies))
+	if len(action.Dependencies) != 4 {
+		t.Fatalf("expected 4 dependencies, got %d", len(action.Dependencies))
 	}
 	if action.Dependencies[0].Name != "actions/checkout" || !action.Dependencies[0].Pinned {
 		t.Errorf("unexpected dependency parsing: %+v", action.Dependencies[0])
+	}
+	if !action.Dependencies[3].Local {
+		t.Errorf("expected last dependency to be local: %+v", action.Dependencies[3])
 	}
 }
 
