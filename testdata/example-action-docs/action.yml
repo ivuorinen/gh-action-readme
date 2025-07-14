@@ -1,0 +1,11 @@
+---
+# docs:start
+# This is a longer description for testing.
+#
+# It spans multiple lines.
+# docs:end
+name: "Doc Action"
+description: "Short desc"
+runs:
+  using: "node20"
+  main: "dist/index.js"

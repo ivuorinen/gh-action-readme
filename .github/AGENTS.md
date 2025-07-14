@@ -269,7 +269,7 @@ and use that directory as the base for `schemas/action.schema.json`.
 Advanced users can add custom Go template functions for use in templates:
 
 1. **Edit `internal/template.go`:**
-   Use the `RenderReadmeWithFuncs` function and pass a `template.FuncMap` with your custom functions.
+   Set `TemplateOptions.Funcs` with a `template.FuncMap` when calling `RenderReadme`.
 
 2. **Register your function:**
    Example:
@@ -278,7 +278,8 @@ Advanced users can add custom Go template functions for use in templates:
    functions := template.FuncMap{
        "toUpper": strings.ToUpper,
    }
-   RenderReadmeWithFuncs(action, opts, functions)
+   opts.Funcs = functions
+   RenderReadme(action, opts)
    ```
 
    Then use `{{.Name | toUpper}}` in your template.

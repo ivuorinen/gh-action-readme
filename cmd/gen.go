@@ -320,17 +320,18 @@ func processGenDryRun(
 	repoRel = filepath.ToSlash(repoRel)
 	for _, format := range formats {
 		tmplOpts := internal.TemplateOptions{
-			TemplateBase: cfg.Template,
-			HeaderBase:   cfg.Header,
-			FooterBase:   cfg.Footer,
-			Format:       format,
-			Org:          orgVal,
-			Repo:         repoRel,
-			Version:      ver,
+			TemplateContent: cfg.Template,
+			HeaderBase:      cfg.Header,
+			FooterBase:      cfg.Footer,
+			Format:          format,
+			Org:             orgVal,
+			Repo:            repoRel,
+			Version:         ver,
 		}
 		if action == nil {
 			logrus.Errorf("Dry-run: Skipping %s because action is nil", actionPath)
 			errs = append(errs, "action is nil")
+
 			continue
 		}
 		out, renderErr := internal.RenderReadme(action, tmplOpts)

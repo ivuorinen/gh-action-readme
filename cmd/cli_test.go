@@ -183,6 +183,8 @@ func Test_BrokenActions_FailValidation(t *testing.T) {
 // --- BEGIN: Concurrency stress tests ---
 
 // TestConcurrency_ManyValidAndInvalidActions runs validation on many temp dirs in parallel.
+//
+//nolint:paralleltest,tparallel
 func TestConcurrency_ManyValidAndInvalidActions(t *testing.T) {
 	t.Parallel()
 	var projectRoot string
@@ -203,8 +205,8 @@ func TestConcurrency_ManyValidAndInvalidActions(t *testing.T) {
 	// initialize counters
 	var validCount int32
 	var invalidCount int32
-	numValid := 30   // How many valid actions to create
-	numInvalid := 20 // How many invalid actions to create
+	const numValid int32 = 30   // How many valid actions to create
+	const numInvalid int32 = 20 // How many invalid actions to create
 
 	tmpDir := t.TempDir()
 	allDirs := make([]string, 0, 50)
@@ -248,9 +250,9 @@ func TestConcurrency_ManyValidAndInvalidActions(t *testing.T) {
 	r.Shuffle(len(allDirs), func(i, j int) { allDirs[i], allDirs[j] = allDirs[j], allDirs[i] })
 
 	// Validate all in parallel
+
 	t.Run(
 		"validate-many-actions", func(t *testing.T) {
-			t.Parallel()
 			for _, dir := range allDirs {
 				t.Run(
 					dir, func(t *testing.T) {
@@ -262,11 +264,11 @@ func TestConcurrency_ManyValidAndInvalidActions(t *testing.T) {
 		},
 	)
 
-	if got := atomic.LoadInt32(&validCount); got != int32(numValid) {
+	if got := atomic.LoadInt32(&validCount); got != numValid {
 		t.Errorf("expected %d valid actions, got %d", numValid, got)
 	}
 
-	if got := atomic.LoadInt32(&invalidCount); got != int32(numInvalid) {
+	if got := atomic.LoadInt32(&invalidCount); got != numInvalid {
 		t.Errorf("expected %d invalid actions, got %d", numInvalid, got)
 	}
 }

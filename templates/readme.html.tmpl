@@ -5,12 +5,10 @@
 </div>
 {{end}}
 <p><em>{{.Description}}</em></p>
-{{if .Author}}
-<p><b>Author:</b> {{.Author}}</p>
+{{if .LongDescription}}
+{{.LongDescription}}
 {{end}}
-{{if .MyCustomField}}
-<p><b>Custom Field:</b> {{.MyCustomField}}</p>
-{{end}}
+{{/* Author and custom fields removed for compatibility */}}
 <h2>Usage</h2>
 <pre>
 - uses: {{.Org}}/{{.Repo}}@{{.Version}}
@@ -20,20 +18,38 @@
 {{- end}}
 </pre>
 <h2>Inputs</h2>
-<ul>
+<table>
+  <thead>
+    <tr><th>Key</th><th>Description</th><th>Required</th><th>Default</th></tr>
+  </thead>
+  <tbody>
 {{range $key, $input := .Inputs}}
-  <li><b>{{$key}}</b>: {{$input.Description}}{{if $input.Required}} <b>(required)</b>{{end}}{{if $input.Default}} (default: {{$input.Default}}){{end}}</li>
+    <tr>
+      <td>{{$key}}</td>
+      <td>{{$input.Description}}</td>
+      <td>{{if $input.Required}}✔{{else}}✘{{end}}</td>
+      <td>{{if $input.Default}}{{$input.Default}}{{else}}-{{end}}</td>
+    </tr>
 {{end}}
-</ul>
+  </tbody>
+</table>
 {{if .Outputs}}
 {{- $outputsLen := len .Outputs -}}
 {{- if gt $outputsLen 0 }}
 <h2>Outputs</h2>
-<ul>
+<table>
+  <thead>
+    <tr><th>Key</th><th>Description</th></tr>
+  </thead>
+  <tbody>
 {{range $key, $output := .Outputs}}
-  <li><b>{{$key}}</b>: {{$output.Description}}</li>
+    <tr>
+      <td>{{$key}}</td>
+      <td>{{$output.Description}}</td>
+    </tr>
 {{end}}
-</ul>
+  </tbody>
+</table>
 {{end}}
 {{end}}
 <h2>Example</h2>

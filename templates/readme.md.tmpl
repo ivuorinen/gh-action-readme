@@ -7,10 +7,12 @@
 {{end}}
 
 > {{.Description}}
+{{if .LongDescription}}
 
-{{if .Author}}
-**Author:** {{.Author}}
+{{.LongDescription}}
+
 {{end}}
+
 
 ## Usage
 

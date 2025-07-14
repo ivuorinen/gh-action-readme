@@ -7,27 +7,24 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"text/template"
 
 	"github.com/sirupsen/logrus"
+	"github.com/yuin/goldmark"
 )
 
 // TemplateOptions holds options for rendering documentation templates.
 type TemplateOptions struct {
-	TemplateBase string          // Path base for main template (e.g. templates/readme)
-	HeaderBase   string          // Path base for header template (e.g. templates/header)
-	FooterBase   string          // Path base for footer template (e.g. templates/footer)
-	Format       string          // Output format ("md" or "html")
-	Org          string          // GitHub org/user name
-	Repo         string          // Repository/folder (relative path for uses)
-	Version      string          // Action version/tag/branch
-	Config       *TemplateConfig // Configuration with template paths
-}
-
-// TemplateConfig holds custom template paths for rendering.
-type TemplateConfig struct {
-	MainTemplatePath string // Custom path for the main template
-	HTMLTemplatePath string // Custom path for the HTML template
+	TemplateContent  string           // Path base for main template (e.g. templates/readme)
+	HeaderBase       string           // Path base for header template (e.g. templates/header)
+	FooterBase       string           // Path base for footer template (e.g. templates/footer)
+	Format           string           // Output format ("md" or "html")
+	Org              string           // GitHub org/user name
+	Repo             string           // Repository/folder (relative path for uses)
+	Version          string           // Action version/tag/branch
+	HTMLTemplatePath string           // Optional HTML template path override
+	Funcs            template.FuncMap // Optional custom template functions
 }
 
 // Template context documentation:
@@ -56,45 +53,18 @@ func resolveTemplatePath(base, format string) string {
 //
 // Returns the rendered documentation as a string, or an error.
 func RenderReadme(action any, opts TemplateOptions) (string, error) {
-	var templatePath string
-	switch {
-	case opts.Format == "html" && opts.Config.HTMLTemplatePath != "":
-		templatePath = opts.Config.HTMLTemplatePath
-	case opts.Format == "md" && opts.Config.MainTemplatePath != "":
-		templatePath = opts.Config.MainTemplatePath
-	case opts.Format == "html":
-		templatePath = "templates/readme.html.tmpl"
-	case opts.Format == "md":
-		templatePath = "templates/readme.md.tmpl"
-	default:
-		return "", fmt.Errorf("unsupported format: %s", opts.Format)
+	// Determine template paths with overrides.
+	var mainPath string
+	if opts.Format == "html" && opts.HTMLTemplatePath != "" {
+		mainPath = opts.HTMLTemplatePath
 	}
-
-	// Load and parse the template
-	tmpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse template: %w", err)
+	if mainPath == "" {
+		base := opts.TemplateContent
+		if base == "" {
+			base = "templates/readme"
+		}
+		mainPath = resolveTemplatePath(base, opts.Format)
 	}
-
-	// Render the template
-	var rendered bytes.Buffer
-	err = tmpl.Execute(&rendered, action)
-	if err != nil {
-		return "", fmt.Errorf("failed to render template: %w", err)
-	}
-
-	return rendered.String(), nil
-}
-
-// RenderReadmeWithFuncs renders the documentation for a GitHub Action using the provided template
-// options and custom template functions.
-// funcs: map[string]interface{} of custom template functions to register (maybe nil).
-func RenderReadmeWithFuncs(
-	action any,
-	opts TemplateOptions,
-	funcs template.FuncMap,
-) (string, error) {
-	mainPath := resolveTemplatePath(opts.TemplateBase, opts.Format)
 	headerPath := resolveTemplatePath(opts.HeaderBase, opts.Format)
 	footerPath := resolveTemplatePath(opts.FooterBase, opts.Format)
 
@@ -102,30 +72,16 @@ func RenderReadmeWithFuncs(
 	footerPath = filepath.Clean(footerPath)
 	mainPath = filepath.Clean(mainPath)
 
-	header, hErr := readTemplateFile(headerPath)
-	footer, fErr := readTemplateFile(footerPath)
-	if hErr != nil && !os.IsNotExist(hErr) {
-		logrus.Warnf("Failed to read header file: %s", headerPath)
-	}
-	if os.IsNotExist(hErr) {
-		logrus.Warnf("Failed to read header file: %s", headerPath)
-		header = nil
-	}
-	if fErr != nil && !os.IsNotExist(fErr) {
-		logrus.Warnf("Failed to load footer template %q: %v\n", footerPath, fErr)
-	}
-	if os.IsNotExist(fErr) {
-		logrus.Warnf("Footer template %q not found, skipping footer.", footerPath)
-		footer = nil
-	}
+	header, _ := readOptionalTemplate(headerPath)
+	footer, _ := readOptionalTemplate(footerPath)
 
 	mainTmpl, err := os.ReadFile(mainPath) // #nosec G304
 	if err != nil {
 		return "", fmt.Errorf("main template %q not found: %v", mainPath, err)
 	}
 	tmpl := template.New(filepath.Base(mainPath))
-	if funcs != nil {
-		tmpl = tmpl.Funcs(funcs)
+	if opts.Funcs != nil {
+		tmpl = tmpl.Funcs(opts.Funcs)
 	}
 	tmpl, parseErr := tmpl.Parse(string(mainTmpl))
 	if parseErr != nil {
@@ -133,6 +89,15 @@ func RenderReadmeWithFuncs(
 	}
 
 	ctx := buildTemplateContext(action, opts)
+
+	if opts.Format == "html" {
+		if desc, ok := ctx["LongDescription"].(string); ok && desc != "" {
+			var buf bytes.Buffer
+			if convErr := goldmark.Convert([]byte(desc), &buf); convErr == nil {
+				ctx["LongDescription"] = buf.String()
+			}
+		}
+	}
 
 	buf := &bytes.Buffer{}
 	if len(header) > 0 {
@@ -147,7 +112,12 @@ func RenderReadmeWithFuncs(
 		buf.Write(footer)
 	}
 
-	return buf.String(), nil
+	result := buf.String()
+	if opts.Version != "" {
+		result = strings.ReplaceAll(result, "{version}", opts.Version)
+	}
+
+	return result, nil
 }
 
 // readTemplateFile reads a template file from disk. The path should be validated by the caller.
@@ -156,6 +126,24 @@ func readTemplateFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 
 	return data, err
+}
+
+// readOptionalTemplate reads a template file and returns nil if it does not exist.
+// A warning is logged if the file is missing or failed to read.
+func readOptionalTemplate(path string) ([]byte, error) {
+	data, err := readTemplateFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logrus.Warnf("Template %q not found, skipping", path)
+
+			return nil, nil
+		}
+		logrus.Warnf("Failed to load template %q: %v", path, err)
+
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func buildTemplateContext(action any, opts TemplateOptions) map[string]any {

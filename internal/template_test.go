@@ -3,6 +3,7 @@ package internal
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -16,13 +17,13 @@ func TestRenderReadmeMarkdownOrgRepoVersion(t *testing.T) {
 		},
 	}
 	opts := TemplateOptions{
-		TemplateBase: filepath.Join(root, "templates/readme"),
-		HeaderBase:   filepath.Join(root, "templates/header"),
-		FooterBase:   filepath.Join(root, "templates/footer"),
-		Format:       "md",
-		Org:          "testorg",
-		Repo:         "monorepo/someaction",
-		Version:      "release-tag",
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		HeaderBase:      filepath.Join(root, "templates/header"),
+		FooterBase:      filepath.Join(root, "templates/footer"),
+		Format:          "md",
+		Org:             "testorg",
+		Repo:            "monorepo/someaction",
+		Version:         "release-tag",
 	}
 	out, err := RenderReadme(action, opts)
 	if err != nil {
@@ -46,13 +47,13 @@ func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
 		},
 	}
 	opts := TemplateOptions{
-		TemplateBase: filepath.Join(root, "templates/readme"),
-		HeaderBase:   filepath.Join(root, "templates/header"),
-		FooterBase:   filepath.Join(root, "templates/footer"),
-		Format:       "html",
-		Org:          "testorghtml",
-		Repo:         "foo/bar/action",
-		Version:      "main",
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		HeaderBase:      filepath.Join(root, "templates/header"),
+		FooterBase:      filepath.Join(root, "templates/footer"),
+		Format:          "html",
+		Org:             "testorghtml",
+		Repo:            "foo/bar/action",
+		Version:         "main",
 	}
 	out, err := RenderReadme(action, opts)
 	if err != nil {
@@ -63,6 +64,9 @@ func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
 	}
 	if want := "testorghtml/foo/bar/action@main"; !contains(out, want) {
 		t.Errorf("expected uses block: %s", want)
+	}
+	if !contains(out, "<table>") || !contains(out, "<thead>") {
+		t.Errorf("expected tables for inputs/outputs: %s", out)
 	}
 }
 
@@ -86,13 +90,13 @@ func TestRenderReadme_EdgeCases(t *testing.T) {
 		// No author, no custom fields
 	}
 	opts := TemplateOptions{
-		TemplateBase: filepath.Join(root, "templates/readme"),
-		HeaderBase:   filepath.Join(root, "templates/header"),
-		FooterBase:   filepath.Join(root, "templates/footer"),
-		Format:       "md",
-		Org:          "edgeorg",
-		Repo:         "edge/repo",
-		Version:      "edge",
+		TemplateContent: filepath.Join(root, "templates/readme"),
+		HeaderBase:      filepath.Join(root, "templates/header"),
+		FooterBase:      filepath.Join(root, "templates/footer"),
+		Format:          "md",
+		Org:             "edgeorg",
+		Repo:            "edge/repo",
+		Version:         "edge",
 	}
 	out, err := RenderReadme(action, opts)
 	if err != nil {
@@ -108,6 +112,41 @@ func TestRenderReadme_EdgeCases(t *testing.T) {
 		t.Errorf("inputs missing in output")
 	}
 	// Should not error or panic on missing author/custom fields
+}
+
+func TestRenderReadme_VersionPlaceholder(t *testing.T) {
+	tmp := t.TempDir()
+	tmplPath := filepath.Join(tmp, "readme.md.tmpl")
+	err := os.WriteFile(tmplPath, []byte("Version: {version}"), 0o600)
+	if err != nil {
+		t.Fatalf("failed to write temp template: %v", err)
+	}
+	action := &ActionYML{Name: "x", Description: "y", Runs: map[string]any{"using": "node20"}}
+	opts := TemplateOptions{
+		TemplateContent: strings.TrimSuffix(tmplPath, ".md.tmpl"),
+		Format:          "md",
+		Version:         "v1.2.3",
+	}
+	out, err := RenderReadme(action, opts)
+	if err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+	if !contains(out, "v1.2.3") {
+		t.Errorf("version placeholder not replaced: %s", out)
+	}
+}
+
+func TestParseActionYML_DocsBlock(t *testing.T) {
+	root := findProjectRoot(t)
+	path := filepath.Join(root, "testdata/example-action-docs/action.yml")
+	action, err := ParseActionYML(path)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	want := "This is a longer description for testing.\n\nIt spans multiple lines."
+	if action.LongDescription != want {
+		t.Errorf("unexpected long description: %q", action.LongDescription)
+	}
 }
 
 // findProjectRoot walks up from the current directory until it finds go.mod.

@@ -171,10 +171,15 @@ For a full list of flags and options, run `gh-action-readme <command> --help`.
   - `.Org` — GitHub org/user (from config or CLI)
   - `.Repo` — Repository/folder (relative path for uses)
   - `.Version` — Action version/tag/branch (from config or CLI)
+  - `{version}` placeholder in templates is replaced with the actual version.
+  - `.LongDescription` contains text between `# docs:start` and `# docs:end` comments.
+    Paragraph breaks are preserved and, when rendering HTML, the text is converted from Markdown.
 - **Header/Footer:**
   - Templates for header and footer are optional and can be customized per format (Markdown/HTML).
   - If a header or footer template file is missing, it is silently skipped (with a warning in logs).
   - Header and footer content is prepended/appended to the main template output.
+  - The main README template path can also be overridden via `config.yaml` using
+    the `template`, `header`, and `footer` fields.
 - **Custom template functions:**
   - Advanced users can extend template rendering with custom Go template functions by modifying
     the codebase (see developer notes).
@@ -184,7 +189,7 @@ For a full list of flags and options, run `gh-action-readme <command> --help`.
 Advanced users can add custom Go template functions for use in templates:
 
 1. **Edit `internal/template.go`:**
-   Use the `RenderReadmeWithFuncs` function and pass a `template.FuncMap` with your custom functions.
+   Set `TemplateOptions.Funcs` with a `template.FuncMap` when calling `RenderReadme`.
 
 2. **Register your function:**
    Example:
@@ -193,7 +198,8 @@ Advanced users can add custom Go template functions for use in templates:
    funcs := template.FuncMap{
        "toUpper": strings.ToUpper,
    }
-   RenderReadmeWithFuncs(action, opts, funcs)
+   opts.Funcs = funcs
+   RenderReadme(action, opts)
    ```
 
    Then use `{{.Name | toUpper}}` in your template.
