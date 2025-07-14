@@ -30,6 +30,5 @@ jobs:
           name: coverage
           path: coverage.ci.out
       - name: Example Action Readme Generation
-        working-directory: ./testdata/example-action
         run: |
-          go run ../../ gen --config ../../config.yaml --org testorg
+          go run . gen --config config.yaml --org testorg

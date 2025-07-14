@@ -185,7 +185,7 @@ each linter.
 │   ├── template.go
 │   └── validator.go
 ├── templates/          # Go text/template files for Markdown and HTML output
-├── schemas/            # JSON schema for action.yml (auto-updatable)
+├── schemas/            # JSON schema for action.yml (embedded and auto-updatable)
 ├── testdata/           # Example actions and test cases
 ├── main.go             # CLI entrypoint (wires up commands)
 ├── config.yaml         # Default config for templates, org, etc.

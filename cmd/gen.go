@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/schemas"
 )
 
 // GenCmd returns the cobra.Command for the "gen" subcommand.
@@ -231,7 +232,12 @@ func runGenWorkerTask(
 	if !relaxedMode {
 		schemaPath := cfg.Schema
 		if schemaPath == "" {
-			schemaPath = "schemas/action.schema.json"
+			schemaPath = schemas.RelPath
+		}
+		if !filepath.IsAbs(schemaPath) {
+			if root, err := findProjectRoot(); err == nil {
+				schemaPath = filepath.Join(root, schemaPath)
+			}
 		}
 		schemaErrs, schemaErr := internal.ValidateActionYMLSchema(
 			actionPath,

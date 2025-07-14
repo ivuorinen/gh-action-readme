@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/schemas"
 )
 
 func TestVersionAndAboutCommands(t *testing.T) {
@@ -383,7 +384,7 @@ func TestSchemaCommand(t *testing.T) {
 	defer logrus.SetOutput(os.Stderr)
 	root := newTestRootCmd()
 	runCmd(root, "schema")
-	if !strings.Contains(logBuf.String(), "Schema: schemas/action.schema.json") {
+	if !strings.Contains(logBuf.String(), "Schema: "+schemas.RelPath) {
 		t.Errorf("schema output missing: %s", logBuf.String())
 	}
 }

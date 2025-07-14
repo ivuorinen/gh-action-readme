@@ -11,6 +11,8 @@ import (
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
+
+	"github.com/ivuorinen/gh-action-readme/schemas"
 )
 
 // ValidationResult holds the result of validating an ActionYML struct.
@@ -44,7 +46,19 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 // schema file. Returns a slice of error messages if validation fails, or nil if valid.
 // Uses gojsonschema for validation.
 func ValidateActionYMLSchema(actionYMLPath, schemaPath string) ([]string, error) {
-	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
+	var schemaBytes []byte
+	var err error
+	if schemaPath != "" {
+		cleanPath := filepath.Clean(schemaPath)
+		schemaBytes, err = os.ReadFile(cleanPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read schema: %w", err)
+		}
+	} else {
+		schemaBytes = schemas.ActionSchema
+	}
+
+	schemaLoader := gojsonschema.NewBytesLoader(schemaBytes)
 
 	// Convert YAML to JSON for validation
 	cleanActionYMLPath := filepath.Clean(actionYMLPath)
@@ -68,7 +82,7 @@ func ValidateActionYMLSchema(actionYMLPath, schemaPath string) ([]string, error)
 	}
 
 	// Strict mode: check for unknown fields in the YAML that are not allowed by the schema
-	allowedFields, afErr := getAllowedTopLevelFieldsFromSchema(schemaPath)
+	allowedFields, afErr := getAllowedTopLevelFieldsFromSchema(schemaBytes)
 	if afErr != nil {
 		return nil, fmt.Errorf("failed to parse schema for allowed fields: %w", afErr)
 	}
@@ -98,12 +112,7 @@ func yamlToJSON(yamlBytes []byte) ([]byte, error) {
 
 // getAllowedTopLevelFieldsFromSchema parses the schema file and returns the allowed
 // top-level fields.
-func getAllowedTopLevelFieldsFromSchema(schemaPath string) ([]string, error) {
-	// #nosec G304 -- schemaPath is controlled by trusted CLI input, not user input.
-	schemaBytes, err := os.ReadFile(schemaPath)
-	if err != nil {
-		return nil, err
-	}
+func getAllowedTopLevelFieldsFromSchema(schemaBytes []byte) ([]string, error) {
 	var schema struct {
 		Properties map[string]any `json:"properties"`
 	}

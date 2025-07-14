@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/schemas"
 )
 
 func TestValidateActionYML(t *testing.T) {
@@ -92,7 +94,7 @@ inputs:
 }
 
 func TestValidateActionYMLSchema_InvalidFile(t *testing.T) {
-	_, err := ValidateActionYMLSchema("nonexistent.yml", "schemas/action.schema.json")
+	_, err := ValidateActionYMLSchema("nonexistent.yml", schemas.RelPath)
 	if err == nil {
 		t.Error("expected error for missing action.yml file")
 	}

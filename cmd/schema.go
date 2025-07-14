@@ -7,6 +7,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/ivuorinen/gh-action-readme/schemas"
 )
 
 // SchemaCmd returns the cobra.Command for the "schema" subcommand.
@@ -28,7 +30,7 @@ Examples:
 			Short: "Update the action.yml schema from the official GitHub Actions documentation.",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				const schemaURL = "https://www.schemastore.org/github-action.json"
-				const schemaRelPath = "schemas/action.schema.json"
+				const schemaRelPath = schemas.RelPath
 				logrus.Infof("Downloading latest schema from %s ...", schemaURL)
 				resp, err := downloadURL(schemaURL)
 				if err != nil {
@@ -63,7 +65,7 @@ Examples:
 		},
 	)
 	cmd.Run = func(cmd *cobra.Command, args []string) {
-		logrus.Info("Schema: schemas/action.schema.json (replaceable, editable)")
+		logrus.Infof("Schema: %s (replaceable, editable)", schemas.RelPath)
 		logrus.Info(
 			"To update the schema from the official source, run: gh-action-readme schema update",
 		)

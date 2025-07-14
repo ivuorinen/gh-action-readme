@@ -218,7 +218,7 @@ Advanced users can add custom Go template functions for use in templates:
 - `cmd/` — CLI subcommands and helpers (one file per command, shared helpers)
 - `internal/` — Core logic (parser, validator, template, config, html)
 - `templates/` — Format-specific templates for README/HTML/header/footer
-- `schemas/` — Official `action.yml` schema (auto-updatable from SchemaStore)
+- `schemas/` — Official `action.yml` schema (embedded in the binary and auto-updatable from SchemaStore)
 - `README.md`, `LICENSE`, `config.yaml`, etc.
 
 ## Developer Notes
@@ -226,7 +226,8 @@ Advanced users can add custom Go template functions for use in templates:
 - All CLI commands are implemented in `cmd/` for clarity and maintainability.
 - Shared helpers are DRY and use Go's standard library where possible.
 - Linting is enforced with `golangci-lint` and the codebase is fully compliant.
-- The schema is updated from [SchemaStore.org][s] for maximum compatibility.
+- The schema is embedded and updated from [SchemaStore.org][s] for maximum compatibility.
+- Paths like `schemas/action.schema.json` are resolved from the project root.
 
 ## License
 

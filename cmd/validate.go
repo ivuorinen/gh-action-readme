@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/schemas"
 )
 
 // ValidateCmd returns the cobra.Command for the "validate" subcommand.
@@ -114,7 +116,12 @@ func runValidateCommand(
 	if *schemaPath == "" {
 		*schemaPath = cfg.Schema
 		if *schemaPath == "" {
-			*schemaPath = "schemas/action.schema.json"
+			*schemaPath = schemas.RelPath
+		}
+	}
+	if !filepath.IsAbs(*schemaPath) {
+		if rootDir, rerr := findProjectRoot(); rerr == nil {
+			*schemaPath = filepath.Join(rootDir, *schemaPath)
 		}
 	}
 	actionFiles := findActionYMLFiles(".")
