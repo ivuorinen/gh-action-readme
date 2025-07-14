@@ -15,6 +15,9 @@ func TestRenderReadmeMarkdownOrgRepoVersion(t *testing.T) {
 		Inputs: map[string]ActionInput{
 			"foo": {Description: "Foo input", Required: true},
 		},
+		Dependencies: []ActionDependency{
+			{Name: "actions/checkout", Version: "v4", Ref: "v4", Pinned: false},
+		},
 	}
 	opts := TemplateOptions{
 		TemplateContent: filepath.Join(root, "templates/readme"),
@@ -35,6 +38,9 @@ func TestRenderReadmeMarkdownOrgRepoVersion(t *testing.T) {
 	if want := "testorg/monorepo/someaction@release-tag"; !contains(out, want) {
 		t.Errorf("expected uses block: %s", want)
 	}
+	if !contains(out, "Dependencies") || !contains(out, "actions/checkout") {
+		t.Errorf("expected dependencies table in output: %s", out)
+	}
 }
 
 func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
@@ -44,6 +50,9 @@ func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
 		Description: "desc",
 		Inputs: map[string]ActionInput{
 			"foo": {Description: "Foo input", Required: true},
+		},
+		Dependencies: []ActionDependency{
+			{Name: "actions/setup-node", Version: "v4", Ref: "v4", Pinned: false},
 		},
 	}
 	opts := TemplateOptions{
@@ -67,6 +76,9 @@ func TestRenderReadmeHTMLOrgRepoVersion(t *testing.T) {
 	}
 	if !contains(out, "<table>") || !contains(out, "<thead>") {
 		t.Errorf("expected tables for inputs/outputs: %s", out)
+	}
+	if !contains(out, "Dependencies") || !contains(out, "actions/setup-node") {
+		t.Errorf("expected dependencies table in HTML output: %s", out)
 	}
 }
 
@@ -146,6 +158,21 @@ func TestParseActionYML_DocsBlock(t *testing.T) {
 	want := "This is a longer description for testing.\n\nIt spans multiple lines."
 	if action.LongDescription != want {
 		t.Errorf("unexpected long description: %q", action.LongDescription)
+	}
+}
+
+func TestParseActionYML_Dependencies(t *testing.T) {
+	root := findProjectRoot(t)
+	path := filepath.Join(root, "testdata/example-action-complex/action.yml")
+	action, err := ParseActionYML(path)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if len(action.Dependencies) != 3 {
+		t.Fatalf("expected 3 dependencies, got %d", len(action.Dependencies))
+	}
+	if action.Dependencies[0].Name != "actions/checkout" || !action.Dependencies[0].Pinned {
+		t.Errorf("unexpected dependency parsing: %+v", action.Dependencies[0])
 	}
 }
 

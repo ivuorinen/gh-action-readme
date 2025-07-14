@@ -99,6 +99,7 @@ The Makefile is platform-agnostic and will install required tools for your OS an
 - Generates `README.md` and/or HTML (with custom header/footer)
 - Customizable Go text/template system for all fields
 - Usage examples, badges, and summary sections by default
+- Lists external action dependencies with links and version info
 - Easy to update action schema and templates (uses [SchemaStore.org][s])
 - Designed for both interactive and automated/CI workflows
 - Configurable GitHub org/user for examples and badges
@@ -174,6 +175,8 @@ For a full list of flags and options, run `gh-action-readme <command> --help`.
   - `{version}` placeholder in templates is replaced with the actual version.
   - `.LongDescription` contains text between `# docs:start` and `# docs:end` comments.
     Paragraph breaks are preserved and, when rendering HTML, the text is converted from Markdown.
+  - `.Dependencies` — slice of external actions used in composite steps.
+    Each element has `Name`, `Version`, `Ref`, and `Pinned` fields.
 - **Header/Footer:**
   - Templates for header and footer are optional and can be customized per format (Markdown/HTML).
   - If a header or footer template file is missing, it is silently skipped (with a warning in logs).

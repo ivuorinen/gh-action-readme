@@ -45,6 +45,16 @@
 {{- end }}
 {{- end }}
 
+{{- if .Dependencies }}
+## Dependencies
+
+| Action | Version |
+| --- | --- |
+{{- range .Dependencies }}
+| [{{ .Name }}](https://github.com/{{ .Name }}) | {{ .Version }}{{ if .Pinned }} \U1F512{{ end }} |
+{{- end }}
+{{- end }}
+
 ## Example
 
 See the [action.yml](./action.yml) for a full reference.

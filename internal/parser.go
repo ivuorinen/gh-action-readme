@@ -5,6 +5,7 @@ package internal
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -23,6 +24,7 @@ type ActionYML struct {
 	Outputs         map[string]ActionOutput `yaml:"outputs"`
 	Runs            map[string]any          `yaml:"runs"`
 	Branding        *Branding               `yaml:"branding,omitempty"`
+	Dependencies    []ActionDependency      `yaml:"-"`
 }
 
 // ActionInput represents a single input parameter for a GitHub Action.
@@ -41,6 +43,14 @@ type ActionOutput struct {
 type Branding struct {
 	Icon  string `yaml:"icon"`
 	Color string `yaml:"color"`
+}
+
+// ActionDependency represents an external action used in a composite action step.
+type ActionDependency struct {
+	Name    string
+	Version string
+	Ref     string
+	Pinned  bool
 }
 
 // ParseActionYML parses the action.yml file at the given path and returns a pointer to ActionYML.
@@ -65,6 +75,10 @@ func ParseActionYML(path string) (*ActionYML, error) {
 	// Also parse optional documentation comments from the file.
 	if docs, docErr := parseDocsFromFile(cleanPath); docErr == nil {
 		a.LongDescription = docs
+	}
+
+	if deps, depErr := parseDependenciesFromFile(cleanPath); depErr == nil {
+		a.Dependencies = deps
 	}
 
 	return &a, nil
@@ -103,4 +117,56 @@ func parseDocsFromFile(path string) (string, error) {
 	}
 
 	return "", nil
+}
+
+// parseDependenciesFromFile scans the action.yml file for external action dependencies.
+// It looks for lines like `uses: actions/checkout@<ref> # <version>`.
+func parseDependenciesFromFile(path string) ([]ActionDependency, error) {
+	data, err := os.ReadFile(path) // #nosec G304 -- path validated by caller
+	if err != nil {
+		return nil, err
+	}
+	re := regexp.MustCompile(`(?i)uses:\s*(\S+)(?:\s*#\s*(.+))?`)
+	shaRE := regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
+	lines := strings.Split(string(data), "\n")
+	deps := make([]ActionDependency, 0)
+	for _, l := range lines {
+		trimmed := strings.TrimSpace(l)
+		if !strings.Contains(trimmed, "uses:") {
+			continue
+		}
+		m := re.FindStringSubmatch(trimmed)
+		if len(m) < 2 {
+			continue
+		}
+		spec := m[1]
+		comment := ""
+		if len(m) > 2 {
+			comment = strings.TrimSpace(m[2])
+		}
+		if strings.HasPrefix(spec, "./") ||
+			strings.HasPrefix(spec, "../") ||
+			strings.HasPrefix(spec, "/") {
+			continue // local action reference
+		}
+		parts := strings.SplitN(spec, "@", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		name := parts[0]
+		ref := parts[1]
+		pinned := shaRE.MatchString(ref)
+		version := comment
+		if version == "" {
+			version = ref
+		}
+		deps = append(deps, ActionDependency{
+			Name:    name,
+			Version: version,
+			Ref:     ref,
+			Pinned:  pinned,
+		})
+	}
+
+	return deps, nil
 }

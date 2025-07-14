@@ -52,6 +52,22 @@
 </table>
 {{end}}
 {{end}}
+{{if .Dependencies}}
+<h2>Dependencies</h2>
+<table>
+  <thead>
+    <tr><th>Action</th><th>Version</th></tr>
+  </thead>
+  <tbody>
+  {{range .Dependencies}}
+    <tr>
+      <td><a href="https://github.com/{{.Name}}">{{.Name}}</a></td>
+      <td>{{.Version}}{{if .Pinned}} 🔒{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
 <h2>Example</h2>
 <p>See the <a href="./action.yml">action.yml</a> for a full reference.</p>
 <h2>Badges</h2>
