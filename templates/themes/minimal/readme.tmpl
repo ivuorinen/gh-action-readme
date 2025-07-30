@@ -1,0 +1,33 @@
+# {{.Name}}
+
+{{.Description}}
+
+## Usage
+
+```yaml
+- uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  {{if .Inputs}}with:
+  {{- range $key, $val := .Inputs}}
+    {{$key}}: {{if $val.Default}}{{$val.Default}}{{else}}value{{end}}
+  {{- end}}{{end}}
+```
+
+{{if .Inputs}}
+## Inputs
+
+{{range $key, $input := .Inputs}}
+- `{{$key}}` - {{$input.Description}}{{if $input.Required}} (required){{end}}{{if $input.Default}} (default: `{{$input.Default}}`){{end}}
+{{end}}
+{{end}}
+
+{{if .Outputs}}
+## Outputs
+
+{{range $key, $output := .Outputs}}
+- `{{$key}}` - {{$output.Description}}
+{{end}}
+{{end}}
+
+## License
+
+MIT

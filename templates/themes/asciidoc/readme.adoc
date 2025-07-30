@@ -1,0 +1,174 @@
+= {{.Name}}
+:toc: left
+:toclevels: 3
+:icons: font
+:source-highlighter: highlight.js
+
+{{if .Branding}}image:https://img.shields.io/badge/icon-{{.Branding.Icon}}-{{.Branding.Color}}[{{.Branding.Icon}}] {{end}}image:https://img.shields.io/badge/GitHub%20Action-{{.Name | replace " " "%20"}}-blue[GitHub Action] image:https://img.shields.io/badge/license-MIT-green[License]
+
+[.lead]
+{{.Description}}
+
+== Quick Start
+
+Add this action to your GitHub workflow:
+
+[source,yaml]
+----
+name: CI Workflow
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: {{.Name}}
+        uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+        {{if .Inputs}}with:
+        {{- range $key, $val := .Inputs}}
+          {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"value"{{end}}
+        {{- end}}{{end}}
+----
+
+{{if .Inputs}}
+== Input Parameters
+
+[cols="1,3,1,2", options="header"]
+|===
+| Parameter | Description | Required | Default
+
+{{range $key, $input := .Inputs}}
+| `{{$key}}`
+| {{$input.Description}}
+| {{if $input.Required}}✓{{else}}✗{{end}}
+| {{if $input.Default}}`{{$input.Default}}`{{else}}_none_{{end}}
+
+{{end}}
+|===
+
+=== Parameter Details
+
+{{range $key, $input := .Inputs}}
+==== {{$key}}
+
+{{$input.Description}}
+
+[horizontal]
+Type:: String
+Required:: {{if $input.Required}}Yes{{else}}No{{end}}
+{{if $input.Default}}Default:: `{{$input.Default}}`{{end}}
+
+.Example
+[source,yaml]
+----
+with:
+  {{$key}}: {{if $input.Default}}"{{$input.Default}}"{{else}}"your-value"{{end}}
+----
+
+{{end}}
+{{end}}
+
+{{if .Outputs}}
+== Output Parameters
+
+[cols="1,3", options="header"]
+|===
+| Parameter | Description
+
+{{range $key, $output := .Outputs}}
+| `{{$key}}`
+| {{$output.Description}}
+
+{{end}}
+|===
+
+=== Using Outputs
+
+[source,yaml]
+----
+- name: {{.Name}}
+  id: action-step
+  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+
+- name: Use Output
+  run: |
+  {{- range $key, $output := .Outputs}}
+    echo "{{$key}}: \${{"{{"}} steps.action-step.outputs.{{$key}} {{"}}"}}"
+  {{- end}}
+----
+{{end}}
+
+== Examples
+
+=== Basic Usage
+
+[source,yaml]
+----
+- name: Basic {{.Name}}
+  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  {{if .Inputs}}with:
+  {{- range $key, $val := .Inputs}}
+    {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"example-value"{{end}}
+  {{- end}}{{end}}
+----
+
+=== Advanced Configuration
+
+[source,yaml]
+----
+- name: Advanced {{.Name}}
+  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  {{if .Inputs}}with:
+  {{- range $key, $val := .Inputs}}
+    {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"\${{"{{"}} vars.{{$key | upper}} {{"}}"}}"{{end}}
+  {{- end}}{{end}}
+  env:
+    GITHUB_TOKEN: \${{"{{"}} secrets.GITHUB_TOKEN {{"}}"}}
+----
+
+=== Conditional Usage
+
+[source,yaml]
+----
+- name: Conditional {{.Name}}
+  if: github.event_name == 'push'
+  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  {{if .Inputs}}with:
+  {{- range $key, $val := .Inputs}}
+    {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"production-value"{{end}}
+  {{- end}}{{end}}
+----
+
+== Troubleshooting
+
+[TIP]
+====
+Common issues and solutions:
+
+1. **Authentication Errors**: Ensure required secrets are configured
+2. **Permission Issues**: Verify GitHub token permissions
+3. **Configuration Errors**: Validate input parameters
+====
+
+== Development
+
+For development information, see the link:./action.yml[action.yml] specification.
+
+=== Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+== License
+
+This project is licensed under the MIT License.
+
+---
+
+_Documentation generated with https://github.com/ivuorinen/gh-action-readme[gh-action-readme]_

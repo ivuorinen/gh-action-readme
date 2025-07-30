@@ -1,0 +1,11 @@
+# Repository-level configuration for gh-action-readme
+organization: "ivuorinen"
+repository: "gh-action-readme"
+theme: "professional"
+analyze_dependencies: true
+show_security_info: true
+permissions:
+  contents: read
+  pull-requests: write
+variables:
+  custom_badge: "https://img.shields.io/badge/gh--action--readme-production-green"

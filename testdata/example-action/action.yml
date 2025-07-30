@@ -1,0 +1,20 @@
+name: Example Action
+description: 'Test Action for gh-action-readme'
+inputs:
+  input1:
+    description: First input
+    required: true
+    default: foo
+  input2:
+    description: Second input
+    required: false
+outputs:
+  result:
+    description: Result output
+runs:
+  using: "node20"
+  main: "dist/index.js"
+branding:
+  icon: check
+  color: green
+

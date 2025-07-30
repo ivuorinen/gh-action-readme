@@ -1,21 +1,19 @@
+# EditorConfig is awesome: https://editorconfig.org
+
+# top-most EditorConfig file
 root = true
 
+# Unix-style newlines with a newline ending every file
 [*]
-charset = utf-8
 end_of_line = lf
-indent_size = 2
-indent_style = space
 insert_final_newline = true
-max_line_length = 160
-tab_width = 2
+charset = utf-8
 trim_trailing_whitespace = true
-
-[{*.md}]
-indent_size = 2
-tab_width = 2
-max_line_length = 160
-trim_trailing_whitespace = false
-
-[{*.mk,GNUmakefile,makefile}]
-tab_width = 4
 indent_style = tab
+tab_width = 2
+max_line_length = 120
+
+[*.{json,yaml,yml,sh}]
+indent_style = space
+indent_size = 2
+
