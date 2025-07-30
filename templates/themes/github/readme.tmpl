@@ -1,0 +1,139 @@
+# {{.Name}}
+
+{{if .Branding}}![{{.Branding.Icon}}](https://img.shields.io/badge/icon-{{.Branding.Icon}}-{{.Branding.Color}}) {{end}}![GitHub](https://img.shields.io/badge/GitHub%20Action-{{.Name | replace " " "%20"}}-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+
+> {{.Description}}
+
+## 🚀 Quick Start
+
+```yaml
+name: My Workflow
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: {{.Name}}
+        uses: {{gitUsesString .}}
+        {{if .Inputs}}with:
+        {{- range $key, $val := .Inputs}}
+          {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"value"{{end}}
+        {{- end}}{{end}}
+```
+
+{{if .Inputs}}
+## 📥 Inputs
+
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+{{- range $key, $input := .Inputs}}
+| `{{$key}}` | {{$input.Description}} | {{if $input.Required}}✅{{else}}❌{{end}} | {{if $input.Default}}`{{$input.Default}}`{{else}}-{{end}} |
+{{- end}}
+{{end}}
+
+{{if .Outputs}}
+## 📤 Outputs
+
+| Parameter | Description |
+|-----------|-------------|
+{{- range $key, $output := .Outputs}}
+| `{{$key}}` | {{$output.Description}} |
+{{- end}}
+{{end}}
+
+## 💡 Examples
+
+<details>
+<summary>Basic Usage</summary>
+
+```yaml
+- name: {{.Name}}
+  uses: {{gitUsesString .}}
+  {{if .Inputs}}with:
+  {{- range $key, $val := .Inputs}}
+    {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"example-value"{{end}}
+  {{- end}}{{end}}
+```
+</details>
+
+<details>
+<summary>Advanced Configuration</summary>
+
+```yaml
+- name: {{.Name}} with custom settings
+  uses: {{gitUsesString .}}
+  {{if .Inputs}}with:
+  {{- range $key, $val := .Inputs}}
+    {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"custom-value"{{end}}
+  {{- end}}{{end}}
+```
+</details>
+
+{{if .Dependencies}}
+## 📦 Dependencies
+
+This action uses the following dependencies:
+
+| Action | Version | Author | Description |
+|--------|---------|--------|-------------|
+{{- range .Dependencies}}
+| {{if .MarketplaceURL}}[{{.Name}}]({{.MarketplaceURL}}){{else}}{{.Name}}{{end}} | {{if .IsPinned}}🔒{{end}}{{.Version}} | [{{.Author}}](https://github.com/{{.Author}}) | {{.Description}} |
+{{- end}}
+
+<details>
+<summary>📋 Dependency Details</summary>
+
+{{range .Dependencies}}
+### {{.Name}}{{if .Version}} @ {{.Version}}{{end}}
+
+{{if .IsPinned}}
+- 🔒 **Pinned Version**: Locked to specific version for security
+{{else}}
+- 📌 **Floating Version**: Using latest version (consider pinning for security)
+{{end}}
+- 👤 **Author**: [{{.Author}}](https://github.com/{{.Author}})
+{{if .MarketplaceURL}}- 🏪 **Marketplace**: [View on GitHub Marketplace]({{.MarketplaceURL}}){{end}}
+{{if .SourceURL}}- 📂 **Source**: [View Source]({{.SourceURL}}){{end}}
+{{if .WithParams}}
+- **Configuration**:
+  ```yaml
+  with:
+  {{- range $key, $value := .WithParams}}
+    {{$key}}: {{$value}}
+  {{- end}}
+  ```
+{{end}}
+
+{{end}}
+
+{{$hasLocalDeps := false}}
+{{range .Dependencies}}{{if .IsLocalAction}}{{$hasLocalDeps = true}}{{end}}{{end}}
+{{if $hasLocalDeps}}
+### Same Repository Dependencies
+{{range .Dependencies}}{{if .IsLocalAction}}
+- [{{.Name}}]({{.SourceURL}}) - {{.Description}}
+{{end}}{{end}}
+{{end}}
+
+</details>
+{{end}}
+
+## 🔧 Development
+
+See the [action.yml](./action.yml) for the complete action specification.
+
+## 📄 License
+
+This action is distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+<div align="center">
+  <sub>🚀 Generated with <a href="https://github.com/ivuorinen/gh-action-readme">gh-action-readme</a></sub>
+</div>

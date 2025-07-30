@@ -1,0 +1,275 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ivuorinen/gh-action-readme/schemas/action.schema.json",
+  "title": "GitHub Action",
+  "description": "Schema for GitHub Action action.yml files",
+  "type": "object",
+  "required": [
+    "name",
+    "description"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of your action"
+    },
+    "author": {
+      "type": "string",
+      "description": "The name of the action's author"
+    },
+    "description": {
+      "type": "string",
+      "description": "A short description of the action"
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Input parameters allow you to specify data that the action expects to use during runtime",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "A string description of the input parameter"
+          },
+          "required": {
+            "type": "boolean",
+            "description": "A boolean to indicate whether the action requires the input parameter",
+            "default": false
+          },
+          "default": {
+            "type": [
+              "string",
+              "boolean",
+              "number"
+            ],
+            "description": "A default value for the input"
+          },
+          "deprecationMessage": {
+            "type": "string",
+            "description": "A deprecation message for the input"
+          }
+        },
+        "required": [
+          "description"
+        ]
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Output parameters allow you to declare data that an action outputs",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "A string description of the output parameter"
+          },
+          "value": {
+            "type": "string",
+            "description": "The value that the output parameter will be mapped to"
+          }
+        },
+        "required": [
+          "description"
+        ]
+      }
+    },
+    "runs": {
+      "type": "object",
+      "description": "Configures the path to the action's code and the runtime used to execute the code",
+      "oneOf": [
+        {
+          "properties": {
+            "using": {
+              "const": "composite",
+              "description": "Composite run steps"
+            },
+            "steps": {
+              "type": "array",
+              "description": "The run steps that you plan to run in this action",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the step"
+                  },
+                  "id": {
+                    "type": "string",
+                    "description": "A unique identifier for the step"
+                  },
+                  "if": {
+                    "type": "string",
+                    "description": "Conditional execution expression"
+                  },
+                  "uses": {
+                    "type": "string",
+                    "description": "Selects an action to run as part of a step in your job"
+                  },
+                  "run": {
+                    "type": "string",
+                    "description": "Runs command-line programs"
+                  },
+                  "shell": {
+                    "type": "string",
+                    "description": "The shell to use for running the command",
+                    "enum": [
+                      "bash",
+                      "pwsh",
+                      "python",
+                      "sh",
+                      "cmd",
+                      "powershell"
+                    ]
+                  },
+                  "with": {
+                    "type": "object",
+                    "description": "A map of the input parameters defined by the action"
+                  },
+                  "env": {
+                    "type": "object",
+                    "description": "Sets environment variables for steps"
+                  },
+                  "continue-on-error": {
+                    "type": "boolean",
+                    "description": "Prevents a job from failing when a step fails"
+                  },
+                  "timeout-minutes": {
+                    "type": "number",
+                    "description": "The maximum number of minutes to run the step"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "using",
+            "steps"
+          ]
+        },
+        {
+          "properties": {
+            "using": {
+              "const": "node20",
+              "description": "Node.js 20 runtime"
+            },
+            "main": {
+              "type": "string",
+              "description": "The file that contains your action code"
+            },
+            "pre": {
+              "type": "string",
+              "description": "Script to run at the start of a job"
+            },
+            "pre-if": {
+              "type": "string",
+              "description": "Conditional for pre script"
+            },
+            "post": {
+              "type": "string",
+              "description": "Script to run at the end of a job"
+            },
+            "post-if": {
+              "type": "string",
+              "description": "Conditional for post script"
+            }
+          },
+          "required": [
+            "using",
+            "main"
+          ]
+        },
+        {
+          "properties": {
+            "using": {
+              "const": "node16",
+              "description": "Node.js 16 runtime"
+            },
+            "main": {
+              "type": "string"
+            },
+            "pre": {
+              "type": "string"
+            },
+            "pre-if": {
+              "type": "string"
+            },
+            "post": {
+              "type": "string"
+            },
+            "post-if": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "using",
+            "main"
+          ]
+        },
+        {
+          "properties": {
+            "using": {
+              "const": "docker",
+              "description": "Docker container runtime"
+            },
+            "image": {
+              "type": "string",
+              "description": "The Docker image to use as the container to run the action"
+            },
+            "env": {
+              "type": "object",
+              "description": "Environment variables to set in the container"
+            },
+            "entrypoint": {
+              "type": "string",
+              "description": "Overrides the Docker entrypoint"
+            },
+            "pre-entrypoint": {
+              "type": "string",
+              "description": "Script to run before the entrypoint"
+            },
+            "post-entrypoint": {
+              "type": "string",
+              "description": "Script to run after the entrypoint"
+            },
+            "args": {
+              "type": "array",
+              "description": "An array of strings to pass as arguments",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "using",
+            "image"
+          ]
+        }
+      ]
+    },
+    "branding": {
+      "type": "object",
+      "description": "You can use a color and Feather icon to create a badge to personalize and distinguish your action",
+      "properties": {
+        "icon": {
+          "type": "string",
+          "description": "The name of the Feather icon to use"
+        },
+        "color": {
+          "type": "string",
+          "description": "The background color of the badge",
+          "enum": [
+            "white",
+            "yellow",
+            "blue",
+            "green",
+            "orange",
+            "red",
+            "purple",
+            "gray-dark"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+# Binaries
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test output
+*.test
+
+# Logs
+*.log
+
+# Vendor
+go.sum
+
+/gh-action-readme
+*.out
+TODO.md
+

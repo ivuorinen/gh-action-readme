@@ -1,0 +1,9 @@
+# Action-specific configuration
+theme: "github"
+variables:
+  action_specific: "This is action-specific config"
+permissions:
+  contents: read
+runs_on:
+  - "ubuntu-latest"
+  - "macos-latest"

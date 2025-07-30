@@ -1,0 +1,255 @@
+# GoReleaser configuration for gh-action-readme
+# See: https://goreleaser.com
+
+version: 2
+
+project_name: gh-action-readme
+
+before:
+  hooks:
+    # Run tests before building
+    - go test ./...
+    # Run linter
+    - golangci-lint run
+    # Ensure dependencies are tidy
+    - go mod tidy
+
+builds:
+  - id: gh-action-readme
+    binary: gh-action-readme
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      # Skip 32-bit builds for macOS (not supported)
+      - goos: darwin
+        goarch: "386"
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    flags:
+      - -trimpath
+
+archives:
+  - id: default
+    format: tar.gz
+    # Use zip for Windows
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG.md
+      - docs/**/*
+      - templates/**/*
+      - schemas/**/*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore"
+      - "^ci:"
+      - "^docs:"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: 🚀 Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 🐛 Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 📝 Documentation
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: 🔨 Dependencies
+      regexp: '^.*?(feat|fix|chore)\(deps\)!?:.+$'
+      order: 3
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: ivuorinen
+    name: gh-action-readme
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## 🎉 {{ .ProjectName }} {{ .Tag }}
+
+    Welcome to this new release of **{{ .ProjectName }}**!
+
+    ### 📦 Installation
+
+    #### Download Binary
+    ```bash
+    # Linux x86_64
+    curl -L https://github.com/ivuorinen/gh-action-readme/releases/download/{{ .Tag }}/gh-action-readme_Linux_x86_64.tar.gz | tar -xz
+
+    # macOS x86_64
+    curl -L https://github.com/ivuorinen/gh-action-readme/releases/download/{{ .Tag }}/gh-action-readme_Darwin_x86_64.tar.gz | tar -xz
+
+    # macOS ARM64 (Apple Silicon)
+    curl -L https://github.com/ivuorinen/gh-action-readme/releases/download/{{ .Tag }}/gh-action-readme_Darwin_arm64.tar.gz | tar -xz
+
+    # Windows x86_64
+    # Download gh-action-readme_Windows_x86_64.zip and extract
+    ```
+
+    #### Using Go
+    ```bash
+    go install github.com/ivuorinen/gh-action-readme@{{ .Tag }}
+    ```
+
+    ### 🔍 What's Changed
+
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/ivuorinen/gh-action-readme/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ### 🙏 Thanks
+
+    Thanks to all contributors who made this release possible!
+
+# Homebrew tap
+brews:
+  - name: gh-action-readme
+    homepage: https://github.com/ivuorinen/gh-action-readme
+    description: "Auto-generate beautiful README and HTML documentation for GitHub Actions"
+    license: MIT
+    repository:
+      owner: ivuorinen
+      name: homebrew-tap
+      branch: main
+    directory: Formula
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    install: |
+      bin.install "gh-action-readme"
+
+      # Install templates and schemas
+      (share/"gh-action-readme/templates").install Dir["templates/*"]
+      (share/"gh-action-readme/schemas").install Dir["schemas/*"]
+    test: |
+      system "#{bin}/gh-action-readme", "version"
+
+# Scoop bucket for Windows
+scoops:
+  - name: gh-action-readme
+    homepage: https://github.com/ivuorinen/gh-action-readme
+    description: "Auto-generate beautiful README and HTML documentation for GitHub Actions"
+    license: MIT
+    repository:
+      owner: ivuorinen
+      name: scoop-bucket
+      branch: main
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+
+# Docker images
+dockers:
+  - image_templates:
+      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-amd64"
+      - "ghcr.io/ivuorinen/gh-action-readme:latest-amd64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source=https://github.com/ivuorinen/gh-action-readme"
+      - "--platform=linux/amd64"
+    goos: linux
+    goarch: amd64
+
+  - image_templates:
+      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-arm64"
+      - "ghcr.io/ivuorinen/gh-action-readme:latest-arm64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source=https://github.com/ivuorinen/gh-action-readme"
+      - "--platform=linux/arm64"
+    goos: linux
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-amd64"
+      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/ivuorinen/gh-action-readme:latest"
+    image_templates:
+      - "ghcr.io/ivuorinen/gh-action-readme:latest-amd64"
+      - "ghcr.io/ivuorinen/gh-action-readme:latest-arm64"
+
+# Signing
+signs:
+  - cmd: cosign
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+      - --yes
+    artifacts: checksum
+    output: true
+
+# SBOM generation
+sboms:
+  - artifacts: archive
+  - id: source
+    artifacts: source
+
+# Announce
+announce:
+  skip: '{{gt .Patch 0}}'
+

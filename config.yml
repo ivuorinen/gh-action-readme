@@ -1,0 +1,13 @@
+# Default configuration for gh-action-readme
+defaults:
+  name: "GitHub Action"
+  description: "A reusable GitHub Action."
+  runs: {}
+  branding:
+    icon: "activity"
+    color: "blue"
+template: "templates/readme.tmpl"
+header: "templates/header.tmpl"
+footer: "templates/footer.tmpl"
+schema: "schemas/action.schema.json"
+
