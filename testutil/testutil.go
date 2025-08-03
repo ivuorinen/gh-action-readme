@@ -192,6 +192,30 @@ branding:
 `, name, description, inputsYAML.String())
 }
 
+// SetupTestTemplates creates template files for testing.
+func SetupTestTemplates(t *testing.T, dir string) {
+	t.Helper()
+
+	// Create templates directory structure
+	templatesDir := filepath.Join(dir, "templates")
+	themesDir := filepath.Join(templatesDir, "themes")
+
+	// Create directories
+	for _, theme := range []string{"github", "gitlab", "minimal", "professional"} {
+		themeDir := filepath.Join(themesDir, theme)
+		if err := os.MkdirAll(themeDir, 0755); err != nil {
+			t.Fatalf("failed to create theme dir %s: %v", themeDir, err)
+		}
+		// Write theme template
+		templatePath := filepath.Join(themeDir, "readme.tmpl")
+		WriteTestFile(t, templatePath, SimpleTemplate)
+	}
+
+	// Create default template
+	defaultTemplatePath := filepath.Join(templatesDir, "readme.tmpl")
+	WriteTestFile(t, defaultTemplatePath, SimpleTemplate)
+}
+
 // CreateCompositeAction creates a test composite action with dependencies.
 func CreateCompositeAction(name, description string, steps []string) string {
 	var stepsYAML bytes.Buffer

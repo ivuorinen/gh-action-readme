@@ -4,7 +4,6 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -28,7 +27,6 @@ type Cache struct {
 	ticker     *time.Ticker     // Cleanup ticker
 	done       chan bool        // Cleanup shutdown
 	defaultTTL time.Duration    // Default TTL for entries
-	errorLog   bool             // Whether to log errors (default: true)
 }
 
 // Config represents cache configuration.
@@ -69,7 +67,6 @@ func NewCache(config *Config) (*Cache, error) {
 		data:       make(map[string]Entry),
 		defaultTTL: config.DefaultTTL,
 		done:       make(chan bool),
-		errorLog:   true, // Enable error logging by default
 	}
 
 	// Load existing cache from disk
@@ -267,12 +264,11 @@ func (c *Cache) saveToDisk() error {
 	return nil
 }
 
-// saveToDiskAsync saves the cache to disk asynchronously with error logging.
+// saveToDiskAsync saves the cache to disk asynchronously.
+// Cache save failures are non-critical and silently ignored.
 func (c *Cache) saveToDiskAsync() {
 	go func() {
-		if err := c.saveToDisk(); err != nil && c.errorLog {
-			log.Printf("gh-action-readme cache: failed to save cache to disk: %v", err)
-		}
+		_ = c.saveToDisk() // Ignore errors - cache save failures are non-critical
 	}()
 }
 

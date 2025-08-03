@@ -18,18 +18,8 @@ func GetCurrentDir() (string, error) {
 	return currentDir, nil
 }
 
-// GetCurrentDirOrExit gets current working directory or exits with error.
-func GetCurrentDirOrExit(output *internal.ColoredOutput) string {
-	currentDir, err := GetCurrentDir()
-	if err != nil {
-		output.Error("Error getting current directory: %v", err)
-		os.Exit(1)
-	}
-	return currentDir
-}
-
 // SetupGeneratorContext creates a generator with proper setup and current directory.
-func SetupGeneratorContext(config *internal.AppConfig) (*internal.Generator, string) {
+func SetupGeneratorContext(config *internal.AppConfig) (*internal.Generator, string, error) {
 	generator := internal.NewGenerator(config)
 	output := generator.Output
 
@@ -37,24 +27,11 @@ func SetupGeneratorContext(config *internal.AppConfig) (*internal.Generator, str
 		output.Info("Using config: %+v", config)
 	}
 
-	currentDir := GetCurrentDirOrExit(output)
-	return generator, currentDir
-}
-
-// DiscoverAndValidateFiles discovers action files with error handling.
-func DiscoverAndValidateFiles(generator *internal.Generator, currentDir string, recursive bool) []string {
-	actionFiles, err := generator.DiscoverActionFiles(currentDir, recursive)
+	currentDir, err := GetCurrentDir()
 	if err != nil {
-		generator.Output.Error("Error discovering action files: %v", err)
-		os.Exit(1)
+		return nil, "", err
 	}
-
-	if len(actionFiles) == 0 {
-		generator.Output.Error("No action.yml or action.yaml files found in %s", currentDir)
-		generator.Output.Info("Please run this command in a directory containing GitHub Action files.")
-		os.Exit(1)
-	}
-	return actionFiles
+	return generator, currentDir, nil
 }
 
 // FindGitRepoRoot finds git repository root with standardized error handling.

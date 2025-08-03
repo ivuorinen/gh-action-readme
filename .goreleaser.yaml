@@ -117,14 +117,17 @@ release:
 
     #### Download Binary
     ```bash
+    # Set base URL for downloads
+    BASE_URL="https://github.com/ivuorinen/gh-action-readme/releases/download/{{ .Tag }}"
+
     # Linux x86_64
-    curl -L https://github.com/ivuorinen/gh-action-readme/releases/download/{{ .Tag }}/gh-action-readme_Linux_x86_64.tar.gz | tar -xz
+    curl -L $BASE_URL/gh-action-readme_Linux_x86_64.tar.gz | tar -xz
 
     # macOS x86_64
-    curl -L https://github.com/ivuorinen/gh-action-readme/releases/download/{{ .Tag }}/gh-action-readme_Darwin_x86_64.tar.gz | tar -xz
+    curl -L $BASE_URL/gh-action-readme_Darwin_x86_64.tar.gz | tar -xz
 
     # macOS ARM64 (Apple Silicon)
-    curl -L https://github.com/ivuorinen/gh-action-readme/releases/download/{{ .Tag }}/gh-action-readme_Darwin_arm64.tar.gz | tar -xz
+    curl -L $BASE_URL/gh-action-readme_Darwin_arm64.tar.gz | tar -xz
 
     # Windows x86_64
     # Download gh-action-readme_Windows_x86_64.zip and extract
@@ -252,4 +255,3 @@ sboms:
 # Announce
 announce:
   skip: '{{gt .Patch 0}}'
-

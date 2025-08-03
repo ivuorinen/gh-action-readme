@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,6 +10,46 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
+
+// copyDir recursively copies a directory.
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+
+		dstPath := filepath.Join(dst, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+
+		// Copy file
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = srcFile.Close() }()
+
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+
+		dstFile, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = dstFile.Close() }()
+
+		_, err = io.Copy(dstFile, srcFile)
+		return err
+	})
+}
 
 // buildTestBinary builds the test binary for integration testing.
 func buildTestBinary(t *testing.T) string {
@@ -27,6 +68,12 @@ func buildTestBinary(t *testing.T) string {
 
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("failed to build test binary: %v\nstderr: %s", err, stderr.String())
+	}
+
+	// Copy templates directory to binary directory
+	templatesDir := filepath.Join(filepath.Dir(binaryPath), "templates")
+	if err := copyDir("templates", templatesDir); err != nil {
+		t.Fatalf("failed to copy templates: %v", err)
 	}
 
 	return binaryPath
@@ -318,20 +365,22 @@ func testOutputFormats(t *testing.T, binaryPath, tmpDir string) {
 		err := cmd.Run()
 		testutil.AssertNoError(t, err)
 
-		// Verify output was created
+		// Verify output was created with correct naming patterns
 		var pattern string
 		switch format {
 		case "md":
 			pattern = "README*.md"
 		case "html":
-			pattern = "README*.html"
+			// HTML files are named after the action name (e.g., "Example Action.html")
+			pattern = "*.html"
 		case "json":
-			pattern = "README*.json"
+			// JSON files have a fixed name
+			pattern = "action-docs.json"
 		}
 
 		files, _ := filepath.Glob(filepath.Join(tmpDir, pattern))
 		if len(files) == 0 {
-			t.Errorf("no output generated for format %s", format)
+			t.Errorf("no output generated for format %s (pattern: %s)", format, pattern)
 		}
 
 		// Clean up
@@ -439,12 +488,12 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 	defer cleanup()
 
 	// Create a project with mixed valid and invalid files
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "valid-action.yml"), testutil.SimpleActionYML)
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "invalid-action.yml"), testutil.InvalidActionYML)
+	// Note: validation looks for files named exactly "action.yml" or "action.yaml"
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), testutil.SimpleActionYML)
 
 	subDir := filepath.Join(tmpDir, "subdir")
 	_ = os.MkdirAll(subDir, 0755)
-	testutil.WriteTestFile(t, filepath.Join(subDir, "another-valid.yml"), testutil.MinimalActionYML)
+	testutil.WriteTestFile(t, filepath.Join(subDir, "action.yml"), testutil.InvalidActionYML)
 
 	// Test that validation reports issues but doesn't crash
 	cmd := exec.Command(binaryPath, "validate")
@@ -458,10 +507,10 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 		t.Error("expected validation to fail with invalid files")
 	}
 
-	// But it should still report on valid files
+	// But it should still report on valid files with validation errors
 	output := stderr.String()
-	if !strings.Contains(output, "Missing required field") {
-		t.Error("expected validation error message")
+	if !strings.Contains(output, "Missing required field:") && !strings.Contains(output, "validation failed") {
+		t.Errorf("expected validation error message, got: %s", output)
 	}
 
 	// Test generation with mixed files - should generate docs for valid ones

@@ -41,11 +41,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      
+
       - name: {{.Name}}
         uses: your-org/{{.Name | lower | replace " " "-"}}@v1
         {{if .Inputs}}with:
@@ -103,7 +103,7 @@ This action provides the following outputs that can be used in subsequent workfl
 - name: {{.Name}}
   id: action-step
   uses: your-org/{{.Name | lower | replace " " "-"}}@v1
-  
+
 - name: Use Output
   run: |
   {{- range $key, $output := .Outputs}}

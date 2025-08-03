@@ -1,0 +1,25 @@
+# Gitleaks ignore patterns
+# https://github.com/gitleaks/gitleaks
+
+# Ignore test files with dummy secrets
+**/testdata/**
+**/test/**
+**/*_test.go
+
+# Ignore example configurations
+**/examples/**
+**/docs/**
+
+# Common false positives
+# Generic test tokens
+test_token_*
+dummy_*
+fake_*
+example_*
+
+# GitHub Actions test tokens
+GITHUB_TOKEN=fake_token
+GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+# Ignore specific lines (use commit:file:line format)
+# abc123:path/to/file.go:42

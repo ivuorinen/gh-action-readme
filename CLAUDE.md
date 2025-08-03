@@ -151,4 +151,3 @@ Add to `templateFuncs()` in `internal_template.go:19`
 
 **Status: PRODUCTION READY ✅**
 *All core features implemented and tested.*
-

@@ -1,0 +1,44 @@
+# Ignore patterns for eclint
+
+# Build artifacts and binaries
+gh-action-readme
+dist/
+coverage.out
+
+# Git directory
+.git/
+
+# Node modules
+node_modules/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Binary files
+*.exe
+*.bin
+*.dll
+*.so
+*.dylib
+
+# Cache directories
+.cache/
+.npm/
+
+# Settings files that may contain secrets or be machine-specific
+.claude/settings.local.json
+
+# Binary executable
+gh-action-readme

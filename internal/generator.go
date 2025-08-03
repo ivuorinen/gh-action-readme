@@ -102,6 +102,18 @@ func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error
 
 	validationResult := ValidateActionYML(action)
 	if len(validationResult.MissingFields) > 0 {
+		// Check for critical validation errors that cannot be fixed with defaults
+		for _, field := range validationResult.MissingFields {
+			if field == "runs.using" {
+				// Invalid runtime - cannot be fixed with defaults, must fail
+				return nil, fmt.Errorf(
+					"action file %s has invalid runtime configuration: %v",
+					actionPath,
+					validationResult.MissingFields,
+				)
+			}
+		}
+
 		if g.Config.Verbose {
 			g.Output.Warning("Missing fields in %s: %v", actionPath, validationResult.MissingFields)
 		}
@@ -116,7 +128,7 @@ func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error
 
 // determineOutputDir calculates the output directory for generated files.
 func (g *Generator) determineOutputDir(actionPath string) string {
-	if g.Config.OutputDir == "." {
+	if g.Config.OutputDir == "" || g.Config.OutputDir == "." {
 		return filepath.Dir(actionPath)
 	}
 	return g.Config.OutputDir
@@ -142,7 +154,7 @@ func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath st
 func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
 	// Use theme-based template if theme is specified, otherwise use explicit template path
 	templatePath := g.Config.Template
-	if g.Config.Theme != "" && g.Config.Theme != "default" {
+	if g.Config.Theme != "" {
 		templatePath = resolveThemeTemplate(g.Config.Theme)
 	}
 
@@ -329,8 +341,18 @@ func (g *Generator) ValidateFiles(paths []string) error {
 		g.reportValidationResults(allResults, errors)
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("validation failed for %d files", len(errors))
+	// Count validation failures (files with missing required fields)
+	validationFailures := 0
+	for _, result := range allResults {
+		// Each result starts with "file: <path>" so check if there are actual missing fields beyond that
+		if len(result.MissingFields) > 1 {
+			validationFailures++
+		}
+	}
+
+	if len(errors) > 0 || validationFailures > 0 {
+		totalFailures := len(errors) + validationFailures
+		return fmt.Errorf("validation failed for %d files", totalFailures)
 	}
 	return nil
 }

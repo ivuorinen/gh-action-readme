@@ -18,4 +18,3 @@ Thank you for considering contributing!
 ## Code of Conduct
 
 This project follows an inclusive, respectful Code of Conduct. Please treat everyone with respect and kindness.
-

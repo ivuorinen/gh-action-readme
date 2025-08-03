@@ -1,0 +1,23 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+	# Example: ignore a specific vulnerability
+	# SNYK-JS-LODASH-567746:
+	#   - '*':
+	#       reason: No upgrade path available
+	#       expires: 2024-12-31T23:59:59.999Z
+
+# patches apply the minimum changes required to fix a vulnerability
+patch: {}
+
+# Language settings
+language-settings:
+	go:
+		# Enable Go module support
+		enableGoModules: true
+		# Allow minor and patch version upgrades
+		allowedUpgrades:
+			- minor
+			- patch

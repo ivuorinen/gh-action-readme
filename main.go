@@ -17,13 +17,13 @@ import (
 )
 
 var (
-	// Version information (set by GoReleaser)
+	// Version information (set by GoReleaser).
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
 	builtBy = "unknown"
 
-	// Application state
+	// Application state.
 	globalConfig *internal.AppConfig
 	configFile   string
 	verbose      bool
@@ -31,9 +31,6 @@ var (
 )
 
 // Helper functions to reduce duplication.
-func getCurrentDirOrExit(output *internal.ColoredOutput) string {
-	return helpers.GetCurrentDirOrExit(output)
-}
 
 func createOutputManager(quiet bool) *internal.ColoredOutput {
 	return internal.NewColoredOutput(quiet)
@@ -146,7 +143,13 @@ func newSchemaCmd() *cobra.Command {
 }
 
 func genHandler(cmd *cobra.Command, _ []string) {
-	currentDir := getCurrentDirOrExit(createOutputManager(globalConfig.Quiet))
+	output := createOutputManager(globalConfig.Quiet)
+	currentDir, err := helpers.GetCurrentDir()
+	if err != nil {
+		output.Error("Error getting current directory: %v", err)
+		os.Exit(1)
+	}
+
 	repoRoot := helpers.FindGitRepoRoot(currentDir)
 	config := loadGenConfig(repoRoot, currentDir)
 	applyGlobalFlags(config)
@@ -233,8 +236,25 @@ func processActionFiles(generator *internal.Generator, actionFiles []string) {
 }
 
 func validateHandler(_ *cobra.Command, _ []string) {
-	generator, currentDir := helpers.SetupGeneratorContext(globalConfig)
-	actionFiles := helpers.DiscoverAndValidateFiles(generator, currentDir, true) // Recursive for validation
+	currentDir, err := helpers.GetCurrentDir()
+	if err != nil {
+		output := createOutputManager(globalConfig.Quiet)
+		output.Error("Error getting current directory: %v", err)
+		os.Exit(1)
+	}
+
+	generator := internal.NewGenerator(globalConfig)
+	actionFiles, err := generator.DiscoverActionFiles(currentDir, true) // Recursive for validation
+	if err != nil {
+		generator.Output.Error("Error discovering action files: %v", err)
+		os.Exit(1)
+	}
+
+	if len(actionFiles) == 0 {
+		generator.Output.Error("No action.yml or action.yaml files found in %s", currentDir)
+		generator.Output.Info("Please run this command in a directory containing GitHub Action files.")
+		os.Exit(1)
+	}
 
 	// Validate the discovered files
 	if err := generator.ValidateFiles(actionFiles); err != nil {
@@ -246,10 +266,11 @@ func validateHandler(_ *cobra.Command, _ []string) {
 }
 
 func schemaHandler(_ *cobra.Command, _ []string) {
+	output := internal.NewColoredOutput(globalConfig.Quiet)
 	if globalConfig.Verbose {
-		fmt.Printf("Using schema: %s\n", globalConfig.Schema)
+		output.Info("Using schema: %s", globalConfig.Schema)
 	}
-	fmt.Println("Schema: schemas/action.schema.json (replaceable, editable)")
+	output.Printf("Schema: schemas/action.schema.json (replaceable, editable)")
 }
 
 func newConfigCmd() *cobra.Command {
@@ -257,14 +278,15 @@ func newConfigCmd() *cobra.Command {
 		Use:   "config",
 		Short: "Configuration management commands",
 		Run: func(_ *cobra.Command, _ []string) {
+			output := internal.NewColoredOutput(globalConfig.Quiet)
 			path, err := internal.GetConfigPath()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error getting config path: %v\n", err)
+				output.Error("Error getting config path: %v", err)
 				return
 			}
-			fmt.Printf("Configuration file location: %s\n", path)
+			output.Info("Configuration file location: %s", path)
 			if globalConfig.Verbose {
-				fmt.Printf("Current config: %+v\n", globalConfig)
+				output.Info("Current config: %+v", globalConfig)
 			}
 		},
 	}
@@ -441,7 +463,12 @@ func newCacheCmd() *cobra.Command {
 
 func depsListHandler(_ *cobra.Command, _ []string) {
 	output := createOutputManager(globalConfig.Quiet)
-	currentDir := getCurrentDirOrExit(output)
+	currentDir, err := helpers.GetCurrentDir()
+	if err != nil {
+		output.Error("Error getting current directory: %v", err)
+		os.Exit(1)
+	}
+
 	generator := internal.NewGenerator(globalConfig)
 	actionFiles := discoverDepsActionFiles(generator, output, currentDir)
 
@@ -461,10 +488,21 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 // discoverDepsActionFiles discovers action files for dependency analysis.
 func discoverDepsActionFiles(
 	generator *internal.Generator,
-	_ *internal.ColoredOutput,
+	output *internal.ColoredOutput,
 	currentDir string,
 ) []string {
-	return helpers.DiscoverAndValidateFiles(generator, currentDir, true)
+	actionFiles, err := generator.DiscoverActionFiles(currentDir, true)
+	if err != nil {
+		output.Error("Error discovering action files: %v", err)
+		os.Exit(1)
+	}
+
+	if len(actionFiles) == 0 {
+		output.Error("No action.yml or action.yaml files found in %s", currentDir)
+		output.Info("Please run this command in a directory containing GitHub Action files.")
+		os.Exit(1)
+	}
+	return actionFiles
 }
 
 // analyzeDependencies analyzes and displays dependencies.
@@ -509,7 +547,12 @@ func analyzeActionFileDeps(output *internal.ColoredOutput, actionFile string, an
 
 func depsSecurityHandler(_ *cobra.Command, _ []string) {
 	output := createOutputManager(globalConfig.Quiet)
-	currentDir := getCurrentDirOrExit(output)
+	currentDir, err := helpers.GetCurrentDir()
+	if err != nil {
+		output.Error("Error getting current directory: %v", err)
+		os.Exit(1)
+	}
+
 	generator := internal.NewGenerator(globalConfig)
 	actionFiles := discoverDepsActionFiles(generator, output, currentDir)
 
@@ -595,7 +638,12 @@ func displayFloatingDeps(output *internal.ColoredOutput, currentDir string, floa
 
 func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 	output := createOutputManager(globalConfig.Quiet)
-	currentDir := getCurrentDirOrExit(output)
+	currentDir, err := helpers.GetCurrentDir()
+	if err != nil {
+		output.Error("Error getting current directory: %v", err)
+		os.Exit(1)
+	}
+
 	generator := internal.NewGenerator(globalConfig)
 	actionFiles := discoverDepsActionFiles(generator, output, currentDir)
 
@@ -677,7 +725,7 @@ func displayOutdatedResults(output *internal.ColoredOutput, allOutdated []depend
 
 func depsUpgradeHandler(cmd *cobra.Command, _ []string) {
 	output := createOutputManager(globalConfig.Quiet)
-	currentDir, err := os.Getwd()
+	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
 		output.Error("Error getting current directory: %v", err)
 		os.Exit(1)

@@ -62,6 +62,12 @@ func DetectRepository(repoRoot string) (*RepoInfo, error) {
 		return &RepoInfo{IsGitRepo: false}, nil
 	}
 
+	// Check if this is actually a git repository
+	gitPath := filepath.Join(repoRoot, ".git")
+	if _, err := os.Stat(gitPath); os.IsNotExist(err) {
+		return &RepoInfo{IsGitRepo: false}, nil
+	}
+
 	info := &RepoInfo{IsGitRepo: true}
 
 	// Try to get remote URL

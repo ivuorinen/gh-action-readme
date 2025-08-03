@@ -41,11 +41,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      
+
       - name: Composite Example Action
         uses: your-org/ @v1
         with:
@@ -113,7 +113,7 @@ This action provides the following outputs that can be used in subsequent workfl
 - name: Composite Example Action
   id: action-step
   uses: your-org/ @v1
-  
+
 - name: Use Output
   run: |
     echo "build-result: \${{ steps.action-step.outputs.build-result }}"

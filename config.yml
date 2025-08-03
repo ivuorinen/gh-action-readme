@@ -10,4 +10,3 @@ template: "templates/readme.tmpl"
 header: "templates/header.tmpl"
 footer: "templates/footer.tmpl"
 schema: "schemas/action.schema.json"
-

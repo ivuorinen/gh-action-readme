@@ -38,8 +38,8 @@ func TestInitConfig(t *testing.T) {
 				Theme:        "default",
 				OutputFormat: "md",
 				OutputDir:    ".",
-				Template:     "",
-				Schema:       "schemas/action.schema.json",
+				Template:     "templates/readme.tmpl",
+				Schema:       "schemas/schema.json",
 				Verbose:      false,
 				Quiet:        false,
 				GitHubToken:  "",
@@ -135,7 +135,8 @@ func TestLoadConfiguration(t *testing.T) {
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
 				_ = os.MkdirAll(globalConfigDir, 0755)
-				testutil.WriteTestFile(t, filepath.Join(globalConfigDir, "config.yml"), `
+				globalConfigPath := filepath.Join(globalConfigDir, "config.yaml")
+				testutil.WriteTestFile(t, globalConfigPath, `
 theme: default
 output_format: md
 github_token: global-token
@@ -152,12 +153,12 @@ output_format: html
 				// Create current directory with action-specific config
 				currentDir := filepath.Join(repoRoot, "action")
 				_ = os.MkdirAll(currentDir, 0755)
-				testutil.WriteTestFile(t, filepath.Join(currentDir, ".ghreadme.yaml"), `
+				testutil.WriteTestFile(t, filepath.Join(currentDir, "config.yaml"), `
 theme: professional
 output_dir: output
 `)
 
-				return "", repoRoot, currentDir
+				return globalConfigPath, repoRoot, currentDir
 			},
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				// Should have action-level overrides
@@ -206,7 +207,8 @@ github_token: config-token
 				// Create XDG-compliant config
 				configDir := filepath.Join(xdgConfigHome, "gh-action-readme")
 				_ = os.MkdirAll(configDir, 0755)
-				testutil.WriteTestFile(t, filepath.Join(configDir, "config.yml"), `
+				configPath := filepath.Join(configDir, "config.yaml")
+				testutil.WriteTestFile(t, configPath, `
 theme: github
 verbose: true
 `)
@@ -215,7 +217,7 @@ verbose: true
 					_ = os.Unsetenv("XDG_CONFIG_HOME")
 				})
 
-				return "", tempDir, tempDir
+				return configPath, tempDir, tempDir
 			},
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				testutil.AssertEqual(t, "github", config.Theme)
@@ -365,8 +367,13 @@ func TestWriteDefaultConfig(t *testing.T) {
 
 	// Check that config file was created
 	configPath, _ := GetConfigPath()
+	t.Logf("Expected config path: %s", configPath)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Errorf("config file was not created at: %s", configPath)
+		// List what files were actually created
+		if files, err := os.ReadDir(tmpDir); err == nil {
+			t.Logf("Files in tmpDir: %v", files)
+		}
 	}
 
 	// Verify config file content
@@ -524,7 +531,7 @@ func TestConfigMerging(t *testing.T) {
 
 	globalConfigDir := filepath.Join(tmpDir, ".config", "gh-action-readme")
 	_ = os.MkdirAll(globalConfigDir, 0755)
-	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, "config.yml"), `
+	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, "config.yaml"), `
 theme: default
 output_format: md
 github_token: base-token
@@ -539,22 +546,33 @@ output_format: html
 verbose: true
 `)
 
-	// Set HOME to temp directory
+	// Set HOME and XDG_CONFIG_HOME to temp directory
 	originalHome := os.Getenv("HOME")
+	originalXDGConfig := os.Getenv("XDG_CONFIG_HOME")
 	_ = os.Setenv("HOME", tmpDir)
+	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
 	defer func() {
 		if originalHome != "" {
 			_ = os.Setenv("HOME", originalHome)
+		} else {
+			_ = os.Unsetenv("HOME")
+		}
+		if originalXDGConfig != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", originalXDGConfig)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
 		}
 	}()
 
-	config, err := LoadConfiguration("", repoRoot, repoRoot)
+	// Use the specific config file path instead of relying on XDG discovery
+	configPath := filepath.Join(tmpDir, ".config", "gh-action-readme", "config.yaml")
+	config, err := LoadConfiguration(configPath, repoRoot, repoRoot)
 	testutil.AssertNoError(t, err)
 
 	// Should have merged values
-	testutil.AssertEqual(t, "github", config.Theme)                      // from repo config
-	testutil.AssertEqual(t, "html", config.OutputFormat)                 // from repo config
-	testutil.AssertEqual(t, true, config.Verbose)                        // from repo config
-	testutil.AssertEqual(t, "base-token", config.GitHubToken)            // from global config
-	testutil.AssertEqual(t, "schemas/action.schema.json", config.Schema) // default value
+	testutil.AssertEqual(t, "github", config.Theme)               // from repo config
+	testutil.AssertEqual(t, "html", config.OutputFormat)          // from repo config
+	testutil.AssertEqual(t, true, config.Verbose)                 // from repo config
+	testutil.AssertEqual(t, "base-token", config.GitHubToken)     // from global config
+	testutil.AssertEqual(t, "schemas/schema.json", config.Schema) // default value
 }

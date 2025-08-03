@@ -13,10 +13,17 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
       - name: Install dependencies
         run: go mod tidy
+      - name: Setup Node.js for EditorConfig tools
+        uses: actions/setup-node@8257c7bb9bd8cefc6ddbc22fb862ec83f2e01c2c # v4.1.0
+        with:
+          node-version: '18'
+      - name: Install EditorConfig tools
+        run: npm install -g eclint
+      - name: Check EditorConfig compliance
+        run: eclint check .
       - name: Run unit tests
         run: go test ./...
       - name: Example Action Readme Generation
         run: |
           go run . gen --config config.yaml
         working-directory: ./testdata/example-action
-

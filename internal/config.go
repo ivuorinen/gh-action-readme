@@ -148,6 +148,11 @@ func resolveTemplatePath(templatePath string) string {
 		return templatePath
 	}
 
+	// Check if template exists in current directory first (for tests)
+	if _, err := os.Stat(templatePath); err == nil {
+		return templatePath
+	}
+
 	binaryDir, err := validation.GetBinaryDir()
 	if err != nil {
 		// Fallback to current working directory if we can't determine binary location
@@ -169,6 +174,8 @@ func resolveThemeTemplate(theme string) string {
 	var templatePath string
 
 	switch theme {
+	case "default":
+		templatePath = "templates/readme.tmpl"
 	case "github":
 		templatePath = "templates/themes/github/readme.tmpl"
 	case "gitlab":
@@ -177,9 +184,12 @@ func resolveThemeTemplate(theme string) string {
 		templatePath = "templates/themes/minimal/readme.tmpl"
 	case "professional":
 		templatePath = "templates/themes/professional/readme.tmpl"
+	case "":
+		// Empty theme should return empty path
+		return ""
 	default:
-		// Use the original default template
-		templatePath = "templates/readme.tmpl"
+		// Unknown theme should return empty path
+		return ""
 	}
 
 	return resolveTemplatePath(templatePath)
@@ -439,6 +449,14 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 		MergeConfigs(config, actionConfig, false) // No tokens in action config
 	}
 
+	// 6. Apply environment variable overrides for GitHub token
+	// Check environment variables directly with higher priority
+	if token := os.Getenv("GH_README_GITHUB_TOKEN"); token != "" {
+		config.GitHubToken = token
+	} else if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		config.GitHubToken = token
+	}
+
 	return config, nil
 }
 
@@ -518,12 +536,15 @@ func InitConfig(configFile string) (*AppConfig, error) {
 
 // WriteDefaultConfig writes a default configuration file to the XDG config directory.
 func WriteDefaultConfig() error {
-	configDir, err := xdg.ConfigFile("gh-action-readme")
+	configFile, err := xdg.ConfigFile("gh-action-readme/config.yaml")
 	if err != nil {
-		return fmt.Errorf("failed to get XDG config directory: %w", err)
+		return fmt.Errorf("failed to get XDG config file path: %w", err)
 	}
 
-	configFile := filepath.Join(filepath.Dir(configDir), "config.yaml")
+	// Ensure the directory exists
+	if err := os.MkdirAll(filepath.Dir(configFile), 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
 
 	v := viper.New()
 	v.SetConfigFile(configFile)

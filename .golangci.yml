@@ -3,7 +3,7 @@ version: "2"
 
 run:
   timeout: 5m
-  go: "1.22"
+  go: "1.23"
 
 linters:
   default: standard
@@ -72,4 +72,3 @@ issues:
   max-issues-per-linter: 50
   max-same-issues: 3
   fix: true
-

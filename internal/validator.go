@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"strings"
 )
 
 // ValidationResult holds the results of action.yml validation.
@@ -33,6 +34,23 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 			result.Suggestions,
 			"Add 'runs:' section with 'using: node20' or 'using: docker' and specify the main file",
 		)
+	} else {
+		// Validate the runs section content
+		if using, ok := action.Runs["using"].(string); ok {
+			if !isValidRuntime(using) {
+				result.MissingFields = append(result.MissingFields, "runs.using")
+				result.Suggestions = append(
+					result.Suggestions,
+					fmt.Sprintf("Invalid runtime '%s'. Valid runtimes: node12, node16, node20, docker, composite", using),
+				)
+			}
+		} else {
+			result.MissingFields = append(result.MissingFields, "runs.using")
+			result.Suggestions = append(
+				result.Suggestions,
+				"Missing 'using' field in runs section. Specify 'using: node20', 'using: docker', or 'using: composite'",
+			)
+		}
 	}
 
 	// Add warnings for optional but recommended fields
@@ -52,12 +70,24 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 		result.Suggestions = append(result.Suggestions, "Consider adding 'outputs:' if your action produces results")
 	}
 
-	// Validation feedback
-	if len(result.MissingFields) == 0 {
-		fmt.Println("Validation passed.")
-	} else {
-		fmt.Printf("Missing required fields: %v\n", result.MissingFields)
+	return result
+}
+
+// isValidRuntime checks if the given runtime is valid for GitHub Actions.
+func isValidRuntime(runtime string) bool {
+	validRuntimes := []string{
+		"node12",    // Legacy Node.js runtime (deprecated)
+		"node16",    // Legacy Node.js runtime (deprecated)
+		"node20",    // Current Node.js runtime
+		"docker",    // Docker container runtime
+		"composite", // Composite action runtime
 	}
 
-	return result
+	runtime = strings.TrimSpace(strings.ToLower(runtime))
+	for _, valid := range validRuntimes {
+		if runtime == valid {
+			return true
+		}
+	}
+	return false
 }

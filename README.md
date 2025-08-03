@@ -1,6 +1,13 @@
 # gh-action-readme
 
-![GitHub](https://img.shields.io/badge/GitHub%20Action-Documentation%20Generator-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8) ![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)
+![GitHub](https://img.shields.io/badge/GitHub%20Action-Documentation%20Generator-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Go](https://img.shields.io/badge/Go-1.23+-00ADD8)
+![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)
+
+[![Security](https://img.shields.io/badge/security-hardened-brightgreen)](SECURITY.md)
+[![Go Vulnerability Check](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml)
+[![CodeQL](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml)
 
 > **The definitive CLI tool for generating beautiful documentation from GitHub Actions `action.yml` files**
 
@@ -250,6 +257,34 @@ go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
 ```
 
+## 🔒 Security
+
+gh-action-readme follows security best practices with comprehensive vulnerability scanning and protection measures:
+
+### Automated Security Scanning
+- **govulncheck**: Go-specific vulnerability detection
+- **Snyk**: Dependency vulnerability analysis
+- **Trivy**: Container and filesystem security scanning
+- **gitleaks**: Secrets detection and prevention
+- **CodeQL**: Static code analysis for security issues
+- **Dependabot**: Automated dependency updates
+
+### Local Security Testing
+```bash
+# Run all security scans
+make security
+
+# Individual security checks
+make vulncheck  # Go vulnerability scanning
+make snyk       # Dependency analysis
+make trivy      # Filesystem scanning
+make gitleaks   # Secrets detection
+make audit      # Comprehensive security audit
+```
+
+### Security Policy
+For reporting security vulnerabilities, please see our [Security Policy](SECURITY.md).
+
 ## 🤝 Contributing
 
 Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -287,4 +322,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 <div align="center">
   <sub>Built with ❤️ by <a href="https://github.com/ivuorinen">ivuorinen</a></sub>
 </div>
-

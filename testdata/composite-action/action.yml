@@ -21,19 +21,19 @@ runs:
       with:
         fetch-depth: 0
         token: ${{ github.token }}
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
-    
+
     - name: Install dependencies
       shell: bash
       run: |
         cd ${{ inputs.working-directory }}
         npm ci
-    
+
     - name: Run tests
       shell: bash
       run: |
@@ -41,7 +41,7 @@ runs:
         echo "Tests completed successfully"
       env:
         NODE_ENV: test
-    
+
     - name: Build project
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       id: build

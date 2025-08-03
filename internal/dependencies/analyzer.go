@@ -108,6 +108,18 @@ func (a *Analyzer) AnalyzeActionFile(actionPath string) ([]Dependency, error) {
 
 	// Only analyze composite actions
 	if action.Runs.Using != compositeUsing {
+		// Check if it's a valid action type
+		validTypes := []string{"node20", "node16", "node12", "docker", "composite"}
+		isValid := false
+		for _, validType := range validTypes {
+			if action.Runs.Using == validType {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return nil, fmt.Errorf("invalid action runtime: %s", action.Runs.Using)
+		}
 		return []Dependency{}, nil // No dependencies for non-composite actions
 	}
 
@@ -148,7 +160,7 @@ func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependen
 
 	// Build dependency
 	dep := &Dependency{
-		Name:          step.Name,
+		Name:          fmt.Sprintf("%s/%s", owner, repo),
 		Uses:          step.Uses,
 		Version:       version,
 		VersionType:   versionType,
@@ -263,6 +275,10 @@ func (a *Analyzer) isSemanticVersion(version string) bool {
 // isVersionPinned checks if a semantic version is pinned to a specific version.
 func (a *Analyzer) isVersionPinned(version string) bool {
 	// Consider it pinned if it specifies patch version (v1.2.3) or is a commit SHA
+	// Also check for full commit SHAs (40 chars)
+	if len(version) == 40 {
+		return true
+	}
 	re := regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
 	return re.MatchString(version)
 }
@@ -325,31 +341,68 @@ func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, er
 
 	// Check cache first
 	cacheKey := fmt.Sprintf("latest:%s/%s", owner, repo)
-	if cached, exists := a.Cache.Get(cacheKey); exists {
-		if versionInfo, ok := cached.(map[string]string); ok {
-			return versionInfo["version"], versionInfo["sha"], nil
-		}
-	}
-
-	// Try to get latest release first
-	release, _, err := a.GitHubClient.Repositories.GetLatestRelease(ctx, owner, repo)
-	if err == nil && release.GetTagName() != "" {
-		// Get the commit SHA for this tag
-		tag, _, tagErr := a.GitHubClient.Git.GetRef(ctx, owner, repo, "tags/"+release.GetTagName())
-		sha := ""
-		if tagErr == nil && tag.GetObject() != nil {
-			sha = tag.GetObject().GetSHA()
-		}
-
-		version := release.GetTagName()
-		// Cache the result
-		versionInfo := map[string]string{"version": version, "sha": sha}
-		_ = a.Cache.SetWithTTL(cacheKey, versionInfo, 1*time.Hour)
-
+	if version, sha, found := a.getCachedVersion(cacheKey); found {
 		return version, sha, nil
 	}
 
-	// If no releases, try to get latest tags
+	// Try to get latest release first
+	if version, sha, err := a.getLatestRelease(ctx, owner, repo); err == nil {
+		a.cacheVersion(cacheKey, version, sha)
+		return version, sha, nil
+	}
+
+	// Fallback to latest tag
+	version, sha, err = a.getLatestTag(ctx, owner, repo)
+	if err != nil {
+		return "", "", err
+	}
+
+	a.cacheVersion(cacheKey, version, sha)
+	return version, sha, nil
+}
+
+// getCachedVersion retrieves version info from cache if available.
+func (a *Analyzer) getCachedVersion(cacheKey string) (version, sha string, found bool) {
+	if a.Cache == nil {
+		return "", "", false
+	}
+
+	cached, exists := a.Cache.Get(cacheKey)
+	if !exists {
+		return "", "", false
+	}
+
+	versionInfo, ok := cached.(map[string]string)
+	if !ok {
+		return "", "", false
+	}
+
+	return versionInfo["version"], versionInfo["sha"], true
+}
+
+// getLatestRelease fetches the latest release and its commit SHA.
+func (a *Analyzer) getLatestRelease(ctx context.Context, owner, repo string) (version, sha string, err error) {
+	release, _, err := a.GitHubClient.Repositories.GetLatestRelease(ctx, owner, repo)
+	if err != nil || release.GetTagName() == "" {
+		return "", "", fmt.Errorf("no release found")
+	}
+
+	version = release.GetTagName()
+	sha = a.getCommitSHAForTag(ctx, owner, repo, version)
+	return version, sha, nil
+}
+
+// getCommitSHAForTag retrieves the commit SHA for a given tag.
+func (a *Analyzer) getCommitSHAForTag(ctx context.Context, owner, repo, tagName string) string {
+	tag, _, err := a.GitHubClient.Git.GetRef(ctx, owner, repo, "tags/"+tagName)
+	if err != nil || tag.GetObject() == nil {
+		return ""
+	}
+	return tag.GetObject().GetSHA()
+}
+
+// getLatestTag fetches the most recent tag and its commit SHA.
+func (a *Analyzer) getLatestTag(ctx context.Context, owner, repo string) (version, sha string, err error) {
 	tags, _, err := a.GitHubClient.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{
 		PerPage: 10,
 	})
@@ -357,16 +410,18 @@ func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, er
 		return "", "", fmt.Errorf("no releases or tags found")
 	}
 
-	// Get the most recent tag
 	latestTag := tags[0]
-	version = latestTag.GetName()
-	sha = latestTag.GetCommit().GetSHA()
+	return latestTag.GetName(), latestTag.GetCommit().GetSHA(), nil
+}
 
-	// Cache the result
+// cacheVersion stores version information in cache with TTL.
+func (a *Analyzer) cacheVersion(cacheKey, version, sha string) {
+	if a.Cache == nil {
+		return
+	}
+
 	versionInfo := map[string]string{"version": version, "sha": sha}
 	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, 1*time.Hour)
-
-	return version, sha, nil
 }
 
 // compareVersions compares two version strings and returns the update type.
@@ -378,6 +433,11 @@ func (a *Analyzer) compareVersions(current, latest string) string {
 		return updateTypeNone
 	}
 
+	// Special case: floating major version (e.g., "4" -> "4.1.1") should be patch
+	if !strings.Contains(currentClean, ".") && strings.HasPrefix(latestClean, currentClean+".") {
+		return updateTypePatch
+	}
+
 	currentParts := a.parseVersionParts(currentClean)
 	latestParts := a.parseVersionParts(latestClean)
 
@@ -387,6 +447,7 @@ func (a *Analyzer) compareVersions(current, latest string) string {
 // parseVersionParts normalizes version string to 3-part semantic version.
 func (a *Analyzer) parseVersionParts(version string) []string {
 	parts := strings.Split(version, ".")
+	// For floating versions like "v4", treat as "v4.0.0" for comparison
 	for len(parts) < 3 {
 		parts = append(parts, "0")
 	}
@@ -404,7 +465,7 @@ func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) strin
 	if currentParts[2] != latestParts[2] {
 		return updateTypePatch
 	}
-	return updateTypePatch
+	return updateTypeNone
 }
 
 // GeneratePinnedUpdate creates a pinned update for a dependency.
@@ -516,10 +577,12 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 
 	// Check cache first
 	cacheKey := fmt.Sprintf("repo:%s/%s", owner, repo)
-	if cached, exists := a.Cache.Get(cacheKey); exists {
-		if repository, ok := cached.(*github.Repository); ok {
-			dep.Description = repository.GetDescription()
-			return nil
+	if a.Cache != nil {
+		if cached, exists := a.Cache.Get(cacheKey); exists {
+			if repository, ok := cached.(*github.Repository); ok {
+				dep.Description = repository.GetDescription()
+				return nil
+			}
 		}
 	}
 
@@ -530,7 +593,9 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 	}
 
 	// Cache the result with 1 hour TTL
-	_ = a.Cache.SetWithTTL(cacheKey, repository, 1*time.Hour) // Ignore cache errors
+	if a.Cache != nil {
+		_ = a.Cache.SetWithTTL(cacheKey, repository, 1*time.Hour) // Ignore cache errors
+	}
 
 	// Enrich dependency with API data
 	dep.Description = repository.GetDescription()

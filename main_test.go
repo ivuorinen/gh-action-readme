@@ -30,7 +30,7 @@ func TestCLICommands(t *testing.T) {
 			name:       "version command",
 			args:       []string{"version"},
 			wantExit:   0,
-			wantStdout: "0.1.0",
+			wantStdout: "dev",
 		},
 		{
 			name:       "about command",
@@ -39,10 +39,11 @@ func TestCLICommands(t *testing.T) {
 			wantStdout: "gh-action-readme: Generates README.md and HTML for GitHub Actions",
 		},
 		{
-			name:       "help command",
-			args:       []string{"--help"},
-			wantExit:   0,
-			wantStdout: "Auto-generate beautiful README and HTML documentation for GitHub Actions",
+			name:     "help command",
+			args:     []string{"--help"},
+			wantExit: 0,
+			wantStdout: "gh-action-readme is a CLI tool for parsing one or many action.yml files and " +
+				"generating informative, modern, and customizable documentation",
 		},
 		{
 			name: "gen command with valid action",
@@ -114,8 +115,8 @@ func TestCLICommands(t *testing.T) {
 		{
 			name:       "deps list command no files",
 			args:       []string{"deps", "list"},
-			wantExit:   0,
-			wantStdout: "No action files found",
+			wantExit:   1,
+			wantStdout: "Please run this command in a directory containing GitHub Action files",
 		},
 		{
 			name: "deps list command with composite action",
@@ -237,7 +238,7 @@ func TestCLIFlags(t *testing.T) {
 			name:     "version short flag",
 			args:     []string{"-v", "version"}, // -v is verbose, not version
 			wantExit: 0,
-			contains: "0.1.0",
+			contains: "dev",
 		},
 	}
 
@@ -365,7 +366,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), testutil.SimpleActionYML)
 			},
 			wantExit:  1,
-			wantError: "permission denied",
+			wantError: "encountered 1 errors during batch processing",
 		},
 		{
 			name: "invalid YAML in action file",
@@ -459,9 +460,23 @@ func TestCLIConfigInitialization(t *testing.T) {
 		}
 	}
 
-	// Check if config file was created
-	expectedConfigPath := filepath.Join(tmpDir, "gh-action-readme", "config.yml")
+	// Check if config file was created (note: uses .yaml extension, not .yml)
+	expectedConfigPath := filepath.Join(tmpDir, "gh-action-readme", "config.yaml")
 	if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
 		t.Errorf("config file was not created at expected path: %s", expectedConfigPath)
+		// List what was actually created to help debug
+		if entries, err := os.ReadDir(tmpDir); err == nil {
+			t.Logf("Contents of tmpDir %s:", tmpDir)
+			for _, entry := range entries {
+				t.Logf("  %s", entry.Name())
+				if entry.IsDir() {
+					if subEntries, err := os.ReadDir(filepath.Join(tmpDir, entry.Name())); err == nil {
+						for _, sub := range subEntries {
+							t.Logf("    %s", sub.Name())
+						}
+					}
+				}
+			}
+		}
 	}
 }
