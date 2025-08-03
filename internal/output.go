@@ -21,6 +21,11 @@ func NewColoredOutput(quiet bool) *ColoredOutput {
 	}
 }
 
+// IsQuiet returns whether the output is in quiet mode.
+func (co *ColoredOutput) IsQuiet() bool {
+	return co.Quiet
+}
+
 // Success prints a success message in green.
 func (co *ColoredOutput) Success(format string, args ...any) {
 	if co.Quiet {

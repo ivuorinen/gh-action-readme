@@ -100,49 +100,106 @@ func NewAnalyzer(client *github.Client, repoInfo git.RepoInfo, cache DependencyC
 
 // AnalyzeActionFile analyzes dependencies from an action.yml file.
 func (a *Analyzer) AnalyzeActionFile(actionPath string) ([]Dependency, error) {
+	return a.AnalyzeActionFileWithProgress(actionPath, nil)
+}
+
+// AnalyzeActionFileWithProgress analyzes dependencies with optional progress tracking.
+func (a *Analyzer) AnalyzeActionFileWithProgress(
+	actionPath string,
+	progressCallback func(current, total int, message string),
+) ([]Dependency, error) {
+	if progressCallback != nil {
+		progressCallback(0, 1, fmt.Sprintf("Parsing %s", actionPath))
+	}
+
 	// Read and parse the action.yml file
 	action, err := a.parseCompositeAction(actionPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse action file: %w", err)
 	}
 
-	// Only analyze composite actions
-	if action.Runs.Using != compositeUsing {
-		// Check if it's a valid action type
-		validTypes := []string{"node20", "node16", "node12", "docker", "composite"}
-		isValid := false
-		for _, validType := range validTypes {
-			if action.Runs.Using == validType {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			return nil, fmt.Errorf("invalid action runtime: %s", action.Runs.Using)
-		}
-		return []Dependency{}, nil // No dependencies for non-composite actions
+	// Validate and check if it's a composite action
+	deps, isComposite, err := a.validateAndCheckComposite(action, progressCallback)
+	if err != nil {
+		return nil, err
+	}
+	if !isComposite {
+		return deps, nil
 	}
 
-	var dependencies []Dependency
+	// Process composite action steps
+	return a.processCompositeSteps(action.Runs.Steps, progressCallback)
+}
 
-	// Analyze each step
-	for i, step := range action.Runs.Steps {
-		if step.Uses != "" {
-			// This is an action dependency
-			dep, err := a.analyzeActionDependency(step, i+1)
-			if err != nil {
-				// Log error but continue processing
-				continue
-			}
-			dependencies = append(dependencies, *dep)
-		} else if step.Run != "" {
-			// This is a shell script step
-			dep := a.analyzeShellScript(step, i+1)
+// validateAndCheckComposite validates action type and checks if it's composite.
+func (a *Analyzer) validateAndCheckComposite(
+	action *ActionWithComposite,
+	progressCallback func(current, total int, message string),
+) ([]Dependency, bool, error) {
+	if action.Runs.Using != compositeUsing {
+		if err := a.validateActionType(action.Runs.Using); err != nil {
+			return nil, false, err
+		}
+		if progressCallback != nil {
+			progressCallback(1, 1, "No dependencies (non-composite action)")
+		}
+		return []Dependency{}, false, nil
+	}
+	return nil, true, nil
+}
+
+// validateActionType checks if the action type is valid.
+func (a *Analyzer) validateActionType(usingType string) error {
+	validTypes := []string{"node20", "node16", "node12", "docker", "composite"}
+	for _, validType := range validTypes {
+		if usingType == validType {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid action runtime: %s", usingType)
+}
+
+// processCompositeSteps processes steps in a composite action.
+func (a *Analyzer) processCompositeSteps(
+	steps []CompositeStep,
+	progressCallback func(current, total int, message string),
+) ([]Dependency, error) {
+	var dependencies []Dependency
+	totalSteps := len(steps)
+
+	for i, step := range steps {
+		if progressCallback != nil {
+			progressCallback(i, totalSteps, fmt.Sprintf("Analyzing step %d/%d", i+1, totalSteps))
+		}
+
+		dep := a.processStep(step, i+1)
+		if dep != nil {
 			dependencies = append(dependencies, *dep)
 		}
+	}
+
+	if progressCallback != nil {
+		progressCallback(totalSteps, totalSteps, fmt.Sprintf("Found %d dependencies", len(dependencies)))
 	}
 
 	return dependencies, nil
+}
+
+// processStep processes a single step and returns dependency if found.
+func (a *Analyzer) processStep(step CompositeStep, stepNumber int) *Dependency {
+	if step.Uses != "" {
+		// This is an action dependency
+		dep, err := a.analyzeActionDependency(step, stepNumber)
+		if err != nil {
+			// Log error but continue processing
+			return nil
+		}
+		return dep
+	} else if step.Run != "" {
+		// This is a shell script step
+		return a.analyzeShellScript(step, stepNumber)
+	}
+	return nil
 }
 
 // parseCompositeAction is implemented in parser.go

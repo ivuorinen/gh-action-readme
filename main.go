@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
@@ -510,10 +511,38 @@ func analyzeDependencies(output *internal.ColoredOutput, actionFiles []string, a
 	totalDeps := 0
 	output.Bold("Dependencies found in action files:")
 
-	for _, actionFile := range actionFiles {
-		output.Info("\n📄 %s", actionFile)
-		totalDeps += analyzeActionFileDeps(output, actionFile, analyzer)
+	// Create progress bar for multiple files
+	var bar *progressbar.ProgressBar
+	if len(actionFiles) > 1 && !output.IsQuiet() {
+		bar = progressbar.NewOptions(len(actionFiles),
+			progressbar.OptionSetDescription("Analyzing dependencies"),
+			progressbar.OptionSetWidth(50),
+			progressbar.OptionShowCount(),
+			progressbar.OptionShowIts(),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "=",
+				SaucerHead:    ">",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}))
 	}
+
+	for _, actionFile := range actionFiles {
+		if bar == nil {
+			output.Info("\n📄 %s", actionFile)
+		}
+		totalDeps += analyzeActionFileDeps(output, actionFile, analyzer)
+
+		if bar != nil {
+			_ = bar.Add(1)
+		}
+	}
+
+	if bar != nil {
+		fmt.Println()
+	}
+
 	return totalDeps
 }
 
@@ -586,9 +615,30 @@ func analyzeSecurityDeps(
 	}
 
 	output.Bold("Security Analysis of GitHub Action Dependencies:")
+
+	// Create progress bar for multiple files
+	var bar *progressbar.ProgressBar
+	if len(actionFiles) > 1 && !output.IsQuiet() {
+		bar = progressbar.NewOptions(len(actionFiles),
+			progressbar.OptionSetDescription("Security analysis"),
+			progressbar.OptionSetWidth(50),
+			progressbar.OptionShowCount(),
+			progressbar.OptionShowIts(),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "=",
+				SaucerHead:    ">",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}))
+	}
+
 	for _, actionFile := range actionFiles {
 		deps, err := analyzer.AnalyzeActionFile(actionFile)
 		if err != nil {
+			if bar != nil {
+				_ = bar.Add(1)
+			}
 			continue
 		}
 
@@ -602,7 +652,16 @@ func analyzeSecurityDeps(
 				}{actionFile, dep})
 			}
 		}
+
+		if bar != nil {
+			_ = bar.Add(1)
+		}
 	}
+
+	if bar != nil {
+		fmt.Println()
+	}
+
 	return pinnedCount, floatingDeps
 }
 
