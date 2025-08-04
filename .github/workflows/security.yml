@@ -104,7 +104,7 @@ jobs:
           fetch-depth: 0 # Full history for gitleaks
 
       - name: Run gitleaks to detect secrets
-        uses: gitleaks/gitleaks-action@e3b19b53b4ccbc33a4b2ba67c9b5ce1adc8aa57a # v2.4.0
+        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE}} # Only required for gitleaks-action pro
