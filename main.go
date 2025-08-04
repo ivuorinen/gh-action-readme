@@ -8,13 +8,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
+	"github.com/ivuorinen/gh-action-readme/internal/errors"
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
+	"github.com/ivuorinen/gh-action-readme/internal/wizard"
+)
+
+const (
+	// Export format constants.
+	formatJSON = "json"
+	formatTOML = "toml"
+	formatYAML = "yaml"
 )
 
 var (
@@ -35,6 +43,18 @@ var (
 
 func createOutputManager(quiet bool) *internal.ColoredOutput {
 	return internal.NewColoredOutput(quiet)
+}
+
+// createErrorHandler creates an error handler for the given output manager.
+func createErrorHandler(output *internal.ColoredOutput) *internal.ErrorHandler {
+	return internal.NewErrorHandler(output)
+}
+
+// setupOutputAndErrorHandling creates output manager and error handler for commands.
+func setupOutputAndErrorHandling() (*internal.ColoredOutput, *internal.ErrorHandler) {
+	output := createOutputManager(globalConfig.Quiet)
+	errorHandler := createErrorHandler(output)
+	return output, errorHandler
 }
 
 func createAnalyzer(generator *internal.Generator, output *internal.ColoredOutput) *dependencies.Analyzer {
@@ -216,13 +236,25 @@ func discoverActionFiles(generator *internal.Generator, currentDir string, cmd *
 	recursive, _ := cmd.Flags().GetBool("recursive")
 	actionFiles, err := generator.DiscoverActionFiles(currentDir, recursive)
 	if err != nil {
-		generator.Output.Error("Error discovering action files: %v", err)
+		generator.Output.ErrorWithContext(
+			errors.ErrCodeFileNotFound,
+			"failed to discover action files",
+			map[string]string{
+				"directory": currentDir,
+				"error":     err.Error(),
+			},
+		)
 		os.Exit(1)
 	}
 
 	if len(actionFiles) == 0 {
-		generator.Output.Error("No action.yml or action.yaml files found in %s", currentDir)
-		generator.Output.Info("Please run this command in a directory containing GitHub Action files.")
+		generator.Output.ErrorWithContext(
+			errors.ErrCodeNoActionFiles,
+			"no GitHub Action files found",
+			map[string]string{
+				"directory": currentDir,
+			},
+		)
 		os.Exit(1)
 	}
 	return actionFiles
@@ -239,27 +271,45 @@ func processActionFiles(generator *internal.Generator, actionFiles []string) {
 func validateHandler(_ *cobra.Command, _ []string) {
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output := createOutputManager(globalConfig.Quiet)
-		output.Error("Error getting current directory: %v", err)
-		os.Exit(1)
+		_, errorHandler := setupOutputAndErrorHandling()
+		errorHandler.HandleSimpleError("Unable to determine current directory", err)
 	}
 
 	generator := internal.NewGenerator(globalConfig)
 	actionFiles, err := generator.DiscoverActionFiles(currentDir, true) // Recursive for validation
 	if err != nil {
-		generator.Output.Error("Error discovering action files: %v", err)
+		generator.Output.ErrorWithContext(
+			errors.ErrCodeFileNotFound,
+			"failed to discover action files",
+			map[string]string{
+				"directory": currentDir,
+				"error":     err.Error(),
+			},
+		)
 		os.Exit(1)
 	}
 
 	if len(actionFiles) == 0 {
-		generator.Output.Error("No action.yml or action.yaml files found in %s", currentDir)
-		generator.Output.Info("Please run this command in a directory containing GitHub Action files.")
+		generator.Output.ErrorWithContext(
+			errors.ErrCodeNoActionFiles,
+			"no GitHub Action files found for validation",
+			map[string]string{
+				"directory": currentDir,
+			},
+		)
 		os.Exit(1)
 	}
 
 	// Validate the discovered files
 	if err := generator.ValidateFiles(actionFiles); err != nil {
-		generator.Output.Error("Validation completed with errors: %v", err)
+		generator.Output.ErrorWithContext(
+			errors.ErrCodeValidation,
+			"validation failed",
+			map[string]string{
+				"files_count": fmt.Sprintf("%d", len(actionFiles)),
+				"error":       err.Error(),
+			},
+		)
 		os.Exit(1)
 	}
 
@@ -298,6 +348,16 @@ func newConfigCmd() *cobra.Command {
 		Short: "Initialize default configuration file",
 		Run:   configInitHandler,
 	})
+
+	initCmd := &cobra.Command{
+		Use:   "wizard",
+		Short: "Interactive configuration wizard",
+		Long:  "Launch an interactive wizard to set up your configuration step by step",
+		Run:   configWizardHandler,
+	}
+	initCmd.Flags().String("format", "yaml", "Export format: yaml, json, toml")
+	initCmd.Flags().String("output", "", "Output path (default: XDG config directory)")
+	cmd.AddCommand(initCmd)
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "show",
@@ -487,23 +547,39 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 }
 
 // discoverDepsActionFiles discovers action files for dependency analysis.
+// discoverActionFilesWithErrorHandling discovers action files with centralized error handling.
+func discoverActionFilesWithErrorHandling(
+	generator *internal.Generator,
+	errorHandler *internal.ErrorHandler,
+	currentDir string,
+) []string {
+	actionFiles, err := generator.DiscoverActionFiles(currentDir, true)
+	if err != nil {
+		errorHandler.HandleSimpleError("Failed to discover action files", err)
+	}
+
+	if len(actionFiles) == 0 {
+		errorHandler.HandleFatalError(
+			errors.ErrCodeNoActionFiles,
+			"No action.yml or action.yaml files found",
+			map[string]string{
+				"directory":  currentDir,
+				"suggestion": "Please run this command in a directory containing GitHub Action files",
+			},
+		)
+	}
+
+	return actionFiles
+}
+
+// discoverDepsActionFiles discovers action files for dependency analysis (legacy wrapper).
 func discoverDepsActionFiles(
 	generator *internal.Generator,
 	output *internal.ColoredOutput,
 	currentDir string,
 ) []string {
-	actionFiles, err := generator.DiscoverActionFiles(currentDir, true)
-	if err != nil {
-		output.Error("Error discovering action files: %v", err)
-		os.Exit(1)
-	}
-
-	if len(actionFiles) == 0 {
-		output.Error("No action.yml or action.yaml files found in %s", currentDir)
-		output.Info("Please run this command in a directory containing GitHub Action files.")
-		os.Exit(1)
-	}
-	return actionFiles
+	errorHandler := createErrorHandler(output)
+	return discoverActionFilesWithErrorHandling(generator, errorHandler, currentDir)
 }
 
 // analyzeDependencies analyzes and displays dependencies.
@@ -512,21 +588,8 @@ func analyzeDependencies(output *internal.ColoredOutput, actionFiles []string, a
 	output.Bold("Dependencies found in action files:")
 
 	// Create progress bar for multiple files
-	var bar *progressbar.ProgressBar
-	if len(actionFiles) > 1 && !output.IsQuiet() {
-		bar = progressbar.NewOptions(len(actionFiles),
-			progressbar.OptionSetDescription("Analyzing dependencies"),
-			progressbar.OptionSetWidth(50),
-			progressbar.OptionShowCount(),
-			progressbar.OptionShowIts(),
-			progressbar.OptionSetTheme(progressbar.Theme{
-				Saucer:        "=",
-				SaucerHead:    ">",
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			}))
-	}
+	progressMgr := internal.NewProgressBarManager(output.IsQuiet())
+	bar := progressMgr.CreateProgressBarForFiles("Analyzing dependencies", actionFiles)
 
 	for _, actionFile := range actionFiles {
 		if bar == nil {
@@ -539,6 +602,7 @@ func analyzeDependencies(output *internal.ColoredOutput, actionFiles []string, a
 		}
 	}
 
+	progressMgr.FinishProgressBar(bar)
 	if bar != nil {
 		fmt.Println()
 	}
@@ -575,19 +639,22 @@ func analyzeActionFileDeps(output *internal.ColoredOutput, actionFile string, an
 }
 
 func depsSecurityHandler(_ *cobra.Command, _ []string) {
-	output := createOutputManager(globalConfig.Quiet)
+	output, errorHandler := setupOutputAndErrorHandling()
+
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output.Error("Error getting current directory: %v", err)
-		os.Exit(1)
+		errorHandler.HandleSimpleError("Failed to get current directory", err)
 	}
 
 	generator := internal.NewGenerator(globalConfig)
-	actionFiles := discoverDepsActionFiles(generator, output, currentDir)
+	actionFiles := discoverActionFilesWithErrorHandling(generator, errorHandler, currentDir)
 
 	if len(actionFiles) == 0 {
-		output.Warning("No action files found")
-		return
+		errorHandler.HandleFatalError(
+			errors.ErrCodeNoActionFiles,
+			"No action files found in the current directory",
+			map[string]string{"directory": currentDir},
+		)
 	}
 
 	analyzer := createAnalyzer(generator, output)
@@ -617,21 +684,8 @@ func analyzeSecurityDeps(
 	output.Bold("Security Analysis of GitHub Action Dependencies:")
 
 	// Create progress bar for multiple files
-	var bar *progressbar.ProgressBar
-	if len(actionFiles) > 1 && !output.IsQuiet() {
-		bar = progressbar.NewOptions(len(actionFiles),
-			progressbar.OptionSetDescription("Security analysis"),
-			progressbar.OptionSetWidth(50),
-			progressbar.OptionShowCount(),
-			progressbar.OptionShowIts(),
-			progressbar.OptionSetTheme(progressbar.Theme{
-				Saucer:        "=",
-				SaucerHead:    ">",
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			}))
-	}
+	progressMgr := internal.NewProgressBarManager(output.IsQuiet())
+	bar := progressMgr.CreateProgressBarForFiles("Security analysis", actionFiles)
 
 	for _, actionFile := range actionFiles {
 		deps, err := analyzer.AnalyzeActionFile(actionFile)
@@ -658,6 +712,7 @@ func analyzeSecurityDeps(
 		}
 	}
 
+	progressMgr.FinishProgressBar(bar)
 	if bar != nil {
 		fmt.Println()
 	}
@@ -727,7 +782,11 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 // validateGitHubToken checks if GitHub token is available.
 func validateGitHubToken(output *internal.ColoredOutput) bool {
 	if globalConfig.GitHubToken == "" {
-		output.Warning("No GitHub token found. Set GITHUB_TOKEN environment variable for accurate results")
+		contextualErr := errors.New(errors.ErrCodeGitHubAuth, "GitHub token not found").
+			WithSuggestions(errors.GetSuggestions(errors.ErrCodeGitHubAuth, map[string]string{})...).
+			WithHelpURL(errors.GetHelpURL(errors.ErrCodeGitHubAuth))
+
+		output.Warning("⚠️  %s", contextualErr.Error())
 		return false
 	}
 	return true
@@ -1037,4 +1096,62 @@ func cachePathHandler(_ *cobra.Command, _ []string) {
 	} else if os.IsNotExist(err) {
 		output.Warning("Directory does not exist (will be created on first use)")
 	}
+}
+
+func configWizardHandler(cmd *cobra.Command, _ []string) {
+	output := createOutputManager(globalConfig.Quiet)
+
+	// Create and run the wizard
+	configWizard := wizard.NewConfigWizard(output)
+	config, err := configWizard.Run()
+	if err != nil {
+		output.Error("Wizard failed: %v", err)
+		os.Exit(1)
+	}
+
+	// Get export format and output path
+	format, _ := cmd.Flags().GetString("format")
+	outputPath, _ := cmd.Flags().GetString("output")
+
+	// Create exporter and export configuration
+	exporter := wizard.NewConfigExporter(output)
+
+	// Use default output path if not specified
+	if outputPath == "" {
+		var exportFormat wizard.ExportFormat
+		switch format {
+		case formatJSON:
+			exportFormat = wizard.FormatJSON
+		case formatTOML:
+			exportFormat = wizard.FormatTOML
+		default:
+			exportFormat = wizard.FormatYAML
+		}
+
+		defaultPath, err := exporter.GetDefaultOutputPath(exportFormat)
+		if err != nil {
+			output.Error("Failed to get default output path: %v", err)
+			os.Exit(1)
+		}
+		outputPath = defaultPath
+	}
+
+	// Export the configuration
+	var exportFormat wizard.ExportFormat
+	switch format {
+	case formatJSON:
+		exportFormat = wizard.FormatJSON
+	case formatTOML:
+		exportFormat = wizard.FormatTOML
+	default:
+		exportFormat = wizard.FormatYAML
+	}
+
+	if err := exporter.ExportConfig(config, exportFormat, outputPath); err != nil {
+		output.Error("Failed to export configuration: %v", err)
+		os.Exit(1)
+	}
+
+	output.Info("\n🎉 Configuration wizard completed successfully!")
+	output.Info("You can now use 'gh-action-readme gen' to generate documentation.")
 }

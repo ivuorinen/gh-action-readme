@@ -359,25 +359,14 @@ func (g *Generator) ValidateFiles(paths []string) error {
 
 // createProgressBar creates a progress bar with the specified description.
 func (g *Generator) createProgressBar(description string, paths []string) *progressbar.ProgressBar {
-	if len(paths) <= 1 || g.Config.Quiet {
-		return nil
-	}
-	return progressbar.NewOptions(len(paths),
-		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetWidth(50),
-		progressbar.OptionShowCount(),
-		progressbar.OptionShowIts(),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "=",
-			SaucerHead:    ">",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}))
+	progressMgr := NewProgressBarManager(g.Config.Quiet)
+	return progressMgr.CreateProgressBarForFiles(description, paths)
 }
 
 // finishProgressBar completes the progress bar display.
 func (g *Generator) finishProgressBar(bar *progressbar.ProgressBar) {
+	progressMgr := NewProgressBarManager(g.Config.Quiet)
+	progressMgr.FinishProgressBar(bar)
 	if bar != nil {
 		fmt.Println()
 	}
