@@ -1,0 +1,19 @@
+name: 'Simple Action'
+description: 'A simple test action'
+inputs:
+  input1:
+    description: 'First input'
+    required: true
+  input2:
+    description: 'Second input'
+    required: false
+    default: 'default-value'
+outputs:
+  output1:
+    description: 'First output'
+runs:
+  using: 'node20'
+  main: 'index.js'
+branding:
+  icon: 'activity'
+  color: 'blue'

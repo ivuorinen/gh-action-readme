@@ -9,12 +9,32 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-github/v57/github"
 )
+
+// readTemplate reads a YAML template file from testdata/yaml-fixtures.
+func readTemplate(filename string) string {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("failed to get current file path")
+	}
+
+	// Get the project root (go up from testutil/testutil.go to project root)
+	projectRoot := filepath.Dir(filepath.Dir(currentFile))
+	templatePath := filepath.Join(projectRoot, "testdata", "yaml-fixtures", filename)
+
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		panic("failed to read template " + filename + ": " + err.Error())
+	}
+
+	return string(content)
+}
 
 // MockHTTPClient is a mock HTTP client for testing.
 type MockHTTPClient struct {
@@ -177,19 +197,12 @@ func CreateTestAction(name, description string, inputs map[string]string) string
 		inputsYAML.WriteString(fmt.Sprintf("  %s:\n    description: %s\n    required: true\n", key, desc))
 	}
 
-	return fmt.Sprintf(`name: %s
-description: %s
-inputs:
-%soutputs:
-	result:
-		description: 'The result'
-runs:
-	using: 'node20'
-	main: 'index.js'
-branding:
-	icon: 'zap'
-	color: 'yellow'
-`, name, description, inputsYAML.String())
+	template := readTemplate("dynamic-action-template.yml")
+	result := strings.ReplaceAll(template, "{{.Name}}", name)
+	result = strings.ReplaceAll(result, "{{.Description}}", description)
+	result = strings.ReplaceAll(result, "{{.Inputs}}", inputsYAML.String())
+
+	return result
 }
 
 // SetupTestTemplates creates template files for testing.
@@ -220,15 +233,15 @@ func SetupTestTemplates(t *testing.T, dir string) {
 func CreateCompositeAction(name, description string, steps []string) string {
 	var stepsYAML bytes.Buffer
 	for i, step := range steps {
-		stepsYAML.WriteString(fmt.Sprintf("  - name: Step %d\n    uses: %s\n", i+1, step))
+		stepsYAML.WriteString(fmt.Sprintf("    - name: Step %d\n      uses: %s\n", i+1, step))
 	}
 
-	return fmt.Sprintf(`name: %s
-description: %s
-runs:
-	using: 'composite'
-	steps:
-%s`, name, description, stepsYAML.String())
+	template := readTemplate("composite-template.yml")
+	result := strings.ReplaceAll(template, "{{.Name}}", name)
+	result = strings.ReplaceAll(result, "{{.Description}}", description)
+	result = strings.ReplaceAll(result, "{{.Steps}}", stepsYAML.String())
+
+	return result
 }
 
 // TestAppConfig represents a test configuration structure.

@@ -294,17 +294,7 @@ type workflowStep struct {
 // testProjectSetup tests basic project validation.
 func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 	// Create a new GitHub Action project
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), `
-name: 'My New Action'
-description: 'A brand new GitHub Action'
-inputs:
-	message:
-		description: 'Message to display'
-		required: true
-runs:
-	using: 'node20'
-	main: 'index.js'
-`)
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), testutil.TestProjectActionYML)
 
 	// Validate the action
 	cmd := exec.Command(binaryPath, "validate")

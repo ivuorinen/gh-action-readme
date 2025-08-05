@@ -1,0 +1,6 @@
+name: {{.Name}}
+description: {{.Description}}
+runs:
+  using: 'composite'
+  steps:
+{{.Steps}}

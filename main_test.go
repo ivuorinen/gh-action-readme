@@ -67,7 +67,7 @@ func TestCLICommands(t *testing.T) {
 			name:       "gen command with no action files",
 			args:       []string{"gen"},
 			wantExit:   1,
-			wantStderr: "No action.yml or action.yaml files found",
+			wantStderr: "no GitHub Action files found [NO_ACTION_FILES]",
 		},
 		{
 			name: "validate command with valid action",
@@ -116,7 +116,7 @@ func TestCLICommands(t *testing.T) {
 			name:       "deps list command no files",
 			args:       []string{"deps", "list"},
 			wantExit:   1,
-			wantStdout: "Please run this command in a directory containing GitHub Action files",
+			wantStderr: "No action.yml or action.yaml files found [NO_ACTION_FILES]",
 		},
 		{
 			name: "deps list command with composite action",

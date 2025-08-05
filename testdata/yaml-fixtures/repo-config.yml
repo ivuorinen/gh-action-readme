@@ -1,0 +1,8 @@
+theme: minimal
+output_format: json
+branding:
+  icon: star
+  color: green
+dependencies:
+  pin_versions: true
+  auto_update: false

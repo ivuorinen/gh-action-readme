@@ -1,6 +1,31 @@
 // Package testutil provides testing fixtures for gh-action-readme.
 package testutil
 
+import (
+	"os"
+	"path/filepath"
+	"runtime"
+)
+
+// mustReadFixture reads a YAML fixture file from testdata/yaml-fixtures.
+func mustReadFixture(filename string) string {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("failed to get current file path")
+	}
+
+	// Get the project root (go up from testutil/fixtures.go to project root)
+	projectRoot := filepath.Dir(filepath.Dir(currentFile))
+	fixturePath := filepath.Join(projectRoot, "testdata", "yaml-fixtures", filename)
+
+	content, err := os.ReadFile(fixturePath)
+	if err != nil {
+		panic("failed to read fixture " + filename + ": " + err.Error())
+	}
+
+	return string(content)
+}
+
 // GitHub API response fixtures for testing.
 
 // GitHubReleaseResponse is a mock GitHub release API response.
@@ -185,88 +210,22 @@ func MockGitHubResponses() map[string]string {
 // Sample action.yml files for testing.
 
 // SimpleActionYML is a basic GitHub Action YAML.
-const SimpleActionYML = `name: 'Simple Action'
-description: 'A simple test action'
-inputs:
-	input1:
-		description: 'First input'
-		required: true
-	input2:
-		description: 'Second input'
-		required: false
-		default: 'default-value'
-outputs:
-	output1:
-		description: 'First output'
-runs:
-	using: 'node20'
-	main: 'index.js'
-branding:
-	icon: 'activity'
-	color: 'blue'
-`
+var SimpleActionYML = mustReadFixture("simple-action.yml")
 
 // CompositeActionYML is a composite GitHub Action with dependencies.
-const CompositeActionYML = `name: 'Composite Action'
-description: 'A composite action with dependencies'
-inputs:
-	version:
-		description: 'Version to use'
-		required: true
-runs:
-	using: 'composite'
-	steps:
-		- name: Checkout code
-			uses: actions/checkout@v4
-		- name: Setup Node
-			uses: actions/setup-node@v3
-			with:
-				node-version: '${{ inputs.version }}'
-		- name: Run tests
-			run: npm test
-			shell: bash
-`
+var CompositeActionYML = mustReadFixture("composite-action.yml")
 
 // DockerActionYML is a Docker-based GitHub Action.
-const DockerActionYML = `name: 'Docker Action'
-description: 'A Docker-based action'
-inputs:
-	dockerfile:
-		description: 'Path to Dockerfile'
-		required: false
-		default: 'Dockerfile'
-outputs:
-	image:
-		description: 'Built image name'
-runs:
-	using: 'docker'
-	image: 'Dockerfile'
-	env:
-		CUSTOM_VAR: 'value'
-branding:
-	icon: 'package'
-	color: 'purple'
-`
+var DockerActionYML = mustReadFixture("docker-action.yml")
 
 // InvalidActionYML is an invalid action.yml for error testing.
-const InvalidActionYML = `name: 'Invalid Action'
-# Missing required description field
-inputs:
-	invalid_input:
-		# Missing required description
-		required: true
-runs:
-	# Invalid using value
-	using: 'invalid-runtime'
-`
+var InvalidActionYML = mustReadFixture("invalid-action.yml")
 
 // MinimalActionYML is a minimal valid action.yml.
-const MinimalActionYML = `name: 'Minimal Action'
-description: 'Minimal test action'
-runs:
-	using: 'node20'
-	main: 'index.js'
-`
+var MinimalActionYML = mustReadFixture("minimal-action.yml")
+
+// TestProjectActionYML is used for integration tests.
+var TestProjectActionYML = mustReadFixture("test-project-action.yml")
 
 // Configuration file fixtures.
 
@@ -290,15 +249,7 @@ github_token: test-token-from-config
 `
 
 // RepoSpecificConfigYAML is a repository-specific configuration.
-const RepoSpecificConfigYAML = `theme: minimal
-output_format: json
-branding:
-	icon: star
-	color: green
-dependencies:
-	pin_versions: true
-	auto_update: false
-`
+var RepoSpecificConfigYAML = mustReadFixture("repo-config.yml")
 
 // GitIgnoreContent is a sample .gitignore file.
 const GitIgnoreContent = `# Dependencies
@@ -315,22 +266,4 @@ Thumbs.db
 `
 
 // PackageJSONContent is a sample package.json file.
-const PackageJSONContent = `{
-	"name": "test-action",
-	"version": "1.0.0",
-	"description": "Test GitHub Action",
-	"main": "index.js",
-	"scripts": {
-		"test": "jest",
-		"build": "webpack"
-	},
-	"dependencies": {
-		"@actions/core": "^1.10.0",
-		"@actions/github": "^5.1.1"
-	},
-	"devDependencies": {
-		"jest": "^29.0.0",
-		"webpack": "^5.0.0"
-	}
-}
-`
+var PackageJSONContent = mustReadFixture("package.json")

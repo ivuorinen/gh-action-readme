@@ -1,0 +1,9 @@
+name: 'Invalid Action'
+# Missing required description field
+inputs:
+  invalid_input:
+    # Missing required description
+    required: true
+runs:
+  # Invalid using value
+  using: 'invalid-runtime'
