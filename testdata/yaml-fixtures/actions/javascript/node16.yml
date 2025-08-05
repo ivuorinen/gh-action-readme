@@ -1,0 +1,23 @@
+name: 'Node.js 16 Action'
+description: 'JavaScript action running on Node.js 16'
+inputs:
+  script-path:
+    description: 'Path to the script to execute'
+    required: true
+  args:
+    description: 'Arguments to pass to the script'
+    required: false
+    default: ''
+outputs:
+  exit-code:
+    description: 'Exit code of the script'
+  stdout:
+    description: 'Standard output from the script'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+  pre: 'dist/setup.js'
+  post: 'dist/cleanup.js'
+branding:
+  icon: 'terminal'
+  color: 'green'

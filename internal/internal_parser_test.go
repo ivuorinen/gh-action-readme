@@ -2,16 +2,19 @@ package internal
 
 import (
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 func TestParseActionYML_Valid(t *testing.T) {
-	path := "../testdata/example-action/action.yml"
-	action, err := ParseActionYML(path)
+	// Create temporary action file using fixture
+	actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
+	action, err := ParseActionYML(actionPath)
 	if err != nil {
 		t.Fatalf("failed to parse action.yml: %v", err)
 	}
-	if action.Name != "Example Action" {
-		t.Errorf("expected name 'Example Action', got '%s'", action.Name)
+	if action.Name != "Simple JavaScript Action" {
+		t.Errorf("expected name 'Simple JavaScript Action', got '%s'", action.Name)
 	}
 	if action.Description == "" {
 		t.Error("expected non-empty description")

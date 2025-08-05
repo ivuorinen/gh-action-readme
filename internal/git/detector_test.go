@@ -20,14 +20,14 @@ func TestFindRepositoryRoot(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0755)
+				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create .git directory: %v", err)
 				}
 
 				// Create subdirectory to test from
 				subDir := filepath.Join(tmpDir, "subdir", "nested")
-				err = os.MkdirAll(subDir, 0755)
+				err = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create subdirectory: %v", err)
 				}
@@ -54,7 +54,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				// Create subdirectory without .git
 				subDir := filepath.Join(tmpDir, "subdir")
-				err := os.MkdirAll(subDir, 0755)
+				err := os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create subdirectory: %v", err)
 				}
@@ -117,7 +117,7 @@ func TestDetectGitRepository(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0755)
+				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create .git directory: %v", err)
 				}
@@ -150,7 +150,7 @@ func TestDetectGitRepository(t *testing.T) {
 			name: "SSH remote URL",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0755)
+				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create .git directory: %v", err)
 				}
@@ -185,7 +185,7 @@ func TestDetectGitRepository(t *testing.T) {
 			name: "git repository without origin remote",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0755)
+				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create .git directory: %v", err)
 				}

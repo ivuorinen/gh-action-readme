@@ -1,0 +1,24 @@
+name: 'Composite Action'
+description: 'A composite action with multiple steps'
+inputs:
+  working-directory:
+    description: 'Working directory'
+    required: false
+    default: '.'
+outputs:
+  result:
+    description: 'The result of all steps'
+    value: ${{ steps.final.outputs.result }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup
+      run: echo "Setting up..."
+      shell: bash
+    - name: Build
+      run: echo "Building..."
+      shell: bash
+    - name: Final step
+      id: final
+      run: echo "result=success" >> $GITHUB_OUTPUT
+      shell: bash

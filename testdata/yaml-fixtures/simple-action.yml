@@ -1,0 +1,13 @@
+name: 'Simple Action'
+description: 'A simple GitHub Action for testing'
+inputs:
+  name:
+    description: 'Name to greet'
+    required: true
+    default: 'World'
+outputs:
+  greeting:
+    description: 'The greeting message'
+runs:
+  using: 'node20'
+  main: 'index.js'

@@ -12,6 +12,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
+	"github.com/ivuorinen/gh-action-readme/internal/validation"
 )
 
 const (
@@ -44,10 +45,6 @@ type TemplateData struct {
 	// Dependencies (populated by dependency analysis)
 	Dependencies []dependencies.Dependency `json:"dependencies,omitempty"`
 }
-
-// GitInfo contains Git repository information for templates.
-// Note: GitInfo struct removed - using git.RepoInfo instead to avoid duplication
-// Note: Dependency struct is now defined in internal/dependencies package
 
 // templateFuncs returns a map of custom template functions.
 func templateFuncs() template.FuncMap {
@@ -115,11 +112,11 @@ func isValidOrgRepo(org, repo string) bool {
 // formatVersion ensures version has proper @ prefix.
 func formatVersion(version string) string {
 	version = strings.TrimSpace(version)
-	if version != "" && !strings.HasPrefix(version, "@") {
-		return "@" + version
-	}
 	if version == "" {
 		return "@v1"
+	}
+	if !strings.HasPrefix(version, "@") {
+		return "@" + version
 	}
 	return version
 }
@@ -127,7 +124,7 @@ func formatVersion(version string) string {
 // buildUsesString constructs the uses string with optional action name.
 func buildUsesString(td *TemplateData, org, repo, version string) string {
 	if td.Name != "" {
-		actionName := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(td.Name), " ", "-"))
+		actionName := validation.SanitizeActionName(td.Name)
 		if actionName != "" && actionName != repo {
 			return fmt.Sprintf("%s/%s/%s%s", org, repo, actionName, version)
 		}
@@ -225,7 +222,7 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 		return "", err
 	}
 	var tmpl *template.Template
-	if opts.Format == "html" {
+	if opts.Format == OutputFormatHTML {
 		tmpl, err = template.New("readme").Funcs(templateFuncs()).Parse(string(tmplContent))
 		if err != nil {
 			return "", err

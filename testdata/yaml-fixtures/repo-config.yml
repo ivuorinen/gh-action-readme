@@ -1,0 +1,7 @@
+theme: github
+output_format: md
+output_dir: docs
+verbose: true
+quiet: false
+analyze_dependencies: true
+show_security_info: true

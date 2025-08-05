@@ -313,12 +313,52 @@ func TestCache_Clear(t *testing.T) {
 	}
 }
 
+func TestCache_Delete(t *testing.T) {
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	cache := createTestCache(t, tmpDir)
+	defer func() { _ = cache.Close() }()
+
+	// Add some data
+	_ = cache.Set("key1", "value1")
+	_ = cache.Set("key2", "value2")
+	_ = cache.Set("key3", "value3")
+
+	// Verify data exists
+	_, exists := cache.Get("key1")
+	if !exists {
+		t.Fatal("expected key1 to exist before delete")
+	}
+
+	// Delete specific key
+	cache.Delete("key1")
+
+	// Verify deleted key is gone but others remain
+	_, exists1 := cache.Get("key1")
+	_, exists2 := cache.Get("key2")
+	_, exists3 := cache.Get("key3")
+
+	if exists1 {
+		t.Error("expected key1 to be deleted")
+	}
+	if !exists2 || !exists3 {
+		t.Error("expected key2 and key3 to still exist")
+	}
+
+	// Test deleting non-existent key (should not panic)
+	cache.Delete("nonexistent")
+}
+
 func TestCache_Stats(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
 	defer func() { _ = cache.Close() }()
+
+	// Ensure cache starts clean
+	_ = cache.Clear()
 
 	// Add some data
 	_ = cache.Set("key1", "value1")

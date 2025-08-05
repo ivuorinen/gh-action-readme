@@ -1,0 +1,16 @@
+name: '{{ .Name }}'
+description: '{{ .Description }}'
+inputs:
+{{- range .Inputs }}
+  {{ .Name }}:
+    description: '{{ .Description }}'
+    required: {{ .Required }}
+{{- end }}
+runs:
+  using: 'composite'
+  steps:
+{{- range .Steps }}
+    - name: '{{ .Name }}'
+      run: '{{ .Command }}'
+      shell: bash
+{{- end }}

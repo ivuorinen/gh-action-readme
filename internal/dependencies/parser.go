@@ -10,7 +10,7 @@ import (
 // parseCompositeActionFromFile reads and parses a composite action file.
 func (a *Analyzer) parseCompositeActionFromFile(actionPath string) (*ActionWithComposite, error) {
 	// Read the file
-	data, err := os.ReadFile(actionPath)
+	data, err := os.ReadFile(actionPath) // #nosec G304 -- action path from function parameter
 	if err != nil {
 		return nil, fmt.Errorf("failed to read action file %s: %w", actionPath, err)
 	}

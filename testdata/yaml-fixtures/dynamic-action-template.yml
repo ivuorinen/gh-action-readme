@@ -1,0 +1,19 @@
+name: '{{ .Name }}'
+description: '{{ .Description }}'
+inputs:
+{{- range .Inputs }}
+  {{ .Name }}:
+    description: '{{ .Description }}'
+    required: {{ .Required }}
+{{- if .Default }}
+    default: '{{ .Default }}'
+{{- end }}
+{{- end }}
+outputs:
+{{- range .Outputs }}
+  {{ .Name }}:
+    description: '{{ .Description }}'
+{{- end }}
+runs:
+  using: '{{ .Runtime }}'
+  main: '{{ .Main }}'

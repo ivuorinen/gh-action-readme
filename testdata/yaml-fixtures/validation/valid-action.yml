@@ -1,0 +1,4 @@
+name: Test Action
+description: A test action
+runs:
+  using: node20

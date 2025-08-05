@@ -1,0 +1,36 @@
+name: 'Comprehensive JavaScript Action'
+description: 'A JavaScript action with all possible fields for testing'
+author: 'Test Author <test@example.com>'
+inputs:
+  required-input:
+    description: 'A required input parameter'
+    required: true
+  optional-input:
+    description: 'An optional input parameter'
+    required: false
+    default: 'default-value'
+  boolean-input:
+    description: 'A boolean input parameter'
+    required: false
+    default: 'false'
+  number-input:
+    description: 'A numeric input parameter'
+    required: false
+    default: '42'
+outputs:
+  success:
+    description: 'Whether the action succeeded'
+  message:
+    description: 'Output message from the action'
+  data:
+    description: 'JSON data output'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+  pre: 'dist/pre.js'
+  post: 'dist/post.js'
+  pre-if: 'always()'
+  post-if: 'always()'
+branding:
+  icon: 'check-circle'
+  color: 'purple'

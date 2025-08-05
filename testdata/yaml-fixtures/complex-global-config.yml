@@ -1,0 +1,7 @@
+theme: default
+output_format: md
+repo_overrides:
+  test-repo:
+    theme: github
+    output_format: html
+    verbose: true

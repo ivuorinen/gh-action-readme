@@ -1,0 +1,47 @@
+name: 'Composite Action with Dependencies'
+description: 'A composite action that uses external actions'
+inputs:
+  node-version:
+    description: 'Node.js version to setup'
+    required: false
+    default: '18'
+  python-version:
+    description: 'Python version to setup'
+    required: false
+    default: '3.9'
+outputs:
+  node-path:
+    description: 'Path to Node.js installation'
+    value: ${{ steps.setup-node.outputs.node-path }}
+  python-path:
+    description: 'Path to Python installation'
+    value: ${{ steps.setup-python.outputs.python-path }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Setup Node.js
+      id: setup-node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+    - name: Setup Python
+      id: setup-python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        npm install
+        pip install -r requirements.txt
+      shell: bash
+    - name: Run tests
+      run: |
+        npm test
+        python -m pytest
+      shell: bash

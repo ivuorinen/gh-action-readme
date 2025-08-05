@@ -78,12 +78,12 @@ type GitHubClient struct {
 // GetGitHubToken returns the GitHub token from environment variables or config.
 func GetGitHubToken(config *AppConfig) string {
 	// Priority 1: Tool-specific env var
-	if token := os.Getenv("GH_README_GITHUB_TOKEN"); token != "" {
+	if token := os.Getenv(EnvGitHubToken); token != "" {
 		return token
 	}
 
 	// Priority 2: Standard GitHub env var
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+	if token := os.Getenv(EnvGitHubTokenStandard); token != "" {
 		return token
 	}
 
@@ -174,16 +174,16 @@ func resolveThemeTemplate(theme string) string {
 	var templatePath string
 
 	switch theme {
-	case "default":
-		templatePath = "templates/readme.tmpl"
-	case "github":
-		templatePath = "templates/themes/github/readme.tmpl"
-	case "gitlab":
-		templatePath = "templates/themes/gitlab/readme.tmpl"
-	case "minimal":
-		templatePath = "templates/themes/minimal/readme.tmpl"
-	case "professional":
-		templatePath = "templates/themes/professional/readme.tmpl"
+	case ThemeDefault:
+		templatePath = TemplatePathDefault
+	case ThemeGitHub:
+		templatePath = TemplatePathGitHub
+	case ThemeGitLab:
+		templatePath = TemplatePathGitLab
+	case ThemeMinimal:
+		templatePath = TemplatePathMinimal
+	case ThemeProfessional:
+		templatePath = TemplatePathProfessional
 	case "":
 		// Empty theme should return empty path
 		return ""
@@ -451,9 +451,9 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 
 	// 6. Apply environment variable overrides for GitHub token
 	// Check environment variables directly with higher priority
-	if token := os.Getenv("GH_README_GITHUB_TOKEN"); token != "" {
+	if token := os.Getenv(EnvGitHubToken); token != "" {
 		config.GitHubToken = token
-	} else if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+	} else if token := os.Getenv(EnvGitHubTokenStandard); token != "" {
 		config.GitHubToken = token
 	}
 
@@ -465,7 +465,7 @@ func InitConfig(configFile string) (*AppConfig, error) {
 	v := viper.New()
 
 	// Set configuration file name and type
-	v.SetConfigName("config")
+	v.SetConfigName(ConfigFileName)
 	v.SetConfigType("yaml")
 
 	// Add XDG-compliant configuration directory
@@ -542,7 +542,7 @@ func WriteDefaultConfig() error {
 	}
 
 	// Ensure the directory exists
-	if err := os.MkdirAll(filepath.Dir(configFile), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configFile), 0750); err != nil { // #nosec G301 -- config directory permissions
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 

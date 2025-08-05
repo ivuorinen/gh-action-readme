@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/internal/wizard"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -50,7 +52,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
 			wantExit: 0,
 		},
@@ -59,7 +61,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
 			wantExit: 0,
 		},
@@ -67,14 +69,14 @@ func TestCLICommands(t *testing.T) {
 			name:       "gen command with no action files",
 			args:       []string{"gen"},
 			wantExit:   1,
-			wantStderr: "No action.yml or action.yaml files found",
+			wantStderr: "no GitHub Action files found for documentation generation [NO_ACTION_FILES]",
 		},
 		{
 			name: "validate command with valid action",
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
 			wantExit:   0,
 			wantStdout: "All validations passed successfully",
@@ -84,7 +86,11 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.InvalidActionYML)
+				testutil.WriteTestFile(
+					t,
+					actionPath,
+					testutil.MustReadFixture("actions/invalid/missing-description.yml"),
+				)
 			},
 			wantExit: 1,
 		},
@@ -115,15 +121,15 @@ func TestCLICommands(t *testing.T) {
 		{
 			name:       "deps list command no files",
 			args:       []string{"deps", "list"},
-			wantExit:   1,
-			wantStdout: "Please run this command in a directory containing GitHub Action files",
+			wantExit:   0, // Changed: deps list now outputs warning instead of error when no files found
+			wantStdout: "No action files found",
 		},
 		{
 			name: "deps list command with composite action",
 			args: []string{"deps", "list"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.CompositeActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/composite/basic.yml"))
 			},
 			wantExit: 0,
 		},
@@ -159,7 +165,7 @@ func TestCLICommands(t *testing.T) {
 			}
 
 			// Run the command in the temporary directory
-			cmd := exec.Command(binaryPath, tt.args...)
+			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
 			cmd.Dir = tmpDir
 
 			var stdout, stderr bytes.Buffer
@@ -247,7 +253,7 @@ func TestCLIFlags(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			cmd := exec.Command(binaryPath, tt.args...)
+			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
 			cmd.Dir = tmpDir
 
 			var stdout, stderr bytes.Buffer
@@ -288,11 +294,13 @@ func TestCLIRecursiveFlag(t *testing.T) {
 
 	// Create nested directory structure with action files
 	subDir := filepath.Join(tmpDir, "subdir")
-	_ = os.MkdirAll(subDir, 0755)
+	_ = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
 
 	// Write action files
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), testutil.SimpleActionYML)
-	testutil.WriteTestFile(t, filepath.Join(subDir, "action.yml"), testutil.CompositeActionYML)
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
+		testutil.MustReadFixture("actions/javascript/simple.yml"))
+	testutil.WriteTestFile(t, filepath.Join(subDir, "action.yml"),
+		testutil.MustReadFixture("actions/composite/basic.yml"))
 
 	tests := []struct {
 		name     string
@@ -316,7 +324,7 @@ func TestCLIRecursiveFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command(binaryPath, tt.args...)
+			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
 			cmd.Dir = tmpDir
 
 			var stdout, stderr bytes.Buffer
@@ -363,7 +371,8 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "permission denied on output directory",
 			args: []string{"gen", "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
+					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
 			wantExit:  1,
 			wantError: "encountered 1 errors during batch processing",
@@ -380,7 +389,8 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "unknown output format",
 			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
+					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
 			wantExit: 1,
 		},
@@ -388,7 +398,8 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "unknown theme",
 			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
+					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
 			wantExit: 1,
 		},
@@ -403,7 +414,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				tt.setupFunc(t, tmpDir)
 			}
 
-			cmd := exec.Command(binaryPath, tt.args...)
+			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
 			cmd.Dir = tmpDir
 
 			var stdout, stderr bytes.Buffer
@@ -443,7 +454,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 	defer cleanup()
 
 	// Test config init command
-	cmd := exec.Command(binaryPath, "config", "init")
+	cmd := exec.Command(binaryPath, "config", "init") // #nosec G204 -- controlled test input
 	cmd.Dir = tmpDir
 
 	// Set XDG_CONFIG_HOME to temp directory
@@ -478,5 +489,160 @@ func TestCLIConfigInitialization(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// Unit Tests for Helper Functions
+// These test the actual functions directly rather than through subprocess execution.
+
+func TestCreateOutputManager(t *testing.T) {
+	tests := []struct {
+		name  string
+		quiet bool
+	}{
+		{"normal mode", false},
+		{"quiet mode", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := createOutputManager(tt.quiet)
+			if output == nil {
+				t.Fatal("createOutputManager returned nil")
+			}
+		})
+	}
+}
+
+func TestFormatSize(t *testing.T) {
+	tests := []struct {
+		name     string
+		size     int64
+		expected string
+	}{
+		{"zero bytes", 0, "0 bytes"},
+		{"bytes", 500, "500 bytes"},
+		{"kilobyte boundary", 1024, "1.00 KB"},
+		{"kilobytes", 2048, "2.00 KB"},
+		{"megabyte boundary", 1024 * 1024, "1.00 MB"},
+		{"megabytes", 5 * 1024 * 1024, "5.00 MB"},
+		{"gigabyte boundary", 1024 * 1024 * 1024, "1.00 GB"},
+		{"gigabytes", 3 * 1024 * 1024 * 1024, "3.00 GB"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := formatSize(tt.size)
+			if result != tt.expected {
+				t.Errorf("formatSize(%d) = %q, want %q", tt.size, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestResolveExportFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   string
+		expected wizard.ExportFormat
+	}{
+		{"json format", formatJSON, wizard.FormatJSON},
+		{"toml format", formatTOML, wizard.FormatTOML},
+		{"yaml format", formatYAML, wizard.FormatYAML},
+		{"default format", "unknown", wizard.FormatYAML},
+		{"empty format", "", wizard.FormatYAML},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := resolveExportFormat(tt.format)
+			if result != tt.expected {
+				t.Errorf("resolveExportFormat(%q) = %v, want %v", tt.format, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCreateErrorHandler(t *testing.T) {
+	output := internal.NewColoredOutput(false)
+	handler := createErrorHandler(output)
+
+	if handler == nil {
+		t.Fatal("createErrorHandler returned nil")
+	}
+}
+
+func TestSetupOutputAndErrorHandling(t *testing.T) {
+	// Setup globalConfig for the test
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: false}
+
+	output, errorHandler := setupOutputAndErrorHandling()
+
+	if output == nil {
+		t.Fatal("setupOutputAndErrorHandling returned nil output")
+	}
+	if errorHandler == nil {
+		t.Fatal("setupOutputAndErrorHandling returned nil errorHandler")
+	}
+}
+
+// Unit Tests for Command Creation Functions
+
+func TestNewGenCmd(t *testing.T) {
+	cmd := newGenCmd()
+
+	if cmd.Use != "gen" {
+		t.Errorf("expected Use to be 'gen', got %q", cmd.Use)
+	}
+
+	if cmd.Short == "" {
+		t.Error("expected Short description to be non-empty")
+	}
+
+	if cmd.RunE == nil && cmd.Run == nil {
+		t.Error("expected command to have a Run or RunE function")
+	}
+
+	// Check that required flags exist
+	flags := []string{"output-format", "output-dir", "theme", "recursive"}
+	for _, flag := range flags {
+		if cmd.Flags().Lookup(flag) == nil {
+			t.Errorf("expected flag %q to exist", flag)
+		}
+	}
+}
+
+func TestNewValidateCmd(t *testing.T) {
+	cmd := newValidateCmd()
+
+	if cmd.Use != "validate" {
+		t.Errorf("expected Use to be 'validate', got %q", cmd.Use)
+	}
+
+	if cmd.Short == "" {
+		t.Error("expected Short description to be non-empty")
+	}
+
+	if cmd.RunE == nil && cmd.Run == nil {
+		t.Error("expected command to have a Run or RunE function")
+	}
+}
+
+func TestNewSchemaCmd(t *testing.T) {
+	cmd := newSchemaCmd()
+
+	if cmd.Use != "schema" {
+		t.Errorf("expected Use to be 'schema', got %q", cmd.Use)
+	}
+
+	if cmd.Short == "" {
+		t.Error("expected Short description to be non-empty")
+	}
+
+	if cmd.RunE == nil && cmd.Run == nil {
+		t.Error("expected command to have a Run or RunE function")
 	}
 }

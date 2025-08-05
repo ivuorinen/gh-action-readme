@@ -26,6 +26,7 @@ linters:
     - godot
     - predeclared
     - lll
+    - gosec
 
   disable:
     # Disable noisy linters

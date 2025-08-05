@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-github/v57/github"
 
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
+	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -25,34 +26,34 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 	}{
 		{
 			name:        "simple action - no dependencies",
-			actionYML:   testutil.SimpleActionYML,
+			actionYML:   testutil.MustReadFixture("actions/javascript/simple.yml"),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:         "composite action with dependencies",
-			actionYML:    testutil.CompositeActionYML,
+			actionYML:    testutil.MustReadFixture("actions/composite/with-dependencies.yml"),
 			expectError:  false,
 			expectDeps:   true,
-			expectedLen:  3,
-			expectedDeps: []string{"actions/checkout@v4", "actions/setup-node@v3"},
+			expectedLen:  5, // 3 action dependencies + 2 shell script dependencies
+			expectedDeps: []string{"actions/checkout@v4", "actions/setup-node@v4", "actions/setup-python@v4"},
 		},
 		{
 			name:        "docker action - no step dependencies",
-			actionYML:   testutil.DockerActionYML,
+			actionYML:   testutil.MustReadFixture("actions/docker/basic.yml"),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:        "invalid action file",
-			actionYML:   testutil.InvalidActionYML,
+			actionYML:   testutil.MustReadFixture("actions/invalid/invalid-using.yml"),
 			expectError: true,
 		},
 		{
 			name:        "minimal action - no dependencies",
-			actionYML:   testutil.MinimalActionYML,
+			actionYML:   testutil.MustReadFixture("minimal-action.yml"),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
@@ -401,18 +402,7 @@ func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
 	defer cleanup()
 
 	// Create a test action file with composite steps
-	actionContent := `name: 'Test Composite Action'
-description: 'Test action for update testing'
-runs:
-	using: 'composite'
-	steps:
-		- name: Checkout code
-			uses: actions/checkout@v3
-		- name: Setup Node
-			uses: actions/setup-node@v3.8.0
-			with:
-				node-version: '18'
-`
+	actionContent := testutil.MustReadFixture("test-composite-action.yml")
 
 	actionPath := filepath.Join(tmpDir, "action.yml")
 	testutil.WriteTestFile(t, actionPath, actionContent)
@@ -528,7 +518,7 @@ func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
 	defer cleanup()
 
 	actionPath := filepath.Join(tmpDir, "action.yml")
-	testutil.WriteTestFile(t, actionPath, testutil.CompositeActionYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/composite/basic.yml"))
 
 	deps, err := analyzer.AnalyzeActionFile(actionPath)
 
@@ -552,4 +542,77 @@ type mockTransport struct {
 
 func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.client.Do(req)
+}
+
+// TestNewAnalyzer tests the analyzer constructor.
+func TestNewAnalyzer(t *testing.T) {
+	// Create test dependencies
+	mockResponses := testutil.MockGitHubResponses()
+	githubClient := testutil.MockGitHubClient(mockResponses)
+	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
+	testutil.AssertNoError(t, err)
+	defer func() { _ = cacheInstance.Close() }()
+
+	repoInfo := git.RepoInfo{
+		Organization: "test-owner",
+		Repository:   "test-repo",
+	}
+
+	tests := []struct {
+		name         string
+		client       *github.Client
+		repoInfo     git.RepoInfo
+		cache        DependencyCache
+		expectNotNil bool
+	}{
+		{
+			name:         "creates analyzer with all dependencies",
+			client:       githubClient,
+			repoInfo:     repoInfo,
+			cache:        NewCacheAdapter(cacheInstance),
+			expectNotNil: true,
+		},
+		{
+			name:         "creates analyzer with nil client",
+			client:       nil,
+			repoInfo:     repoInfo,
+			cache:        NewCacheAdapter(cacheInstance),
+			expectNotNil: true,
+		},
+		{
+			name:         "creates analyzer with nil cache",
+			client:       githubClient,
+			repoInfo:     repoInfo,
+			cache:        nil,
+			expectNotNil: true,
+		},
+		{
+			name:         "creates analyzer with empty repo info",
+			client:       githubClient,
+			repoInfo:     git.RepoInfo{},
+			cache:        NewCacheAdapter(cacheInstance),
+			expectNotNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			analyzer := NewAnalyzer(tt.client, tt.repoInfo, tt.cache)
+
+			if tt.expectNotNil && analyzer == nil {
+				t.Fatal("expected non-nil analyzer")
+			}
+
+			// Verify fields are set correctly
+			if analyzer.GitHubClient != tt.client {
+				t.Error("GitHub client not set correctly")
+			}
+			if analyzer.Cache != tt.cache {
+				t.Error("cache not set correctly")
+			}
+			if analyzer.RepoInfo != tt.repoInfo {
+				t.Error("repo info not set correctly")
+			}
+		})
+	}
 }

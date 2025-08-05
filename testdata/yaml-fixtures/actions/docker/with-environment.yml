@@ -1,0 +1,38 @@
+name: 'Docker Action with Environment'
+description: 'Docker action with environment variables and advanced configuration'
+inputs:
+  dockerfile-path:
+    description: 'Path to the Dockerfile'
+    required: false
+    default: 'Dockerfile'
+  build-args:
+    description: 'Build arguments for Docker build'
+    required: false
+  registry-url:
+    description: 'Container registry URL'
+    required: false
+  username:
+    description: 'Registry username'
+    required: false
+  password:
+    description: 'Registry password'
+    required: false
+outputs:
+  image-digest:
+    description: 'SHA digest of the built image'
+  image-url:
+    description: 'URL of the pushed image'
+runs:
+  using: 'docker'
+  image: ${{ inputs.dockerfile-path }}
+  env:
+    REGISTRY_URL: ${{ inputs.registry-url }}
+    REGISTRY_USERNAME: ${{ inputs.username }}
+    REGISTRY_PASSWORD: ${{ inputs.password }}
+    BUILD_ARGS: ${{ inputs.build-args }}
+  args:
+    - '--build-args'
+    - ${{ inputs.build-args }}
+branding:
+  icon: 'box'
+  color: 'orange'

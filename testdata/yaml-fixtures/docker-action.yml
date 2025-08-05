@@ -1,0 +1,15 @@
+name: 'Docker Action'
+description: 'A Docker-based GitHub Action'
+inputs:
+  dockerfile:
+    description: 'Path to Dockerfile'
+    required: true
+    default: 'Dockerfile'
+outputs:
+  image-id:
+    description: 'Built Docker image ID'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.dockerfile }}

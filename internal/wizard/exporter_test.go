@@ -103,7 +103,7 @@ func verifyFileExists(t *testing.T, outputPath string) {
 
 // verifyYAMLContent verifies YAML content is valid and contains expected data.
 func verifyYAMLContent(t *testing.T, outputPath string, expected *internal.AppConfig) {
-	data, err := os.ReadFile(outputPath)
+	data, err := os.ReadFile(outputPath) // #nosec G304 -- test output path
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}
@@ -123,7 +123,7 @@ func verifyYAMLContent(t *testing.T, outputPath string, expected *internal.AppCo
 
 // verifyJSONContent verifies JSON content is valid and contains expected data.
 func verifyJSONContent(t *testing.T, outputPath string, expected *internal.AppConfig) {
-	data, err := os.ReadFile(outputPath)
+	data, err := os.ReadFile(outputPath) // #nosec G304 -- test output path
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}
@@ -143,7 +143,7 @@ func verifyJSONContent(t *testing.T, outputPath string, expected *internal.AppCo
 
 // verifyTOMLContent verifies TOML content contains expected fields.
 func verifyTOMLContent(t *testing.T, outputPath string) {
-	data, err := os.ReadFile(outputPath)
+	data, err := os.ReadFile(outputPath) // #nosec G304 -- test output path
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}

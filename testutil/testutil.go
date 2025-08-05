@@ -22,6 +22,21 @@ type MockHTTPClient struct {
 	Requests  []*http.Request
 }
 
+// HTTPResponse represents a mock HTTP response.
+type HTTPResponse struct {
+	StatusCode int
+	Body       string
+	Headers    map[string]string
+}
+
+// HTTPRequest represents a captured HTTP request.
+type HTTPRequest struct {
+	Method  string
+	URL     string
+	Body    string
+	Headers map[string]string
+}
+
 // Do implements the http.Client interface.
 func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	m.Requests = append(m.Requests, req)
@@ -83,11 +98,11 @@ func WriteTestFile(t *testing.T, path, content string) {
 	t.Helper()
 
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil { // #nosec G301 -- test directory permissions
 		t.Fatalf("failed to create dir %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil { // #nosec G306 -- test file permissions
 		t.Fatalf("failed to write test file %s: %v", path, err)
 	}
 }
@@ -177,19 +192,20 @@ func CreateTestAction(name, description string, inputs map[string]string) string
 		inputsYAML.WriteString(fmt.Sprintf("  %s:\n    description: %s\n    required: true\n", key, desc))
 	}
 
-	return fmt.Sprintf(`name: %s
-description: %s
-inputs:
-%soutputs:
-  result:
-    description: 'The result'
-runs:
-  using: 'node20'
-  main: 'index.js'
-branding:
-  icon: 'zap'
-  color: 'yellow'
-`, name, description, inputsYAML.String())
+	result := fmt.Sprintf("name: %s\n", name)
+	result += fmt.Sprintf("description: %s\n", description)
+	result += "inputs:\n"
+	result += inputsYAML.String()
+	result += "outputs:\n"
+	result += "  result:\n"
+	result += "    description: 'The result'\n"
+	result += "runs:\n"
+	result += "  using: 'node20'\n"
+	result += "  main: 'index.js'\n"
+	result += "branding:\n"
+	result += "  icon: 'zap'\n"
+	result += "  color: 'yellow'\n"
+	return result
 }
 
 // SetupTestTemplates creates template files for testing.
@@ -203,7 +219,7 @@ func SetupTestTemplates(t *testing.T, dir string) {
 	// Create directories
 	for _, theme := range []string{"github", "gitlab", "minimal", "professional"} {
 		themeDir := filepath.Join(themesDir, theme)
-		if err := os.MkdirAll(themeDir, 0755); err != nil {
+		if err := os.MkdirAll(themeDir, 0750); err != nil { // #nosec G301 -- test directory permissions
 			t.Fatalf("failed to create theme dir %s: %v", themeDir, err)
 		}
 		// Write theme template
@@ -223,12 +239,13 @@ func CreateCompositeAction(name, description string, steps []string) string {
 		stepsYAML.WriteString(fmt.Sprintf("  - name: Step %d\n    uses: %s\n", i+1, step))
 	}
 
-	return fmt.Sprintf(`name: %s
-description: %s
-runs:
-  using: 'composite'
-  steps:
-%s`, name, description, stepsYAML.String())
+	result := fmt.Sprintf("name: %s\n", name)
+	result += fmt.Sprintf("description: %s\n", description)
+	result += "runs:\n"
+	result += "  using: 'composite'\n"
+	result += "  steps:\n"
+	result += stepsYAML.String()
+	return result
 }
 
 // TestAppConfig represents a test configuration structure.

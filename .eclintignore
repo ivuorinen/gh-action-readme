@@ -4,6 +4,11 @@
 gh-action-readme
 dist/
 coverage.out
+*.exe
+*.bin
+*.dll
+*.so
+*.dylib
 
 # Git directory
 .git/
@@ -26,19 +31,6 @@ Thumbs.db
 # Log files
 *.log
 
-# Binary files
-*.exe
-*.bin
-*.dll
-*.so
-*.dylib
-
 # Cache directories
 .cache/
 .npm/
-
-# Settings files that may contain secrets or be machine-specific
-.claude/settings.local.json
-
-# Binary executable
-gh-action-readme

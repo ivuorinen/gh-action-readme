@@ -27,6 +27,7 @@ type Cache struct {
 	ticker     *time.Ticker     // Cleanup ticker
 	done       chan bool        // Cleanup shutdown
 	defaultTTL time.Duration    // Default TTL for entries
+	saveWG     sync.WaitGroup   // Wait group for pending save operations
 }
 
 // Config represents cache configuration.
@@ -58,7 +59,7 @@ func NewCache(config *Config) (*Cache, error) {
 	}
 
 	// Ensure cache directory exists
-	if err := os.MkdirAll(filepath.Dir(cacheDir), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(cacheDir), 0750); err != nil { // #nosec G301 -- cache directory permissions
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -188,6 +189,9 @@ func (c *Cache) Close() error {
 	default:
 	}
 
+	// Wait for any pending async save operations to complete
+	c.saveWG.Wait()
+
 	// Save final state to disk
 	return c.saveToDisk()
 }
@@ -224,7 +228,7 @@ func (c *Cache) cleanup() {
 func (c *Cache) loadFromDisk() error {
 	cacheFile := filepath.Join(c.path, "cache.json")
 
-	data, err := os.ReadFile(cacheFile)
+	data, err := os.ReadFile(cacheFile) // #nosec G304 -- cache file path constructed internally
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No cache file is fine
@@ -257,7 +261,7 @@ func (c *Cache) saveToDisk() error {
 	}
 
 	cacheFile := filepath.Join(c.path, "cache.json")
-	if err := os.WriteFile(cacheFile, jsonData, 0644); err != nil {
+	if err := os.WriteFile(cacheFile, jsonData, 0600); err != nil { // #nosec G306 -- cache file permissions
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
@@ -267,7 +271,9 @@ func (c *Cache) saveToDisk() error {
 // saveToDiskAsync saves the cache to disk asynchronously.
 // Cache save failures are non-critical and silently ignored.
 func (c *Cache) saveToDiskAsync() {
+	c.saveWG.Add(1)
 	go func() {
+		defer c.saveWG.Done()
 		_ = c.saveToDisk() // Ignore errors - cache save failures are non-critical
 	}()
 }

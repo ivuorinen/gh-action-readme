@@ -1,0 +1,8 @@
+theme: professional
+output_format: html
+output_dir: docs
+template: custom-template.tmpl
+schema: custom-schema.json
+verbose: true
+quiet: false
+github_token: test-token-from-config

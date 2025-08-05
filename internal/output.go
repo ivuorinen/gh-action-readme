@@ -11,10 +11,21 @@ import (
 )
 
 // ColoredOutput provides methods for colored terminal output.
+// It implements all the focused interfaces for backward compatibility.
 type ColoredOutput struct {
 	NoColor bool
 	Quiet   bool
 }
+
+// Compile-time interface checks.
+var (
+	_ MessageLogger    = (*ColoredOutput)(nil)
+	_ ErrorReporter    = (*ColoredOutput)(nil)
+	_ ErrorFormatter   = (*ColoredOutput)(nil)
+	_ ProgressReporter = (*ColoredOutput)(nil)
+	_ OutputConfig     = (*ColoredOutput)(nil)
+	_ CompleteOutput   = (*ColoredOutput)(nil)
+)
 
 // NewColoredOutput creates a new colored output instance.
 func NewColoredOutput(quiet bool) *ColoredOutput {

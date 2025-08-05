@@ -1,0 +1,19 @@
+name: 'Simple JavaScript Action'
+description: 'A simple JavaScript action for testing'
+inputs:
+  message:
+    description: 'Message to display'
+    required: true
+  level:
+    description: 'Log level'
+    required: false
+    default: 'info'
+outputs:
+  result:
+    description: 'The result of the action'
+runs:
+  using: 'node20'
+  main: 'index.js'
+branding:
+  icon: 'activity'
+  color: 'blue'

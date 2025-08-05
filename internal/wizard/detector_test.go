@@ -23,7 +23,7 @@ func TestProjectDetector_analyzeProjectFiles(t *testing.T) {
 
 	for filename, content := range testFiles {
 		filePath := filepath.Join(tempDir, filename)
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0600); err != nil { // #nosec G306 -- test file permissions
 			t.Fatalf("Failed to create test file %s: %v", filename, err)
 		}
 	}
@@ -73,7 +73,7 @@ func TestProjectDetector_detectVersionFromPackageJSON(t *testing.T) {
 	}`
 
 	packagePath := filepath.Join(tempDir, "package.json")
-	if err := os.WriteFile(packagePath, []byte(packageJSON), 0644); err != nil {
+	if err := os.WriteFile(packagePath, []byte(packageJSON), 0600); err != nil { // #nosec G306 -- test file permissions
 		t.Fatalf("Failed to create package.json: %v", err)
 	}
 
@@ -95,7 +95,7 @@ func TestProjectDetector_detectVersionFromFiles(t *testing.T) {
 	// Create VERSION file
 	versionContent := "3.2.1\n"
 	versionPath := filepath.Join(tempDir, "VERSION")
-	if err := os.WriteFile(versionPath, []byte(versionContent), 0644); err != nil {
+	if err := os.WriteFile(versionPath, []byte(versionContent), 0600); err != nil { // #nosec G306 -- test file permissions
 		t.Fatalf("Failed to create VERSION file: %v", err)
 	}
 
@@ -116,18 +116,26 @@ func TestProjectDetector_findActionFiles(t *testing.T) {
 
 	// Create action files
 	actionYML := filepath.Join(tempDir, "action.yml")
-	if err := os.WriteFile(actionYML, []byte("name: Test Action"), 0644); err != nil {
+	if err := os.WriteFile(
+		actionYML,
+		[]byte("name: Test Action"),
+		0600, // #nosec G306 -- test file permissions
+	); err != nil {
 		t.Fatalf("Failed to create action.yml: %v", err)
 	}
 
 	// Create subdirectory with another action file
 	subDir := filepath.Join(tempDir, "subaction")
-	if err := os.MkdirAll(subDir, 0755); err != nil {
+	if err := os.MkdirAll(subDir, 0750); err != nil { // #nosec G301 -- test directory permissions
 		t.Fatalf("Failed to create subdirectory: %v", err)
 	}
 
 	subActionYAML := filepath.Join(subDir, "action.yaml")
-	if err := os.WriteFile(subActionYAML, []byte("name: Sub Action"), 0644); err != nil {
+	if err := os.WriteFile(
+		subActionYAML,
+		[]byte("name: Sub Action"),
+		0600, // #nosec G306 -- test file permissions
+	); err != nil {
 		t.Fatalf("Failed to create sub action.yaml: %v", err)
 	}
 

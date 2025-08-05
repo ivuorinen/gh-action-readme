@@ -1,0 +1,17 @@
+theme: professional
+output_format: html
+output_dir: docs
+verbose: true
+quiet: false
+github_token: 'ghp_test_token_1234567890'
+analyze_dependencies: true
+show_security_info: true
+cache_duration: 3600
+max_concurrent_requests: 10
+repo_overrides:
+  'example/repo':
+    theme: github
+    output_format: md
+  'test/action':
+    theme: minimal
+    quiet: true

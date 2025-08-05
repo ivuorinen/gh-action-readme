@@ -1,0 +1,12 @@
+name: 'Malformed YAML Action'
+description: 'Action with intentionally malformed YAML'
+inputs:
+  test-input:
+    description: 'A test input'
+    # This creates invalid YAML due to incorrect indentation
+  invalid-structure
+runs:
+  using: 'node20'
+  main: 'index.js'
+    # More invalid indentation
+  extra-field: value

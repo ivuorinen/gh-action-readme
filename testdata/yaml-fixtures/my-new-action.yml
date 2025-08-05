@@ -1,0 +1,9 @@
+name: 'My New Action'
+description: 'A brand new GitHub Action'
+inputs:
+  message:
+    description: 'Message to display'
+    required: true
+runs:
+  using: 'node20'
+  main: 'index.js'

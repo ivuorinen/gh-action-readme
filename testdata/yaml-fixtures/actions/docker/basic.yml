@@ -1,0 +1,22 @@
+name: 'Basic Docker Action'
+description: 'A simple Docker-based action'
+inputs:
+  command:
+    description: 'Command to execute in the container'
+    required: true
+  args:
+    description: 'Arguments for the command'
+    required: false
+    default: ''
+outputs:
+  result:
+    description: 'Result of the command execution'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.command }}
+    - ${{ inputs.args }}
+branding:
+  icon: 'package'
+  color: 'blue'

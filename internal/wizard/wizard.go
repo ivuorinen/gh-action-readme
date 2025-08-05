@@ -43,24 +43,16 @@ func (w *ConfigWizard) Run() (*internal.AppConfig, error) {
 	}
 
 	// Step 2: Configure basic settings
-	if err := w.configureBasicSettings(); err != nil {
-		return nil, fmt.Errorf("failed to configure basic settings: %w", err)
-	}
+	w.configureBasicSettings()
 
 	// Step 3: Configure template and output settings
-	if err := w.configureTemplateSettings(); err != nil {
-		return nil, fmt.Errorf("failed to configure template settings: %w", err)
-	}
+	w.configureTemplateSettings()
 
 	// Step 4: Configure features
-	if err := w.configureFeatures(); err != nil {
-		return nil, fmt.Errorf("failed to configure features: %w", err)
-	}
+	w.configureFeatures()
 
 	// Step 5: Configure GitHub integration
-	if err := w.configureGitHubIntegration(); err != nil {
-		return nil, fmt.Errorf("failed to configure GitHub integration: %w", err)
-	}
+	w.configureGitHubIntegration()
 
 	// Step 6: Summary and confirmation
 	if err := w.showSummaryAndConfirm(); err != nil {
@@ -96,8 +88,8 @@ func (w *ConfigWizard) detectProjectSettings() error {
 	}
 
 	// Check for existing action files
-	actionFiles, err := w.findActionFiles(currentDir)
-	if err == nil && len(actionFiles) > 0 {
+	actionFiles := w.findActionFiles(currentDir)
+	if len(actionFiles) > 0 {
 		w.output.Success("  🎯 Found %d action file(s)", len(actionFiles))
 	}
 
@@ -105,7 +97,7 @@ func (w *ConfigWizard) detectProjectSettings() error {
 }
 
 // configureBasicSettings handles basic configuration prompts.
-func (w *ConfigWizard) configureBasicSettings() error {
+func (w *ConfigWizard) configureBasicSettings() {
 	w.output.Bold("\n⚙️  Step 2: Basic Settings")
 
 	// Organization
@@ -119,19 +111,15 @@ func (w *ConfigWizard) configureBasicSettings() error {
 	if version != "" {
 		w.config.Version = version
 	}
-
-	return nil
 }
 
 // configureTemplateSettings handles template and output configuration.
-func (w *ConfigWizard) configureTemplateSettings() error {
+func (w *ConfigWizard) configureTemplateSettings() {
 	w.output.Bold("\n🎨 Step 3: Template & Output Settings")
 
 	w.configureThemeSelection()
 	w.configureOutputFormat()
 	w.configureOutputDirectory()
-
-	return nil
 }
 
 // configureThemeSelection handles theme selection.
@@ -208,7 +196,7 @@ func (w *ConfigWizard) displayFormatOptions(formats []string) {
 }
 
 // configureFeatures handles feature configuration.
-func (w *ConfigWizard) configureFeatures() error {
+func (w *ConfigWizard) configureFeatures() {
 	w.output.Bold("\n🚀 Step 4: Features")
 
 	// Dependency analysis
@@ -220,19 +208,17 @@ func (w *ConfigWizard) configureFeatures() error {
 	w.output.Info("Security information shows pinned vs floating versions and security recommendations.")
 	showSecurity := w.promptYesNo("Show security information?", w.config.ShowSecurityInfo)
 	w.config.ShowSecurityInfo = showSecurity
-
-	return nil
 }
 
 // configureGitHubIntegration handles GitHub API configuration.
-func (w *ConfigWizard) configureGitHubIntegration() error {
+func (w *ConfigWizard) configureGitHubIntegration() {
 	w.output.Bold("\n🐙 Step 5: GitHub Integration")
 
 	// Check for existing token
 	existingToken := internal.GetGitHubToken(w.config)
 	if existingToken != "" {
 		w.output.Success("GitHub token already configured ✓")
-		return nil
+		return
 	}
 
 	w.output.Info("GitHub integration requires a personal access token for:")
@@ -245,7 +231,7 @@ func (w *ConfigWizard) configureGitHubIntegration() error {
 	if !setupToken {
 		w.output.Info("You can set up the token later using environment variables:")
 		w.output.Printf("  export GITHUB_TOKEN=your_personal_access_token")
-		return nil
+		return
 	}
 
 	w.output.Info("\nTo create a personal access token:")
@@ -265,8 +251,6 @@ func (w *ConfigWizard) configureGitHubIntegration() error {
 			w.config.GitHubToken = token
 		}
 	}
-
-	return nil
 }
 
 // showSummaryAndConfirm displays configuration summary and asks for confirmation.
@@ -286,9 +270,9 @@ func (w *ConfigWizard) showSummaryAndConfirm() error {
 
 	tokenStatus := "Not configured"
 	if w.config.GitHubToken != "" {
-		tokenStatus = "Configured ✓"
+		tokenStatus = "Configured ✓" // #nosec G101 -- status message, not actual token
 	} else if internal.GetGitHubToken(w.config) != "" {
-		tokenStatus = "Configured via environment ✓"
+		tokenStatus = "Configured via environment ✓" // #nosec G101 -- status message, not actual token
 	}
 	w.output.Printf("  GitHub Token: %s", tokenStatus)
 
@@ -361,7 +345,7 @@ func (w *ConfigWizard) promptYesNo(prompt string, defaultValue bool) bool {
 }
 
 // findActionFiles discovers action files in the given directory.
-func (w *ConfigWizard) findActionFiles(dir string) ([]string, error) {
+func (w *ConfigWizard) findActionFiles(dir string) []string {
 	var actionFiles []string
 
 	// Check for action.yml and action.yaml
@@ -372,5 +356,5 @@ func (w *ConfigWizard) findActionFiles(dir string) ([]string, error) {
 		}
 	}
 
-	return actionFiles, nil
+	return actionFiles
 }

@@ -1,0 +1,5 @@
+name: 'Minimal Action'
+description: 'Minimal test action'
+runs:
+  using: 'node20'
+  main: 'index.js'

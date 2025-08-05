@@ -1,0 +1,8 @@
+name: 'Action Missing Description'
+inputs:
+  test-input:
+    description: 'A test input'
+    required: true
+runs:
+  using: 'node20'
+  main: 'index.js'

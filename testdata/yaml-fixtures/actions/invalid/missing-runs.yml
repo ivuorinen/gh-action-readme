@@ -1,0 +1,9 @@
+name: 'Action Missing Runs'
+description: 'Action without required runs section'
+inputs:
+  test-input:
+    description: 'A test input'
+    required: true
+branding:
+  icon: 'alert-circle'
+  color: 'red'

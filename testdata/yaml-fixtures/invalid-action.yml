@@ -1,0 +1,8 @@
+name: 'Invalid Action'
+# Missing description field makes this invalid
+inputs:
+  test-input:
+    description: 'Test input'
+    required: true
+runs:
+  using: 'invalid-runtime'

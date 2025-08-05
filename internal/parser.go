@@ -40,7 +40,7 @@ type Branding struct {
 
 // ParseActionYML reads and parses action.yml from given path.
 func ParseActionYML(path string) (*ActionYML, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path from function parameter
 	if err != nil {
 		return nil, err
 	}

@@ -50,7 +50,7 @@ func TestInitConfig(t *testing.T) {
 			configFile: "custom-config.yml",
 			setupFunc: func(t *testing.T, tempDir string) {
 				configPath := filepath.Join(tempDir, "custom-config.yml")
-				testutil.WriteTestFile(t, configPath, testutil.CustomConfigYAML)
+				testutil.WriteTestFile(t, configPath, testutil.MustReadFixture("professional-config.yml"))
 			},
 			expected: &AppConfig{
 				Theme:        "professional",
@@ -134,7 +134,7 @@ func TestLoadConfiguration(t *testing.T) {
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
-				_ = os.MkdirAll(globalConfigDir, 0755)
+				_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
 				globalConfigPath := filepath.Join(globalConfigDir, "config.yaml")
 				testutil.WriteTestFile(t, globalConfigPath, `
 theme: default
@@ -144,7 +144,7 @@ github_token: global-token
 
 				// Create repo root with repo-specific config
 				repoRoot := filepath.Join(tempDir, "repo")
-				_ = os.MkdirAll(repoRoot, 0755)
+				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 				testutil.WriteTestFile(t, filepath.Join(repoRoot, ".ghreadme.yaml"), `
 theme: github
 output_format: html
@@ -152,7 +152,7 @@ output_format: html
 
 				// Create current directory with action-specific config
 				currentDir := filepath.Join(repoRoot, "action")
-				_ = os.MkdirAll(currentDir, 0755)
+				_ = os.MkdirAll(currentDir, 0750) // #nosec G301 -- test directory permissions
 				testutil.WriteTestFile(t, filepath.Join(currentDir, "config.yaml"), `
 theme: professional
 output_dir: output
@@ -206,7 +206,7 @@ github_token: config-token
 
 				// Create XDG-compliant config
 				configDir := filepath.Join(xdgConfigHome, "gh-action-readme")
-				_ = os.MkdirAll(configDir, 0755)
+				_ = os.MkdirAll(configDir, 0750) // #nosec G301 -- test directory permissions
 				configPath := filepath.Join(configDir, "config.yaml")
 				testutil.WriteTestFile(t, configPath, `
 theme: github
@@ -228,7 +228,7 @@ verbose: true
 			name: "hidden config file discovery",
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
 				repoRoot := filepath.Join(tempDir, "repo")
-				_ = os.MkdirAll(repoRoot, 0755)
+				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 
 				// Create multiple hidden config files
 				testutil.WriteTestFile(t, filepath.Join(repoRoot, ".ghreadme.yaml"), `
@@ -530,7 +530,7 @@ func TestConfigMerging(t *testing.T) {
 	// Test config merging by creating config files and seeing the result
 
 	globalConfigDir := filepath.Join(tmpDir, ".config", "gh-action-readme")
-	_ = os.MkdirAll(globalConfigDir, 0755)
+	_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
 	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, "config.yaml"), `
 theme: default
 output_format: md
@@ -539,7 +539,7 @@ verbose: false
 `)
 
 	repoRoot := filepath.Join(tmpDir, "repo")
-	_ = os.MkdirAll(repoRoot, 0755)
+	_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 	testutil.WriteTestFile(t, filepath.Join(repoRoot, ".ghreadme.yaml"), `
 theme: github
 output_format: html
@@ -575,4 +575,252 @@ verbose: true
 	testutil.AssertEqual(t, true, config.Verbose)                 // from repo config
 	testutil.AssertEqual(t, "base-token", config.GitHubToken)     // from global config
 	testutil.AssertEqual(t, "schemas/schema.json", config.Schema) // default value
+}
+
+// TestGetGitHubToken tests GitHub token resolution with different priority levels.
+func TestGetGitHubToken(t *testing.T) {
+	// Save and restore original environment
+	originalToolToken := os.Getenv(EnvGitHubToken)
+	originalStandardToken := os.Getenv(EnvGitHubTokenStandard)
+	defer func() {
+		if originalToolToken != "" {
+			_ = os.Setenv(EnvGitHubToken, originalToolToken)
+		} else {
+			_ = os.Unsetenv(EnvGitHubToken)
+		}
+		if originalStandardToken != "" {
+			_ = os.Setenv(EnvGitHubTokenStandard, originalStandardToken)
+		} else {
+			_ = os.Unsetenv(EnvGitHubTokenStandard)
+		}
+	}()
+
+	tests := []struct {
+		name          string
+		toolEnvToken  string
+		stdEnvToken   string
+		configToken   string
+		expectedToken string
+	}{
+		{
+			name:          "tool-specific env var has highest priority",
+			toolEnvToken:  "tool-token",
+			stdEnvToken:   "std-token",
+			configToken:   "config-token",
+			expectedToken: "tool-token",
+		},
+		{
+			name:          "standard env var when tool env not set",
+			toolEnvToken:  "",
+			stdEnvToken:   "std-token",
+			configToken:   "config-token",
+			expectedToken: "std-token",
+		},
+		{
+			name:          "config token when env vars not set",
+			toolEnvToken:  "",
+			stdEnvToken:   "",
+			configToken:   "config-token",
+			expectedToken: "config-token",
+		},
+		{
+			name:          "empty string when nothing set",
+			toolEnvToken:  "",
+			stdEnvToken:   "",
+			configToken:   "",
+			expectedToken: "",
+		},
+		{
+			name:          "empty env var does not override config",
+			toolEnvToken:  "",
+			stdEnvToken:   "",
+			configToken:   "config-token",
+			expectedToken: "config-token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up environment
+			if tt.toolEnvToken != "" {
+				_ = os.Setenv(EnvGitHubToken, tt.toolEnvToken)
+			} else {
+				_ = os.Unsetenv(EnvGitHubToken)
+			}
+			if tt.stdEnvToken != "" {
+				_ = os.Setenv(EnvGitHubTokenStandard, tt.stdEnvToken)
+			} else {
+				_ = os.Unsetenv(EnvGitHubTokenStandard)
+			}
+
+			config := &AppConfig{GitHubToken: tt.configToken}
+			result := GetGitHubToken(config)
+
+			testutil.AssertEqual(t, tt.expectedToken, result)
+		})
+	}
+}
+
+// TestMergeMapFields tests the merging of map fields in configuration.
+func TestMergeMapFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		dst      *AppConfig
+		src      *AppConfig
+		expected *AppConfig
+	}{
+		{
+			name: "merge permissions into empty dst",
+			dst:  &AppConfig{},
+			src: &AppConfig{
+				Permissions: map[string]string{"read": "read", "write": "write"},
+			},
+			expected: &AppConfig{
+				Permissions: map[string]string{"read": "read", "write": "write"},
+			},
+		},
+		{
+			name: "merge permissions into existing dst",
+			dst: &AppConfig{
+				Permissions: map[string]string{"read": "existing"},
+			},
+			src: &AppConfig{
+				Permissions: map[string]string{"read": "new", "write": "write"},
+			},
+			expected: &AppConfig{
+				Permissions: map[string]string{"read": "new", "write": "write"},
+			},
+		},
+		{
+			name: "merge variables into empty dst",
+			dst:  &AppConfig{},
+			src: &AppConfig{
+				Variables: map[string]string{"VAR1": "value1", "VAR2": "value2"},
+			},
+			expected: &AppConfig{
+				Variables: map[string]string{"VAR1": "value1", "VAR2": "value2"},
+			},
+		},
+		{
+			name: "merge variables into existing dst",
+			dst: &AppConfig{
+				Variables: map[string]string{"VAR1": "existing"},
+			},
+			src: &AppConfig{
+				Variables: map[string]string{"VAR1": "new", "VAR2": "value2"},
+			},
+			expected: &AppConfig{
+				Variables: map[string]string{"VAR1": "new", "VAR2": "value2"},
+			},
+		},
+		{
+			name: "merge both permissions and variables",
+			dst: &AppConfig{
+				Permissions: map[string]string{"read": "existing"},
+			},
+			src: &AppConfig{
+				Permissions: map[string]string{"write": "write"},
+				Variables:   map[string]string{"VAR1": "value1"},
+			},
+			expected: &AppConfig{
+				Permissions: map[string]string{"read": "existing", "write": "write"},
+				Variables:   map[string]string{"VAR1": "value1"},
+			},
+		},
+		{
+			name: "empty src does not affect dst",
+			dst: &AppConfig{
+				Permissions: map[string]string{"read": "read"},
+				Variables:   map[string]string{"VAR1": "value1"},
+			},
+			src: &AppConfig{},
+			expected: &AppConfig{
+				Permissions: map[string]string{"read": "read"},
+				Variables:   map[string]string{"VAR1": "value1"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Deep copy dst to avoid modifying test data
+			dst := &AppConfig{}
+			if tt.dst.Permissions != nil {
+				dst.Permissions = make(map[string]string)
+				for k, v := range tt.dst.Permissions {
+					dst.Permissions[k] = v
+				}
+			}
+			if tt.dst.Variables != nil {
+				dst.Variables = make(map[string]string)
+				for k, v := range tt.dst.Variables {
+					dst.Variables[k] = v
+				}
+			}
+
+			mergeMapFields(dst, tt.src)
+
+			testutil.AssertEqual(t, tt.expected.Permissions, dst.Permissions)
+			testutil.AssertEqual(t, tt.expected.Variables, dst.Variables)
+		})
+	}
+}
+
+// TestMergeSliceFields tests the merging of slice fields in configuration.
+func TestMergeSliceFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		dst      *AppConfig
+		src      *AppConfig
+		expected []string
+	}{
+		{
+			name:     "merge runsOn into empty dst",
+			dst:      &AppConfig{},
+			src:      &AppConfig{RunsOn: []string{"ubuntu-latest", "windows-latest"}},
+			expected: []string{"ubuntu-latest", "windows-latest"},
+		},
+		{
+			name:     "merge runsOn replaces existing dst",
+			dst:      &AppConfig{RunsOn: []string{"macos-latest"}},
+			src:      &AppConfig{RunsOn: []string{"ubuntu-latest", "windows-latest"}},
+			expected: []string{"ubuntu-latest", "windows-latest"},
+		},
+		{
+			name:     "empty src does not affect dst",
+			dst:      &AppConfig{RunsOn: []string{"ubuntu-latest"}},
+			src:      &AppConfig{},
+			expected: []string{"ubuntu-latest"},
+		},
+		{
+			name:     "empty src slice does not affect dst",
+			dst:      &AppConfig{RunsOn: []string{"ubuntu-latest"}},
+			src:      &AppConfig{RunsOn: []string{}},
+			expected: []string{"ubuntu-latest"},
+		},
+		{
+			name:     "single item slice",
+			dst:      &AppConfig{},
+			src:      &AppConfig{RunsOn: []string{"self-hosted"}},
+			expected: []string{"self-hosted"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mergeSliceFields(tt.dst, tt.src)
+
+			// Compare slices manually since they can't be compared directly
+			if len(tt.expected) != len(tt.dst.RunsOn) {
+				t.Errorf("expected slice length %d, got %d", len(tt.expected), len(tt.dst.RunsOn))
+				return
+			}
+			for i, expected := range tt.expected {
+				if i >= len(tt.dst.RunsOn) || tt.dst.RunsOn[i] != expected {
+					t.Errorf("expected %v, got %v", tt.expected, tt.dst.RunsOn)
+					return
+				}
+			}
+		})
+	}
 }

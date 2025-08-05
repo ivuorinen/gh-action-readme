@@ -26,4 +26,6 @@ go.sum
 
 /gh-action-readme
 *.out
-TODO.md
+
+# Created readme files
+testdata/**/README.md

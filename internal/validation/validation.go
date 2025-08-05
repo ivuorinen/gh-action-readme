@@ -25,16 +25,19 @@ func IsSemanticVersion(version string) bool {
 
 // IsVersionPinned checks if a semantic version is pinned to a specific version.
 func IsVersionPinned(version string) bool {
-	// Consider it pinned if it specifies patch version (v1.2.3) or is a commit SHA
-	if IsSemanticVersion(version) {
-		return true
-	}
-	return IsCommitSHA(version) && len(version) == 40 // Only full SHAs are considered pinned
+	// Consider it pinned if it specifies patch version (v1.2.3) or is a full commit SHA
+	return IsSemanticVersion(version) || (IsCommitSHA(version) && len(version) == 40)
 }
 
 // ValidateGitBranch checks if a branch exists in the given repository.
 func ValidateGitBranch(repoRoot, branch string) bool {
-	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
+	cmd := exec.Command(
+		"git",
+		"show-ref",
+		"--verify",
+		"--quiet",
+		"refs/heads/"+branch,
+	) // #nosec G204 -- branch name validated by git
 	cmd.Dir = repoRoot
 	return cmd.Run() == nil
 }

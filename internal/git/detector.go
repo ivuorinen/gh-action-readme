@@ -80,9 +80,7 @@ func DetectRepository(repoRoot string) (*RepoInfo, error) {
 	}
 
 	// Try to get default branch
-	if defaultBranch, err := getDefaultBranch(repoRoot); err == nil {
-		info.DefaultBranch = defaultBranch
-	}
+	info.DefaultBranch = getDefaultBranch(repoRoot)
 
 	return info, nil
 }
@@ -114,7 +112,7 @@ func getRemoteURLFromGit(repoRoot string) (string, error) {
 // getRemoteURLFromConfig parses .git/config to extract remote URL.
 func getRemoteURLFromConfig(repoRoot string) (string, error) {
 	configPath := filepath.Join(repoRoot, ".git", "config")
-	file, err := os.Open(configPath)
+	file, err := os.Open(configPath) // #nosec G304 -- git config path constructed from repo root
 	if err != nil {
 		return "", fmt.Errorf("failed to open git config: %w", err)
 	}
@@ -150,7 +148,7 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 }
 
 // getDefaultBranch gets the default branch name.
-func getDefaultBranch(repoRoot string) (string, error) {
+func getDefaultBranch(repoRoot string) string {
 	cmd := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD")
 	cmd.Dir = repoRoot
 
@@ -159,24 +157,30 @@ func getDefaultBranch(repoRoot string) (string, error) {
 		// Fallback to common default branches
 		for _, branch := range []string{DefaultBranch, "master"} {
 			if branchExists(repoRoot, branch) {
-				return branch, nil
+				return branch
 			}
 		}
-		return DefaultBranch, nil // Default fallback
+		return DefaultBranch // Default fallback
 	}
 
 	// Extract branch name from refs/remotes/origin/HEAD -> refs/remotes/origin/main
 	parts := strings.Split(strings.TrimSpace(string(output)), "/")
 	if len(parts) > 0 {
-		return parts[len(parts)-1], nil
+		return parts[len(parts)-1]
 	}
 
-	return DefaultBranch, nil
+	return DefaultBranch
 }
 
 // branchExists checks if a branch exists in the repository.
 func branchExists(repoRoot, branch string) bool {
-	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
+	cmd := exec.Command(
+		"git",
+		"show-ref",
+		"--verify",
+		"--quiet",
+		"refs/heads/"+branch,
+	) // #nosec G204 -- branch name validated by git
 	cmd.Dir = repoRoot
 	return cmd.Run() == nil
 }

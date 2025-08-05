@@ -32,7 +32,43 @@ const (
 	updateTypeNone  = "none"
 	updateTypeMajor = "major"
 	updateTypePatch = "patch"
+	updateTypeMinor = "minor"
 	defaultBranch   = "main"
+
+	// Timeout constants.
+	apiCallTimeout  = 10 * time.Second
+	cacheDefaultTTL = 1 * time.Hour
+
+	// File permission constants.
+	backupFilePerms  = 0600
+	updatedFilePerms = 0600
+
+	// GitHub URL patterns.
+	githubBaseURL      = "https://github.com"
+	marketplaceBaseURL = "https://github.com/marketplace/actions/"
+
+	// Version parsing constants.
+	fullSHALength     = 40
+	minSHALength      = 7
+	versionPartsCount = 3
+
+	// File path patterns.
+	dockerPrefix      = "docker://"
+	localPathPrefix   = "./"
+	localPathUpPrefix = "../"
+
+	// File extensions.
+	backupExtension = ".backup"
+
+	// Cache key prefixes.
+	cacheKeyLatest = "latest:"
+	cacheKeyRepo   = "repo:"
+
+	// YAML structure constants.
+	usesFieldPrefix = "uses: "
+
+	// Special line estimation for script URLs.
+	scriptLineEstimate = 10
 )
 
 // Dependency represents a GitHub Action dependency with detailed information.
@@ -223,7 +259,7 @@ func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependen
 		VersionType:   versionType,
 		IsPinned:      versionType == CommitSHA || (versionType == SemanticVersion && a.isVersionPinned(version)),
 		Author:        owner,
-		SourceURL:     fmt.Sprintf("https://github.com/%s/%s", owner, repo),
+		SourceURL:     fmt.Sprintf("%s/%s/%s", githubBaseURL, owner, repo),
 		IsLocalAction: isLocal,
 		IsShellScript: false,
 		WithParams:    a.convertWithParams(step.With),
@@ -231,7 +267,7 @@ func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependen
 
 	// Add marketplace URL for public actions
 	if !isLocal {
-		dep.MarketplaceURL = fmt.Sprintf("https://github.com/marketplace/actions/%s", repo)
+		dep.MarketplaceURL = marketplaceBaseURL + repo
 	}
 
 	// Fetch additional metadata from GitHub API if available
@@ -254,8 +290,14 @@ func (a *Analyzer) analyzeShellScript(step CompositeStep, stepNumber int) *Depen
 	scriptURL := ""
 	if a.RepoInfo.Organization != "" && a.RepoInfo.Repository != "" {
 		// This would ideally link to the specific line in the action.yml file
-		scriptURL = fmt.Sprintf("https://github.com/%s/%s/blob/%s/action.yml#L%d",
-			a.RepoInfo.Organization, a.RepoInfo.Repository, a.RepoInfo.DefaultBranch, stepNumber*10) // Rough estimate
+		scriptURL = fmt.Sprintf(
+			"%s/%s/%s/blob/%s/action.yml#L%d",
+			githubBaseURL,
+			a.RepoInfo.Organization,
+			a.RepoInfo.Repository,
+			a.RepoInfo.DefaultBranch,
+			stepNumber*scriptLineEstimate,
+		) // Rough estimate
 	}
 
 	return &Dependency{
@@ -283,11 +325,11 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 	// - ./local-action
 	// - docker://alpine:3.14
 
-	if strings.HasPrefix(uses, "./") || strings.HasPrefix(uses, "../") {
+	if strings.HasPrefix(uses, localPathPrefix) || strings.HasPrefix(uses, localPathUpPrefix) {
 		return "", "", uses, LocalPath
 	}
 
-	if strings.HasPrefix(uses, "docker://") {
+	if strings.HasPrefix(uses, dockerPrefix) {
 		return "", "", uses, LocalPath
 	}
 
@@ -319,7 +361,7 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 func (a *Analyzer) isCommitSHA(version string) bool {
 	// Check if it's a 40-character hex string (full SHA) or 7+ character hex (short SHA)
 	re := regexp.MustCompile(`^[a-f0-9]{7,40}$`)
-	return len(version) >= 7 && re.MatchString(version)
+	return len(version) >= minSHALength && re.MatchString(version)
 }
 
 // isSemanticVersion checks if a version string follows semantic versioning.
@@ -333,7 +375,7 @@ func (a *Analyzer) isSemanticVersion(version string) bool {
 func (a *Analyzer) isVersionPinned(version string) bool {
 	// Consider it pinned if it specifies patch version (v1.2.3) or is a commit SHA
 	// Also check for full commit SHAs (40 chars)
-	if len(version) == 40 {
+	if len(version) == fullSHALength {
 		return true
 	}
 	re := regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
@@ -393,11 +435,11 @@ func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, er
 		return "", "", fmt.Errorf("GitHub client not available")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
 	defer cancel()
 
 	// Check cache first
-	cacheKey := fmt.Sprintf("latest:%s/%s", owner, repo)
+	cacheKey := cacheKeyLatest + fmt.Sprintf("%s/%s", owner, repo)
 	if version, sha, found := a.getCachedVersion(cacheKey); found {
 		return version, sha, nil
 	}
@@ -478,7 +520,7 @@ func (a *Analyzer) cacheVersion(cacheKey, version, sha string) {
 	}
 
 	versionInfo := map[string]string{"version": version, "sha": sha}
-	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, 1*time.Hour)
+	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, cacheDefaultTTL)
 }
 
 // compareVersions compares two version strings and returns the update type.
@@ -505,7 +547,7 @@ func (a *Analyzer) compareVersions(current, latest string) string {
 func (a *Analyzer) parseVersionParts(version string) []string {
 	parts := strings.Split(version, ".")
 	// For floating versions like "v4", treat as "v4.0.0" for comparison
-	for len(parts) < 3 {
+	for len(parts) < versionPartsCount {
 		parts = append(parts, "0")
 	}
 	return parts
@@ -517,7 +559,7 @@ func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) strin
 		return updateTypeMajor
 	}
 	if currentParts[1] != latestParts[1] {
-		return "minor"
+		return updateTypeMinor
 	}
 	if currentParts[2] != latestParts[2] {
 		return updateTypePatch
@@ -573,14 +615,14 @@ func (a *Analyzer) ApplyPinnedUpdates(updates []PinnedUpdate) error {
 // updateActionFile applies updates to a single action file.
 func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) error {
 	// Read the file
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) // #nosec G304 -- file path from function parameter
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Create backup
-	backupPath := filePath + ".backup"
-	if err := os.WriteFile(backupPath, content, 0644); err != nil {
+	backupPath := filePath + backupExtension
+	if err := os.WriteFile(backupPath, content, backupFilePerms); err != nil { // #nosec G306 -- backup file permissions
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -592,8 +634,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 			if strings.Contains(line, update.OldUses) {
 				// Replace the uses statement while preserving indentation
 				indent := strings.Repeat(" ", len(line)-len(strings.TrimLeft(line, " ")))
-				usesPrefix := "uses: "
-				lines[i] = indent + usesPrefix + update.NewUses
+				lines[i] = indent + usesFieldPrefix + update.NewUses
 				update.LineNumber = i + 1 // Store line number for reference
 				break
 			}
@@ -602,7 +643,8 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
-	if err := os.WriteFile(filePath, []byte(updatedContent), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(updatedContent), updatedFilePerms); err != nil {
+		// #nosec G306 -- updated file permissions
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 
@@ -629,11 +671,11 @@ func (a *Analyzer) validateActionFile(filePath string) error {
 
 // enrichWithGitHubData fetches additional information from GitHub API.
 func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
 	defer cancel()
 
 	// Check cache first
-	cacheKey := fmt.Sprintf("repo:%s/%s", owner, repo)
+	cacheKey := cacheKeyRepo + fmt.Sprintf("%s/%s", owner, repo)
 	if a.Cache != nil {
 		if cached, exists := a.Cache.Get(cacheKey); exists {
 			if repository, ok := cached.(*github.Repository); ok {
@@ -651,7 +693,7 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 
 	// Cache the result with 1 hour TTL
 	if a.Cache != nil {
-		_ = a.Cache.SetWithTTL(cacheKey, repository, 1*time.Hour) // Ignore cache errors
+		_ = a.Cache.SetWithTTL(cacheKey, repository, cacheDefaultTTL) // Ignore cache errors
 	}
 
 	// Enrich dependency with API data

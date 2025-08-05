@@ -4,7 +4,9 @@
 :icons: font
 :source-highlighter: highlight.js
 
-{{if .Branding}}image:https://img.shields.io/badge/icon-{{.Branding.Icon}}-{{.Branding.Color}}[{{.Branding.Icon}}] {{end}}image:https://img.shields.io/badge/GitHub%20Action-{{.Name | replace " " "%20"}}-blue[GitHub Action] image:https://img.shields.io/badge/license-MIT-green[License]
+{{if .Branding}}image:https://img.shields.io/badge/icon-{{.Branding.Icon}}-{{.Branding.Color}}[{{.Branding.Icon}}] {{end}}+
+image:https://img.shields.io/badge/GitHub%20Action-{{.Name | replace " " "%20"}}-blue[GitHub Action] +
+image:https://img.shields.io/badge/license-MIT-green[License]
 
 [.lead]
 {{.Description}}

@@ -1,0 +1,9 @@
+name: 'Action with Invalid Using'
+description: 'Action with invalid runtime specification'
+inputs:
+  test-input:
+    description: 'A test input'
+    required: true
+runs:
+  using: 'invalid-runtime'
+  main: 'index.js'

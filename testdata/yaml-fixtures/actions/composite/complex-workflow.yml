@@ -1,0 +1,93 @@
+name: 'Complex Composite Workflow'
+description: 'A complex composite action demonstrating advanced features'
+inputs:
+  environment:
+    description: 'Target environment (dev, staging, prod)'
+    required: true
+  deploy:
+    description: 'Whether to deploy after build'
+    required: false
+    default: 'false'
+  slack-webhook:
+    description: 'Slack webhook URL for notifications'
+    required: false
+outputs:
+  build-status:
+    description: 'Build status'
+    value: ${{ steps.build.outputs.status }}
+  deploy-url:
+    description: 'Deployment URL if deployed'
+    value: ${{ steps.deploy.outputs.url }}
+  artifact-url:
+    description: 'URL to build artifacts'
+    value: ${{ steps.upload.outputs.artifact-url }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate environment
+      run: |
+        if [[ ! "${{ inputs.environment }}" =~ ^(dev|staging|prod)$ ]]; then
+          echo "Invalid environment: ${{ inputs.environment }}"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Setup build environment
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+
+    - name: Run linting
+      run: npm run lint
+      shell: bash
+
+    - name: Run tests
+      run: npm run test:coverage
+      shell: bash
+
+    - name: Build application
+      id: build
+      run: |
+        npm run build:${{ inputs.environment }}
+        echo "status=success" >> $GITHUB_OUTPUT
+      shell: bash
+      env:
+        NODE_ENV: ${{ inputs.environment }}
+
+    - name: Upload build artifacts
+      id: upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-${{ inputs.environment }}-${{ github.sha }}
+        path: dist/
+        retention-days: 30
+
+    - name: Deploy to environment
+      id: deploy
+      if: inputs.deploy == 'true'
+      run: |
+        echo "Deploying to ${{ inputs.environment }}"
+        # Deployment logic would go here
+        echo "url=https://${{ inputs.environment }}.example.com" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Notify Slack on success
+      if: success() && inputs.slack-webhook != ''
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"✅ Deployment to ${{ inputs.environment }} successful"}' \
+          ${{ inputs.slack-webhook }}
+      shell: bash
+
+    - name: Notify Slack on failure
+      if: failure() && inputs.slack-webhook != ''
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"❌ Deployment to ${{ inputs.environment }} failed"}' \
+          ${{ inputs.slack-webhook }}
+      shell: bash

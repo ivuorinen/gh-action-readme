@@ -19,7 +19,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "valid action.yml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 				return actionPath
 			},
 			expectError: false,
@@ -28,7 +28,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "valid action.yaml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				actionPath := filepath.Join(tmpDir, "action.yaml")
-				testutil.WriteTestFile(t, actionPath, testutil.MinimalActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("minimal-action.yml"))
 				return actionPath
 			},
 			expectError: false,
@@ -44,7 +44,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "file with wrong extension",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				actionPath := filepath.Join(tmpDir, "action.txt")
-				testutil.WriteTestFile(t, actionPath, testutil.SimpleActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 				return actionPath
 			},
 			expectError: true,
@@ -240,7 +240,7 @@ func TestValidateGitBranch(t *testing.T) {
 			setupFunc: func(_ *testing.T, tmpDir string) (string, string) {
 				// Create a simple git repository
 				gitDir := filepath.Join(tmpDir, ".git")
-				_ = os.MkdirAll(gitDir, 0755)
+				_ = os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 
 				// Create a basic git config
 				configContent := `[core]
@@ -297,7 +297,7 @@ func TestIsGitRepository(t *testing.T) {
 			name: "directory with .git folder",
 			setupFunc: func(_ *testing.T, tmpDir string) string {
 				gitDir := filepath.Join(tmpDir, ".git")
-				_ = os.MkdirAll(gitDir, 0755)
+				_ = os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				return tmpDir
 			},
 			expected: true,

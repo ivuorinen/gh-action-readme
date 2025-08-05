@@ -12,6 +12,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
+	"github.com/ivuorinen/gh-action-readme/internal/errors"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
@@ -24,16 +25,34 @@ const (
 )
 
 // Generator orchestrates the documentation generation process.
+// It uses focused interfaces to reduce coupling and improve testability.
 type Generator struct {
-	Config *AppConfig
-	Output *ColoredOutput
+	Config   *AppConfig
+	Output   CompleteOutput
+	Progress ProgressManager
 }
 
 // NewGenerator creates a new generator instance with the provided configuration.
+// This constructor maintains backward compatibility by using concrete implementations.
 func NewGenerator(config *AppConfig) *Generator {
+	return NewGeneratorWithDependencies(
+		config,
+		NewColoredOutput(config.Quiet),
+		NewProgressBarManager(config.Quiet),
+	)
+}
+
+// NewGeneratorWithDependencies creates a new generator with dependency injection.
+// This constructor allows for better testability and flexibility by accepting interfaces.
+func NewGeneratorWithDependencies(
+	config *AppConfig,
+	output CompleteOutput,
+	progress ProgressManager,
+) *Generator {
 	return &Generator{
-		Config: config,
-		Output: NewColoredOutput(config.Quiet),
+		Config:   config,
+		Output:   output,
+		Progress: progress,
 	}
 }
 
@@ -104,10 +123,11 @@ func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error
 	if len(validationResult.MissingFields) > 0 {
 		// Check for critical validation errors that cannot be fixed with defaults
 		for _, field := range validationResult.MissingFields {
-			if field == "runs.using" {
-				// Invalid runtime - cannot be fixed with defaults, must fail
+			// All core required fields should cause validation failure
+			if field == "name" || field == "description" || field == "runs" || field == "runs.using" {
+				// Required fields missing - cannot be fixed with defaults, must fail
 				return nil, fmt.Errorf(
-					"action file %s has invalid runtime configuration: %v",
+					"action file %s has invalid configuration, missing required field(s): %v",
 					actionPath,
 					validationResult.MissingFields,
 				)
@@ -140,11 +160,11 @@ func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath st
 	case "md":
 		return g.generateMarkdown(action, outputDir, actionPath)
 	case OutputFormatHTML:
-		return g.generateHTML(action, outputDir)
+		return g.generateHTML(action, outputDir, actionPath)
 	case OutputFormatJSON:
 		return g.generateJSON(action, outputDir)
 	case OutputFormatASCIIDoc:
-		return g.generateASCIIDoc(action, outputDir)
+		return g.generateASCIIDoc(action, outputDir, actionPath)
 	default:
 		return fmt.Errorf("unsupported output format: %s", g.Config.OutputFormat)
 	}
@@ -175,7 +195,8 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 	}
 
 	outputPath := filepath.Join(outputDir, "README.md")
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
+		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write README.md to %s: %w", outputPath, err)
 	}
 
@@ -184,15 +205,27 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 }
 
 // generateHTML creates an HTML file using the template and optional header/footer.
-func (g *Generator) generateHTML(action *ActionYML, outputDir string) error {
+func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string) error {
+	// Use theme-based template if theme is specified, otherwise use explicit template path
+	templatePath := g.Config.Template
+	if g.Config.Theme != "" {
+		templatePath = resolveThemeTemplate(g.Config.Theme)
+	}
+
 	opts := TemplateOptions{
-		TemplatePath: g.Config.Template,
+		TemplatePath: templatePath,
 		HeaderPath:   g.Config.Header,
 		FooterPath:   g.Config.Footer,
 		Format:       "html",
 	}
 
-	content, err := RenderReadme(action, opts)
+	// Find repository root for git information
+	repoRoot, _ := git.FindRepositoryRoot(outputDir)
+
+	// Build comprehensive template data
+	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
+
+	content, err := RenderReadme(templateData, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render HTML template: %w", err)
 	}
@@ -226,7 +259,7 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 }
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
-func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir string) error {
+func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string) error {
 	// Use AsciiDoc template
 	templatePath := resolveTemplatePath("templates/themes/asciidoc/readme.adoc")
 
@@ -235,13 +268,20 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir string) error 
 		Format:       "asciidoc",
 	}
 
-	content, err := RenderReadme(action, opts)
+	// Find repository root for git information
+	repoRoot, _ := git.FindRepositoryRoot(outputDir)
+
+	// Build comprehensive template data
+	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
+
+	content, err := RenderReadme(templateData, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render AsciiDoc template: %w", err)
 	}
 
 	outputPath := filepath.Join(outputDir, "README.adoc")
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
+		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write AsciiDoc to %s: %w", outputPath, err)
 	}
 
@@ -271,15 +311,53 @@ func (g *Generator) DiscoverActionFiles(dir string, recursive bool) ([]string, e
 	return actionFiles, nil
 }
 
+// DiscoverActionFilesWithValidation discovers action files with centralized error handling and validation.
+// This function consolidates the duplicated file discovery logic across the codebase.
+func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool, context string) ([]string, error) {
+	// Discover action files
+	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
+	if err != nil {
+		g.Output.ErrorWithContext(
+			errors.ErrCodeFileNotFound,
+			fmt.Sprintf("failed to discover action files for %s", context),
+			map[string]string{
+				"directory":     dir,
+				"recursive":     fmt.Sprintf("%t", recursive),
+				"context":       context,
+				ContextKeyError: err.Error(),
+			},
+		)
+		return nil, err
+	}
+
+	// Check if any files were found
+	if len(actionFiles) == 0 {
+		contextMsg := fmt.Sprintf("no GitHub Action files found for %s", context)
+		g.Output.ErrorWithContext(
+			errors.ErrCodeNoActionFiles,
+			contextMsg,
+			map[string]string{
+				"directory":  dir,
+				"recursive":  fmt.Sprintf("%t", recursive),
+				"context":    context,
+				"suggestion": "Please run this command in a directory containing GitHub Action files (action.yml or action.yaml)",
+			},
+		)
+		return nil, fmt.Errorf("no action files found in directory: %s", dir)
+	}
+
+	return actionFiles, nil
+}
+
 // ProcessBatch processes multiple action.yml files.
 func (g *Generator) ProcessBatch(paths []string) error {
 	if len(paths) == 0 {
 		return fmt.Errorf("no action files to process")
 	}
 
-	bar := g.createProgressBar("Processing files", paths)
+	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
 	errors, successCount := g.processFiles(paths, bar)
-	g.finishProgressBar(bar)
+	g.Progress.FinishProgressBarWithNewline(bar)
 	g.reportResults(successCount, errors)
 
 	if len(errors) > 0 {
@@ -304,9 +382,7 @@ func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) (
 			successCount++
 		}
 
-		if bar != nil {
-			_ = bar.Add(1)
-		}
+		g.Progress.UpdateProgressBar(bar)
 	}
 	return errors, successCount
 }
@@ -333,9 +409,9 @@ func (g *Generator) ValidateFiles(paths []string) error {
 		return fmt.Errorf("no action files to validate")
 	}
 
-	bar := g.createProgressBar("Validating files", paths)
+	bar := g.Progress.CreateProgressBarForFiles("Validating files", paths)
 	allResults, errors := g.validateFiles(paths, bar)
-	g.finishProgressBar(bar)
+	g.Progress.FinishProgressBarWithNewline(bar)
 
 	if !g.Config.Quiet {
 		g.reportValidationResults(allResults, errors)
@@ -355,21 +431,6 @@ func (g *Generator) ValidateFiles(paths []string) error {
 		return fmt.Errorf("validation failed for %d files", totalFailures)
 	}
 	return nil
-}
-
-// createProgressBar creates a progress bar with the specified description.
-func (g *Generator) createProgressBar(description string, paths []string) *progressbar.ProgressBar {
-	progressMgr := NewProgressBarManager(g.Config.Quiet)
-	return progressMgr.CreateProgressBarForFiles(description, paths)
-}
-
-// finishProgressBar completes the progress bar display.
-func (g *Generator) finishProgressBar(bar *progressbar.ProgressBar) {
-	progressMgr := NewProgressBarManager(g.Config.Quiet)
-	progressMgr.FinishProgressBar(bar)
-	if bar != nil {
-		fmt.Println()
-	}
 }
 
 // validateFiles processes each file for validation.
@@ -393,9 +454,7 @@ func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) 
 		result.MissingFields = append([]string{fmt.Sprintf("file: %s", path)}, result.MissingFields...)
 		allResults = append(allResults, result)
 
-		if bar != nil {
-			_ = bar.Add(1)
-		}
+		g.Progress.UpdateProgressBar(bar)
 	}
 	return allResults, errors
 }

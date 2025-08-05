@@ -3,8 +3,26 @@ package internal
 
 import (
 	"os"
+	"strings"
 
 	"github.com/ivuorinen/gh-action-readme/internal/errors"
+)
+
+// Error detection constants for automatic error code determination.
+const (
+	// File system error patterns.
+	errorPatternFileNotFound = "no such file or directory"
+	errorPatternPermission   = "permission denied"
+
+	// Content format error patterns.
+	errorPatternYAML = "yaml"
+
+	// Service-specific error patterns.
+	errorPatternGitHub = "github"
+	errorPatternConfig = "config"
+
+	// Exit code constants.
+	exitCodeError = 1
 )
 
 // ErrorHandler provides centralized error handling and exit management.
@@ -22,7 +40,7 @@ func NewErrorHandler(output *ColoredOutput) *ErrorHandler {
 // HandleError handles contextual errors and exits with appropriate code.
 func (eh *ErrorHandler) HandleError(err *errors.ContextualError) {
 	eh.output.ErrorWithSuggestions(err)
-	os.Exit(1)
+	os.Exit(exitCodeError)
 }
 
 // HandleFatalError handles fatal errors with contextual information.
@@ -48,7 +66,7 @@ func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
 
 	// Try to determine appropriate error code based on error content
 	if err != nil {
-		context["error"] = err.Error()
+		context[ContextKeyError] = err.Error()
 		code = eh.determineErrorCode(err)
 	}
 
@@ -60,15 +78,15 @@ func (eh *ErrorHandler) determineErrorCode(err error) errors.ErrorCode {
 	errStr := err.Error()
 
 	switch {
-	case contains(errStr, "no such file or directory"):
+	case contains(errStr, errorPatternFileNotFound):
 		return errors.ErrCodeFileNotFound
-	case contains(errStr, "permission denied"):
+	case contains(errStr, errorPatternPermission):
 		return errors.ErrCodePermission
-	case contains(errStr, "yaml"):
+	case contains(errStr, errorPatternYAML):
 		return errors.ErrCodeInvalidYAML
-	case contains(errStr, "github"):
+	case contains(errStr, errorPatternGitHub):
 		return errors.ErrCodeGitHubAPI
-	case contains(errStr, "config"):
+	case contains(errStr, errorPatternConfig):
 		return errors.ErrCodeConfiguration
 	default:
 		return errors.ErrCodeUnknown
@@ -77,35 +95,5 @@ func (eh *ErrorHandler) determineErrorCode(err error) errors.ErrorCode {
 
 // contains checks if a string contains a substring (case-insensitive).
 func contains(s, substr string) bool {
-	// Simple implementation - could use strings.Contains with strings.ToLower
-	// but avoiding extra imports for now
-	sLen := len(s)
-	substrLen := len(substr)
-
-	if substrLen > sLen {
-		return false
-	}
-
-	for i := 0; i <= sLen-substrLen; i++ {
-		match := true
-		for j := 0; j < substrLen; j++ {
-			if toLower(s[i+j]) != toLower(substr[j]) {
-				match = false
-				break
-			}
-		}
-		if match {
-			return true
-		}
-	}
-
-	return false
-}
-
-// toLower converts a byte to lowercase.
-func toLower(b byte) byte {
-	if b >= 'A' && b <= 'Z' {
-		return b + ('a' - 'A')
-	}
-	return b
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

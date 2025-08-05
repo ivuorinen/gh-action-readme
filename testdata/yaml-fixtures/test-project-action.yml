@@ -1,0 +1,20 @@
+name: 'Test Project Action'
+description: 'A GitHub Action for testing project functionality'
+inputs:
+  project-path:
+    description: 'Path to the project directory'
+    required: true
+    default: '.'
+  test-command:
+    description: 'Command to run tests'
+    required: false
+    default: 'npm test'
+outputs:
+  test-results:
+    description: 'Test execution results'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+branding:
+  icon: 'check-circle'
+  color: 'green'

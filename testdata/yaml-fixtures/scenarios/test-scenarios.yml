@@ -1,0 +1,196 @@
+scenarios:
+  # JavaScript Action Scenarios
+  - id: "simple-javascript"
+    name: "Simple JavaScript Action"
+    description: "Basic JavaScript action with minimal configuration"
+    action_type: "javascript"
+    fixture: "actions/javascript/simple.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["javascript", "basic", "valid", "node20"]
+    metadata:
+      node_version: "20"
+      has_branding: true
+      input_count: 2
+      output_count: 1
+
+  - id: "node16-javascript"
+    name: "Node.js 16 JavaScript Action"
+    description: "JavaScript action running on Node.js 16"
+    action_type: "javascript"
+    fixture: "actions/javascript/node16.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["javascript", "node16", "valid", "pre-post"]
+    metadata:
+      node_version: "16"
+      has_pre: true
+      has_post: true
+
+  - id: "comprehensive-javascript"
+    name: "Comprehensive JavaScript Action"
+    description: "JavaScript action with all possible fields"
+    action_type: "javascript"
+    fixture: "actions/javascript/with-all-fields.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["javascript", "comprehensive", "valid", "node20"]
+    metadata:
+      has_author: true
+      has_pre_post: true
+      input_count: 4
+      output_count: 3
+
+  # Composite Action Scenarios
+  - id: "basic-composite"
+    name: "Basic Composite Action"
+    description: "Simple composite action with basic shell steps"
+    action_type: "composite"
+    fixture: "actions/composite/basic.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["composite", "basic", "valid", "shell"]
+    metadata:
+      step_count: 3
+      has_outputs: true
+
+  - id: "composite-with-deps"
+    name: "Composite Action with Dependencies"
+    description: "Composite action using external GitHub actions"
+    action_type: "composite"
+    fixture: "actions/composite/with-dependencies.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["composite", "dependencies", "valid", "external-actions"]
+    metadata:
+      external_actions: ["actions/checkout@v4", "actions/setup-node@v4", "actions/setup-python@v4"]
+      step_count: 6
+
+  - id: "complex-composite"
+    name: "Complex Composite Workflow"
+    description: "Advanced composite action with conditional steps and notifications"
+    action_type: "composite"
+    fixture: "actions/composite/complex-workflow.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["composite", "complex", "valid", "conditional", "notifications"]
+    metadata:
+      step_count: 9
+      has_conditionals: true
+      has_env_vars: true
+
+  # Docker Action Scenarios
+  - id: "basic-docker"
+    name: "Basic Docker Action"
+    description: "Simple Docker-based action"
+    action_type: "docker"
+    fixture: "actions/docker/basic.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["docker", "basic", "valid", "dockerfile"]
+    metadata:
+      uses_dockerfile: true
+      has_args: true
+
+  - id: "docker-with-env"
+    name: "Docker Action with Environment"
+    description: "Docker action with environment variables and registry configuration"
+    action_type: "docker"
+    fixture: "actions/docker/with-environment.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["docker", "environment", "valid", "registry"]
+    metadata:
+      has_env_vars: true
+      has_registry_config: true
+
+  # Invalid Action Scenarios
+  - id: "missing-description"
+    name: "Invalid Action - Missing Description"
+    description: "Action missing required description field"
+    action_type: "invalid"
+    fixture: "actions/invalid/missing-description.yml"
+    expect_valid: false
+    expect_error: true
+    tags: ["invalid", "validation", "error", "missing-field"]
+    metadata:
+      missing_fields: ["description"]
+
+  - id: "invalid-using"
+    name: "Invalid Action - Invalid Runtime"
+    description: "Action with invalid runtime specification"
+    action_type: "invalid"
+    fixture: "actions/invalid/invalid-using.yml"
+    expect_valid: false
+    expect_error: true
+    tags: ["invalid", "validation", "error", "invalid-runtime"]
+    metadata:
+      invalid_runtime: "invalid-runtime"
+
+  - id: "malformed-yaml"
+    name: "Invalid Action - Malformed YAML"
+    description: "Action with malformed YAML syntax"
+    action_type: "invalid"
+    fixture: "actions/invalid/malformed-yaml.yml"
+    expect_valid: false
+    expect_error: true
+    tags: ["invalid", "yaml-error", "syntax-error"]
+    metadata:
+      yaml_error: true
+
+  - id: "missing-runs"
+    name: "Invalid Action - Missing Runs"
+    description: "Action missing required runs section"
+    action_type: "invalid"
+    fixture: "actions/invalid/missing-runs.yml"
+    expect_valid: false
+    expect_error: true
+    tags: ["invalid", "validation", "error", "missing-runs"]
+    metadata:
+      missing_fields: ["runs"]
+
+  # Legacy Fixture Mappings (for backward compatibility)
+  - id: "legacy-simple"
+    name: "Legacy Simple Action"
+    description: "Backward compatibility mapping for SimpleActionYML"
+    action_type: "javascript"
+    fixture: "simple-action.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["legacy", "javascript", "valid"]
+
+  - id: "legacy-composite"
+    name: "Legacy Composite Action"
+    description: "Backward compatibility mapping for CompositeActionYML"
+    action_type: "composite"
+    fixture: "composite-action.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["legacy", "composite", "valid"]
+
+  - id: "legacy-docker"
+    name: "Legacy Docker Action"
+    description: "Backward compatibility mapping for DockerActionYML"
+    action_type: "docker"
+    fixture: "docker-action.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["legacy", "docker", "valid"]
+
+  - id: "legacy-minimal"
+    name: "Legacy Minimal Action"
+    description: "Backward compatibility mapping for MinimalActionYML"
+    action_type: "minimal"
+    fixture: "minimal-action.yml"
+    expect_valid: true
+    expect_error: false
+    tags: ["legacy", "minimal", "valid"]
+
+  - id: "legacy-invalid"
+    name: "Legacy Invalid Action"
+    description: "Backward compatibility mapping for InvalidActionYML"
+    action_type: "invalid"
+    fixture: "invalid-action.yml"
+    expect_valid: false
+    expect_error: true
+    tags: ["legacy", "invalid", "error"]

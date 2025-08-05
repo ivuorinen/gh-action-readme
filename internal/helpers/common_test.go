@@ -110,12 +110,12 @@ func TestFindGitRepoRoot(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0755)
+				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				testutil.AssertNoError(t, err)
 
 				// Create subdirectory to test from
 				subDir := filepath.Join(tmpDir, "subdir")
-				err = os.MkdirAll(subDir, 0755)
+				err = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
 				testutil.AssertNoError(t, err)
 
 				return subDir
@@ -135,12 +135,12 @@ func TestFindGitRepoRoot(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				// Create .git directory at root
 				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0755)
+				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				testutil.AssertNoError(t, err)
 
 				// Create deeply nested subdirectory
 				nestedDir := filepath.Join(tmpDir, "a", "b", "c")
-				err = os.MkdirAll(nestedDir, 0755)
+				err = os.MkdirAll(nestedDir, 0750) // #nosec G301 -- test directory permissions
 				testutil.AssertNoError(t, err)
 
 				return nestedDir
@@ -222,7 +222,7 @@ func TestGetGitRepoRootAndInfo(t *testing.T) {
 func setupCompleteGitRepo(t *testing.T, tmpDir string) string {
 	// Create .git directory
 	gitDir := filepath.Join(tmpDir, ".git")
-	err := os.MkdirAll(gitDir, 0755)
+	err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 	testutil.AssertNoError(t, err)
 
 	// Create a basic git config to make it look like a real repo
@@ -238,7 +238,7 @@ func setupCompleteGitRepo(t *testing.T, tmpDir string) string {
 	merge = refs/heads/main
 `
 	configPath := filepath.Join(gitDir, "config")
-	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	err = os.WriteFile(configPath, []byte(configContent), 0600) // #nosec G306 -- test file permissions
 	testutil.AssertNoError(t, err)
 
 	return tmpDir
@@ -247,7 +247,7 @@ func setupCompleteGitRepo(t *testing.T, tmpDir string) string {
 func setupMinimalGitRepo(t *testing.T, tmpDir string) string {
 	// Create .git directory but with minimal content
 	gitDir := filepath.Join(tmpDir, ".git")
-	err := os.MkdirAll(gitDir, 0755)
+	err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 	testutil.AssertNoError(t, err)
 
 	return tmpDir

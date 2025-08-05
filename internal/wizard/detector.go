@@ -77,9 +77,7 @@ func (d *ProjectDetector) DetectProjectSettings() (*DetectedSettings, error) {
 	}
 
 	// Detect project characteristics
-	if err := d.detectProjectCharacteristics(settings); err != nil {
-		d.output.Warning("Could not detect project characteristics: %v", err)
-	}
+	d.detectProjectCharacteristics(settings)
 
 	// Suggest configuration based on detection
 	d.suggestConfiguration(settings)
@@ -134,7 +132,7 @@ func (d *ProjectDetector) detectActionFiles(settings *DetectedSettings) error {
 }
 
 // detectProjectCharacteristics detects project type, language, and framework.
-func (d *ProjectDetector) detectProjectCharacteristics(settings *DetectedSettings) error {
+func (d *ProjectDetector) detectProjectCharacteristics(settings *DetectedSettings) {
 	// Check for common files and patterns
 	characteristics := d.analyzeProjectFiles()
 
@@ -148,8 +146,6 @@ func (d *ProjectDetector) detectProjectCharacteristics(settings *DetectedSetting
 		settings.HasDockerfile = true
 		d.output.Success("Detected Dockerfile")
 	}
-
-	return nil
 }
 
 // detectVersion attempts to detect project version from various sources.
@@ -175,7 +171,7 @@ func (d *ProjectDetector) detectVersion() string {
 // detectVersionFromPackageJSON detects version from package.json.
 func (d *ProjectDetector) detectVersionFromPackageJSON() string {
 	packageJSONPath := filepath.Join(d.currentDir, "package.json")
-	data, err := os.ReadFile(packageJSONPath)
+	data, err := os.ReadFile(packageJSONPath) // #nosec G304 -- path is constructed from current directory
 	if err != nil {
 		return ""
 	}
@@ -208,6 +204,7 @@ func (d *ProjectDetector) detectVersionFromFiles() string {
 
 	for _, filename := range versionFiles {
 		versionPath := filepath.Join(d.currentDir, filename)
+		// #nosec G304 -- path constructed from current dir
 		if data, err := os.ReadFile(versionPath); err == nil {
 			version := strings.TrimSpace(string(data))
 			if version != "" {
@@ -293,7 +290,7 @@ func (d *ProjectDetector) analyzeActionFile(actionFile string, settings *Detecte
 
 // parseActionFile reads and parses an action YAML file.
 func (d *ProjectDetector) parseActionFile(actionFile string) (map[string]any, error) {
-	data, err := os.ReadFile(actionFile)
+	data, err := os.ReadFile(actionFile) // #nosec G304 -- action file path from function parameter
 	if err != nil {
 		return nil, fmt.Errorf("failed to read action file: %w", err)
 	}
