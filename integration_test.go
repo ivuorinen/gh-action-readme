@@ -298,12 +298,12 @@ func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 name: 'My New Action'
 description: 'A brand new GitHub Action'
 inputs:
-  message:
-    description: 'Message to display'
-    required: true
+	message:
+		description: 'Message to display'
+		required: true
 runs:
-  using: 'node20'
-  main: 'index.js'
+	using: 'node20'
+	main: 'index.js'
 `)
 
 	// Validate the action

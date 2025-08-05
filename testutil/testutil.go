@@ -181,14 +181,14 @@ func CreateTestAction(name, description string, inputs map[string]string) string
 description: %s
 inputs:
 %soutputs:
-  result:
-    description: 'The result'
+	result:
+		description: 'The result'
 runs:
-  using: 'node20'
-  main: 'index.js'
+	using: 'node20'
+	main: 'index.js'
 branding:
-  icon: 'zap'
-  color: 'yellow'
+	icon: 'zap'
+	color: 'yellow'
 `, name, description, inputsYAML.String())
 }
 
@@ -226,8 +226,8 @@ func CreateCompositeAction(name, description string, steps []string) string {
 	return fmt.Sprintf(`name: %s
 description: %s
 runs:
-  using: 'composite'
-  steps:
+	using: 'composite'
+	steps:
 %s`, name, description, stepsYAML.String())
 }
 

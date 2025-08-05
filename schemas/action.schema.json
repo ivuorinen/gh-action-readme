@@ -249,7 +249,7 @@
     },
     "branding": {
       "type": "object",
-      "description": "You can use a color and Feather icon to create a badge to personalize and distinguish your action",
+      "description": "Color and Feather icon to create a badge to personalize and distinguish your action",
       "properties": {
         "icon": {
           "type": "string",
