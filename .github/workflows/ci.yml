@@ -8,21 +8,33 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          cache: 'true'
+          go-version-file: 'go.mod'
+
       - name: Install dependencies
         run: go mod tidy
+
       - name: Setup Node.js for EditorConfig tools
-        uses: actions/setup-node@8257c7bb9bd8cefc6ddbc22fb862ec83f2e01c2c # v4.1.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '18'
+          node-version: '24'
+
       - name: Install EditorConfig tools
         run: npm install -g eclint
+
       - name: Check EditorConfig compliance
         run: eclint check .
+
       - name: Run unit tests
         run: go test ./...
+
       - name: Example Action Readme Generation
         run: |
           go run . gen --config config.yaml
