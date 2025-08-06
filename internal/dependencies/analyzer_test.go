@@ -1,9 +1,9 @@
 package dependencies
 
 import (
-	"fmt"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -478,7 +478,7 @@ func TestAnalyzer_RateLimitHandling(t *testing.T) {
 		StatusCode: 403,
 		Header: http.Header{
 			"X-RateLimit-Remaining": []string{"0"},
-			"X-RateLimit-Reset":     []string{fmt.Sprintf("%d", time.Now().Add(time.Hour).Unix())},
+			"X-RateLimit-Reset":     []string{strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10)},
 		},
 		Body: testutil.NewStringReader(`{"message": "API rate limit exceeded"}`),
 	}

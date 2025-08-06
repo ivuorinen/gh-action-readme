@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-github/v57/github"
@@ -342,7 +343,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 			"failed to discover action files for "+context,
 			map[string]string{
 				"directory":     dir,
-				"recursive":     fmt.Sprintf("%t", recursive),
+				"recursive":     strconv.FormatBool(recursive),
 				"context":       context,
 				ContextKeyError: err.Error(),
 			},
@@ -359,7 +360,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 			contextMsg,
 			map[string]string{
 				"directory":  dir,
-				"recursive":  fmt.Sprintf("%t", recursive),
+				"recursive":  strconv.FormatBool(recursive),
 				"context":    context,
 				"suggestion": "Please run this command in a directory containing GitHub Action files (action.yml or action.yaml)",
 			},

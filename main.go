@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/schollz/progressbar/v3"
@@ -365,7 +366,7 @@ func validateHandler(_ *cobra.Command, _ []string) {
 			errors.ErrCodeValidation,
 			"validation failed",
 			map[string]string{
-				"files_count":            fmt.Sprintf("%d", len(actionFiles)),
+				"files_count":            strconv.Itoa(len(actionFiles)),
 				internal.ContextKeyError: err.Error(),
 			},
 		)
