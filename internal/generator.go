@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-github/v58/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/schollz/progressbar/v3"
 
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
