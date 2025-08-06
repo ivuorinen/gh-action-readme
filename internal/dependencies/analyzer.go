@@ -168,6 +168,85 @@ func (a *Analyzer) AnalyzeActionFileWithProgress(
 	return a.processCompositeSteps(action.Runs.Steps, progressCallback)
 }
 
+// CheckOutdated analyzes dependencies and finds those with newer versions available.
+func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error) {
+	var outdated []OutdatedDependency
+
+	for _, dep := range deps {
+		if dep.IsShellScript || dep.IsLocalAction {
+			continue // Skip shell scripts and local actions
+		}
+
+		owner, repo, currentVersion, _ := a.parseUsesStatement(dep.Uses)
+		if owner == "" || repo == "" {
+			continue
+		}
+
+		latestVersion, latestSHA, err := a.getLatestVersion(owner, repo)
+		if err != nil {
+			continue // Skip on error, don't fail the whole operation
+		}
+
+		updateType := a.compareVersions(currentVersion, latestVersion)
+		if updateType != updateTypeNone {
+			outdated = append(outdated, OutdatedDependency{
+				Current:          dep,
+				LatestVersion:    latestVersion,
+				LatestSHA:        latestSHA,
+				UpdateType:       updateType,
+				IsSecurityUpdate: updateType == updateTypeMajor, // Assume major updates might be security
+			})
+		}
+	}
+
+	return outdated, nil
+}
+
+// GeneratePinnedUpdate creates a pinned update for a dependency.
+func (a *Analyzer) GeneratePinnedUpdate(
+	actionPath string,
+	dep Dependency,
+	latestVersion, latestSHA string,
+) (*PinnedUpdate, error) {
+	if latestSHA == "" {
+		return nil, fmt.Errorf("no commit SHA available for %s", dep.Uses)
+	}
+
+	// Create the new pinned uses string: "owner/repo@sha # version"
+	owner, repo, currentVersion, _ := a.parseUsesStatement(dep.Uses)
+	newUses := fmt.Sprintf("%s/%s@%s # %s", owner, repo, latestSHA, latestVersion)
+
+	updateType := a.compareVersions(currentVersion, latestVersion)
+
+	return &PinnedUpdate{
+		FilePath:   actionPath,
+		OldUses:    dep.Uses,
+		NewUses:    newUses,
+		CommitSHA:  latestSHA,
+		Version:    latestVersion,
+		UpdateType: updateType,
+		LineNumber: 0, // Will be determined during file update
+	}, nil
+}
+
+// ApplyPinnedUpdates applies pinned updates to action files.
+func (a *Analyzer) ApplyPinnedUpdates(updates []PinnedUpdate) error {
+	// Group updates by file path
+	updatesByFile := make(map[string][]PinnedUpdate)
+	for _, update := range updates {
+		updatesByFile[update.FilePath] = append(updatesByFile[update.FilePath], update)
+	}
+
+	// Apply updates to each file
+	for filePath, fileUpdates := range updatesByFile {
+		if err := a.updateActionFile(filePath, fileUpdates); err != nil {
+			return fmt.Errorf("failed to update %s: %w", filePath, err)
+		}
+	}
+
+	return nil
+}
+
 // validateAndCheckComposite validates action type and checks if it's composite.
 func (a *Analyzer) validateAndCheckComposite(
 	action *ActionWithComposite,
@@ -243,8 +322,6 @@ func (a *Analyzer) processStep(step CompositeStep, stepNumber int) *Dependency {
 
 	return nil
 }
-
-// parseCompositeAction is implemented in parser.go
 
 // analyzeActionDependency analyzes a single action dependency.
 func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependency, error) {
@@ -405,40 +482,6 @@ func (a *Analyzer) convertWithParams(with map[string]any) map[string]string {
 	return params
 }
 
-// CheckOutdated analyzes dependencies and finds those with newer versions available.
-func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error) {
-	var outdated []OutdatedDependency
-
-	for _, dep := range deps {
-		if dep.IsShellScript || dep.IsLocalAction {
-			continue // Skip shell scripts and local actions
-		}
-
-		owner, repo, currentVersion, _ := a.parseUsesStatement(dep.Uses)
-		if owner == "" || repo == "" {
-			continue
-		}
-
-		latestVersion, latestSHA, err := a.getLatestVersion(owner, repo)
-		if err != nil {
-			continue // Skip on error, don't fail the whole operation
-		}
-
-		updateType := a.compareVersions(currentVersion, latestVersion)
-		if updateType != updateTypeNone {
-			outdated = append(outdated, OutdatedDependency{
-				Current:          dep,
-				LatestVersion:    latestVersion,
-				LatestSHA:        latestSHA,
-				UpdateType:       updateType,
-				IsSecurityUpdate: updateType == updateTypeMajor, // Assume major updates might be security
-			})
-		}
-	}
-
-	return outdated, nil
-}
-
 // getLatestVersion fetches the latest release/tag for a repository.
 func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, err error) {
 	if a.GitHubClient == nil {
@@ -582,51 +625,6 @@ func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) strin
 	}
 
 	return updateTypeNone
-}
-
-// GeneratePinnedUpdate creates a pinned update for a dependency.
-func (a *Analyzer) GeneratePinnedUpdate(
-	actionPath string,
-	dep Dependency,
-	latestVersion, latestSHA string,
-) (*PinnedUpdate, error) {
-	if latestSHA == "" {
-		return nil, fmt.Errorf("no commit SHA available for %s", dep.Uses)
-	}
-
-	// Create the new pinned uses string: "owner/repo@sha # version"
-	owner, repo, currentVersion, _ := a.parseUsesStatement(dep.Uses)
-	newUses := fmt.Sprintf("%s/%s@%s # %s", owner, repo, latestSHA, latestVersion)
-
-	updateType := a.compareVersions(currentVersion, latestVersion)
-
-	return &PinnedUpdate{
-		FilePath:   actionPath,
-		OldUses:    dep.Uses,
-		NewUses:    newUses,
-		CommitSHA:  latestSHA,
-		Version:    latestVersion,
-		UpdateType: updateType,
-		LineNumber: 0, // Will be determined during file update
-	}, nil
-}
-
-// ApplyPinnedUpdates applies pinned updates to action files.
-func (a *Analyzer) ApplyPinnedUpdates(updates []PinnedUpdate) error {
-	// Group updates by file path
-	updatesByFile := make(map[string][]PinnedUpdate)
-	for _, update := range updates {
-		updatesByFile[update.FilePath] = append(updatesByFile[update.FilePath], update)
-	}
-
-	// Apply updates to each file
-	for filePath, fileUpdates := range updatesByFile {
-		if err := a.updateActionFile(filePath, fileUpdates); err != nil {
-			return fmt.Errorf("failed to update %s: %w", filePath, err)
-		}
-	}
-
-	return nil
 }
 
 // updateActionFile applies updates to a single action file.

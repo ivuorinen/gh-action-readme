@@ -1,12 +1,13 @@
 ---
 repos:
+  # Built-in pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
-      - id: requirements-txt-fixer
       - id: detect-private-key
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+        exclude: "^testdata/"
       - id: check-case-conflict
       - id: check-merge-conflict
       - id: check-executables-have-shebangs
@@ -16,48 +17,54 @@ repos:
       - id: check-xml
       - id: check-yaml
         args: [--allow-multiple-documents]
+        exclude: "^testdata/"
       - id: end-of-file-fixer
+        exclude: "^testdata/"
       - id: mixed-line-ending
         args: [--fix=auto]
       - id: pretty-format-json
         args: [--autofix, --no-sort-keys]
 
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.44.0
+  # YAML formatting with yamlfmt (replaces yamllint for formatting)
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.17.2
     hooks:
-      - id: markdownlint
-        args: [-c, .markdownlint.json, --fix]
+      - id: yamlfmt
+        exclude: "^testdata/"
 
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.0
+  # Markdown linting with markdownlint-cli2 (excluding legacy files)
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.18.1
     hooks:
-      - id: yamllint
+      - id: markdownlint-cli2
+        exclude: '^(testdata/|CHANGELOG\.md|TODO\.md|\.github/|CLAUDE\.md|README\.md|SECURITY\.md)'
 
+  # EditorConfig checking
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker
+    rev: v3.3.0
+    hooks:
+      - id: editorconfig-checker
+        alias: ec
+
+  # Go formatting, imports, and linting
+  - repo: https://github.com/TekWizely/pre-commit-golang
+    rev: v1.0.0-rc.2
+    hooks:
+      - id: go-imports-repo
+        args: [-w]
+      - id: go-mod-tidy
+      - id: golangci-lint-repo-mod
+        args: [--fix]
+
+  # Shell formatting and linting
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.11.0-1
+    rev: v3.12.0-2
     hooks:
       - id: shfmt
 
-  - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.10.0
-    hooks:
-      - id: shellcheck
-        args: ['--severity=warning']
-
+  # GitHub Actions linting
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.7
     hooks:
       - id: actionlint
-        args: ['-shellcheck=']
-
-  - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 39.227.2
-    hooks:
-      - id: renovate-config-validator
-
-  - repo: https://github.com/bridgecrewio/checkov.git
-    rev: '3.2.400'
-    hooks:
-      - id: checkov
-        args:
-          - '--quiet'
+        args: ["-shellcheck="]

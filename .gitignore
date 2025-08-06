@@ -32,3 +32,4 @@ go.sum
 testdata/**/*.md
 testdata/**/*.html
 testdata/**/*.json
+coverage.*

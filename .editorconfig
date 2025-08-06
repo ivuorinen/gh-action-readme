@@ -31,3 +31,6 @@ max_line_length = 200
 [Makefile]
 indent_style = tab
 tab_width = 2
+
+[{go.sum,go.mod}]
+max_line_length = 300

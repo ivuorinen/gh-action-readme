@@ -1,3 +1,4 @@
+---
 name: 'Basic Composite Action'
 description: 'A simple composite action with basic steps'
 inputs:

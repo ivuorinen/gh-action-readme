@@ -1,3 +1,4 @@
+---
 name: 'Simple Action'
 description: 'A simple GitHub Action for testing'
 inputs:

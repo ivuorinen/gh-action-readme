@@ -1,3 +1,4 @@
+---
 name: 'Docker Action'
 description: 'A Docker-based GitHub Action'
 inputs:

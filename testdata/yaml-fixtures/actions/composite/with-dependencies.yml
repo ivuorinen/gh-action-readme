@@ -1,3 +1,4 @@
+---
 name: 'Composite Action with Dependencies'
 description: 'A composite action that uses external actions'
 inputs:

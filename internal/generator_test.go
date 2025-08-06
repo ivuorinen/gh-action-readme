@@ -563,19 +563,18 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 	t.Parallel()
 	themes := []string{"default", "github", "gitlab", "minimal", "professional"}
 
-	tmpDir, cleanup := testutil.TempDir(t)
-	defer cleanup()
-
-	// Set up test templates
-	testutil.SetupTestTemplates(t, tmpDir)
-
-	actionPath := filepath.Join(tmpDir, "action.yml")
-	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
-
 	for _, theme := range themes {
 		t.Run("theme_"+theme, func(t *testing.T) {
 			t.Parallel()
-			// Templates are now embedded, no working directory changes needed
+			// Create separate temp directory for each theme test
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Set up test templates for this theme test
+			testutil.SetupTestTemplates(t, tmpDir)
+
+			actionPath := filepath.Join(tmpDir, "action.yml")
+			testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 
 			config := &AppConfig{
 				Theme:        theme,
@@ -595,11 +594,6 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 			readmeFiles, _ := filepath.Glob(filepath.Join(tmpDir, "README*.md"))
 			if len(readmeFiles) == 0 {
 				t.Errorf("no output file was created for theme %s", theme)
-			}
-
-			// Clean up for next test
-			for _, file := range readmeFiles {
-				_ = os.Remove(file)
 			}
 		})
 	}

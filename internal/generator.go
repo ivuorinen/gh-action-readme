@@ -34,9 +34,39 @@ type Generator struct {
 	Progress ProgressManager
 }
 
+// isUnitTestEnvironment detects if we're running unit tests (not integration tests).
+func isUnitTestEnvironment() bool {
+	// Only enable for unit tests, not integration tests
+	// Integration tests need real output to verify CLI behavior
+
+	// Check if we're in the internal package tests
+	if strings.Contains(os.Args[0], "internal.test") ||
+		strings.Contains(os.Args[0], "T/go-build") && strings.Contains(os.Args[0], "internal") {
+		return true
+	}
+
+	// Check for explicit unit test environment variable
+	if os.Getenv("UNIT_TEST_MODE") != "" {
+		return true
+	}
+
+	return false
+}
+
 // NewGenerator creates a new generator instance with the provided configuration.
 // This constructor maintains backward compatibility by using concrete implementations.
+// In unit test environments, it automatically uses NullOutput to suppress output.
 func NewGenerator(config *AppConfig) *Generator {
+	// Use null output in unit test environments to keep tests clean
+	// Integration tests need real output to verify CLI behavior
+	if isUnitTestEnvironment() {
+		return NewGeneratorWithDependencies(
+			config,
+			NewNullOutput(),
+			NewNullProgressManager(),
+		)
+	}
+
 	return NewGeneratorWithDependencies(
 		config,
 		NewColoredOutput(config.Quiet),
@@ -115,76 +145,116 @@ func (g *Generator) GenerateFromFile(actionPath string) error {
 	return g.generateByFormat(action, outputDir, actionPath)
 }
 
-// parseAndValidateAction parses and validates an action.yml file.
-func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error) {
-	action, err := ParseActionYML(actionPath)
+// DiscoverActionFiles finds action.yml and action.yaml files in the given directory
+// using the centralized parser function and adds verbose logging.
+func (g *Generator) DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
+	actionFiles, err := DiscoverActionFiles(dir, recursive)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse action file %s: %w", actionPath, err)
+		return nil, err
 	}
 
-	validationResult := ValidateActionYML(action)
-	if len(validationResult.MissingFields) > 0 {
-		// Check for critical validation errors that cannot be fixed with defaults
-		for _, field := range validationResult.MissingFields {
-			// All core required fields should cause validation failure
-			if field == "name" || field == "description" || field == "runs" || field == "runs.using" {
-				// Required fields missing - cannot be fixed with defaults, must fail
-				return nil, fmt.Errorf(
-					"action file %s has invalid configuration, missing required field(s): %v",
-					actionPath,
-					validationResult.MissingFields,
-				)
+	// Add verbose logging
+	if g.Config.Verbose {
+		for _, file := range actionFiles {
+			if recursive {
+				g.Output.Info("Discovered action file: %s", file)
+			} else {
+				g.Output.Info("Found action file: %s", file)
 			}
 		}
-
-		if g.Config.Verbose {
-			g.Output.Warning("Missing fields in %s: %v", actionPath, validationResult.MissingFields)
-		}
-		FillMissing(action, g.Config.Defaults)
-		if g.Config.Verbose {
-			g.Output.Info("Applied default values for missing fields")
-		}
 	}
 
-	return action, nil
+	return actionFiles, nil
 }
 
-// determineOutputDir calculates the output directory for generated files.
-func (g *Generator) determineOutputDir(actionPath string) string {
-	if g.Config.OutputDir == "" || g.Config.OutputDir == "." {
-		return filepath.Dir(actionPath)
+// DiscoverActionFilesWithValidation discovers action files with centralized error handling and validation.
+// This function consolidates the duplicated file discovery logic across the codebase.
+func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool, context string) ([]string, error) {
+	// Discover action files
+	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
+	if err != nil {
+		g.Output.ErrorWithContext(
+			errCodes.ErrCodeFileNotFound,
+			"failed to discover action files for "+context,
+			map[string]string{
+				"directory":     dir,
+				"recursive":     strconv.FormatBool(recursive),
+				"context":       context,
+				ContextKeyError: err.Error(),
+			},
+		)
+
+		return nil, err
 	}
 
-	return g.Config.OutputDir
+	// Check if any files were found
+	if len(actionFiles) == 0 {
+		contextMsg := "no GitHub Action files found for " + context
+		g.Output.ErrorWithContext(
+			errCodes.ErrCodeNoActionFiles,
+			contextMsg,
+			map[string]string{
+				"directory":  dir,
+				"recursive":  strconv.FormatBool(recursive),
+				"context":    context,
+				"suggestion": "Please run this command in a directory containing GitHub Action files (action.yml or action.yaml)",
+			},
+		)
+
+		return nil, fmt.Errorf("no action files found in directory: %s", dir)
+	}
+
+	return actionFiles, nil
 }
 
-// resolveOutputPath resolves the final output path, considering custom filename.
-func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string {
-	if g.Config.OutputFilename != "" {
-		if filepath.IsAbs(g.Config.OutputFilename) {
-			return g.Config.OutputFilename
+// ProcessBatch processes multiple action.yml files.
+func (g *Generator) ProcessBatch(paths []string) error {
+	if len(paths) == 0 {
+		return errors.New("no action files to process")
+	}
+
+	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
+	errors, successCount := g.processFiles(paths, bar)
+	g.Progress.FinishProgressBarWithNewline(bar)
+	g.reportResults(successCount, errors)
+
+	if len(errors) > 0 {
+		return fmt.Errorf("encountered %d errors during batch processing", len(errors))
+	}
+
+	return nil
+}
+
+// ValidateFiles validates multiple action.yml files and reports results.
+func (g *Generator) ValidateFiles(paths []string) error {
+	if len(paths) == 0 {
+		return errors.New("no action files to validate")
+	}
+
+	bar := g.Progress.CreateProgressBarForFiles("Validating files", paths)
+	allResults, errors := g.validateFiles(paths, bar)
+	g.Progress.FinishProgressBarWithNewline(bar)
+
+	if !g.Config.Quiet {
+		g.reportValidationResults(allResults, errors)
+	}
+
+	// Count validation failures (files with missing required fields)
+	validationFailures := 0
+	for _, result := range allResults {
+		// Each result starts with "file: <path>" so check if there are actual missing fields beyond that
+		if len(result.MissingFields) > 1 {
+			validationFailures++
 		}
-
-		return filepath.Join(outputDir, g.Config.OutputFilename)
 	}
 
-	return filepath.Join(outputDir, defaultFilename)
-}
+	if len(errors) > 0 || validationFailures > 0 {
+		totalFailures := len(errors) + validationFailures
 
-// generateByFormat generates documentation in the specified format.
-func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
-	switch g.Config.OutputFormat {
-	case "md":
-		return g.generateMarkdown(action, outputDir, actionPath)
-	case OutputFormatHTML:
-		return g.generateHTML(action, outputDir, actionPath)
-	case OutputFormatJSON:
-		return g.generateJSON(action, outputDir)
-	case OutputFormatASCIIDoc:
-		return g.generateASCIIDoc(action, outputDir, actionPath)
-	default:
-		return fmt.Errorf("unsupported output format: %s", g.Config.OutputFormat)
+		return fmt.Errorf("validation failed for %d files", totalFailures)
 	}
+
+	return nil
 }
 
 // generateMarkdown creates a README.md file using the template.
@@ -311,86 +381,6 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 	return nil
 }
 
-// DiscoverActionFiles finds action.yml and action.yaml files in the given directory
-// using the centralized parser function and adds verbose logging.
-func (g *Generator) DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
-	actionFiles, err := DiscoverActionFiles(dir, recursive)
-	if err != nil {
-		return nil, err
-	}
-
-	// Add verbose logging
-	if g.Config.Verbose {
-		for _, file := range actionFiles {
-			if recursive {
-				g.Output.Info("Discovered action file: %s", file)
-			} else {
-				g.Output.Info("Found action file: %s", file)
-			}
-		}
-	}
-
-	return actionFiles, nil
-}
-
-// DiscoverActionFilesWithValidation discovers action files with centralized error handling and validation.
-// This function consolidates the duplicated file discovery logic across the codebase.
-func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool, context string) ([]string, error) {
-	// Discover action files
-	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
-	if err != nil {
-		g.Output.ErrorWithContext(
-			errCodes.ErrCodeFileNotFound,
-			"failed to discover action files for "+context,
-			map[string]string{
-				"directory":     dir,
-				"recursive":     strconv.FormatBool(recursive),
-				"context":       context,
-				ContextKeyError: err.Error(),
-			},
-		)
-
-		return nil, err
-	}
-
-	// Check if any files were found
-	if len(actionFiles) == 0 {
-		contextMsg := "no GitHub Action files found for " + context
-		g.Output.ErrorWithContext(
-			errCodes.ErrCodeNoActionFiles,
-			contextMsg,
-			map[string]string{
-				"directory":  dir,
-				"recursive":  strconv.FormatBool(recursive),
-				"context":    context,
-				"suggestion": "Please run this command in a directory containing GitHub Action files (action.yml or action.yaml)",
-			},
-		)
-
-		return nil, fmt.Errorf("no action files found in directory: %s", dir)
-	}
-
-	return actionFiles, nil
-}
-
-// ProcessBatch processes multiple action.yml files.
-func (g *Generator) ProcessBatch(paths []string) error {
-	if len(paths) == 0 {
-		return errors.New("no action files to process")
-	}
-
-	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
-	errors, successCount := g.processFiles(paths, bar)
-	g.Progress.FinishProgressBarWithNewline(bar)
-	g.reportResults(successCount, errors)
-
-	if len(errors) > 0 {
-		return fmt.Errorf("encountered %d errors during batch processing", len(errors))
-	}
-
-	return nil
-}
-
 // processFiles processes each file and tracks results.
 func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) ([]string, int) {
 	var errors []string
@@ -429,36 +419,76 @@ func (g *Generator) reportResults(successCount int, errors []string) {
 	}
 }
 
-// ValidateFiles validates multiple action.yml files and reports results.
-func (g *Generator) ValidateFiles(paths []string) error {
-	if len(paths) == 0 {
-		return errors.New("no action files to validate")
+// parseAndValidateAction parses and validates an action.yml file.
+func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error) {
+	action, err := ParseActionYML(actionPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse action file %s: %w", actionPath, err)
 	}
 
-	bar := g.Progress.CreateProgressBarForFiles("Validating files", paths)
-	allResults, errors := g.validateFiles(paths, bar)
-	g.Progress.FinishProgressBarWithNewline(bar)
+	validationResult := ValidateActionYML(action)
+	if len(validationResult.MissingFields) > 0 {
+		// Check for critical validation errors that cannot be fixed with defaults
+		for _, field := range validationResult.MissingFields {
+			// All core required fields should cause validation failure
+			if field == "name" || field == "description" || field == "runs" || field == "runs.using" {
+				// Required fields missing - cannot be fixed with defaults, must fail
+				return nil, fmt.Errorf(
+					"action file %s has invalid configuration, missing required field(s): %v",
+					actionPath,
+					validationResult.MissingFields,
+				)
+			}
+		}
 
-	if !g.Config.Quiet {
-		g.reportValidationResults(allResults, errors)
-	}
-
-	// Count validation failures (files with missing required fields)
-	validationFailures := 0
-	for _, result := range allResults {
-		// Each result starts with "file: <path>" so check if there are actual missing fields beyond that
-		if len(result.MissingFields) > 1 {
-			validationFailures++
+		if g.Config.Verbose {
+			g.Output.Warning("Missing fields in %s: %v", actionPath, validationResult.MissingFields)
+		}
+		FillMissing(action, g.Config.Defaults)
+		if g.Config.Verbose {
+			g.Output.Info("Applied default values for missing fields")
 		}
 	}
 
-	if len(errors) > 0 || validationFailures > 0 {
-		totalFailures := len(errors) + validationFailures
+	return action, nil
+}
 
-		return fmt.Errorf("validation failed for %d files", totalFailures)
+// determineOutputDir calculates the output directory for generated files.
+func (g *Generator) determineOutputDir(actionPath string) string {
+	if g.Config.OutputDir == "" || g.Config.OutputDir == "." {
+		return filepath.Dir(actionPath)
 	}
 
-	return nil
+	return g.Config.OutputDir
+}
+
+// resolveOutputPath resolves the final output path, considering custom filename.
+func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string {
+	if g.Config.OutputFilename != "" {
+		if filepath.IsAbs(g.Config.OutputFilename) {
+			return g.Config.OutputFilename
+		}
+
+		return filepath.Join(outputDir, g.Config.OutputFilename)
+	}
+
+	return filepath.Join(outputDir, defaultFilename)
+}
+
+// generateByFormat generates documentation in the specified format.
+func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
+	switch g.Config.OutputFormat {
+	case "md":
+		return g.generateMarkdown(action, outputDir, actionPath)
+	case OutputFormatHTML:
+		return g.generateHTML(action, outputDir, actionPath)
+	case OutputFormatJSON:
+		return g.generateJSON(action, outputDir)
+	case OutputFormatASCIIDoc:
+		return g.generateASCIIDoc(action, outputDir, actionPath)
+	default:
+		return fmt.Errorf("unsupported output format: %s", g.Config.OutputFormat)
+	}
 }
 
 // validateFiles processes each file for validation.

@@ -1,3 +1,4 @@
+---
 name: Composite Example Action
 description: 'Test Composite Action for gh-action-readme dependency analysis'
 inputs:

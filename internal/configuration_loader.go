@@ -108,6 +108,77 @@ func (cl *ConfigurationLoader) LoadConfiguration(configFile, repoRoot, actionDir
 	return config, nil
 }
 
+// LoadGlobalConfig loads only the global configuration.
+func (cl *ConfigurationLoader) LoadGlobalConfig(configFile string) (*AppConfig, error) {
+	return cl.loadGlobalConfig(configFile)
+}
+
+// ValidateConfiguration validates a configuration for consistency and required values.
+func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
+	if config == nil {
+		return errors.New("configuration cannot be nil")
+	}
+
+	// Validate output format
+	validFormats := []string{"md", "html", "json", "asciidoc"}
+	if !containsString(validFormats, config.OutputFormat) {
+		return fmt.Errorf("invalid output format '%s', must be one of: %s",
+			config.OutputFormat, strings.Join(validFormats, ", "))
+	}
+
+	// Validate theme (if set)
+	if config.Theme != "" {
+		if err := cl.validateTheme(config.Theme); err != nil {
+			return fmt.Errorf("invalid theme: %w", err)
+		}
+	}
+
+	// Validate output directory
+	if config.OutputDir == "" {
+		return errors.New("output directory cannot be empty")
+	}
+
+	// Validate mutually exclusive flags
+	if config.Verbose && config.Quiet {
+		return errors.New("verbose and quiet flags are mutually exclusive")
+	}
+
+	return nil
+}
+
+// containsString checks if a slice contains a string.
+func containsString(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetConfigurationSources returns the currently enabled configuration sources.
+func (cl *ConfigurationLoader) GetConfigurationSources() []ConfigurationSource {
+	var sources []ConfigurationSource
+	for source, enabled := range cl.sources {
+		if enabled {
+			sources = append(sources, source)
+		}
+	}
+
+	return sources
+}
+
+// EnableSource enables a specific configuration source.
+func (cl *ConfigurationLoader) EnableSource(source ConfigurationSource) {
+	cl.sources[source] = true
+}
+
+// DisableSource disables a specific configuration source.
+func (cl *ConfigurationLoader) DisableSource(source ConfigurationSource) {
+	cl.sources[source] = false
+}
+
 // loadDefaultsStep loads default configuration values.
 func (cl *ConfigurationLoader) loadDefaultsStep(config *AppConfig) {
 	if cl.sources[SourceDefaults] {
@@ -175,44 +246,6 @@ func (cl *ConfigurationLoader) loadEnvironmentStep(config *AppConfig) {
 	if cl.sources[SourceEnvironment] {
 		cl.applyEnvironmentOverrides(config)
 	}
-}
-
-// LoadGlobalConfig loads only the global configuration.
-func (cl *ConfigurationLoader) LoadGlobalConfig(configFile string) (*AppConfig, error) {
-	return cl.loadGlobalConfig(configFile)
-}
-
-// ValidateConfiguration validates a configuration for consistency and required values.
-func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
-	if config == nil {
-		return errors.New("configuration cannot be nil")
-	}
-
-	// Validate output format
-	validFormats := []string{"md", "html", "json", "asciidoc"}
-	if !containsString(validFormats, config.OutputFormat) {
-		return fmt.Errorf("invalid output format '%s', must be one of: %s",
-			config.OutputFormat, strings.Join(validFormats, ", "))
-	}
-
-	// Validate theme (if set)
-	if config.Theme != "" {
-		if err := cl.validateTheme(config.Theme); err != nil {
-			return fmt.Errorf("invalid theme: %w", err)
-		}
-	}
-
-	// Validate output directory
-	if config.OutputDir == "" {
-		return errors.New("output directory cannot be empty")
-	}
-
-	// Validate mutually exclusive flags
-	if config.Verbose && config.Quiet {
-		return errors.New("verbose and quiet flags are mutually exclusive")
-	}
-
-	return nil
 }
 
 // loadGlobalConfig initializes and loads the global configuration using Viper.
@@ -394,39 +427,6 @@ func (cl *ConfigurationLoader) validateTheme(theme string) error {
 
 	return fmt.Errorf("unsupported theme '%s', must be one of: %s",
 		theme, strings.Join(supportedThemes, ", "))
-}
-
-// containsString checks if a slice contains a string.
-func containsString(slice []string, str string) bool {
-	for _, s := range slice {
-		if s == str {
-			return true
-		}
-	}
-
-	return false
-}
-
-// GetConfigurationSources returns the currently enabled configuration sources.
-func (cl *ConfigurationLoader) GetConfigurationSources() []ConfigurationSource {
-	var sources []ConfigurationSource
-	for source, enabled := range cl.sources {
-		if enabled {
-			sources = append(sources, source)
-		}
-	}
-
-	return sources
-}
-
-// EnableSource enables a specific configuration source.
-func (cl *ConfigurationLoader) EnableSource(source ConfigurationSource) {
-	cl.sources[source] = true
-}
-
-// DisableSource disables a specific configuration source.
-func (cl *ConfigurationLoader) DisableSource(source ConfigurationSource) {
-	cl.sources[source] = false
 }
 
 // String returns a string representation of a ConfigurationSource.
