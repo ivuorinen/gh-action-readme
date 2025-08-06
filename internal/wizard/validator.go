@@ -196,7 +196,7 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 			Value:   theme,
 		})
 		result.Suggestions = append(result.Suggestions,
-			fmt.Sprintf("Valid themes: %s", strings.Join(validThemes, ", ")))
+			"Valid themes: "+strings.Join(validThemes, ", "))
 	}
 }
 
@@ -220,7 +220,7 @@ func (v *ConfigValidator) validateOutputFormat(format string, result *Validation
 			Value:   format,
 		})
 		result.Suggestions = append(result.Suggestions,
-			fmt.Sprintf("Valid formats: %s", strings.Join(validFormats, ", ")))
+			"Valid formats: "+strings.Join(validFormats, ", "))
 	}
 }
 
@@ -320,7 +320,7 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		if !permissionExists {
 			result.Warnings = append(result.Warnings, ValidationWarning{
 				Field:   "permissions",
-				Message: fmt.Sprintf("Unknown permission: %s", permission),
+				Message: "Unknown permission: " + permission,
 				Value:   value,
 			})
 
@@ -340,7 +340,7 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		if !validValue {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "permissions",
-				Message: fmt.Sprintf("Invalid value for permission %s", permission),
+				Message: "Invalid value for permission " + permission,
 				Value:   value,
 			})
 			result.Suggestions = append(result.Suggestions,
@@ -385,7 +385,7 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 			if !strings.HasPrefix(runner, "self-hosted") {
 				result.Warnings = append(result.Warnings, ValidationWarning{
 					Field:   "runs_on",
-					Message: fmt.Sprintf("Unknown runner: %s", runner),
+					Message: "Unknown runner: " + runner,
 					Value:   runner,
 				})
 				result.Suggestions = append(result.Suggestions,
@@ -408,7 +408,7 @@ func (v *ConfigValidator) validateVariables(variables map[string]string, result 
 			if strings.EqualFold(key, reserved) {
 				result.Warnings = append(result.Warnings, ValidationWarning{
 					Field:   "variables",
-					Message: fmt.Sprintf("Variable name conflicts with GitHub environment variable: %s", key),
+					Message: "Variable name conflicts with GitHub environment variable: " + key,
 					Value:   value,
 				})
 
@@ -420,7 +420,7 @@ func (v *ConfigValidator) validateVariables(variables map[string]string, result 
 		if !v.isValidVariableName(key) {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "variables",
-				Message: fmt.Sprintf("Invalid variable name: %s", key),
+				Message: "Invalid variable name: " + key,
 				Value:   value,
 			})
 			result.Suggestions = append(result.Suggestions,

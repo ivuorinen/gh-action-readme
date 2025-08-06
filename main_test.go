@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -458,7 +457,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 	cmd.Dir = tmpDir
 
 	// Set XDG_CONFIG_HOME to temp directory
-	cmd.Env = append(os.Environ(), fmt.Sprintf("XDG_CONFIG_HOME=%s", tmpDir))
+	cmd.Env = append(os.Environ(), "XDG_CONFIG_HOME="+tmpDir)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

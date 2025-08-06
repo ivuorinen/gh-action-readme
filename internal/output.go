@@ -238,7 +238,7 @@ func (co *ColoredOutput) formatSuggestionsSection(suggestions []string) []string
 
 	for _, suggestion := range suggestions {
 		if co.NoColor {
-			parts = append(parts, fmt.Sprintf("  • %s", suggestion))
+			parts = append(parts, "  • "+suggestion)
 		} else {
 			parts = append(parts, fmt.Sprintf("  %s %s",
 				color.YellowString("•"),
@@ -252,7 +252,7 @@ func (co *ColoredOutput) formatSuggestionsSection(suggestions []string) []string
 // formatHelpURLSection formats the help URL section.
 func (co *ColoredOutput) formatHelpURLSection(helpURL string) string {
 	if co.NoColor {
-		return fmt.Sprintf("\nFor more help: %s", helpURL)
+		return "\nFor more help: " + helpURL
 	}
 
 	return fmt.Sprintf("\n%s: %s",

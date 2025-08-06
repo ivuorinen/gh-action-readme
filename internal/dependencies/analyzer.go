@@ -145,7 +145,7 @@ func (a *Analyzer) AnalyzeActionFileWithProgress(
 	progressCallback func(current, total int, message string),
 ) ([]Dependency, error) {
 	if progressCallback != nil {
-		progressCallback(0, 1, fmt.Sprintf("Parsing %s", actionPath))
+		progressCallback(0, 1, "Parsing "+actionPath)
 	}
 
 	// Read and parse the action.yml file

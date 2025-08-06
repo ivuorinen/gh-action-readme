@@ -64,7 +64,7 @@ func getFileNotFoundSuggestions(context map[string]string) []string {
 
 	if path, ok := context["path"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Check if the file exists: %s", path),
+			"Check if the file exists: "+path,
 			"Verify the file path is correct",
 		)
 
@@ -73,7 +73,7 @@ func getFileNotFoundSuggestions(context map[string]string) []string {
 		if _, err := os.Stat(dir); err == nil {
 			suggestions = append(suggestions,
 				"Check for case sensitivity in the filename",
-				fmt.Sprintf("Try: ls -la %s", dir),
+				"Try: ls -la "+dir,
 			)
 		}
 
@@ -99,14 +99,14 @@ func getPermissionSuggestions(context map[string]string) []string {
 
 	if path, ok := context["path"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Check file permissions: ls -la %s", path),
-			fmt.Sprintf("Try changing permissions: chmod 644 %s", path),
+			"Check file permissions: ls -la "+path,
+			"Try changing permissions: chmod 644 "+path,
 		)
 
 		// Check if it's a directory
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
 			suggestions = append(suggestions,
-				fmt.Sprintf("For directories, try: chmod 755 %s", path),
+				"For directories, try: chmod 755 "+path,
 			)
 		}
 	}
@@ -169,7 +169,7 @@ func getInvalidActionSuggestions(context map[string]string) []string {
 
 	if missingFields, ok := context["missing_fields"]; ok {
 		suggestions = append([]string{
-			fmt.Sprintf("Missing required fields: %s", missingFields),
+			"Missing required fields: " + missingFields,
 		}, suggestions...)
 	}
 
@@ -197,7 +197,7 @@ func getNoActionFilesSuggestions(context map[string]string) []string {
 
 	if dir, ok := context["directory"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Current directory: %s", dir),
+			"Current directory: "+dir,
 			fmt.Sprintf("Try: find %s -name 'action.y*ml' -type f", dir),
 		)
 	}
@@ -275,8 +275,8 @@ func getConfigurationSuggestions(context map[string]string) []string {
 
 	if configPath, ok := context["config_path"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Config path: %s", configPath),
-			fmt.Sprintf("Check if file exists: ls -la %s", configPath),
+			"Config path: "+configPath,
+			"Check if file exists: ls -la "+configPath,
 		)
 	}
 
@@ -302,7 +302,7 @@ func getValidationSuggestions(context map[string]string) []string {
 
 	if fields, ok := context["invalid_fields"]; ok {
 		suggestions = append([]string{
-			fmt.Sprintf("Invalid fields: %s", fields),
+			"Invalid fields: " + fields,
 			"Check spelling and nesting of these fields",
 		}, suggestions...)
 	}
@@ -334,14 +334,14 @@ func getTemplateSuggestions(context map[string]string) []string {
 
 	if templatePath, ok := context["template_path"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Template path: %s", templatePath),
+			"Template path: "+templatePath,
 			"Ensure template file exists and is readable",
 		)
 	}
 
 	if theme, ok := context["theme"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Current theme: %s", theme),
+			"Current theme: "+theme,
 			"Try using a different theme: --theme github",
 			"Available themes: default, github, gitlab, minimal, professional",
 		)
@@ -360,9 +360,9 @@ func getFileWriteSuggestions(context map[string]string) []string {
 	if outputPath, ok := context["output_path"]; ok {
 		dir := filepath.Dir(outputPath)
 		suggestions = append(suggestions,
-			fmt.Sprintf("Output directory: %s", dir),
-			fmt.Sprintf("Check permissions: ls -la %s", dir),
-			fmt.Sprintf("Create directory if needed: mkdir -p %s", dir),
+			"Output directory: "+dir,
+			"Check permissions: ls -la "+dir,
+			"Create directory if needed: mkdir -p "+dir,
 		)
 
 		// Check if file already exists
@@ -386,7 +386,7 @@ func getDependencyAnalysisSuggestions(context map[string]string) []string {
 
 	if action, ok := context["action"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Analyzing action: %s", action),
+			"Analyzing action: "+action,
 			"Only composite actions have analyzable dependencies",
 		)
 	}
@@ -407,8 +407,8 @@ func getCacheAccessSuggestions(context map[string]string) []string {
 
 	if cachePath, ok := context["cache_path"]; ok {
 		suggestions = append(suggestions,
-			fmt.Sprintf("Cache path: %s", cachePath),
-			fmt.Sprintf("Check permissions: ls -la %s", cachePath),
+			"Cache path: "+cachePath,
+			"Check permissions: ls -la "+cachePath,
 			"You can disable cache temporarily with environment variables",
 		)
 	}

@@ -830,7 +830,7 @@ func TestAllThemes(t *testing.T, testFunc func(*testing.T, string)) {
 
 	for _, theme := range themes {
 		theme := theme // capture loop variable
-		t.Run(fmt.Sprintf("theme_%s", theme), func(t *testing.T) {
+		t.Run("theme_"+theme, func(t *testing.T) {
 			t.Parallel()
 			testFunc(t, theme)
 		})
@@ -845,7 +845,7 @@ func TestAllFormats(t *testing.T, testFunc func(*testing.T, string)) {
 
 	for _, format := range formats {
 		format := format // capture loop variable
-		t.Run(fmt.Sprintf("format_%s", format), func(t *testing.T) {
+		t.Run("format_"+format, func(t *testing.T) {
 			t.Parallel()
 			testFunc(t, format)
 		})
@@ -860,7 +860,7 @@ func TestValidationScenarios(t *testing.T, validatorFunc func(*testing.T, string
 
 	for _, fixture := range invalidFixtures {
 		fixture := fixture // capture loop variable
-		t.Run(fmt.Sprintf("invalid_%s", strings.ReplaceAll(fixture, "/", "_")), func(t *testing.T) {
+		t.Run("invalid_"+strings.ReplaceAll(fixture, "/", "_"), func(t *testing.T) {
 			t.Parallel()
 
 			err := validatorFunc(t, fixture)
@@ -926,8 +926,8 @@ func CreateActionTestCases() []ActionTestCase {
 
 		cases = append(cases, ActionTestCase{
 			TestCase: TestCase{
-				Name:        fmt.Sprintf("valid_%s", strings.ReplaceAll(fixture, "/", "_")),
-				Description: fmt.Sprintf("Test valid action fixture: %s", fixture),
+				Name:        "valid_" + strings.ReplaceAll(fixture, "/", "_"),
+				Description: "Test valid action fixture: " + fixture,
 				Fixture:     fixture,
 				Config:      DefaultTestConfig(),
 				Mocks:       DefaultMockConfig(),
@@ -952,8 +952,8 @@ func CreateActionTestCases() []ActionTestCase {
 
 		cases = append(cases, ActionTestCase{
 			TestCase: TestCase{
-				Name:        fmt.Sprintf("invalid_%s", strings.ReplaceAll(fixture, "/", "_")),
-				Description: fmt.Sprintf("Test invalid action fixture: %s", fixture),
+				Name:        "invalid_" + strings.ReplaceAll(fixture, "/", "_"),
+				Description: "Test invalid action fixture: " + fixture,
 				Fixture:     fixture,
 				Config:      DefaultTestConfig(),
 				Mocks:       DefaultMockConfig(),
@@ -1046,7 +1046,7 @@ func CreateValidationTestCases() []ValidationTestCase {
 	for _, scenario := range fm.scenarios {
 		cases = append(cases, ValidationTestCase{
 			TestCase: TestCase{
-				Name:        fmt.Sprintf("validate_%s", scenario.ID),
+				Name:        "validate_" + scenario.ID,
 				Description: scenario.Description,
 				Fixture:     scenario.Fixture,
 				Config:      DefaultTestConfig(),

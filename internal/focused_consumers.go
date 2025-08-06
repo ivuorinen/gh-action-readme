@@ -51,7 +51,7 @@ func (fem *FocusedErrorManager) HandleValidationError(file string, missingFields
 
 	fem.manager.ErrorWithContext(
 		errors.ErrCodeValidation,
-		fmt.Sprintf("Validation failed for %s", file),
+		"Validation failed for "+file,
 		context,
 	)
 }
@@ -145,7 +145,7 @@ func (vc *ValidationComponent) ValidateAndReport(item string, isValid bool, err 
 		}
 	} else {
 		vc.errorManager.ErrorWithSimpleFix(
-			fmt.Sprintf("Validation failed for %s", item),
+			"Validation failed for "+item,
 			"Please check the item configuration and try again",
 		)
 	}

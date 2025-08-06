@@ -339,7 +339,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	if err != nil {
 		g.Output.ErrorWithContext(
 			errors.ErrCodeFileNotFound,
-			fmt.Sprintf("failed to discover action files for %s", context),
+			"failed to discover action files for "+context,
 			map[string]string{
 				"directory":     dir,
 				"recursive":     fmt.Sprintf("%t", recursive),
@@ -353,7 +353,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 
 	// Check if any files were found
 	if len(actionFiles) == 0 {
-		contextMsg := fmt.Sprintf("no GitHub Action files found for %s", context)
+		contextMsg := "no GitHub Action files found for " + context
 		g.Output.ErrorWithContext(
 			errors.ErrCodeNoActionFiles,
 			contextMsg,
@@ -478,7 +478,7 @@ func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) 
 		}
 
 		result := ValidateActionYML(action)
-		result.MissingFields = append([]string{fmt.Sprintf("file: %s", path)}, result.MissingFields...)
+		result.MissingFields = append([]string{"file: " + path}, result.MissingFields...)
 		allResults = append(allResults, result)
 
 		g.Progress.UpdateProgressBar(bar)

@@ -65,13 +65,13 @@ func (ce *ContextualError) Error() string {
 	if len(ce.Suggestions) > 0 {
 		b.WriteString("\n\nSuggestions:")
 		for _, suggestion := range ce.Suggestions {
-			b.WriteString(fmt.Sprintf("\n  • %s", suggestion))
+			b.WriteString("\n  • " + suggestion)
 		}
 	}
 
 	// Add help URL
 	if ce.HelpURL != "" {
-		b.WriteString(fmt.Sprintf("\n\nFor more help: %s", ce.HelpURL))
+		b.WriteString("\n\nFor more help: " + ce.HelpURL)
 	}
 
 	return b.String()
