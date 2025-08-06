@@ -1,3 +1,4 @@
+---
 name: 'Basic Docker Action'
 description: 'A simple Docker-based action'
 inputs:

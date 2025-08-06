@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/yamlfmt/main/schema.json
+doublestar: true
+formatter:
+  type: basic
+  include_document_start: true
+  retain_line_breaks: true
+  retain_line_breaks_single: true
+  trim_trailing_whitespace: true
+  eof_newline: true
+  max_line_length: 300
+gitignore_excludes: true
+exclude:
+  - testdata/yaml-fixtures/validation/invalid-yaml.yml
+  - testdata/yaml-fixtures/validation/missing-*
+  - testdata/yaml-fixtures/actions/invalid/*
+  - testdata/yaml-fixtures/invalid-action.yml
+  - testdata/yaml-fixtures/*-template.yml

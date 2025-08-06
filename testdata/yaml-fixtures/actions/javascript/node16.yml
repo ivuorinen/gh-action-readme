@@ -1,3 +1,4 @@
+---
 name: 'Node.js 16 Action'
 description: 'JavaScript action running on Node.js 16'
 inputs:

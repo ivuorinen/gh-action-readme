@@ -1,3 +1,4 @@
+---
 # Default configuration for gh-action-readme
 defaults:
   name: "GitHub Action"

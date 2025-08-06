@@ -1,3 +1,4 @@
+---
 name: 'Docker Action with Environment'
 description: 'Docker action with environment variables and advanced configuration'
 inputs:

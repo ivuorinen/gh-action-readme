@@ -1,3 +1,4 @@
+---
 scenarios:
   # JavaScript Action Scenarios
   - id: "simple-javascript"

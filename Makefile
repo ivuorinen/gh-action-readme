@@ -1,5 +1,5 @@
 .PHONY: help test lint run example clean readme config-verify security vulncheck audit snyk trivy gitleaks \
-	editorconfig editorconfig-fix format
+	editorconfig editorconfig-fix format devtools
 
 all: help
 
@@ -10,6 +10,7 @@ help: ## Show this help message
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Common workflows:"
+	@echo "  make devtools      # Install all development tools"
 	@echo "  make test lint     # Run tests and linting"
 	@echo "  make format        # Format code and fix EditorConfig issues"
 	@echo "  make security      # Run all security scans"
@@ -18,6 +19,11 @@ test: ## Run all tests
 	go test ./...
 
 lint: format ## Run linter (after formatting)
+	@echo "Running YAML formatting check..."
+	@command -v yamlfmt >/dev/null 2>&1 || \
+		{ echo "Please install yamlfmt or run 'make devtools'"; exit 1; }
+	yamlfmt -lint **/*.yml **/*.yaml
+	@echo "Running Go linter..."
 	golangci-lint run \
 		--max-issues-per-linter 100 \
 		--max-same-issues 50 \
@@ -85,6 +91,42 @@ editorconfig-fix: ## Fix EditorConfig violations
 	\) -not -path "./gh-action-readme" -not -path "./coverage*" \
 		-not -path "./testutil.test" -not -path "./test_*" | \
 		xargs eclint fix
+
+# Development tools installation
+devtools: ## Install all development tools
+	@echo "Installing development tools..."
+	@echo ""
+	@echo "=== Go Tools ==="
+	@command -v golangci-lint >/dev/null 2>&1 || \
+		{ echo "Installing golangci-lint..."; \
+		  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin; }
+	@command -v govulncheck >/dev/null 2>&1 || \
+		{ echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
+	@echo "✓ Go tools installed"
+	@echo ""
+	@echo "=== Node.js Tools ==="
+	@command -v npm >/dev/null 2>&1 || \
+		{ echo "❌ npm not found. Please install Node.js first."; exit 1; }
+	@command -v eclint >/dev/null 2>&1 || \
+		{ echo "Installing eclint..."; npm install -g eclint; }
+	@command -v snyk >/dev/null 2>&1 || \
+		{ echo "Installing snyk..."; npm install -g snyk; }
+	@echo "✓ Node.js tools installed"
+	@echo ""
+	@echo "=== YAML Tools ==="
+	@command -v yamlfmt >/dev/null 2>&1 || \
+		{ echo "Installing yamlfmt..."; go install github.com/google/yamlfmt/cmd/yamlfmt@latest; }
+	@echo "✓ YAML tools installed"
+	@echo ""
+	@echo "=== System Tools ==="
+	@command -v trivy >/dev/null 2>&1 || \
+		{ echo "❌ trivy not found. Please install manually: https://aquasecurity.github.io/trivy/"; }
+	@command -v gitleaks >/dev/null 2>&1 || \
+		{ echo "❌ gitleaks not found. Please install manually: https://github.com/gitleaks/gitleaks"; }
+	@echo "✓ System tools check completed"
+	@echo ""
+	@echo "🎉 Development tools installation completed!"
+	@echo "   Run 'make test lint' to verify everything works."
 
 # Security targets
 security: vulncheck snyk trivy gitleaks ## Run all security scans

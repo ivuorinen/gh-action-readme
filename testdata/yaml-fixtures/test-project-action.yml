@@ -1,3 +1,4 @@
+---
 name: 'Test Project Action'
 description: 'A GitHub Action for testing project functionality'
 inputs:

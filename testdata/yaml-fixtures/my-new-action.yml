@@ -1,3 +1,4 @@
+---
 name: 'My New Action'
 description: 'A brand new GitHub Action'
 inputs:

@@ -1,3 +1,4 @@
+---
 name: Example Action
 description: 'Test Action for gh-action-readme'
 inputs:
