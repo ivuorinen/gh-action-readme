@@ -1,11 +1,8 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/testutil"
@@ -288,45 +285,12 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 		// Create generator configuration from test config
 		config := createGeneratorConfigFromTestConfig(ctx.Config, ctx.TempDir)
 
-		// Save current working directory and change to project root for template resolution
-		originalWd, err := os.Getwd()
-		if err != nil {
-			result.Error = fmt.Errorf("failed to get working directory: %w", err)
-
-			return result
-		}
-
-		// Use runtime.Caller to find project root relative to this file
-		_, currentFile, _, ok := runtime.Caller(0)
-		if !ok {
-			result.Error = errors.New("failed to get current file path")
-
-			return result
-		}
-
-		// Get the project root (go up from internal/generator_comprehensive_test.go to project root)
-		projectRoot := filepath.Dir(filepath.Dir(currentFile))
-		if err := os.Chdir(projectRoot); err != nil {
-			result.Error = fmt.Errorf("failed to change to project root %s: %w", projectRoot, err)
-
-			return result
-		}
-
-		// Debug: Log the working directory and template path
-		currentWd, _ := os.Getwd()
-		t.Logf("Test working directory: %s, template path: %s", currentWd, config.Template)
-
-		// Restore working directory after test
-		defer func() {
-			if err := os.Chdir(originalWd); err != nil {
-				// Log error but don't fail the test
-				t.Logf("Failed to restore working directory: %v", err)
-			}
-		}()
+		// Debug: Log the template path (no working directory changes needed with embedded templates)
+		t.Logf("Using template path: %s", config.Template)
 
 		// Create and run generator
 		generator := NewGenerator(config)
-		err = generator.GenerateFromFile(actionPath)
+		err := generator.GenerateFromFile(actionPath)
 
 		if err != nil {
 			result.Error = err
@@ -369,24 +333,8 @@ func createGeneratorConfigFromTestConfig(testConfig *testutil.TestConfig, output
 		config.Quiet = testConfig.Quiet
 	}
 
-	// Set appropriate template path based on theme and output format
-	config.Template = resolveTemplatePathForTest(config.Theme, config.OutputFormat)
+	// Set appropriate template path based on theme - embedded templates will handle resolution
+	config.Template = resolveThemeTemplate(config.Theme)
 
 	return config
-}
-
-// resolveTemplatePathForTest resolves the correct template path for testing.
-func resolveTemplatePathForTest(theme, _ string) string {
-	switch theme {
-	case "github":
-		return "templates/themes/github/readme.tmpl"
-	case "gitlab":
-		return "templates/themes/gitlab/readme.tmpl"
-	case "minimal":
-		return "templates/themes/minimal/readme.tmpl"
-	case "professional":
-		return "templates/themes/professional/readme.tmpl"
-	default:
-		return "templates/readme.tmpl"
-	}
 }

@@ -18,7 +18,6 @@ func TestCLICommands(t *testing.T) {
 	t.Parallel()
 	// Build the binary for testing
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name       string
@@ -216,7 +215,6 @@ func TestCLICommands(t *testing.T) {
 func TestCLIFlags(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name     string
@@ -294,7 +292,6 @@ func TestCLIFlags(t *testing.T) {
 func TestCLIRecursiveFlag(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -366,7 +363,6 @@ func TestCLIRecursiveFlag(t *testing.T) {
 func TestCLIErrorHandling(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -461,7 +457,6 @@ func TestCLIErrorHandling(t *testing.T) {
 func TestCLIConfigInitialization(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()

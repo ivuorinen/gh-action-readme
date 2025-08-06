@@ -575,19 +575,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 	for _, theme := range themes {
 		t.Run("theme_"+theme, func(t *testing.T) {
 			t.Parallel()
-			// Change to tmpDir so templates can be found
-			origDir, err := os.Getwd()
-			if err != nil {
-				t.Fatalf("failed to get working directory: %v", err)
-			}
-			if err := os.Chdir(tmpDir); err != nil {
-				t.Fatalf("failed to change directory: %v", err)
-			}
-			defer func() {
-				if err := os.Chdir(origDir); err != nil {
-					t.Errorf("failed to restore directory: %v", err)
-				}
-			}()
+			// Templates are now embedded, no working directory changes needed
 
 			config := &AppConfig{
 				Theme:        theme,

@@ -12,13 +12,40 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// fixtureCache provides thread-safe caching of fixture content.
+var fixtureCache = struct {
+	mu    sync.RWMutex
+	cache map[string]string
+}{
+	cache: make(map[string]string),
+}
+
 // MustReadFixture reads a YAML fixture file from testdata/yaml-fixtures.
 func MustReadFixture(filename string) string {
 	return mustReadFixture(filename)
 }
 
-// mustReadFixture reads a YAML fixture file from testdata/yaml-fixtures.
+// mustReadFixture reads a YAML fixture file from testdata/yaml-fixtures with caching.
 func mustReadFixture(filename string) string {
+	// Try to get from cache first (read lock)
+	fixtureCache.mu.RLock()
+	if content, exists := fixtureCache.cache[filename]; exists {
+		fixtureCache.mu.RUnlock()
+
+		return content
+	}
+	fixtureCache.mu.RUnlock()
+
+	// Not in cache, acquire write lock and read from disk
+	fixtureCache.mu.Lock()
+	defer fixtureCache.mu.Unlock()
+
+	// Double-check in case another goroutine loaded it while we were waiting
+	if content, exists := fixtureCache.cache[filename]; exists {
+		return content
+	}
+
+	// Load from disk
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		panic("failed to get current file path")
@@ -28,12 +55,17 @@ func mustReadFixture(filename string) string {
 	projectRoot := filepath.Dir(filepath.Dir(currentFile))
 	fixturePath := filepath.Join(projectRoot, "testdata", "yaml-fixtures", filename)
 
-	content, err := os.ReadFile(fixturePath) // #nosec G304 -- test fixture path from project structure
+	contentBytes, err := os.ReadFile(fixturePath) // #nosec G304 -- test fixture path from project structure
 	if err != nil {
 		panic("failed to read fixture " + filename + ": " + err.Error())
 	}
 
-	return string(content)
+	content := string(contentBytes)
+
+	// Store in cache
+	fixtureCache.cache[filename] = content
+
+	return content
 }
 
 // Constants for fixture management.

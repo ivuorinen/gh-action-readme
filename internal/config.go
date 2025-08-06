@@ -16,6 +16,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
+	"github.com/ivuorinen/gh-action-readme/templates_embed"
 )
 
 // AppConfig represents the application configuration that can be used at multiple levels.
@@ -143,13 +144,22 @@ func FillMissing(action *ActionYML, defs DefaultValues) {
 	}
 }
 
-// resolveTemplatePath resolves a template path relative to the binary directory if it's not absolute.
+// resolveTemplatePath resolves a template path, preferring embedded templates.
+// For custom/absolute paths, falls back to filesystem.
 func resolveTemplatePath(templatePath string) string {
 	if filepath.IsAbs(templatePath) {
 		return templatePath
 	}
 
-	// Check if template exists in current directory first (for tests)
+	// Check if template is available in embedded filesystem first
+	if templates_embed.IsEmbeddedTemplateAvailable(templatePath) {
+		// Return a special marker to indicate this should use embedded templates
+		// The actual template loading will handle embedded vs filesystem
+		return templatePath
+	}
+
+	// Fallback to filesystem resolution for custom templates
+	// Check if template exists in current directory
 	if _, err := os.Stat(templatePath); err == nil {
 		return templatePath
 	}

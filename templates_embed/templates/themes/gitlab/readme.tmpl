@@ -1,0 +1,94 @@
+# {{.Name}}
+
+{{if .Branding}}**{{.Branding.Icon}}** {{end}}**{{.Description}}**
+
+---
+
+## Installation
+
+Add this action to your GitLab CI/CD pipeline or GitHub workflow:
+
+### GitHub Actions
+
+```yaml
+steps:
+  - name: {{.Name}}
+    uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+    {{if .Inputs}}with:
+    {{- range $key, $val := .Inputs}}
+      {{$key}}: {{if $val.Default}}{{$val.Default}}{{else}}value{{end}}
+    {{- end}}{{end}}
+```
+
+### GitLab CI/CD
+
+```yaml
+{{.Name | lower | replace " " "-"}}:
+  stage: build
+  image: node:20
+  script:
+    - # Your action logic here
+  {{if .Inputs}}variables:
+  {{- range $key, $val := .Inputs}}
+    {{$key | upper}}: {{if $val.Default}}{{$val.Default}}{{else}}value{{end}}
+  {{- end}}{{end}}
+```
+
+## Configuration
+
+{{if .Inputs}}
+### Input Parameters
+
+{{range $key, $input := .Inputs}}
+#### `{{$key}}`
+- **Description**: {{$input.Description}}
+- **Type**: String{{if $input.Required}}
+- **Required**: Yes{{else}}
+- **Required**: No{{end}}{{if $input.Default}}
+- **Default**: `{{$input.Default}}`{{end}}
+
+{{end}}
+{{end}}
+
+{{if .Outputs}}
+### Output Parameters
+
+{{range $key, $output := .Outputs}}
+#### `{{$key}}`
+- **Description**: {{$output.Description}}
+
+{{end}}
+{{end}}
+
+## Usage Examples
+
+### Basic Example
+
+```yaml
+{{.Name | lower | replace " " "-"}}:
+  stage: deploy
+  script:
+    - echo "Using {{.Name}}"
+  {{if .Inputs}}variables:
+  {{- range $key, $val := .Inputs}}
+    {{$key | upper}}: "{{if $val.Default}}{{$val.Default}}{{else}}example{{end}}"
+  {{- end}}{{end}}
+```
+
+### Advanced Example
+
+For more complex scenarios, refer to the [action.yml](./action.yml) specification.
+
+## Documentation
+
+- [Action specification](./action.yml)
+- [Usage examples](./examples/)
+- [Contributing guidelines](./CONTRIBUTING.md)
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+*Generated with [gh-action-readme](https://github.com/ivuorinen/gh-action-readme)*

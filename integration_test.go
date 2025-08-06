@@ -7,10 +7,35 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
+
+var (
+	// sharedBinaryPath holds the path to the shared test binary.
+	sharedBinaryPath string
+	// sharedBinaryOnce ensures the binary is built only once.
+	sharedBinaryOnce sync.Once
+	// errSharedBinary holds any error from building the shared binary.
+	errSharedBinary error
+	// sharedBinaryTmpDir holds the temporary directory for cleanup.
+	sharedBinaryTmpDir string
+)
+
+// TestMain handles setup and cleanup for all tests.
+func TestMain(m *testing.M) {
+	// Run all tests
+	code := m.Run()
+
+	// Cleanup shared binary directory
+	if sharedBinaryTmpDir != "" {
+		_ = os.RemoveAll(sharedBinaryTmpDir)
+	}
+
+	os.Exit(code)
+}
 
 // copyDir recursively copies a directory.
 func copyDir(src, dst string) error {
@@ -53,29 +78,58 @@ func copyDir(src, dst string) error {
 	})
 }
 
-// buildTestBinary builds the test binary for integration testing.
+// getSharedTestBinary returns the path to the shared test binary, building it once if needed.
+func getSharedTestBinary(t *testing.T) string {
+	t.Helper()
+
+	sharedBinaryOnce.Do(func() {
+		// Create a shared temporary directory that will be cleaned up in TestMain
+		// Note: Cannot use t.TempDir() here because we need the directory to persist
+		// across all tests and be cleaned up only at the end in TestMain
+		tmpDir, err := os.MkdirTemp("", "gh-action-readme-shared-test-*") //nolint:usetesting
+		if err != nil {
+			errSharedBinary = err
+
+			return
+		}
+
+		sharedBinaryTmpDir = tmpDir
+
+		binaryPath := filepath.Join(tmpDir, "gh-action-readme")
+		cmd := exec.Command("go", "build", "-o", binaryPath, ".") // #nosec G204 -- controlled test input
+
+		var stderr strings.Builder
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			errSharedBinary = err
+
+			return
+		}
+
+		// Copy templates directory to binary directory (for compatibility with embedded templates fallback)
+		templatesDir := filepath.Join(filepath.Dir(binaryPath), "templates")
+		if err := copyDir("templates", templatesDir); err != nil {
+			errSharedBinary = err
+
+			return
+		}
+
+		sharedBinaryPath = binaryPath
+	})
+
+	if errSharedBinary != nil {
+		t.Fatalf("failed to build shared test binary: %v", errSharedBinary)
+	}
+
+	return sharedBinaryPath
+}
+
+// buildTestBinary is maintained for compatibility but now uses the shared binary system.
 func buildTestBinary(t *testing.T) string {
 	t.Helper()
 
-	tmpDir := t.TempDir()
-
-	binaryPath := filepath.Join(tmpDir, "gh-action-readme")
-	cmd := exec.Command("go", "build", "-o", binaryPath, ".") // #nosec G204 -- controlled test input
-
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to build test binary: %v\nstderr: %s", err, stderr.String())
-	}
-
-	// Copy templates directory to binary directory
-	templatesDir := filepath.Join(filepath.Dir(binaryPath), "templates")
-	if err := copyDir("templates", templatesDir); err != nil {
-		t.Fatalf("failed to copy templates: %v", err)
-	}
-
-	return binaryPath
+	return getSharedTestBinary(t)
 }
 
 // setupCompleteWorkflow creates a realistic project structure for testing.
@@ -409,7 +463,6 @@ func executeWorkflowStep(t *testing.T, binaryPath, tmpDir string, step workflowS
 func TestServiceIntegration(t *testing.T) {
 	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name          string
@@ -514,7 +567,6 @@ func TestServiceIntegration(t *testing.T) {
 func TestEndToEndWorkflows(t *testing.T) {
 	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -848,7 +900,6 @@ func testCacheManagement(t *testing.T, binaryPath, tmpDir string) {
 func TestCompleteProjectLifecycle(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -883,7 +934,6 @@ func TestCompleteProjectLifecycle(t *testing.T) {
 func TestMultiFormatIntegration(t *testing.T) {
 	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -1030,7 +1080,6 @@ func validateFormatSpecificContent(t *testing.T, file string, content []byte, fo
 func TestErrorScenarioIntegration(t *testing.T) {
 	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -1134,7 +1183,6 @@ func TestErrorScenarioIntegration(t *testing.T) {
 func TestStressTestWorkflow(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -1173,7 +1221,6 @@ func TestStressTestWorkflow(t *testing.T) {
 func TestProgressBarIntegration(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -1273,7 +1320,6 @@ func TestProgressBarIntegration(t *testing.T) {
 func TestErrorRecoveryWorkflow(t *testing.T) {
 	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -1324,7 +1370,6 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 func TestConfigurationWorkflow(t *testing.T) {
 	// Note: Cannot use t.Parallel() because this test uses t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
