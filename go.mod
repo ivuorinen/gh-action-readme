@@ -5,13 +5,13 @@ go 1.24.4
 require (
 	github.com/adrg/xdg v0.5.3
 	github.com/fatih/color v1.18.0
+	github.com/goccy/go-yaml v1.15.13
 	github.com/gofri/go-github-ratelimit v1.1.1
 	github.com/google/go-github/v74 v74.0.0
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	golang.org/x/oauth2 v0.30.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -33,4 +33,5 @@ require (
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/term v0.33.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

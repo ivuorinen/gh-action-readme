@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
 )
@@ -94,8 +94,7 @@ func (e *ConfigExporter) exportYAML(config *internal.AppConfig, outputPath strin
 		_ = file.Close() // File will be closed, error not actionable in defer
 	}()
 
-	encoder := yaml.NewEncoder(file)
-	encoder.SetIndent(2)
+	encoder := yaml.NewEncoder(file, yaml.Indent(2))
 
 	// Add header comment
 	_, _ = file.WriteString("# gh-action-readme configuration file\n")

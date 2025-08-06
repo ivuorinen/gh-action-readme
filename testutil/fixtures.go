@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
 
 // fixtureCache provides thread-safe caching of fixture content.
