@@ -475,7 +475,7 @@ func TestAnalyzer_WithCache(t *testing.T) {
 func TestAnalyzer_RateLimitHandling(t *testing.T) {
 	// Create mock client that returns rate limit error
 	rateLimitResponse := &http.Response{
-		StatusCode: 403,
+		StatusCode: http.StatusForbidden,
 		Header: http.Header{
 			"X-RateLimit-Remaining": []string{"0"},
 			"X-RateLimit-Reset":     []string{strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10)},

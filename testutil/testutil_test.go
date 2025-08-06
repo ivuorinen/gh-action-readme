@@ -165,7 +165,7 @@ func TestMockGitHubClient(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.StatusCode)
 		}
 	})
@@ -181,7 +181,7 @@ func TestMockGitHubClient(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.StatusCode)
 		}
 	})
@@ -199,7 +199,7 @@ func TestMockTransport(t *testing.T) {
 
 	transport := &mockTransport{client: client}
 
-	req, err := http.NewRequest("GET", "https://api.github.com/test", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/test", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestMockTransport(t *testing.T) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
 	}
 }

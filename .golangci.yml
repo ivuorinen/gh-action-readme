@@ -23,6 +23,7 @@ linters:
     - nilerr
     - nolintlint
     - prealloc
+    - goconst
     - godot
     - predeclared
     - lll

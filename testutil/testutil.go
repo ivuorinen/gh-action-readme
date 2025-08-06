@@ -48,7 +48,7 @@ func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 
 	// Default 404 response
 	return &http.Response{
-		StatusCode: 404,
+		StatusCode: http.StatusNotFound,
 		Body:       io.NopCloser(strings.NewReader(`{"error": "not found"}`)),
 	}, nil
 }
@@ -61,7 +61,7 @@ func MockGitHubClient(responses map[string]string) *github.Client {
 
 	for key, body := range responses {
 		mockClient.Responses[key] = &http.Response{
-			StatusCode: 200,
+			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(body)),
 			Header:     make(http.Header),
 		}
