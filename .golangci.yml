@@ -19,7 +19,7 @@ linters:
     - errname
     - exhaustive
     - forcetypeassert
-    # - funcorder
+    - funcorder
     - goconst
     - gocritic
     - gocyclo

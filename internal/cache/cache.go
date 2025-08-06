@@ -196,6 +196,25 @@ func (c *Cache) Close() error {
 	return c.saveToDisk()
 }
 
+// GetOrSet retrieves a value from cache or sets it if not found.
+func (c *Cache) GetOrSet(key string, getter func() (any, error)) (any, error) {
+	// Try to get from cache first
+	if value, exists := c.Get(key); exists {
+		return value, nil
+	}
+
+	// Not in cache, get from source
+	value, err := getter()
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	_ = c.Set(key, value) // Log error but don't fail - we have the value
+
+	return value, nil
+}
+
 // cleanupLoop runs periodically to remove expired entries.
 func (c *Cache) cleanupLoop() {
 	for {
@@ -288,23 +307,4 @@ func (c *Cache) estimateSize(value any) int64 {
 	}
 
 	return int64(len(jsonData))
-}
-
-// GetOrSet retrieves a value from cache or sets it if not found.
-func (c *Cache) GetOrSet(key string, getter func() (any, error)) (any, error) {
-	// Try to get from cache first
-	if value, exists := c.Get(key); exists {
-		return value, nil
-	}
-
-	// Not in cache, get from source
-	value, err := getter()
-	if err != nil {
-		return nil, err
-	}
-
-	// Store in cache
-	_ = c.Set(key, value) // Log error but don't fail - we have the value
-
-	return value, nil
 }

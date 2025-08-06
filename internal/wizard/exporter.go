@@ -55,6 +55,32 @@ func (e *ConfigExporter) ExportConfig(config *internal.AppConfig, format ExportF
 	}
 }
 
+// GetSupportedFormats returns the list of supported export formats.
+func (e *ConfigExporter) GetSupportedFormats() []ExportFormat {
+	return []ExportFormat{FormatYAML, FormatJSON, FormatTOML}
+}
+
+// GetDefaultOutputPath returns the default output path for a given format.
+func (e *ConfigExporter) GetDefaultOutputPath(format ExportFormat) (string, error) {
+	configPath, err := internal.GetConfigPath()
+	if err != nil {
+		return "", fmt.Errorf("failed to get config directory: %w", err)
+	}
+
+	dir := filepath.Dir(configPath)
+
+	switch format {
+	case FormatYAML:
+		return filepath.Join(dir, "config.yaml"), nil
+	case FormatJSON:
+		return filepath.Join(dir, "config.json"), nil
+	case FormatTOML:
+		return filepath.Join(dir, "config.toml"), nil
+	default:
+		return "", fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
 // exportYAML exports configuration as YAML.
 func (e *ConfigExporter) exportYAML(config *internal.AppConfig, outputPath string) error {
 	// Create a clean config without sensitive data for export
@@ -258,31 +284,5 @@ func (e *ConfigExporter) writeVariablesSection(file *os.File, config *internal.A
 	_, _ = fmt.Fprintf(file, "\n[variables]\n")
 	for key, value := range config.Variables {
 		_, _ = fmt.Fprintf(file, "%s = %q\n", key, value)
-	}
-}
-
-// GetSupportedFormats returns the list of supported export formats.
-func (e *ConfigExporter) GetSupportedFormats() []ExportFormat {
-	return []ExportFormat{FormatYAML, FormatJSON, FormatTOML}
-}
-
-// GetDefaultOutputPath returns the default output path for a given format.
-func (e *ConfigExporter) GetDefaultOutputPath(format ExportFormat) (string, error) {
-	configPath, err := internal.GetConfigPath()
-	if err != nil {
-		return "", fmt.Errorf("failed to get config directory: %w", err)
-	}
-
-	dir := filepath.Dir(configPath)
-
-	switch format {
-	case FormatYAML:
-		return filepath.Join(dir, "config.yaml"), nil
-	case FormatJSON:
-		return filepath.Join(dir, "config.json"), nil
-	case FormatTOML:
-		return filepath.Join(dir, "config.toml"), nil
-	default:
-		return "", fmt.Errorf("unsupported format: %s", format)
 	}
 }

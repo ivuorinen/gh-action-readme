@@ -109,6 +109,33 @@ func (v *ConfigValidator) ValidateField(fieldName, value string) *ValidationResu
 	return result
 }
 
+// DisplayValidationResult displays validation results to the user.
+func (v *ConfigValidator) DisplayValidationResult(result *ValidationResult) {
+	if result.Valid {
+		v.output.Success("✅ Configuration is valid")
+	} else {
+		v.output.Error("❌ Configuration has errors")
+	}
+
+	// Display errors
+	for _, err := range result.Errors {
+		v.output.Error("  • %s: %s (value: %s)", err.Field, err.Message, err.Value)
+	}
+
+	// Display warnings
+	for _, warning := range result.Warnings {
+		v.output.Warning("  ⚠️  %s: %s", warning.Field, warning.Message)
+	}
+
+	// Display suggestions
+	if len(result.Suggestions) > 0 {
+		v.output.Info("\nSuggestions:")
+		for _, suggestion := range result.Suggestions {
+			v.output.Printf("  💡 %s", suggestion)
+		}
+	}
+}
+
 // validateOrganization validates the organization field.
 func (v *ConfigValidator) validateOrganization(org string, result *ValidationResult) {
 	if org == "" {
@@ -477,31 +504,4 @@ func (v *ConfigValidator) isValidVariableName(name string) bool {
 	matched, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*$`, name)
 
 	return matched
-}
-
-// DisplayValidationResult displays validation results to the user.
-func (v *ConfigValidator) DisplayValidationResult(result *ValidationResult) {
-	if result.Valid {
-		v.output.Success("✅ Configuration is valid")
-	} else {
-		v.output.Error("❌ Configuration has errors")
-	}
-
-	// Display errors
-	for _, err := range result.Errors {
-		v.output.Error("  • %s: %s (value: %s)", err.Field, err.Message, err.Value)
-	}
-
-	// Display warnings
-	for _, warning := range result.Warnings {
-		v.output.Warning("  ⚠️  %s: %s", warning.Field, warning.Message)
-	}
-
-	// Display suggestions
-	if len(result.Suggestions) > 0 {
-		v.output.Info("\nSuggestions:")
-		for _, suggestion := range result.Suggestions {
-			v.output.Printf("  💡 %s", suggestion)
-		}
-	}
 }
