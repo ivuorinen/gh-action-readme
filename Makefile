@@ -1,4 +1,4 @@
-.PHONY: help test test-coverage test-coverage-html lint run example clean readme config-verify \
+.PHONY: help test test-coverage test-coverage-html lint build run example clean readme config-verify \
 	security vulncheck audit snyk trivy gitleaks \
 	editorconfig editorconfig-fix format devtools
 
@@ -12,7 +12,8 @@ help: ## Show this help message
 	@echo ""
 	@echo "Common workflows:"
 	@echo "  make devtools      # Install all development tools"
-	@echo "  make test lint     # Run tests and linting"
+	@echo "  make build         # Build the application binary"
+	@echo "  make test lint     # Run tests and linting (includes EditorConfig check)"
 	@echo "  make test-coverage # Run tests with coverage analysis"
 	@echo "  make format        # Format code and fix EditorConfig issues"
 	@echo "  make security      # Run all security scans"
@@ -54,11 +55,18 @@ lint: format ## Run linter (after formatting)
 	@command -v yamlfmt >/dev/null 2>&1 || \
 		{ echo "Please install yamlfmt or run 'make devtools'"; exit 1; }
 	yamlfmt -lint **/*.yml **/*.yaml
+	@echo "Running EditorConfig compliance check..."
+	@command -v editorconfig-checker >/dev/null 2>&1 || \
+		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
+	editorconfig-checker
 	@echo "Running Go linter..."
 	golangci-lint run \
 		--max-issues-per-linter 100 \
 		--max-same-issues 50 \
 		--output.tab.path stdout || true
+
+build: ## Build the application
+	go build -o gh-action-readme .
 
 config-verify: ## Verify golangci-lint configuration
 	golangci-lint config verify --verbose
@@ -74,7 +82,7 @@ readme: ## Generate project README
 
 clean: ## Clean build artifacts
 	rm -rf dist/
-	rm -f coverage.out coverage.html
+	rm -f gh-action-readme coverage.out coverage.html
 
 # Code formatting and EditorConfig targets
 format: editorconfig-fix ## Format code and fix EditorConfig issues
@@ -86,43 +94,17 @@ format: editorconfig-fix ## Format code and fix EditorConfig issues
 
 editorconfig: ## Check EditorConfig compliance
 	@echo "Checking EditorConfig compliance..."
-	@command -v eclint >/dev/null 2>&1 || \
-		{ echo "Please install eclint: npm install -g eclint"; exit 1; }
-	@echo "Checking files for EditorConfig compliance..."
-	@find . -type f \( \
-		-name "*.go" -o \
-		-name "*.yml" -o \
-		-name "*.yaml" -o \
-		-name "*.json" -o \
-		-name "*.md" -o \
-		-name "Makefile" -o \
-		-name ".snyk" -o \
-		-name "*.tmpl" -o \
-		-name "*.adoc" -o \
-		-name "*.sh" \
-	\) -not -path "./gh-action-readme" -not -path "./coverage*" \
-		-not -path "./testutil.test" -not -path "./test_*" | \
-		xargs eclint check
+	@command -v editorconfig-checker >/dev/null 2>&1 || \
+		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
+	editorconfig-checker
 
 editorconfig-fix: ## Fix EditorConfig violations
-	@echo "Fixing EditorConfig violations..."
-	@command -v eclint >/dev/null 2>&1 || \
-		{ echo "Please install eclint: npm install -g eclint"; exit 1; }
-	@echo "Fixing files for EditorConfig compliance..."
-	@find . -type f \( \
-		-name "*.go" -o \
-		-name "*.yml" -o \
-		-name "*.yaml" -o \
-		-name "*.json" -o \
-		-name "*.md" -o \
-		-name "Makefile" -o \
-		-name ".snyk" -o \
-		-name "*.tmpl" -o \
-		-name "*.adoc" -o \
-		-name "*.sh" \
-	\) -not -path "./gh-action-readme" -not -path "./coverage*" \
-		-not -path "./testutil.test" -not -path "./test_*" | \
-		xargs eclint fix
+	@echo "EditorConfig violations cannot be automatically fixed by editorconfig-checker"
+	@echo "Please fix the reported issues manually or use your editor's EditorConfig plugin"
+	@echo "Running check to show issues..."
+	@command -v editorconfig-checker >/dev/null 2>&1 || \
+		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
+	editorconfig-checker
 
 # Development tools installation
 devtools: ## Install all development tools
@@ -135,21 +117,19 @@ devtools: ## Install all development tools
 			sh -s -- -b $(go env GOPATH)/bin; }
 	@command -v govulncheck >/dev/null 2>&1 || \
 		{ echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
+	@command -v editorconfig-checker >/dev/null 2>&1 || \
+		{ echo "Installing editorconfig-checker..."; \
+			go install github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@latest; }
+	@command -v yamlfmt >/dev/null 2>&1 || \
+		{ echo "Installing yamlfmt..."; go install github.com/google/yamlfmt/cmd/yamlfmt@latest; }
 	@echo "✓ Go tools installed"
 	@echo ""
 	@echo "=== Node.js Tools ==="
 	@command -v npm >/dev/null 2>&1 || \
 		{ echo "❌ npm not found. Please install Node.js first."; exit 1; }
-	@command -v eclint >/dev/null 2>&1 || \
-		{ echo "Installing eclint..."; npm install -g eclint; }
 	@command -v snyk >/dev/null 2>&1 || \
 		{ echo "Installing snyk..."; npm install -g snyk; }
 	@echo "✓ Node.js tools installed"
-	@echo ""
-	@echo "=== YAML Tools ==="
-	@command -v yamlfmt >/dev/null 2>&1 || \
-		{ echo "Installing yamlfmt..."; go install github.com/google/yamlfmt/cmd/yamlfmt@latest; }
-	@echo "✓ YAML tools installed"
 	@echo ""
 	@echo "=== System Tools ==="
 	@command -v trivy >/dev/null 2>&1 || \
