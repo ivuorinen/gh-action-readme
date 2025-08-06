@@ -3,6 +3,7 @@ package dependencies
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -441,7 +442,7 @@ func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error
 // getLatestVersion fetches the latest release/tag for a repository.
 func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, err error) {
 	if a.GitHubClient == nil {
-		return "", "", fmt.Errorf("GitHub client not available")
+		return "", "", errors.New("GitHub client not available")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
@@ -494,7 +495,7 @@ func (a *Analyzer) getCachedVersion(cacheKey string) (version, sha string, found
 func (a *Analyzer) getLatestRelease(ctx context.Context, owner, repo string) (version, sha string, err error) {
 	release, _, err := a.GitHubClient.Repositories.GetLatestRelease(ctx, owner, repo)
 	if err != nil || release.GetTagName() == "" {
-		return "", "", fmt.Errorf("no release found")
+		return "", "", errors.New("no release found")
 	}
 
 	version = release.GetTagName()
@@ -519,7 +520,7 @@ func (a *Analyzer) getLatestTag(ctx context.Context, owner, repo string) (versio
 		PerPage: 10,
 	})
 	if err != nil || len(tags) == 0 {
-		return "", "", fmt.Errorf("no releases or tags found")
+		return "", "", errors.New("no releases or tags found")
 	}
 
 	latestTag := tags[0]

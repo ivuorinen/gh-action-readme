@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -287,7 +288,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 		// Use runtime.Caller to find project root relative to this file
 		_, currentFile, _, ok := runtime.Caller(0)
 		if !ok {
-			result.Error = fmt.Errorf("failed to get current file path")
+			result.Error = errors.New("failed to get current file path")
 
 			return result
 		}

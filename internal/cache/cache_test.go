@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -195,7 +196,7 @@ func TestCache_GetOrSetError(t *testing.T) {
 
 	// Getter that returns error
 	getter := func() (any, error) {
-		return nil, fmt.Errorf("getter error")
+		return nil, errors.New("getter error")
 	}
 
 	value, err := cache.GetOrSet("error-key", getter)

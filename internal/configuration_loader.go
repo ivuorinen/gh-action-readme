@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -184,7 +185,7 @@ func (cl *ConfigurationLoader) LoadGlobalConfig(configFile string) (*AppConfig, 
 // ValidateConfiguration validates a configuration for consistency and required values.
 func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
 	if config == nil {
-		return fmt.Errorf("configuration cannot be nil")
+		return errors.New("configuration cannot be nil")
 	}
 
 	// Validate output format
@@ -203,12 +204,12 @@ func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
 
 	// Validate output directory
 	if config.OutputDir == "" {
-		return fmt.Errorf("output directory cannot be empty")
+		return errors.New("output directory cannot be empty")
 	}
 
 	// Validate mutually exclusive flags
 	if config.Verbose && config.Quiet {
-		return fmt.Errorf("verbose and quiet flags are mutually exclusive")
+		return errors.New("verbose and quiet flags are mutually exclusive")
 	}
 
 	return nil
@@ -376,7 +377,7 @@ func (cl *ConfigurationLoader) setViperDefaults(v *viper.Viper) {
 // validateTheme validates that a theme exists and is supported.
 func (cl *ConfigurationLoader) validateTheme(theme string) error {
 	if theme == "" {
-		return fmt.Errorf("theme cannot be empty")
+		return errors.New("theme cannot be empty")
 	}
 
 	// Check if it's a built-in theme

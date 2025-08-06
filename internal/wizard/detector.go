@@ -3,6 +3,7 @@ package wizard
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -88,7 +89,7 @@ func (d *ProjectDetector) DetectProjectSettings() (*DetectedSettings, error) {
 // detectRepositoryInfo detects repository information from git.
 func (d *ProjectDetector) detectRepositoryInfo(settings *DetectedSettings) error {
 	if d.repoRoot == "" {
-		return fmt.Errorf("not in a git repository")
+		return errors.New("not in a git repository")
 	}
 
 	repoInfo, err := git.DetectRepository(d.repoRoot)

@@ -3,6 +3,7 @@ package git
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,7 +52,7 @@ func FindRepositoryRoot(startPath string) (string, error) {
 		parent := filepath.Dir(absPath)
 		if parent == absPath {
 			// Reached root without finding .git
-			return "", fmt.Errorf("not a git repository")
+			return "", errors.New("not a git repository")
 		}
 		absPath = parent
 	}
@@ -147,7 +148,7 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no origin remote URL found in git config")
+	return "", errors.New("no origin remote URL found in git config")
 }
 
 // getDefaultBranch gets the default branch name.

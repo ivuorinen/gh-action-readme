@@ -2,6 +2,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	errCodes "github.com/ivuorinen/gh-action-readme/internal/errors"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
@@ -339,7 +340,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
 	if err != nil {
 		g.Output.ErrorWithContext(
-			errors.ErrCodeFileNotFound,
+			errCodes.ErrCodeFileNotFound,
 			"failed to discover action files for "+context,
 			map[string]string{
 				"directory":     dir,
@@ -356,7 +357,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	if len(actionFiles) == 0 {
 		contextMsg := "no GitHub Action files found for " + context
 		g.Output.ErrorWithContext(
-			errors.ErrCodeNoActionFiles,
+			errCodes.ErrCodeNoActionFiles,
 			contextMsg,
 			map[string]string{
 				"directory":  dir,
@@ -375,7 +376,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 // ProcessBatch processes multiple action.yml files.
 func (g *Generator) ProcessBatch(paths []string) error {
 	if len(paths) == 0 {
-		return fmt.Errorf("no action files to process")
+		return errors.New("no action files to process")
 	}
 
 	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
@@ -431,7 +432,7 @@ func (g *Generator) reportResults(successCount int, errors []string) {
 // ValidateFiles validates multiple action.yml files and reports results.
 func (g *Generator) ValidateFiles(paths []string) error {
 	if len(paths) == 0 {
-		return fmt.Errorf("no action files to validate")
+		return errors.New("no action files to validate")
 	}
 
 	bar := g.Progress.CreateProgressBarForFiles("Validating files", paths)

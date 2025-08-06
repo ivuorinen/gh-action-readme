@@ -3,6 +3,7 @@ package wizard
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -287,7 +288,7 @@ func (w *ConfigWizard) confirmConfiguration() error {
 	w.output.Info("")
 	confirmed := w.promptYesNo("Save this configuration?", true)
 	if !confirmed {
-		return fmt.Errorf("configuration canceled by user")
+		return errors.New("configuration canceled by user")
 	}
 
 	return nil
