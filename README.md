@@ -21,6 +21,8 @@ Transform your GitHub Actions into professional documentation with multiple them
 🚀 **Modern CLI** - Colored output, progress bars, comprehensive help
 ⚙️ **Enterprise Ready** - XDG-compliant configuration, recursive processing
 🔧 **Developer Friendly** - Template customization, batch operations
+📁 **Flexible Targeting** - Directory/file arguments, custom output filenames
+🛡️ **Thread Safe** - Race condition protection, concurrent processing ready
 
 ## 🚀 Quick Start
 
@@ -80,14 +82,18 @@ go build .
 ### Basic Usage
 
 ```bash
-# Generate README.md from action.yml
+# Generate README.md from action.yml in current directory
 gh-action-readme gen
 
-# Use GitHub theme with badges and collapsible sections
-gh-action-readme gen --theme github
+# Target specific directories or files
+gh-action-readme gen testdata/example-action/
+gh-action-readme gen testdata/composite-action/action.yml
 
-# Generate JSON for API integration
-gh-action-readme gen --output-format json
+# Use GitHub theme with custom output filename
+gh-action-readme gen --theme github --output custom-readme.md
+
+# Generate JSON for API integration with custom filename
+gh-action-readme gen --output-format json --output api-docs.json
 
 # Process all action.yml files recursively
 gh-action-readme gen --recursive --theme professional
@@ -146,9 +152,10 @@ The tool generates comprehensive documentation including:
 
 ### Generation
 ```bash
-gh-action-readme gen [flags]
+gh-action-readme gen [directory_or_file] [flags]
   -f, --output-format string   md, html, json, asciidoc (default "md")
   -o, --output-dir string      output directory (default ".")
+      --output string          custom output filename
   -t, --theme string           github, gitlab, minimal, professional
   -r, --recursive              search recursively
 ```
@@ -164,6 +171,7 @@ gh-action-readme validate
 gh-action-readme config init     # Create default config
 gh-action-readme config show     # Show current settings
 gh-action-readme config themes   # List available themes
+gh-action-readme config wizard   # Interactive configuration wizard
 ```
 
 ## ⚙️ Configuration
@@ -192,11 +200,15 @@ export GH_ACTION_README_VERBOSE=true
 
 ### Batch Processing
 ```bash
-# Process multiple repositories
-find . -name "action.yml" -execdir gh-action-readme gen --theme github \;
+# Process multiple repositories with custom outputs
+find . -name "action.yml" -execdir gh-action-readme gen --theme github --output README-generated.md \;
 
-# Recursive processing with JSON output
+# Recursive processing with JSON output and custom directory structure
 gh-action-readme gen --recursive --output-format json --output-dir docs/
+
+# Target multiple specific actions with different themes
+gh-action-readme gen actions/checkout/ --theme github --output docs/checkout.md
+gh-action-readme gen actions/setup-node/ --theme professional --output docs/setup-node.md
 ```
 
 ### Custom Themes
@@ -237,17 +249,18 @@ This project maintains high code quality standards:
 - ✅ **Proper error handling** - All errors properly acknowledged and handled
 - ✅ **Standardized formatting** - `gofmt` and `goimports` applied consistently
 
-**Recent Improvements (2025-07-24)**:
-- Extracted common functionality into `internal/helpers/` package
-- Simplified template path resolution and git operations
-- Refactored complex test functions for better maintainability
-- Fixed all linting issues including error handling and unused parameters
+**Recent Improvements (August 6, 2025)**:
+- **Enhanced Gen Command**: Added directory/file targeting with `--output` flag for custom filenames
+- **Thread Safety**: Implemented RWMutex synchronization for race condition protection
+- **GitHub Actions Integration**: Enhanced CI workflow showcasing all new gen command features
+- **Code Quality**: Achieved zero linting violations with complete EditorConfig compliance
+- **Architecture**: Added contextual error handling, interactive wizard, and progress indicators
 
 ### Testing
 ```bash
 # Test generation (safe - uses testdata/)
-cd testdata/example-action/
-../../gh-action-readme gen --theme github
+gh-action-readme gen testdata/example-action/ --theme github --output test-output.md
+gh-action-readme gen testdata/composite-action/action.yml --theme professional
 
 # Run full test suite
 go test ./...

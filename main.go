@@ -170,12 +170,12 @@ func newGenCmd() *cobra.Command {
 		Long: `Generate documentation for GitHub Actions.
 
 Examples:
-  gh-action-readme gen                               # Current directory
-  gh-action-readme gen testdata/example-action/     # Specific directory  
-  gh-action-readme gen testdata/action.yml          # Specific file
-  gh-action-readme gen -f html testdata/action/     # HTML format
-  gh-action-readme gen -f html --output custom.html testdata/action/
-  gh-action-readme gen --output docs/action1.html testdata/action1/`,
+	gh-action-readme gen                               # Current directory
+	gh-action-readme gen testdata/example-action/     # Specific directory
+	gh-action-readme gen testdata/action.yml          # Specific file
+	gh-action-readme gen -f html testdata/action/     # HTML format
+	gh-action-readme gen -f html --output custom.html testdata/action/
+	gh-action-readme gen --output docs/action1.html testdata/action1/`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  genHandler,
 	}
@@ -207,7 +207,7 @@ func newSchemaCmd() *cobra.Command {
 
 func genHandler(cmd *cobra.Command, args []string) {
 	output := createOutputManager(globalConfig.Quiet)
-	
+
 	// Determine target path from arguments or current directory
 	var targetPath string
 	if len(args) > 0 {
@@ -243,13 +243,18 @@ func genHandler(cmd *cobra.Command, args []string) {
 		workingDir = absTargetPath
 		generator := internal.NewGenerator(globalConfig) // Temporary generator for discovery
 		recursive, _ := cmd.Flags().GetBool("recursive")
-		actionFiles, err = generator.DiscoverActionFilesWithValidation(workingDir, recursive, "documentation generation")
+		actionFiles, err = generator.DiscoverActionFilesWithValidation(
+			workingDir,
+			recursive,
+			"documentation generation",
+		)
 		if err != nil {
 			os.Exit(1)
 		}
 	} else {
 		// Target is a file - validate it's an action file
-		if !strings.HasSuffix(strings.ToLower(absTargetPath), ".yml") && !strings.HasSuffix(strings.ToLower(absTargetPath), ".yaml") {
+		lowerPath := strings.ToLower(absTargetPath)
+		if !strings.HasSuffix(lowerPath, ".yml") && !strings.HasSuffix(lowerPath, ".yaml") {
 			output.Error("File must be a YAML file (.yml or .yaml): %s", targetPath)
 			os.Exit(1)
 		}

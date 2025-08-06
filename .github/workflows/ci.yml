@@ -30,27 +30,27 @@ jobs:
         run: |
           # Create docs directory
           mkdir -p docs
-          
+
           # Generate multiple formats for different actions to demonstrate new functionality
           echo "Generating documentation for example-action..."
           go run . gen testdata/example-action/ --output $PWD/docs/example-action.md
           go run . gen testdata/example-action/ -f html --output $PWD/docs/example-action.html
           go run . gen testdata/example-action/ -f json --output $PWD/docs/example-action.json
-          
+
           echo "Generating documentation for composite-action..."
           go run . gen testdata/composite-action/ --output $PWD/docs/composite-action.md
           go run . gen testdata/composite-action/ -f html --output $PWD/docs/composite-action.html
-          
+
           # Test single file targeting
           echo "Generating from specific action.yml files..."
           go run . gen testdata/example-action/action.yml --output $PWD/docs/direct-example.md
           go run . gen testdata/composite-action/action.yml --output $PWD/docs/direct-composite.md
-          
+
           # Test recursive generation with different themes
           echo "Testing recursive generation with themes..."
           go run . gen testdata/ --recursive --theme minimal -f html --output $PWD/docs/all-actions-minimal.html
           go run . gen testdata/ --recursive --theme professional -f json --output $PWD/docs/all-actions-professional.json
-          
+
           # Verify files were generated
           echo "Verifying generated documentation files..."
           ls -la docs/
