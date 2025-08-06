@@ -1,6 +1,6 @@
-.PHONY: help test test-coverage test-coverage-html lint build run example clean readme config-verify \
-	security vulncheck audit snyk trivy gitleaks \
-	editorconfig editorconfig-fix format devtools
+.PHONY: help test test-coverage test-coverage-html lint build run example \
+	clean readme config-verify security vulncheck audit snyk trivy gitleaks \
+	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update
 
 all: help
 
@@ -11,12 +11,13 @@ help: ## Show this help message
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Common workflows:"
-	@echo "  make devtools      # Install all development tools"
-	@echo "  make build         # Build the application binary"
-	@echo "  make test lint     # Run tests and linting (includes EditorConfig check)"
-	@echo "  make test-coverage # Run tests with coverage analysis"
-	@echo "  make format        # Format code and fix EditorConfig issues"
-	@echo "  make security      # Run all security scans"
+	@echo "  make devtools            # Install all development tools"
+	@echo "  make pre-commit-install  # Install pre-commit hooks (run once)"
+	@echo "  make build               # Build the application binary"
+	@echo "  make test lint           # Run tests and all linters via pre-commit"
+	@echo "  make test-coverage       # Run tests with coverage analysis"
+	@echo "  make pre-commit-update   # Update pre-commit hooks to latest versions"
+	@echo "  make security            # Run all security scans"
 
 test: ## Run all tests
 	go test ./...
@@ -50,20 +51,23 @@ test-coverage-html: test-coverage ## Generate HTML coverage report and open in b
 		echo "Open coverage.html in your browser to view detailed coverage"; \
 	fi
 
-lint: format ## Run linter (after formatting)
-	@echo "Running YAML formatting check..."
-	@command -v yamlfmt >/dev/null 2>&1 || \
-		{ echo "Please install yamlfmt or run 'make devtools'"; exit 1; }
-	yamlfmt -lint **/*.yml **/*.yaml
-	@echo "Running EditorConfig compliance check..."
-	@command -v editorconfig-checker >/dev/null 2>&1 || \
-		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
-	editorconfig-checker
-	@echo "Running Go linter..."
-	golangci-lint run \
-		--max-issues-per-linter 100 \
-		--max-same-issues 50 \
-		--output.tab.path stdout || true
+lint: ## Run all linters via pre-commit
+	@echo "Running all linters via pre-commit..."
+	@command -v pre-commit >/dev/null 2>&1 || \
+		{ echo "Please install pre-commit or run 'make devtools'"; exit 1; }
+	pre-commit run --all-files
+
+pre-commit-install: ## Install pre-commit hooks
+	@echo "Installing pre-commit hooks..."
+	@command -v pre-commit >/dev/null 2>&1 || \
+		{ echo "Please install pre-commit or run 'make devtools'"; exit 1; }
+	pre-commit install
+
+pre-commit-update: ## Update pre-commit hooks to latest versions
+	@echo "Updating pre-commit hooks..."
+	@command -v pre-commit >/dev/null 2>&1 || \
+		{ echo "Please install pre-commit or run 'make devtools'"; exit 1; }
+	pre-commit autoupdate
 
 build: ## Build the application
 	go build -o gh-action-readme .
@@ -130,6 +134,13 @@ devtools: ## Install all development tools
 	@command -v snyk >/dev/null 2>&1 || \
 		{ echo "Installing snyk..."; npm install -g snyk; }
 	@echo "✓ Node.js tools installed"
+	@echo ""
+	@echo "=== Python Tools ==="
+	@command -v python3 >/dev/null 2>&1 || \
+		{ echo "❌ python3 not found. Please install Python 3 first."; exit 1; }
+	@command -v pre-commit >/dev/null 2>&1 || \
+		{ echo "Installing pre-commit..."; pip install pre-commit; }
+	@echo "✓ Python tools installed"
 	@echo ""
 	@echo "=== System Tools ==="
 	@command -v trivy >/dev/null 2>&1 || \

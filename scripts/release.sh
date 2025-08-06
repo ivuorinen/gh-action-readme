@@ -44,13 +44,13 @@ fi
 
 # Get version from command line or prompt
 VERSION="$1"
-if [[ -z "$VERSION" ]]; then
+if [[ -z $VERSION ]]; then
   echo -n "Enter version (e.g., v1.0.0): "
   read -r VERSION
 fi
 
 # Validate version format
-if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   log_error "Version must be in format vX.Y.Z (e.g., v1.0.0)"
   exit 1
 fi
@@ -59,11 +59,11 @@ log_info "Preparing release $VERSION"
 
 # Check if we're on main branch
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$CURRENT_BRANCH" != "main" ]]; then
+if [[ $CURRENT_BRANCH != "main" ]]; then
   log_warning "You're not on the main branch (current: $CURRENT_BRANCH)"
   echo -n "Continue anyway? (y/N): "
   read -r CONTINUE
-  if [[ "$CONTINUE" != "y" && "$CONTINUE" != "Y" ]]; then
+  if [[ $CONTINUE != "y" && $CONTINUE != "Y" ]]; then
     log_info "Aborted"
     exit 0
   fi
