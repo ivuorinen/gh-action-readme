@@ -9,6 +9,8 @@ import (
 )
 
 func TestFindRepositoryRoot(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) string
@@ -79,6 +81,8 @@ func TestFindRepositoryRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -114,6 +118,8 @@ func TestFindRepositoryRoot(t *testing.T) {
 }
 
 func TestDetectGitRepository(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) string
@@ -224,6 +230,8 @@ func TestDetectGitRepository(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -240,6 +248,8 @@ func TestDetectGitRepository(t *testing.T) {
 }
 
 func TestParseGitHubURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		remoteURL    string
@@ -280,6 +290,8 @@ func TestParseGitHubURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			org, repo := parseGitHubURL(tt.remoteURL)
 
 			testutil.AssertEqual(t, tt.expectedOrg, org)
@@ -289,6 +301,8 @@ func TestParseGitHubURL(t *testing.T) {
 }
 
 func TestRepoInfo_GetRepositoryName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		repoInfo RepoInfo
@@ -325,6 +339,8 @@ func TestRepoInfo_GetRepositoryName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := tt.repoInfo.GetRepositoryName()
 			testutil.AssertEqual(t, tt.expected, result)
 		})

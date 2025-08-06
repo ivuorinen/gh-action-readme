@@ -11,6 +11,8 @@ import (
 )
 
 func TestGetCurrentDir(t *testing.T) {
+	t.Parallel()
+
 	t.Run("successfully get current directory", func(t *testing.T) {
 		currentDir, err := GetCurrentDir()
 
@@ -33,6 +35,8 @@ func TestGetCurrentDir(t *testing.T) {
 }
 
 func TestSetupGeneratorContext(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		config *internal.AppConfig
@@ -71,6 +75,8 @@ func TestSetupGeneratorContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			generator, currentDir, err := SetupGeneratorContext(tt.config)
 
 			// Verify no error occurred
@@ -101,6 +107,8 @@ func TestSetupGeneratorContext(t *testing.T) {
 }
 
 func TestFindGitRepoRoot(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) string
@@ -154,6 +162,8 @@ func TestFindGitRepoRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -175,7 +185,11 @@ func TestFindGitRepoRoot(t *testing.T) {
 }
 
 func TestGetGitRepoRootAndInfo(t *testing.T) {
+	t.Parallel()
+
 	t.Run("valid git repository with complete info", func(t *testing.T) {
+		t.Parallel()
+
 		tmpDir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
@@ -190,6 +204,8 @@ func TestGetGitRepoRootAndInfo(t *testing.T) {
 	})
 
 	t.Run("git repository but info detection fails", func(t *testing.T) {
+		t.Parallel()
+
 		tmpDir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
@@ -204,6 +220,8 @@ func TestGetGitRepoRootAndInfo(t *testing.T) {
 	})
 
 	t.Run("directory without git repository", func(t *testing.T) {
+		t.Parallel()
+
 		tmpDir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
@@ -267,7 +285,11 @@ func verifyRepoRoot(t *testing.T, repoRoot, tmpDir string) {
 
 // Test error handling in GetGitRepoRootAndInfo.
 func TestGetGitRepoRootAndInfo_ErrorHandling(t *testing.T) {
+	t.Parallel()
+
 	t.Run("nonexistent directory", func(t *testing.T) {
+		t.Parallel()
+
 		nonexistentPath := "/this/path/should/not/exist"
 		repoRoot, gitInfo, err := GetGitRepoRootAndInfo(nonexistentPath)
 

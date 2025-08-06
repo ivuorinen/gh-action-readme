@@ -15,6 +15,7 @@ import (
 
 // TestCLICommands tests the main CLI commands using subprocess execution.
 func TestCLICommands(t *testing.T) {
+	t.Parallel()
 	// Build the binary for testing
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
@@ -213,6 +214,7 @@ func TestCLICommands(t *testing.T) {
 
 // TestCLIFlags tests various flag combinations.
 func TestCLIFlags(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -290,6 +292,7 @@ func TestCLIFlags(t *testing.T) {
 
 // TestCLIRecursiveFlag tests the recursive flag functionality.
 func TestCLIRecursiveFlag(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -361,6 +364,7 @@ func TestCLIRecursiveFlag(t *testing.T) {
 
 // TestCLIErrorHandling tests error scenarios.
 func TestCLIErrorHandling(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -455,6 +459,7 @@ func TestCLIErrorHandling(t *testing.T) {
 
 // TestCLIConfigInitialization tests configuration initialization.
 func TestCLIConfigInitialization(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -504,6 +509,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 // These test the actual functions directly rather than through subprocess execution.
 
 func TestCreateOutputManager(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		quiet bool
@@ -523,6 +529,7 @@ func TestCreateOutputManager(t *testing.T) {
 }
 
 func TestFormatSize(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		size     int64
@@ -549,6 +556,7 @@ func TestFormatSize(t *testing.T) {
 }
 
 func TestResolveExportFormat(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		format   string
@@ -572,6 +580,7 @@ func TestResolveExportFormat(t *testing.T) {
 }
 
 func TestCreateErrorHandler(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(false)
 	handler := createErrorHandler(output)
 
@@ -581,6 +590,7 @@ func TestCreateErrorHandler(t *testing.T) {
 }
 
 func TestSetupOutputAndErrorHandling(t *testing.T) {
+	// Note: This test cannot use t.Parallel() because it modifies globalConfig
 	// Setup globalConfig for the test
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
@@ -600,6 +610,7 @@ func TestSetupOutputAndErrorHandling(t *testing.T) {
 // Unit Tests for Command Creation Functions
 
 func TestNewGenCmd(t *testing.T) {
+	t.Parallel()
 	cmd := newGenCmd()
 
 	if cmd.Use != "gen [directory_or_file]" {
@@ -624,6 +635,7 @@ func TestNewGenCmd(t *testing.T) {
 }
 
 func TestNewValidateCmd(t *testing.T) {
+	t.Parallel()
 	cmd := newValidateCmd()
 
 	if cmd.Use != "validate" {
@@ -640,6 +652,7 @@ func TestNewValidateCmd(t *testing.T) {
 }
 
 func TestNewSchemaCmd(t *testing.T) {
+	t.Parallel()
 	cmd := newSchemaCmd()
 
 	if cmd.Use != "schema" {

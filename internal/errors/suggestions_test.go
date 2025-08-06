@@ -7,6 +7,8 @@ import (
 )
 
 func TestGetSuggestions(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		code     ErrorCode
@@ -239,6 +241,8 @@ func TestGetSuggestions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			suggestions := GetSuggestions(tt.code, tt.context)
 
 			if len(suggestions) == 0 {
@@ -262,6 +266,8 @@ func TestGetSuggestions(t *testing.T) {
 }
 
 func TestGetPermissionSuggestions_OSSpecific(t *testing.T) {
+	t.Parallel()
+
 	context := map[string]string{"path": "/test/file"}
 	suggestions := getPermissionSuggestions(context)
 
@@ -286,6 +292,8 @@ func TestGetPermissionSuggestions_OSSpecific(t *testing.T) {
 }
 
 func TestGetSuggestions_EmptyContext(t *testing.T) {
+	t.Parallel()
+
 	// Test that all error codes work with empty context
 	errorCodes := []ErrorCode{
 		ErrCodeFileNotFound,
@@ -306,6 +314,8 @@ func TestGetSuggestions_EmptyContext(t *testing.T) {
 
 	for _, code := range errorCodes {
 		t.Run(string(code), func(t *testing.T) {
+			t.Parallel()
+
 			suggestions := GetSuggestions(code, map[string]string{})
 			if len(suggestions) == 0 {
 				t.Errorf("GetSuggestions(%s, {}) returned empty slice", code)
@@ -315,6 +325,8 @@ func TestGetSuggestions_EmptyContext(t *testing.T) {
 }
 
 func TestGetFileNotFoundSuggestions_ActionFile(t *testing.T) {
+	t.Parallel()
+
 	context := map[string]string{
 		"path": "/project/action.yml",
 	}
@@ -333,6 +345,8 @@ func TestGetFileNotFoundSuggestions_ActionFile(t *testing.T) {
 }
 
 func TestGetInvalidYAMLSuggestions_TabError(t *testing.T) {
+	t.Parallel()
+
 	context := map[string]string{
 		"error": "found character that cannot start any token, tab character",
 	}
@@ -347,6 +361,8 @@ func TestGetInvalidYAMLSuggestions_TabError(t *testing.T) {
 }
 
 func TestGetGitHubAPISuggestions_StatusCodes(t *testing.T) {
+	t.Parallel()
+
 	statusCodes := map[string]string{
 		"401": "Authentication failed",
 		"403": "Access forbidden",
@@ -355,6 +371,8 @@ func TestGetGitHubAPISuggestions_StatusCodes(t *testing.T) {
 
 	for code, expectedText := range statusCodes {
 		t.Run("status_"+code, func(t *testing.T) {
+			t.Parallel()
+
 			context := map[string]string{"status_code": code}
 			suggestions := getGitHubAPISuggestions(context)
 			allSuggestions := strings.Join(suggestions, " ")

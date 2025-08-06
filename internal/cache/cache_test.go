@@ -104,6 +104,8 @@ func TestCache_SetAndGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Set value
 			err := cache.Set(tt.key, tt.value)
 			testutil.AssertNoError(t, err)
@@ -534,6 +536,8 @@ func TestCache_EstimateSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			size := cache.estimateSize(tt.value)
 			if size < tt.minSize || size > tt.maxSize {
 				t.Errorf("expected size between %d and %d, got %d", tt.minSize, tt.maxSize, size)

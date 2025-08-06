@@ -407,6 +407,7 @@ func executeWorkflowStep(t *testing.T, binaryPath, tmpDir string, step workflowS
 
 // TestServiceIntegration tests integration between refactored services.
 func TestServiceIntegration(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -511,6 +512,7 @@ func TestServiceIntegration(t *testing.T) {
 
 // TestEndToEndWorkflows tests complete workflows from start to finish.
 func TestEndToEndWorkflows(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -844,6 +846,7 @@ func testCacheManagement(t *testing.T, binaryPath, tmpDir string) {
 }
 
 func TestCompleteProjectLifecycle(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -878,6 +881,7 @@ func TestCompleteProjectLifecycle(t *testing.T) {
 
 // TestMultiFormatIntegration tests all output formats with real data.
 func TestMultiFormatIntegration(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -1024,6 +1028,7 @@ func validateFormatSpecificContent(t *testing.T, file string, content []byte, fo
 
 // TestErrorScenarioIntegration tests error handling across service components.
 func TestErrorScenarioIntegration(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -1127,6 +1132,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 }
 
 func TestStressTestWorkflow(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -1165,6 +1171,7 @@ func TestStressTestWorkflow(t *testing.T) {
 
 // TestProgressBarIntegration tests progress bar functionality in various scenarios.
 func TestProgressBarIntegration(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -1264,6 +1271,7 @@ func TestProgressBarIntegration(t *testing.T) {
 }
 
 func TestErrorRecoveryWorkflow(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 
@@ -1314,6 +1322,7 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 }
 
 func TestConfigurationWorkflow(t *testing.T) {
+	// Note: Cannot use t.Parallel() because this test uses t.Setenv
 	binaryPath := buildTestBinary(t)
 	defer func() { _ = os.Remove(binaryPath) }()
 

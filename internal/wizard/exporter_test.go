@@ -13,6 +13,7 @@ import (
 )
 
 func TestConfigExporter_ExportConfig(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true) // quiet mode for testing
 	exporter := NewConfigExporter(output)
 
@@ -20,13 +21,22 @@ func TestConfigExporter_ExportConfig(t *testing.T) {
 	config := createTestConfig()
 
 	// Test YAML export
-	t.Run("export YAML", testYAMLExport(exporter, config))
+	t.Run("export YAML", func(t *testing.T) {
+		t.Parallel()
+		testYAMLExport(exporter, config)(t)
+	})
 
 	// Test JSON export
-	t.Run("export JSON", testJSONExport(exporter, config))
+	t.Run("export JSON", func(t *testing.T) {
+		t.Parallel()
+		testJSONExport(exporter, config)(t)
+	})
 
 	// Test TOML export
-	t.Run("export TOML", testTOMLExport(exporter, config))
+	t.Run("export TOML", func(t *testing.T) {
+		t.Parallel()
+		testTOMLExport(exporter, config)(t)
+	})
 }
 
 // createTestConfig creates a test configuration for testing.
@@ -49,6 +59,7 @@ func createTestConfig() *internal.AppConfig {
 // testYAMLExport tests YAML export functionality.
 func testYAMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*testing.T) {
 	return func(t *testing.T) {
+		t.Helper()
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "config.yaml")
 
@@ -65,6 +76,7 @@ func testYAMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 // testJSONExport tests JSON export functionality.
 func testJSONExport(exporter *ConfigExporter, config *internal.AppConfig) func(*testing.T) {
 	return func(t *testing.T) {
+		t.Helper()
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "config.json")
 
@@ -81,6 +93,7 @@ func testJSONExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 // testTOMLExport tests TOML export functionality.
 func testTOMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*testing.T) {
 	return func(t *testing.T) {
+		t.Helper()
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "config.toml")
 
@@ -162,6 +175,7 @@ func verifyTOMLContent(t *testing.T, outputPath string) {
 }
 
 func TestConfigExporter_sanitizeConfig(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
 
@@ -195,6 +209,7 @@ func TestConfigExporter_sanitizeConfig(t *testing.T) {
 }
 
 func TestConfigExporter_GetSupportedFormats(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
 
@@ -219,6 +234,7 @@ func TestConfigExporter_GetSupportedFormats(t *testing.T) {
 }
 
 func TestConfigExporter_GetDefaultOutputPath(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
 
@@ -233,6 +249,7 @@ func TestConfigExporter_GetDefaultOutputPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.format), func(t *testing.T) {
+			t.Parallel()
 			path, err := exporter.GetDefaultOutputPath(tt.format)
 			if err != nil {
 				t.Fatalf("GetDefaultOutputPath() error = %v", err)

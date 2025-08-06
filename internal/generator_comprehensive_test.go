@@ -14,6 +14,7 @@ import (
 // TestGenerator_ComprehensiveGeneration demonstrates the new table-driven testing framework
 // by testing generation across all fixtures, themes, and formats systematically.
 func TestGenerator_ComprehensiveGeneration(t *testing.T) {
+	t.Parallel()
 	// Create test cases using the new helper functions
 	cases := testutil.CreateGeneratorTestCases()
 
@@ -36,6 +37,7 @@ func TestGenerator_ComprehensiveGeneration(t *testing.T) {
 
 // TestGenerator_AllValidFixtures tests generation with all valid fixtures.
 func TestGenerator_AllValidFixtures(t *testing.T) {
+	t.Parallel()
 	validFixtures := testutil.GetValidFixtures()
 
 	for _, fixture := range validFixtures {
@@ -67,6 +69,7 @@ func TestGenerator_AllValidFixtures(t *testing.T) {
 
 // TestGenerator_AllInvalidFixtures tests that invalid fixtures produce expected errors.
 func TestGenerator_AllInvalidFixtures(t *testing.T) {
+	t.Parallel()
 	invalidFixtures := testutil.GetInvalidFixtures()
 
 	for _, fixture := range invalidFixtures {
@@ -108,6 +111,7 @@ func TestGenerator_AllInvalidFixtures(t *testing.T) {
 
 // TestGenerator_AllThemes demonstrates theme testing using helper functions.
 func TestGenerator_AllThemes(t *testing.T) {
+	t.Parallel()
 	// Use the helper function to test all themes
 	testutil.TestAllThemes(t, func(t *testing.T, theme string) {
 		t.Helper()
@@ -130,6 +134,7 @@ func TestGenerator_AllThemes(t *testing.T) {
 
 // TestGenerator_AllFormats demonstrates format testing using helper functions.
 func TestGenerator_AllFormats(t *testing.T) {
+	t.Parallel()
 	// Use the helper function to test all formats
 	testutil.TestAllFormats(t, func(t *testing.T, format string) {
 		t.Helper()
@@ -152,6 +157,7 @@ func TestGenerator_AllFormats(t *testing.T) {
 
 // TestGenerator_ByActionType demonstrates testing by action type.
 func TestGenerator_ByActionType(t *testing.T) {
+	t.Parallel()
 	actionTypes := []testutil.ActionType{
 		testutil.ActionTypeJavaScript,
 		testutil.ActionTypeComposite,
@@ -189,6 +195,7 @@ func TestGenerator_ByActionType(t *testing.T) {
 
 // TestGenerator_WithMockEnvironment demonstrates testing with a complete mock environment.
 func TestGenerator_WithMockEnvironment(t *testing.T) {
+	t.Parallel()
 	// Create a complete test environment
 	envConfig := &testutil.EnvironmentConfig{
 		ActionFixtures: []string{"actions/composite/with-dependencies.yml"},
@@ -225,6 +232,7 @@ func TestGenerator_WithMockEnvironment(t *testing.T) {
 
 // TestGenerator_FixtureValidation demonstrates fixture validation.
 func TestGenerator_FixtureValidation(t *testing.T) {
+	t.Parallel()
 	// Test that all valid fixtures pass validation
 	validFixtures := testutil.GetValidFixtures()
 
@@ -239,6 +247,7 @@ func TestGenerator_FixtureValidation(t *testing.T) {
 
 	for _, fixtureName := range invalidFixtures {
 		t.Run(fixtureName, func(t *testing.T) {
+			t.Parallel()
 			testutil.AssertFixtureInvalid(t, fixtureName)
 		})
 	}

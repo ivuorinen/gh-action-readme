@@ -9,6 +9,7 @@ import (
 )
 
 func TestNewConfigurationLoader(t *testing.T) {
+	t.Parallel()
 	loader := NewConfigurationLoader()
 
 	if loader == nil {
@@ -38,6 +39,7 @@ func TestNewConfigurationLoader(t *testing.T) {
 }
 
 func TestNewConfigurationLoaderWithOptions(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		opts     ConfigurationOptions
@@ -75,6 +77,7 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			loader := NewConfigurationLoaderWithOptions(tt.opts)
 
 			for _, expectedSource := range tt.expected {
@@ -353,6 +356,7 @@ verbose: true
 }
 
 func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		config      *AppConfig
@@ -431,6 +435,7 @@ func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			loader := NewConfigurationLoader()
 			err := loader.ValidateConfiguration(tt.config)
 
@@ -447,6 +452,7 @@ func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
 }
 
 func TestConfigurationLoader_SourceManagement(t *testing.T) {
+	t.Parallel()
 	loader := NewConfigurationLoader()
 
 	// Test initial state
@@ -476,6 +482,7 @@ func TestConfigurationLoader_SourceManagement(t *testing.T) {
 }
 
 func TestConfigurationSource_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		source   ConfigurationSource
 		expected string
@@ -554,6 +561,7 @@ func TestConfigurationLoader_RepoOverrides(t *testing.T) {
 
 // TestConfigurationLoader_ApplyRepoOverrides tests repo-specific overrides.
 func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		config         *AppConfig
@@ -584,6 +592,7 @@ func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -597,6 +606,7 @@ func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 
 // TestConfigurationLoader_LoadActionConfig tests action-specific configuration loading.
 func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		setupFunc    func(t *testing.T, tmpDir string) string
@@ -663,6 +673,7 @@ verbose: true
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -694,6 +705,7 @@ verbose: true
 
 // TestConfigurationLoader_ValidateTheme tests theme validation edge cases.
 func TestConfigurationLoader_ValidateTheme(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		theme       string
@@ -738,6 +750,7 @@ func TestConfigurationLoader_ValidateTheme(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			loader := NewConfigurationLoader()
 			err := loader.validateTheme(tt.theme)
 

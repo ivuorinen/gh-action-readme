@@ -7,6 +7,7 @@ import (
 )
 
 func TestProgressBarManager_CreateProgressBar(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		quiet       bool
@@ -46,6 +47,7 @@ func TestProgressBarManager_CreateProgressBar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			pm := NewProgressBarManager(tt.quiet)
 			bar := pm.CreateProgressBar(tt.description, tt.total)
 
@@ -63,6 +65,7 @@ func TestProgressBarManager_CreateProgressBar(t *testing.T) {
 }
 
 func TestProgressBarManager_CreateProgressBarForFiles(t *testing.T) {
+	t.Parallel()
 	pm := NewProgressBarManager(false)
 	files := []string{"file1.yml", "file2.yml", "file3.yml"}
 
@@ -73,7 +76,8 @@ func TestProgressBarManager_CreateProgressBarForFiles(t *testing.T) {
 	}
 }
 
-func TestProgressBarManager_FinishProgressBar(_ *testing.T) {
+func TestProgressBarManager_FinishProgressBar(t *testing.T) {
+	t.Parallel()
 	pm := NewProgressBarManager(false)
 
 	// Test with nil bar (should not panic)
@@ -86,7 +90,8 @@ func TestProgressBarManager_FinishProgressBar(_ *testing.T) {
 	}
 }
 
-func TestProgressBarManager_UpdateProgressBar(_ *testing.T) {
+func TestProgressBarManager_UpdateProgressBar(t *testing.T) {
+	t.Parallel()
 	pm := NewProgressBarManager(false)
 
 	// Test with nil bar (should not panic)
@@ -100,6 +105,7 @@ func TestProgressBarManager_UpdateProgressBar(_ *testing.T) {
 }
 
 func TestProgressBarManager_ProcessWithProgressBar(t *testing.T) {
+	t.Parallel()
 	pm := NewProgressBarManager(false)
 	items := []string{"item1", "item2", "item3"}
 
@@ -122,6 +128,7 @@ func TestProgressBarManager_ProcessWithProgressBar(t *testing.T) {
 }
 
 func TestProgressBarManager_ProcessWithProgressBar_QuietMode(t *testing.T) {
+	t.Parallel()
 	pm := NewProgressBarManager(true) // quiet mode
 	items := []string{"item1", "item2"}
 

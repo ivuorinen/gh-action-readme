@@ -16,6 +16,8 @@ import (
 )
 
 func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		actionYML    string
@@ -62,6 +64,8 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Create temporary action file
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
@@ -117,6 +121,8 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 }
 
 func TestAnalyzer_ParseUsesStatement(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		uses            string
@@ -163,6 +169,8 @@ func TestAnalyzer_ParseUsesStatement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			owner, repo, version, versionType := analyzer.parseUsesStatement(tt.uses)
 
 			testutil.AssertEqual(t, tt.expectedOwner, owner)
@@ -174,6 +182,8 @@ func TestAnalyzer_ParseUsesStatement(t *testing.T) {
 }
 
 func TestAnalyzer_VersionChecking(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		version     string
@@ -229,6 +239,8 @@ func TestAnalyzer_VersionChecking(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			isPinned := analyzer.isVersionPinned(tt.version)
 			isCommitSHA := analyzer.isCommitSHA(tt.version)
 			isSemantic := analyzer.isSemanticVersion(tt.version)
@@ -241,6 +253,8 @@ func TestAnalyzer_VersionChecking(t *testing.T) {
 }
 
 func TestAnalyzer_GetLatestVersion(t *testing.T) {
+	t.Parallel()
+
 	// Create mock GitHub client with test responses
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
@@ -279,6 +293,8 @@ func TestAnalyzer_GetLatestVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			version, sha, err := analyzer.getLatestVersion(tt.owner, tt.repo)
 
 			if tt.expectError {
@@ -295,6 +311,8 @@ func TestAnalyzer_GetLatestVersion(t *testing.T) {
 }
 
 func TestAnalyzer_CheckOutdated(t *testing.T) {
+	t.Parallel()
+
 	// Create mock GitHub client
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
@@ -352,6 +370,8 @@ func TestAnalyzer_CheckOutdated(t *testing.T) {
 }
 
 func TestAnalyzer_CompareVersions(t *testing.T) {
+	t.Parallel()
+
 	analyzer := &Analyzer{}
 
 	tests := []struct {
@@ -394,6 +414,8 @@ func TestAnalyzer_CompareVersions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			updateType := analyzer.compareVersions(tt.current, tt.latest)
 			testutil.AssertEqual(t, tt.expectedType, updateType)
 		})
@@ -401,6 +423,8 @@ func TestAnalyzer_CompareVersions(t *testing.T) {
 }
 
 func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
+	t.Parallel()
+
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -449,6 +473,8 @@ func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
 }
 
 func TestAnalyzer_WithCache(t *testing.T) {
+	t.Parallel()
+
 	// Test that caching works properly
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
@@ -473,6 +499,8 @@ func TestAnalyzer_WithCache(t *testing.T) {
 }
 
 func TestAnalyzer_RateLimitHandling(t *testing.T) {
+	t.Parallel()
+
 	// Create mock client that returns rate limit error
 	rateLimitResponse := &http.Response{
 		StatusCode: http.StatusForbidden,
@@ -511,6 +539,8 @@ func TestAnalyzer_RateLimitHandling(t *testing.T) {
 }
 
 func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
+	t.Parallel()
+
 	// Test graceful degradation when GitHub client is not available
 	analyzer := &Analyzer{
 		GitHubClient: nil,
@@ -549,6 +579,8 @@ func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // TestNewAnalyzer tests the analyzer constructor.
 func TestNewAnalyzer(t *testing.T) {
+	t.Parallel()
+
 	// Create test dependencies
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
@@ -600,6 +632,8 @@ func TestNewAnalyzer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			analyzer := NewAnalyzer(tt.client, tt.repoInfo, tt.cache)
 
 			if tt.expectNotNil && analyzer == nil {

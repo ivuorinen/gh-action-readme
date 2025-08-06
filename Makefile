@@ -18,7 +18,10 @@ test: ## Run all tests
 	go test ./...
 
 lint: format ## Run linter (after formatting)
-	golangci-lint run || true
+	golangci-lint run \
+		--max-issues-per-linter 100 \
+		--max-same-issues 50 \
+		--output.tab.path stdout || true
 
 config-verify: ## Verify golangci-lint configuration
 	golangci-lint config verify --verbose

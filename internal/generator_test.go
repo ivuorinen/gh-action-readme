@@ -10,6 +10,7 @@ import (
 )
 
 func TestGenerator_NewGenerator(t *testing.T) {
+	t.Parallel()
 	config := &AppConfig{
 		Theme:        "default",
 		OutputFormat: "md",
@@ -34,6 +35,7 @@ func TestGenerator_NewGenerator(t *testing.T) {
 }
 
 func TestGenerator_DiscoverActionFiles(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string)
@@ -128,6 +130,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -167,6 +170,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 }
 
 func TestGenerator_GenerateFromFile(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		actionYML    string
@@ -225,6 +229,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -321,6 +326,7 @@ func logREADMELocations(t *testing.T, dir string) {
 }
 
 func TestGenerator_ProcessBatch(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) []string
@@ -398,6 +404,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -441,6 +448,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 }
 
 func TestGenerator_ValidateFiles(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) []string
@@ -487,6 +495,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -506,6 +515,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 }
 
 func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		token       string
@@ -525,6 +535,7 @@ func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			config := &AppConfig{
 				GitHubToken: tt.token,
 				Quiet:       true,
@@ -549,6 +560,7 @@ func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
 }
 
 func TestGenerator_WithDifferentThemes(t *testing.T) {
+	t.Parallel()
 	themes := []string{"default", "github", "gitlab", "minimal", "professional"}
 
 	tmpDir, cleanup := testutil.TempDir(t)
@@ -562,6 +574,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 
 	for _, theme := range themes {
 		t.Run("theme_"+theme, func(t *testing.T) {
+			t.Parallel()
 			// Change to tmpDir so templates can be found
 			origDir, err := os.Getwd()
 			if err != nil {
@@ -605,6 +618,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 }
 
 func TestGenerator_ErrorHandling(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) (*Generator, string)
@@ -657,6 +671,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 

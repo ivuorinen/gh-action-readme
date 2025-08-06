@@ -13,15 +13,19 @@ import (
 
 // TestMockHTTPClient tests the MockHTTPClient implementation.
 func TestMockHTTPClient(t *testing.T) {
+	t.Parallel()
 	t.Run("returns configured response", func(t *testing.T) {
+		t.Parallel()
 		testMockHTTPClientConfiguredResponse(t)
 	})
 
 	t.Run("returns 404 for unconfigured endpoints", func(t *testing.T) {
+		t.Parallel()
 		testMockHTTPClientUnconfiguredEndpoints(t)
 	})
 
 	t.Run("tracks requests", func(t *testing.T) {
+		t.Parallel()
 		testMockHTTPClientRequestTracking(t)
 	})
 }
@@ -155,7 +159,9 @@ func validateRequestTracking(
 }
 
 func TestMockGitHubClient(t *testing.T) {
+	t.Parallel()
 	t.Run("creates client with mocked responses", func(t *testing.T) {
+		t.Parallel()
 		responses := map[string]string{
 			"GET https://api.github.com/repos/test/repo": `{"name": "repo", "full_name": "test/repo"}`,
 		}
@@ -179,6 +185,7 @@ func TestMockGitHubClient(t *testing.T) {
 	})
 
 	t.Run("uses MockGitHubResponses", func(t *testing.T) {
+		t.Parallel()
 		responses := MockGitHubResponses()
 		client := MockGitHubClient(responses)
 
@@ -196,6 +203,7 @@ func TestMockGitHubClient(t *testing.T) {
 }
 
 func TestMockTransport(t *testing.T) {
+	t.Parallel()
 	client := &MockHTTPClient{
 		Responses: map[string]*http.Response{
 			"GET https://api.github.com/test": {
@@ -224,7 +232,9 @@ func TestMockTransport(t *testing.T) {
 }
 
 func TestTempDir(t *testing.T) {
+	t.Parallel()
 	t.Run("creates temporary directory", func(t *testing.T) {
+		t.Parallel()
 		dir, cleanup := TempDir(t)
 		defer cleanup()
 
@@ -245,6 +255,7 @@ func TestTempDir(t *testing.T) {
 	})
 
 	t.Run("cleanup removes directory", func(t *testing.T) {
+		t.Parallel()
 		dir, cleanup := TempDir(t)
 
 		// Verify directory exists
@@ -263,10 +274,12 @@ func TestTempDir(t *testing.T) {
 }
 
 func TestWriteTestFile(t *testing.T) {
+	t.Parallel()
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
 	t.Run("writes file with content", func(t *testing.T) {
+		t.Parallel()
 		testPath := filepath.Join(tmpDir, "test.txt")
 		testContent := "Hello, World!"
 
@@ -289,6 +302,7 @@ func TestWriteTestFile(t *testing.T) {
 	})
 
 	t.Run("creates nested directories", func(t *testing.T) {
+		t.Parallel()
 		nestedPath := filepath.Join(tmpDir, "nested", "deep", "file.txt")
 		testContent := "nested content"
 
@@ -307,6 +321,7 @@ func TestWriteTestFile(t *testing.T) {
 	})
 
 	t.Run("sets correct permissions", func(t *testing.T) {
+		t.Parallel()
 		testPath := filepath.Join(tmpDir, "perm-test.txt")
 		WriteTestFile(t, testPath, "test")
 
@@ -324,6 +339,7 @@ func TestWriteTestFile(t *testing.T) {
 }
 
 func TestSetupTestTemplates(t *testing.T) {
+	t.Parallel()
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
@@ -368,40 +384,53 @@ func TestSetupTestTemplates(t *testing.T) {
 }
 
 func TestMockColoredOutput(t *testing.T) {
+	t.Parallel()
 	t.Run("creates mock output", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputCreation(t)
 	})
 	t.Run("creates quiet mock output", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputQuietCreation(t)
 	})
 	t.Run("captures info messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputInfoMessages(t)
 	})
 	t.Run("captures success messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputSuccessMessages(t)
 	})
 	t.Run("captures warning messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputWarningMessages(t)
 	})
 	t.Run("captures error messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputErrorMessages(t)
 	})
 	t.Run("captures bold messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputBoldMessages(t)
 	})
 	t.Run("captures printf messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputPrintfMessages(t)
 	})
 	t.Run("quiet mode suppresses non-error messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputQuietMode(t)
 	})
 	t.Run("HasMessage works correctly", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputHasMessage(t)
 	})
 	t.Run("HasError works correctly", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputHasError(t)
 	})
 	t.Run("Reset clears messages and errors", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputReset(t)
 	})
 }
@@ -616,7 +645,9 @@ func validateErrorContains(t *testing.T, output *MockColoredOutput, keyword stri
 }
 
 func TestCreateTestAction(t *testing.T) {
+	t.Parallel()
 	t.Run("creates basic action", func(t *testing.T) {
+		t.Parallel()
 		name := "Test Action"
 		description := "A test action for testing"
 		inputs := map[string]string{
@@ -650,6 +681,7 @@ func TestCreateTestAction(t *testing.T) {
 	})
 
 	t.Run("creates action with no inputs", func(t *testing.T) {
+		t.Parallel()
 		action := CreateTestAction("Simple Action", "No inputs", nil)
 
 		if action == "" {
@@ -663,7 +695,9 @@ func TestCreateTestAction(t *testing.T) {
 }
 
 func TestCreateCompositeAction(t *testing.T) {
+	t.Parallel()
 	t.Run("creates composite action with steps", func(t *testing.T) {
+		t.Parallel()
 		name := "Composite Test"
 		description := "A composite action"
 		steps := []string{
@@ -694,6 +728,7 @@ func TestCreateCompositeAction(t *testing.T) {
 	})
 
 	t.Run("creates composite action with no steps", func(t *testing.T) {
+		t.Parallel()
 		action := CreateCompositeAction("Empty Composite", "No steps", nil)
 
 		if action == "" {
@@ -707,15 +742,19 @@ func TestCreateCompositeAction(t *testing.T) {
 }
 
 func TestMockAppConfig(t *testing.T) {
+	t.Parallel()
 	t.Run("creates default config", func(t *testing.T) {
+		t.Parallel()
 		testMockAppConfigDefaults(t)
 	})
 
 	t.Run("applies overrides", func(t *testing.T) {
+		t.Parallel()
 		testMockAppConfigOverrides(t)
 	})
 
 	t.Run("partial overrides keep defaults", func(t *testing.T) {
+		t.Parallel()
 		testMockAppConfigPartialOverrides(t)
 	})
 }
@@ -888,7 +927,9 @@ func TestSetEnv(t *testing.T) {
 }
 
 func TestWithContext(t *testing.T) {
+	t.Parallel()
 	t.Run("creates context with timeout", func(t *testing.T) {
+		t.Parallel()
 		timeout := 100 * time.Millisecond
 		ctx := WithContext(timeout)
 
@@ -911,6 +952,7 @@ func TestWithContext(t *testing.T) {
 	})
 
 	t.Run("context eventually times out", func(t *testing.T) {
+		t.Parallel()
 		ctx := WithContext(1 * time.Millisecond)
 
 		// Wait a bit longer than the timeout
@@ -929,7 +971,9 @@ func TestWithContext(t *testing.T) {
 }
 
 func TestAssertNoError(t *testing.T) {
+	t.Parallel()
 	t.Run("passes with nil error", func(t *testing.T) {
+		t.Parallel()
 		// This should not fail
 		AssertNoError(t, nil)
 	})
@@ -942,7 +986,9 @@ func TestAssertNoError(t *testing.T) {
 }
 
 func TestAssertError(t *testing.T) {
+	t.Parallel()
 	t.Run("passes with non-nil error", func(t *testing.T) {
+		t.Parallel()
 		// This should not fail
 		AssertError(t, io.EOF)
 	})
@@ -952,7 +998,9 @@ func TestAssertError(t *testing.T) {
 }
 
 func TestAssertStringContains(t *testing.T) {
+	t.Parallel()
 	t.Run("passes when string contains substring", func(t *testing.T) {
+		t.Parallel()
 		AssertStringContains(t, "hello world", "world")
 		AssertStringContains(t, "test string", "test")
 		AssertStringContains(t, "exact match", "exact match")
@@ -962,7 +1010,9 @@ func TestAssertStringContains(t *testing.T) {
 }
 
 func TestAssertEqual(t *testing.T) {
+	t.Parallel()
 	t.Run("passes with equal basic types", func(t *testing.T) {
+		t.Parallel()
 		AssertEqual(t, 42, 42)
 		AssertEqual(t, "test", "test")
 		AssertEqual(t, true, true)
@@ -970,12 +1020,14 @@ func TestAssertEqual(t *testing.T) {
 	})
 
 	t.Run("passes with equal string maps", func(t *testing.T) {
+		t.Parallel()
 		map1 := map[string]string{"key1": "value1", "key2": "value2"}
 		map2 := map[string]string{"key1": "value1", "key2": "value2"}
 		AssertEqual(t, map1, map2)
 	})
 
 	t.Run("passes with empty string maps", func(t *testing.T) {
+		t.Parallel()
 		map1 := map[string]string{}
 		map2 := map[string]string{}
 		AssertEqual(t, map1, map2)
@@ -986,7 +1038,9 @@ func TestAssertEqual(t *testing.T) {
 }
 
 func TestNewStringReader(t *testing.T) {
+	t.Parallel()
 	t.Run("creates reader from string", func(t *testing.T) {
+		t.Parallel()
 		testString := "Hello, World!"
 		reader := NewStringReader(testString)
 
@@ -1006,6 +1060,7 @@ func TestNewStringReader(t *testing.T) {
 	})
 
 	t.Run("creates reader from empty string", func(t *testing.T) {
+		t.Parallel()
 		reader := NewStringReader("")
 		content, err := io.ReadAll(reader)
 		if err != nil {
@@ -1018,6 +1073,7 @@ func TestNewStringReader(t *testing.T) {
 	})
 
 	t.Run("reader can be closed", func(t *testing.T) {
+		t.Parallel()
 		reader := NewStringReader("test")
 		err := reader.Close()
 		if err != nil {
@@ -1026,6 +1082,7 @@ func TestNewStringReader(t *testing.T) {
 	})
 
 	t.Run("handles large strings", func(t *testing.T) {
+		t.Parallel()
 		largeString := strings.Repeat("test ", 10000)
 		reader := NewStringReader(largeString)
 

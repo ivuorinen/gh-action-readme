@@ -7,6 +7,7 @@ import (
 )
 
 func TestConfigValidator_ValidateConfig(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true) // quiet mode for testing
 	validator := NewConfigValidator(output)
 
@@ -74,6 +75,7 @@ func TestConfigValidator_ValidateConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := validator.ValidateConfig(tt.config)
 
 			if result.Valid != tt.expectValid {
@@ -92,6 +94,7 @@ func TestConfigValidator_ValidateConfig(t *testing.T) {
 }
 
 func TestConfigValidator_ValidateField(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
 
@@ -115,6 +118,7 @@ func TestConfigValidator_ValidateField(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := validator.ValidateField(tt.fieldName, tt.value)
 
 			if result.Valid != tt.expectValid {
@@ -125,6 +129,7 @@ func TestConfigValidator_ValidateField(t *testing.T) {
 }
 
 func TestConfigValidator_isValidGitHubName(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
 
@@ -146,6 +151,7 @@ func TestConfigValidator_isValidGitHubName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := validator.isValidGitHubName(tt.input)
 			if got != tt.want {
 				t.Errorf("isValidGitHubName(%q) = %v, want %v", tt.input, got, tt.want)
@@ -155,6 +161,7 @@ func TestConfigValidator_isValidGitHubName(t *testing.T) {
 }
 
 func TestConfigValidator_isValidSemanticVersion(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
 
@@ -175,6 +182,7 @@ func TestConfigValidator_isValidSemanticVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := validator.isValidSemanticVersion(tt.input)
 			if got != tt.want {
 				t.Errorf("isValidSemanticVersion(%q) = %v, want %v", tt.input, got, tt.want)
@@ -184,6 +192,7 @@ func TestConfigValidator_isValidSemanticVersion(t *testing.T) {
 }
 
 func TestConfigValidator_isValidGitHubToken(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
 
@@ -204,6 +213,7 @@ func TestConfigValidator_isValidGitHubToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := validator.isValidGitHubToken(tt.input)
 			if got != tt.want {
 				t.Errorf("isValidGitHubToken(%q) = %v, want %v", tt.input, got, tt.want)
@@ -213,6 +223,7 @@ func TestConfigValidator_isValidGitHubToken(t *testing.T) {
 }
 
 func TestConfigValidator_isValidVariableName(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
 
@@ -234,6 +245,7 @@ func TestConfigValidator_isValidVariableName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := validator.isValidVariableName(tt.input)
 			if got != tt.want {
 				t.Errorf("isValidVariableName(%q) = %v, want %v", tt.input, got, tt.want)

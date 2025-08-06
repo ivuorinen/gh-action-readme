@@ -8,6 +8,8 @@ import (
 )
 
 func TestCreateAnalyzer(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name           string
 		setupConfig    func() *internal.AppConfig
@@ -48,6 +50,8 @@ func TestCreateAnalyzer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			config := tt.setupConfig()
 			generator := internal.NewGenerator(config)
 
@@ -74,6 +78,8 @@ func TestCreateAnalyzer(t *testing.T) {
 }
 
 func TestCreateAnalyzerOrExit(t *testing.T) {
+	t.Parallel()
+
 	// Only test success case since failure case calls os.Exit
 	t.Run("successful analyzer creation", func(t *testing.T) {
 		config := &internal.AppConfig{
@@ -103,6 +109,8 @@ func TestCreateAnalyzerOrExit(t *testing.T) {
 }
 
 func TestCreateAnalyzer_Integration(t *testing.T) {
+	t.Parallel()
+
 	// Test integration with actual generator functionality
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()

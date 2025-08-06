@@ -350,6 +350,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 }
 
 func TestResolveThemeTemplate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		theme        string
@@ -406,6 +407,7 @@ func TestResolveThemeTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			path := resolveThemeTemplate(tt.theme)
 
 			if tt.expectError {
@@ -561,6 +563,7 @@ func TestGetGitHubToken(t *testing.T) {
 
 // TestMergeMapFields tests the merging of map fields in configuration.
 func TestMergeMapFields(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		dst      *AppConfig
@@ -641,6 +644,7 @@ func TestMergeMapFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Deep copy dst to avoid modifying test data
 			dst := &AppConfig{}
 			if tt.dst.Permissions != nil {
@@ -666,6 +670,7 @@ func TestMergeMapFields(t *testing.T) {
 
 // TestMergeSliceFields tests the merging of slice fields in configuration.
 func TestMergeSliceFields(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		dst      *AppConfig
@@ -706,6 +711,7 @@ func TestMergeSliceFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			mergeSliceFields(tt.dst, tt.src)
 
 			// Compare slices manually since they can't be compared directly
