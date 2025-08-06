@@ -126,6 +126,7 @@ func (cl *ConfigurationLoader) loadGlobalStep(config *AppConfig, configFile stri
 		return fmt.Errorf("failed to load global config: %w", err)
 	}
 	cl.mergeConfigs(config, globalConfig, true) // Allow tokens for global config
+
 	return nil
 }
 
@@ -149,6 +150,7 @@ func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot st
 		return fmt.Errorf("failed to load repo config: %w", err)
 	}
 	cl.mergeConfigs(config, repoConfig, false) // No tokens in repo config
+
 	return nil
 }
 
@@ -163,6 +165,7 @@ func (cl *ConfigurationLoader) loadActionConfigStep(config *AppConfig, actionDir
 		return fmt.Errorf("failed to load action config: %w", err)
 	}
 	cl.mergeConfigs(config, actionConfig, false) // No tokens in action config
+
 	return nil
 }
 
@@ -399,6 +402,7 @@ func containsString(slice []string, str string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -410,6 +414,7 @@ func (cl *ConfigurationLoader) GetConfigurationSources() []ConfigurationSource {
 			sources = append(sources, source)
 		}
 	}
+
 	return sources
 }
 

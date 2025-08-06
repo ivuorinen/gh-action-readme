@@ -199,6 +199,7 @@ func (co *ColoredOutput) formatMainError(err *errors.ContextualError) string {
 	if co.NoColor {
 		return "❌ " + mainMsg
 	}
+
 	return color.RedString("❌ ") + mainMsg
 }
 
@@ -253,6 +254,7 @@ func (co *ColoredOutput) formatHelpURLSection(helpURL string) string {
 	if co.NoColor {
 		return fmt.Sprintf("\nFor more help: %s", helpURL)
 	}
+
 	return fmt.Sprintf("\n%s: %s",
 		color.New(color.Bold).Sprint("For more help"),
 		color.BlueString(helpURL))

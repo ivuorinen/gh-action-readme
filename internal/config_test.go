@@ -102,6 +102,7 @@ func TestInitConfig(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -278,6 +279,7 @@ verbose: true
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -449,6 +451,7 @@ func TestResolveThemeTemplate(t *testing.T) {
 				if path != "" {
 					t.Errorf("expected empty path on error, got: %s", path)
 				}
+
 				return
 			}
 
@@ -477,6 +480,7 @@ func TestConfigTokenHierarchy(t *testing.T) {
 			setupFunc: func(_ *testing.T) func() {
 				_ = os.Setenv("GH_README_GITHUB_TOKEN", "priority-token")
 				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
+
 				return func() {
 					_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
 					_ = os.Unsetenv("GITHUB_TOKEN")
@@ -489,6 +493,7 @@ func TestConfigTokenHierarchy(t *testing.T) {
 			setupFunc: func(_ *testing.T) func() {
 				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
 				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
+
 				return func() {
 					_ = os.Unsetenv("GITHUB_TOKEN")
 				}
@@ -500,6 +505,7 @@ func TestConfigTokenHierarchy(t *testing.T) {
 			setupFunc: func(_ *testing.T) func() {
 				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
 				_ = os.Unsetenv("GITHUB_TOKEN")
+
 				return func() {}
 			},
 			expectedToken: "",
@@ -813,11 +819,13 @@ func TestMergeSliceFields(t *testing.T) {
 			// Compare slices manually since they can't be compared directly
 			if len(tt.expected) != len(tt.dst.RunsOn) {
 				t.Errorf("expected slice length %d, got %d", len(tt.expected), len(tt.dst.RunsOn))
+
 				return
 			}
 			for i, expected := range tt.expected {
 				if i >= len(tt.dst.RunsOn) || tt.dst.RunsOn[i] != expected {
 					t.Errorf("expected %v, got %v", tt.expected, tt.dst.RunsOn)
+
 					return
 				}
 			}

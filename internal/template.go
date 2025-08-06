@@ -70,6 +70,7 @@ func getGitOrg(data any) string {
 			return td.Config.Organization
 		}
 	}
+
 	return defaultOrgPlaceholder
 }
 
@@ -83,6 +84,7 @@ func getGitRepo(data any) string {
 			return td.Config.Repository
 		}
 	}
+
 	return defaultRepoPlaceholder
 }
 
@@ -101,6 +103,7 @@ func getGitUsesString(data any) string {
 	}
 
 	version := formatVersion(getActionVersion(data))
+
 	return buildUsesString(td, org, repo, version)
 }
 
@@ -118,6 +121,7 @@ func formatVersion(version string) string {
 	if !strings.HasPrefix(version, "@") {
 		return "@" + version
 	}
+
 	return version
 }
 
@@ -129,6 +133,7 @@ func buildUsesString(td *TemplateData, org, repo, version string) string {
 			return fmt.Sprintf("%s/%s/%s%s", org, repo, actionName, version)
 		}
 	}
+
 	return fmt.Sprintf("%s/%s%s", org, repo, version)
 }
 
@@ -139,6 +144,7 @@ func getActionVersion(data any) string {
 			return td.Config.Version
 		}
 	}
+
 	return "v1"
 }
 
@@ -243,6 +249,7 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 			return "", err
 		}
 		buf.WriteString(foot)
+
 		return buf.String(), nil
 	}
 
@@ -254,5 +261,6 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	if err := tmpl.Execute(buf, action); err != nil {
 		return "", err
 	}
+
 	return buf.String(), nil
 }

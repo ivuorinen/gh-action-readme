@@ -579,5 +579,6 @@ func GetConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get XDG config file path: %w", err)
 	}
+
 	return configDir, nil
 }

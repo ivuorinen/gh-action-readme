@@ -13,6 +13,7 @@ import (
 func IsCommitSHA(version string) bool {
 	// Check if it's a 40-character hex string (full SHA) or 7+ character hex (short SHA)
 	re := regexp.MustCompile(`^[a-f0-9]{7,40}$`)
+
 	return len(version) >= 7 && re.MatchString(version)
 }
 
@@ -20,6 +21,7 @@ func IsCommitSHA(version string) bool {
 func IsSemanticVersion(version string) bool {
 	// Check for vX.Y.Z format (requires major.minor.patch)
 	re := regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
+
 	return re.MatchString(version)
 }
 
@@ -39,6 +41,7 @@ func ValidateGitBranch(repoRoot, branch string) bool {
 		"refs/heads/"+branch,
 	) // #nosec G204 -- branch name validated by git
 	cmd.Dir = repoRoot
+
 	return cmd.Run() == nil
 }
 
@@ -61,5 +64,6 @@ func ValidateActionYMLPath(path string) error {
 // IsGitRepository checks if the given path is within a git repository.
 func IsGitRepository(path string) bool {
 	_, err := git.FindRepositoryRoot(path)
+
 	return err == nil
 }

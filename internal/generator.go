@@ -109,6 +109,7 @@ func (g *Generator) GenerateFromFile(actionPath string) error {
 	}
 
 	outputDir := g.determineOutputDir(actionPath)
+
 	return g.generateByFormat(action, outputDir, actionPath)
 }
 
@@ -151,6 +152,7 @@ func (g *Generator) determineOutputDir(actionPath string) string {
 	if g.Config.OutputDir == "" || g.Config.OutputDir == "." {
 		return filepath.Dir(actionPath)
 	}
+
 	return g.Config.OutputDir
 }
 
@@ -160,8 +162,10 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string 
 		if filepath.IsAbs(g.Config.OutputFilename) {
 			return g.Config.OutputFilename
 		}
+
 		return filepath.Join(outputDir, g.Config.OutputFilename)
 	}
+
 	return filepath.Join(outputDir, defaultFilename)
 }
 
@@ -212,6 +216,7 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 	}
 
 	g.Output.Success("Generated README.md: %s", outputPath)
+
 	return nil
 }
 
@@ -254,6 +259,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 	}
 
 	g.Output.Success("Generated HTML: %s", outputPath)
+
 	return nil
 }
 
@@ -267,6 +273,7 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 	}
 
 	g.Output.Success("Generated JSON: %s", outputPath)
+
 	return nil
 }
 
@@ -298,6 +305,7 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 	}
 
 	g.Output.Success("Generated AsciiDoc: %s", outputPath)
+
 	return nil
 }
 
@@ -339,6 +347,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 				ContextKeyError: err.Error(),
 			},
 		)
+
 		return nil, err
 	}
 
@@ -355,6 +364,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 				"suggestion": "Please run this command in a directory containing GitHub Action files (action.yml or action.yaml)",
 			},
 		)
+
 		return nil, fmt.Errorf("no action files found in directory: %s", dir)
 	}
 
@@ -375,6 +385,7 @@ func (g *Generator) ProcessBatch(paths []string) error {
 	if len(errors) > 0 {
 		return fmt.Errorf("encountered %d errors during batch processing", len(errors))
 	}
+
 	return nil
 }
 
@@ -396,6 +407,7 @@ func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) (
 
 		g.Progress.UpdateProgressBar(bar)
 	}
+
 	return errors, successCount
 }
 
@@ -440,8 +452,10 @@ func (g *Generator) ValidateFiles(paths []string) error {
 
 	if len(errors) > 0 || validationFailures > 0 {
 		totalFailures := len(errors) + validationFailures
+
 		return fmt.Errorf("validation failed for %d files", totalFailures)
 	}
+
 	return nil
 }
 
@@ -459,6 +473,7 @@ func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) 
 		if err != nil {
 			errorMsg := fmt.Sprintf("failed to parse %s: %v", path, err)
 			errors = append(errors, errorMsg)
+
 			continue
 		}
 
@@ -468,6 +483,7 @@ func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) 
 
 		g.Progress.UpdateProgressBar(bar)
 	}
+
 	return allResults, errors
 }
 
@@ -490,6 +506,7 @@ func (g *Generator) countValidationStats(results []ValidationResult) (validFiles
 			totalIssues += len(result.MissingFields) - 1 // Subtract file path entry
 		}
 	}
+
 	return validFiles, totalIssues
 }
 

@@ -15,6 +15,7 @@ func GetCurrentDir() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error getting current directory: %w", err)
 	}
+
 	return currentDir, nil
 }
 
@@ -31,12 +32,14 @@ func SetupGeneratorContext(config *internal.AppConfig) (*internal.Generator, str
 	if err != nil {
 		return nil, "", err
 	}
+
 	return generator, currentDir, nil
 }
 
 // FindGitRepoRoot finds git repository root with standardized error handling.
 func FindGitRepoRoot(currentDir string) string {
 	repoRoot, _ := git.FindRepositoryRoot(currentDir)
+
 	return repoRoot
 }
 

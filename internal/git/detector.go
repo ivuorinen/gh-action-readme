@@ -30,6 +30,7 @@ func (r *RepoInfo) GetRepositoryName() string {
 	if r.Organization != "" && r.Repository != "" {
 		return fmt.Sprintf("%s/%s", r.Organization, r.Repository)
 	}
+
 	return ""
 }
 
@@ -129,12 +130,14 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 		// Check for [remote "origin"] section
 		if strings.Contains(line, `[remote "origin"]`) {
 			inOriginSection = true
+
 			continue
 		}
 
 		// Check for new section
 		if strings.HasPrefix(line, "[") && inOriginSection {
 			inOriginSection = false
+
 			continue
 		}
 
@@ -160,6 +163,7 @@ func getDefaultBranch(repoRoot string) string {
 				return branch
 			}
 		}
+
 		return DefaultBranch // Default fallback
 	}
 
@@ -182,6 +186,7 @@ func branchExists(repoRoot, branch string) bool {
 		"refs/heads/"+branch,
 	) // #nosec G204 -- branch name validated by git
 	cmd.Dir = repoRoot
+
 	return cmd.Run() == nil
 }
 
@@ -225,5 +230,6 @@ func (r *RepoInfo) GenerateUsesStatement(actionName, version string) string {
 	if actionName != "" {
 		return fmt.Sprintf("your-org/%s@%s", actionName, version)
 	}
+
 	return "your-org/your-action@v1"
 }

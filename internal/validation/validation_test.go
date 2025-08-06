@@ -20,6 +20,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return actionPath
 			},
 			expectError: false,
@@ -29,6 +30,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				actionPath := filepath.Join(tmpDir, "action.yaml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("minimal-action.yml"))
+
 				return actionPath
 			},
 			expectError: false,
@@ -45,6 +47,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				actionPath := filepath.Join(tmpDir, "action.txt")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return actionPath
 			},
 			expectError: true,
@@ -252,6 +255,7 @@ func TestValidateGitBranch(t *testing.T) {
 	merge = refs/heads/main
 `
 				testutil.WriteTestFile(t, filepath.Join(gitDir, "config"), configContent)
+
 				return tmpDir, "main"
 			},
 			expected: true, // This may vary based on actual git repo state
@@ -298,6 +302,7 @@ func TestIsGitRepository(t *testing.T) {
 			setupFunc: func(_ *testing.T, tmpDir string) string {
 				gitDir := filepath.Join(tmpDir, ".git")
 				_ = os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
+
 				return tmpDir
 			},
 			expected: true,
@@ -307,6 +312,7 @@ func TestIsGitRepository(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				gitFile := filepath.Join(tmpDir, ".git")
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
+
 				return tmpDir
 			},
 			expected: true,

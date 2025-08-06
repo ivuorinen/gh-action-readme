@@ -243,6 +243,7 @@ func TestGetSuggestions(t *testing.T) {
 
 			if len(suggestions) == 0 {
 				t.Error("GetSuggestions() returned empty slice")
+
 				return
 			}
 

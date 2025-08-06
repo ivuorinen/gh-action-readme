@@ -103,6 +103,7 @@ func (d *ProjectDetector) detectRepositoryInfo(settings *DetectedSettings) error
 	settings.Version = d.detectVersion()
 
 	d.output.Success("Detected repository: %s/%s", settings.Organization, settings.Repository)
+
 	return nil
 }
 
@@ -221,6 +222,7 @@ func (d *ProjectDetector) findActionFiles(dir string, recursive bool) ([]string,
 	if recursive {
 		return d.findActionFilesRecursive(dir)
 	}
+
 	return d.findActionFilesInDirectory(dir)
 }
 
@@ -253,6 +255,7 @@ func (d *ProjectDetector) handleDirectory(info os.FileInfo) error {
 	if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
 		return filepath.SkipDir
 	}
+
 	return nil
 }
 
@@ -366,6 +369,7 @@ func (d *ProjectDetector) analyzeProjectFiles() map[string]string {
 	}
 
 	d.setDefaultProjectType(characteristics)
+
 	return characteristics
 }
 
@@ -425,6 +429,7 @@ func (d *ProjectDetector) setDefaultProjectType(characteristics map[string]strin
 // getCurrentActionFiles gets action files in current directory only.
 func (d *ProjectDetector) getCurrentActionFiles() []string {
 	actionFiles, _ := d.findActionFiles(d.currentDir, false)
+
 	return actionFiles
 }
 

@@ -139,6 +139,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -242,6 +243,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -260,6 +262,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 			readmeFiles, _ := filepath.Glob(pattern)
 			if len(readmeFiles) == 0 {
 				t.Errorf("no output file was created for format %s", tt.outputFormat)
+
 				return
 			}
 
@@ -289,11 +292,13 @@ func countREADMEFiles(t *testing.T, dir string) int {
 		if strings.HasSuffix(path, "README.md") {
 			count++
 		}
+
 		return nil
 	})
 	if err != nil {
 		t.Errorf("error walking directory: %v", err)
 	}
+
 	return count
 }
 
@@ -304,6 +309,7 @@ func logREADMELocations(t *testing.T, dir string) {
 		if err == nil && strings.HasSuffix(path, "README.md") {
 			t.Logf("Found README at: %s", path)
 		}
+
 		return nil
 	})
 }
@@ -334,6 +340,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/composite/basic.yml"))
+
 				return files
 			},
 			expectError: false,
@@ -358,6 +365,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/invalid/invalid-using.yml"))
+
 				return files
 			},
 			expectError: true, // Invalid runtime configuration should cause batch to fail
@@ -401,11 +409,13 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
+
 				return
 			}
 
@@ -437,6 +447,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("minimal-action.yml"))
+
 				return files
 			},
 			expectError: false,
@@ -450,6 +461,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/invalid/missing-description.yml"))
+
 				return files
 			},
 			expectError: true, // Validation should fail for invalid runtime configuration
@@ -513,6 +525,7 @@ func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -563,6 +576,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 
 			if err := generator.GenerateFromFile(actionPath); err != nil {
 				t.Errorf("unexpected error: %v", err)
+
 				return
 			}
 
@@ -598,6 +612,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 				generator := NewGenerator(config)
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return generator, actionPath
 			},
 			wantError: "template",
@@ -621,6 +636,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 				generator := NewGenerator(config)
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return generator, actionPath
 			},
 			wantError: "permission denied",

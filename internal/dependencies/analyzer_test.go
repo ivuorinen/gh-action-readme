@@ -85,6 +85,7 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 			// Check error expectation
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 			testutil.AssertNoError(t, err)
@@ -100,6 +101,7 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 					for i, expectedDep := range tt.expectedDeps {
 						if i >= len(deps) {
 							t.Errorf("expected dependency %s but got fewer dependencies", expectedDep)
+
 							continue
 						}
 						if !strings.Contains(deps[i].Name+"@"+deps[i].Version, expectedDep) {
@@ -281,6 +283,7 @@ func TestAnalyzer_GetLatestVersion(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 

@@ -257,6 +257,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 			fixture, err := ctx.FixtureManager.LoadActionFixture(testCase.Fixture)
 			if err != nil {
 				result.Error = fmt.Errorf("failed to load fixture %s: %w", testCase.Fixture, err)
+
 				return result
 			}
 
@@ -268,6 +269,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 		// If we don't have an action file to test, just return success
 		if actionPath == "" {
 			result.Success = true
+
 			return result
 		}
 
@@ -278,6 +280,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 		originalWd, err := os.Getwd()
 		if err != nil {
 			result.Error = fmt.Errorf("failed to get working directory: %w", err)
+
 			return result
 		}
 
@@ -285,6 +288,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 		_, currentFile, _, ok := runtime.Caller(0)
 		if !ok {
 			result.Error = fmt.Errorf("failed to get current file path")
+
 			return result
 		}
 
@@ -292,6 +296,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 		projectRoot := filepath.Dir(filepath.Dir(currentFile))
 		if err := os.Chdir(projectRoot); err != nil {
 			result.Error = fmt.Errorf("failed to change to project root %s: %w", projectRoot, err)
+
 			return result
 		}
 

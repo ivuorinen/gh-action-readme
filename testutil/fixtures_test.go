@@ -64,6 +64,7 @@ func TestMustReadFixture_Panic(t *testing.T) {
 				errStr, ok := r.(string)
 				if !ok {
 					t.Errorf("expected panic to contain string message, got: %T", r)
+
 					return
 				}
 				if !strings.Contains(errStr, "failed to read fixture") {
@@ -175,6 +176,7 @@ func parseJSONResponse(t *testing.T, response string) map[string]any {
 	if err := json.Unmarshal([]byte(response), &data); err != nil {
 		t.Fatalf("failed to parse JSON response: %v", err)
 	}
+
 	return data
 }
 
@@ -334,6 +336,7 @@ func TestFixtureFileSystem(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to get working directory: %v", err)
 		}
+
 		return filepath.Dir(wd) // Go up from testutil to project root
 	}()
 

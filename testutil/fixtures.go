@@ -316,6 +316,7 @@ var PackageJSONContent = func() string {
 	result += "    \"webpack\": \"^5.0.0\"\n"
 	result += "  }\n"
 	result += "}\n"
+
 	return result
 }()
 
@@ -373,6 +374,7 @@ func (fm *FixtureManager) LoadActionFixture(name string) (*ActionFixture, error)
 	fm.mu.RLock()
 	if fixture, exists := fm.cache[name]; exists {
 		fm.mu.RUnlock()
+
 		return fixture, nil
 	}
 	fm.mu.RUnlock()
@@ -403,6 +405,7 @@ func (fm *FixtureManager) LoadActionFixture(name string) (*ActionFixture, error)
 	// Double-check cache in case another goroutine cached it while we were loading
 	if cachedFixture, exists := fm.cache[name]; exists {
 		fm.mu.Unlock()
+
 		return cachedFixture, nil
 	}
 	fm.cache[name] = fixture
@@ -505,6 +508,7 @@ func (fm *FixtureManager) ensureYamlExtension(path string) string {
 	if !strings.HasSuffix(path, YmlExtension) && !strings.HasSuffix(path, YamlExtension) {
 		path += YmlExtension
 	}
+
 	return path
 }
 
@@ -524,6 +528,7 @@ func (fm *FixtureManager) searchInDirectories(name string) string {
 			return path
 		}
 	}
+
 	return ""
 }
 
@@ -535,6 +540,7 @@ func (fm *FixtureManager) buildSearchPath(dir, name string) string {
 	} else {
 		path = filepath.Join(fm.basePath, dir, name)
 	}
+
 	return fm.ensureYamlExtension(path)
 }
 
@@ -566,6 +572,7 @@ func (fm *FixtureManager) determineActionTypeByName(name string) ActionType {
 	if strings.Contains(name, "minimal") {
 		return ActionTypeMinimal
 	}
+
 	return ActionTypeMinimal
 }
 
@@ -580,6 +587,7 @@ func (fm *FixtureManager) determineActionTypeByContent(content string) ActionTyp
 	if strings.Contains(content, `using: 'node`) {
 		return ActionTypeJavaScript
 	}
+
 	return ActionTypeMinimal
 }
 
@@ -594,6 +602,7 @@ func (fm *FixtureManager) determineConfigType(name string) string {
 	if strings.Contains(name, "user") {
 		return "user-specific"
 	}
+
 	return "generic"
 }
 
@@ -658,12 +667,14 @@ func isValidRuntime(runtime string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 // validateConfigContent validates configuration fixture content.
 func (fm *FixtureManager) validateConfigContent(content string) bool {
 	var data map[string]any
+
 	return yaml.Unmarshal([]byte(content), &data) == nil
 }
 
@@ -762,6 +773,7 @@ func GetFixtureManager() *FixtureManager {
 			panic(fmt.Sprintf("failed to load test scenarios: %v", err))
 		}
 	}
+
 	return defaultFixtureManager
 }
 

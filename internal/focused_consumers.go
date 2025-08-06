@@ -133,6 +133,7 @@ func NewValidationComponent(errorManager ErrorManager, logger MessageLogger) *Va
 func (vc *ValidationComponent) ValidateAndReport(item string, isValid bool, err error) {
 	if isValid {
 		vc.logger.Success("Validation passed for: %s", item)
+
 		return
 	}
 

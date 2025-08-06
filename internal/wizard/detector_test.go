@@ -50,6 +50,7 @@ func TestProjectDetector_analyzeProjectFiles(t *testing.T) {
 	for _, validType := range validTypes {
 		if projectType == validType {
 			typeValid = true
+
 			break
 		}
 	}

@@ -94,6 +94,7 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 				for _, expectedSource := range tt.expected {
 					if source == expectedSource {
 						expected = true
+
 						break
 					}
 				}
@@ -272,6 +273,7 @@ verbose: true
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -301,6 +303,7 @@ output_format: html
 github_token: test-token
 verbose: true
 `)
+
 				return configPath
 			},
 			checkFunc: func(_ *testing.T, config *AppConfig) {
@@ -322,6 +325,7 @@ verbose: true
 			setupFunc: func(t *testing.T, tempDir string) string {
 				configPath := filepath.Join(tempDir, "invalid.yaml")
 				testutil.WriteTestFile(t, configPath, "invalid: yaml: content: [")
+
 				return configPath
 			},
 			expectError: true,
@@ -351,6 +355,7 @@ verbose: true
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -520,6 +525,7 @@ func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
 			setupFunc: func(_ *testing.T) func() {
 				_ = os.Setenv("GH_README_GITHUB_TOKEN", "priority-token")
 				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
+
 				return func() {
 					_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
 					_ = os.Unsetenv("GITHUB_TOKEN")
@@ -532,6 +538,7 @@ func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
 			setupFunc: func(_ *testing.T) func() {
 				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
 				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
+
 				return func() {
 					_ = os.Unsetenv("GITHUB_TOKEN")
 				}
@@ -543,6 +550,7 @@ func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
 			setupFunc: func(_ *testing.T) func() {
 				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
 				_ = os.Unsetenv("GITHUB_TOKEN")
+
 				return func() {}
 			},
 			expectedToken: "",
@@ -679,6 +687,7 @@ theme: minimal
 output_format: json
 verbose: true
 `)
+
 				return actionDir
 			},
 			expectError: false,
@@ -695,6 +704,7 @@ verbose: true
 
 				configPath := filepath.Join(actionDir, "config.yaml")
 				testutil.WriteTestFile(t, configPath, "invalid yaml content:\n  - broken [")
+
 				return actionDir
 			},
 			expectError:  false, // Function may handle YAML errors gracefully
@@ -705,6 +715,7 @@ verbose: true
 			setupFunc: func(_ *testing.T, tmpDir string) string {
 				actionDir := filepath.Join(tmpDir, "action")
 				_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
+
 				return actionDir
 			},
 			expectError:  false,

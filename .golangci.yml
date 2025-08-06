@@ -27,6 +27,7 @@ linters:
     - predeclared
     - lll
     - gosec
+    - nlreturn
 
   disable:
     # Disable noisy linters
@@ -35,7 +36,6 @@ linters:
     - nestif
     - cyclop
     - wsl
-    - nlreturn
     - wrapcheck
 
   settings:

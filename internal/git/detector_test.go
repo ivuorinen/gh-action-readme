@@ -58,6 +58,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to create subdirectory: %v", err)
 				}
+
 				return subDir
 			},
 			expectError: true,
@@ -82,6 +83,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 

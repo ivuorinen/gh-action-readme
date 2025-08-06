@@ -79,6 +79,7 @@ func TestSetupGeneratorContext(t *testing.T) {
 			// Verify generator was created
 			if generator == nil {
 				t.Error("expected generator to be created")
+
 				return
 			}
 

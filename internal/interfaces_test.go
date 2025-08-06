@@ -101,6 +101,7 @@ type MockProgressManager struct {
 
 func (m *MockProgressManager) CreateProgressBar(description string, total int) *progressbar.ProgressBar {
 	m.CreateProgressBarCalls = append(m.CreateProgressBarCalls, formatMessage("%s (total: %d)", description, total))
+
 	return nil // Return nil for mock to avoid actual progress bar
 }
 
@@ -109,6 +110,7 @@ func (m *MockProgressManager) CreateProgressBarForFiles(description string, file
 		m.CreateProgressBarForFilesCalls,
 		formatMessage("%s (files: %d)", description, len(files)),
 	)
+
 	return nil // Return nil for mock to avoid actual progress bar
 }
 
@@ -151,6 +153,7 @@ func formatMessage(format string, args ...any) string {
 		result = strings.Replace(result, "%d", toString(arg), 1)
 		result = strings.Replace(result, "%v", toString(arg), 1)
 	}
+
 	return result
 }
 
@@ -183,6 +186,7 @@ func formatInt(i int) string {
 	if negative {
 		result = "-" + result
 	}
+
 	return result
 }
 
@@ -436,8 +440,10 @@ func (m *MockErrorFormatter) FormatContextualError(err *errors.ContextualError) 
 	if err != nil {
 		formatted := err.Error()
 		m.FormatContextualErrorCalls = append(m.FormatContextualErrorCalls, formatted)
+
 		return formatted
 	}
+
 	return ""
 }
 

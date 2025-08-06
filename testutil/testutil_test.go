@@ -84,6 +84,7 @@ func createTestRequest(t *testing.T, method, url string) *http.Request {
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
+
 	return req
 }
 
@@ -93,6 +94,7 @@ func executeRequest(t *testing.T, client *MockHTTPClient, req *http.Request) *ht
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	return resp
 }
 
@@ -131,6 +133,7 @@ func validateRequestTracking(
 ) {
 	if len(client.Requests) != expectedCount {
 		t.Errorf("expected %d tracked requests, got %d", expectedCount, len(client.Requests))
+
 		return
 	}
 

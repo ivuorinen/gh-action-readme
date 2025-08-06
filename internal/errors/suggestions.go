@@ -13,6 +13,7 @@ func GetSuggestions(code ErrorCode, context map[string]string) []string {
 	if handler := getSuggestionHandler(code); handler != nil {
 		return handler(context)
 	}
+
 	return getDefaultSuggestions()
 }
 

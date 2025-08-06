@@ -86,6 +86,7 @@ func createErrorHandler(output *internal.ColoredOutput) *internal.ErrorHandler {
 func setupOutputAndErrorHandling() (*internal.ColoredOutput, *internal.ErrorHandler) {
 	output := createOutputManager(globalConfig.Quiet)
 	errorHandler := createErrorHandler(output)
+
 	return output, errorHandler
 }
 
@@ -391,6 +392,7 @@ func newConfigCmd() *cobra.Command {
 			path, err := internal.GetConfigPath()
 			if err != nil {
 				output.Error("Error getting config path: %v", err)
+
 				return
 			}
 			output.Info("Configuration file location: %s", path)
@@ -445,6 +447,7 @@ func configInitHandler(_ *cobra.Command, _ []string) {
 	if _, err := os.Stat(configPath); err == nil {
 		output.Warning("Configuration file already exists at: %s", configPath)
 		output.Info("Use 'gh-action-readme config show' to view current configuration")
+
 		return
 	}
 
@@ -593,6 +596,7 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 	if err != nil {
 		// For deps list, we can continue if no files found (show warning instead of error)
 		output.Warning("No action files found")
+
 		return
 	}
 
@@ -630,17 +634,20 @@ func analyzeDependencies(output *internal.ColoredOutput, actionFiles []string, a
 func analyzeActionFileDeps(output *internal.ColoredOutput, actionFile string, analyzer *dependencies.Analyzer) int {
 	if analyzer == nil {
 		output.Printf("  • Cannot analyze (no GitHub token)\n")
+
 		return 0
 	}
 
 	deps, err := analyzer.AnalyzeActionFile(actionFile)
 	if err != nil {
 		output.Warning("  ⚠️  Error analyzing: %v", err)
+
 		return 0
 	}
 
 	if len(deps) == 0 {
 		output.Printf("  • No dependencies (not a composite action)\n")
+
 		return 0
 	}
 
@@ -651,6 +658,7 @@ func analyzeActionFileDeps(output *internal.ColoredOutput, actionFile string, an
 			output.Warning("  📌 %s @ %s - %s", dep.Name, dep.Version, dep.Description)
 		}
 	}
+
 	return len(deps)
 }
 
@@ -765,6 +773,7 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 	if err != nil {
 		// For deps outdated, we can continue if no files found (show warning instead of error)
 		output.Warning("No action files found")
+
 		return
 	}
 
@@ -789,8 +798,10 @@ func validateGitHubToken(output *internal.ColoredOutput) bool {
 			WithHelpURL(errors.GetHelpURL(errors.ErrCodeGitHubAuth))
 
 		output.Warning("⚠️  %s", contextualErr.Error())
+
 		return false
 	}
+
 	return true
 }
 
@@ -807,17 +818,20 @@ func checkAllOutdated(
 		deps, err := analyzer.AnalyzeActionFile(actionFile)
 		if err != nil {
 			output.Warning("Error analyzing %s: %v", actionFile, err)
+
 			continue
 		}
 
 		outdated, err := analyzer.CheckOutdated(deps)
 		if err != nil {
 			output.Warning("Error checking outdated for %s: %v", actionFile, err)
+
 			continue
 		}
 
 		allOutdated = append(allOutdated, outdated...)
 	}
+
 	return allOutdated
 }
 
@@ -825,6 +839,7 @@ func checkAllOutdated(
 func displayOutdatedResults(output *internal.ColoredOutput, allOutdated []dependencies.OutdatedDependency) {
 	if len(allOutdated) == 0 {
 		output.Success("✅ All dependencies are up to date!")
+
 		return
 	}
 
@@ -869,6 +884,7 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) {
 	allUpdates := collectAllUpdates(output, analyzer, actionFiles)
 	if len(allUpdates) == 0 {
 		output.Success("✅ No updates needed - all dependencies are current and pinned!")
+
 		return
 	}
 
@@ -892,17 +908,20 @@ func setupDepsUpgrade(output *internal.ColoredOutput, currentDir string) (*depen
 
 	if len(actionFiles) == 0 {
 		output.Warning("No action files found")
+
 		return nil, nil
 	}
 
 	analyzer, err := generator.CreateDependencyAnalyzer()
 	if err != nil {
 		output.Warning("Could not create dependency analyzer: %v", err)
+
 		return nil, nil
 	}
 
 	if globalConfig.GitHubToken == "" {
 		output.Warning("No GitHub token found. Set GITHUB_TOKEN environment variable")
+
 		return nil, nil
 	}
 
@@ -933,12 +952,14 @@ func collectAllUpdates(
 		deps, err := analyzer.AnalyzeActionFile(actionFile)
 		if err != nil {
 			output.Warning("Error analyzing %s: %v", actionFile, err)
+
 			continue
 		}
 
 		outdated, err := analyzer.CheckOutdated(deps)
 		if err != nil {
 			output.Warning("Error checking outdated for %s: %v", actionFile, err)
+
 			continue
 		}
 
@@ -951,6 +972,7 @@ func collectAllUpdates(
 			)
 			if err != nil {
 				output.Warning("Error generating update for %s: %v", outdatedDep.Current.Name, err)
+
 				continue
 			}
 			allUpdates = append(allUpdates, *update)
@@ -996,6 +1018,7 @@ func applyUpdates(
 		_, _ = fmt.Scanln(&response) // User input, scan error not critical
 		if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
 			output.Info("Canceled")
+
 			return
 		}
 

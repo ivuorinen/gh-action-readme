@@ -13,6 +13,7 @@ func GetBinaryDir() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get executable path: %w", err)
 	}
+
 	return filepath.Dir(executable), nil
 }
 
@@ -21,5 +22,6 @@ func EnsureAbsolutePath(path string) (string, error) {
 	if filepath.IsAbs(path) {
 		return path, nil
 	}
+
 	return filepath.Abs(path)
 }

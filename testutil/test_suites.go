@@ -184,6 +184,7 @@ func runAllTestCases(t *testing.T, suite TestSuite, globalContext *TestContext) 
 
 		if testCase.SkipReason != "" {
 			runSkippedTest(t, testCase)
+
 			continue
 		}
 
@@ -276,6 +277,7 @@ func createTestContext(t *testing.T, testCase TestCase, globalContext *TestConte
 		ctx.TempDir = tempDir
 		ctx.Cleanup = append(ctx.Cleanup, func() error {
 			cleanup()
+
 			return nil
 		})
 	}
@@ -348,6 +350,7 @@ func executeTest(t *testing.T, testCase TestCase, ctx *TestContext) *TestResult 
 		fixture, err := ctx.FixtureManager.LoadActionFixture(testCase.Fixture)
 		if err != nil {
 			result.Error = fmt.Errorf("failed to load fixture %s: %w", testCase.Fixture, err)
+
 			return result
 		}
 
@@ -358,6 +361,7 @@ func executeTest(t *testing.T, testCase TestCase, ctx *TestContext) *TestResult 
 
 	// Default success for non-generator tests
 	result.Success = true
+
 	return result
 }
 
@@ -401,6 +405,7 @@ func validateError(t *testing.T, expected *ExpectedResult, result *TestResult) {
 
 	if result.Error == nil {
 		t.Errorf("expected error %q, but got no error", expected.ExpectedError)
+
 		return
 	}
 
@@ -432,6 +437,7 @@ func validateFiles(t *testing.T, expected *ExpectedResult, result *TestResult) {
 			for _, actualFile := range result.Files {
 				if strings.HasSuffix(actualFile, pattern) {
 					found = true
+
 					break
 				}
 			}
@@ -541,6 +547,7 @@ func containsString(slice any, item string) bool {
 	case string:
 		return len(s) > 0 && s == item
 	}
+
 	return false
 }
 
@@ -701,6 +708,7 @@ func CreateTestEnvironment(t *testing.T, config *EnvironmentConfig) *TestEnviron
 	env.TempDir = tempDir
 	env.Cleanup = append(env.Cleanup, func() error {
 		cleanup()
+
 		return nil
 	})
 

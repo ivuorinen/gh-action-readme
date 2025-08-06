@@ -68,6 +68,7 @@ func MockGitHubClient(responses map[string]string) *github.Client {
 	}
 
 	client := github.NewClient(&http.Client{Transport: &mockTransport{client: mockClient}})
+
 	return client
 }
 
@@ -172,6 +173,7 @@ func (m *MockColoredOutput) HasMessage(substring string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -182,6 +184,7 @@ func (m *MockColoredOutput) HasError(substring string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -205,6 +208,7 @@ func CreateTestAction(name, description string, inputs map[string]string) string
 	result += "branding:\n"
 	result += "  icon: 'zap'\n"
 	result += "  color: 'yellow'\n"
+
 	return result
 }
 
@@ -245,6 +249,7 @@ func CreateCompositeAction(name, description string, steps []string) string {
 	result += "  using: 'composite'\n"
 	result += "  steps:\n"
 	result += stepsYAML.String()
+
 	return result
 }
 
@@ -319,6 +324,7 @@ func SetEnv(t *testing.T, key, value string) func() {
 func WithContext(timeout time.Duration) context.Context {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	_ = cancel // Avoid lostcancel - we're intentionally creating a context without cleanup for testing
+
 	return ctx
 }
 
@@ -366,6 +372,7 @@ func AssertEqual(t *testing.T, expected, actual any) {
 				t.Fatalf("expected map[%s] = %s, got %s", k, v, actualMap[k])
 			}
 		}
+
 		return
 	}
 

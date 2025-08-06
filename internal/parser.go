@@ -52,6 +52,7 @@ func ParseActionYML(path string) (*ActionYML, error) {
 	if err := dec.Decode(&a); err != nil {
 		return nil, err
 	}
+
 	return &a, nil
 }
 

@@ -53,6 +53,7 @@ func TestNewCache(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -168,6 +169,7 @@ func TestCache_GetOrSet(t *testing.T) {
 	callCount := 0
 	getter := func() (any, error) {
 		callCount++
+
 		return fmt.Sprintf("generated-value-%d", callCount), nil
 	}
 
@@ -237,6 +239,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 				err := cache.Set(key, value)
 				if err != nil {
 					t.Errorf("error setting value: %v", err)
+
 					return
 				}
 
@@ -244,11 +247,13 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 				retrieved, exists := cache.Get(key)
 				if !exists {
 					t.Errorf("expected key %s to exist", key)
+
 					return
 				}
 
 				if retrieved != value {
 					t.Errorf("expected %s, got %s", value, retrieved)
+
 					return
 				}
 			}
@@ -456,6 +461,7 @@ func TestCache_ErrorHandling(t *testing.T) {
 				// This test would require special setup for permission testing
 				// For now, we'll create a valid cache and test other error scenarios
 				tmpDir, _ := testutil.TempDir(t)
+
 				return createTestCache(t, tmpDir)
 			},
 			testFunc: func(t *testing.T, cache *Cache) {

@@ -60,6 +60,7 @@ func (w *ConfigWizard) Run() (*internal.AppConfig, error) {
 	}
 
 	w.output.Success("\n✅ Configuration completed successfully!")
+
 	return w.config, nil
 }
 
@@ -218,6 +219,7 @@ func (w *ConfigWizard) configureGitHubIntegration() {
 	existingToken := internal.GetGitHubToken(w.config)
 	if existingToken != "" {
 		w.output.Success("GitHub token already configured ✓")
+
 		return
 	}
 
@@ -231,6 +233,7 @@ func (w *ConfigWizard) configureGitHubIntegration() {
 	if !setupToken {
 		w.output.Info("You can set up the token later using environment variables:")
 		w.output.Printf("  export GITHUB_TOKEN=your_personal_access_token")
+
 		return
 	}
 
@@ -286,6 +289,7 @@ func (w *ConfigWizard) confirmConfiguration() error {
 	if !confirmed {
 		return fmt.Errorf("configuration canceled by user")
 	}
+
 	return nil
 }
 
@@ -302,6 +306,7 @@ func (w *ConfigWizard) promptWithDefault(prompt, defaultValue string) string {
 		if input == "" {
 			return defaultValue
 		}
+
 		return input
 	}
 
@@ -314,6 +319,7 @@ func (w *ConfigWizard) promptSensitive(prompt string) string {
 	if w.scanner.Scan() {
 		return strings.TrimSpace(w.scanner.Text())
 	}
+
 	return ""
 }
 
@@ -337,6 +343,7 @@ func (w *ConfigWizard) promptYesNo(prompt string, defaultValue bool) bool {
 			return defaultValue
 		default:
 			w.output.Warning("Please answer 'y' or 'n'. Using default.")
+
 			return defaultValue
 		}
 	}

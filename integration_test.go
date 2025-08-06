@@ -48,6 +48,7 @@ func copyDir(src, dst string) error {
 		defer func() { _ = dstFile.Close() }()
 
 		_, err = io.Copy(dstFile, srcFile)
+
 		return err
 	})
 }
@@ -894,6 +895,7 @@ func testFormatGeneration(t *testing.T, binaryPath, tmpDir, format, extension, t
 	// Handle missing files
 	if len(files) == 0 {
 		handleMissingFiles(t, format, extension, stdout, stderr)
+
 		return
 	}
 
@@ -970,6 +972,7 @@ func validateGeneratedFiles(t *testing.T, files []string, format string) {
 
 		if len(content) == 0 {
 			t.Errorf("generated file %s is empty", file)
+
 			continue
 		}
 
@@ -1201,6 +1204,7 @@ func TestProgressBarIntegration(t *testing.T) {
 			for _, indicator := range progressIndicators {
 				if strings.Contains(output, indicator) {
 					foundIndicator = true
+
 					break
 				}
 			}
@@ -1351,6 +1355,7 @@ func verifyConfigurationLoading(t *testing.T, tmpDir string) {
 
 	if configFound == 0 {
 		t.Error("no configuration files found, configuration hierarchy setup failed")
+
 		return
 	}
 
@@ -1368,6 +1373,7 @@ func verifyProgressIndicators(t *testing.T, tmpDir string) {
 	actionFile := filepath.Join(tmpDir, "action.yml")
 	if _, err := os.Stat(actionFile); err != nil {
 		t.Error("action file missing, progress tracking test setup failed")
+
 		return
 	}
 
@@ -1375,6 +1381,7 @@ func verifyProgressIndicators(t *testing.T, tmpDir string) {
 	content, err := os.ReadFile(actionFile) // #nosec G304 -- test file path
 	if err != nil || len(content) == 0 {
 		t.Error("action file is empty, progress tracking test setup failed")
+
 		return
 	}
 
@@ -1406,6 +1413,7 @@ func verifyFileDiscovery(t *testing.T, tmpDir string) {
 
 	if discoveredActions == 0 {
 		t.Error("no action files found, file discovery test setup failed")
+
 		return
 	}
 
@@ -1432,6 +1440,7 @@ func verifyTemplateRendering(t *testing.T, tmpDir string) {
 				filepath.Join(tmpDir, "**/action.yml"),
 				filepath.Join(tmpDir, "action.yml"),
 			)
+
 			return
 		}
 	}
@@ -1447,6 +1456,7 @@ func verifyTemplateRendering(t *testing.T, tmpDir string) {
 
 	if validActions == 0 {
 		t.Error("no valid action files found for template rendering")
+
 		return
 	}
 
@@ -1487,6 +1497,7 @@ func verifyCompleteServiceChain(t *testing.T, tmpDir string) {
 			foundComponents,
 			len(requiredComponents),
 		)
+
 		return
 	}
 

@@ -233,6 +233,7 @@ func (c *Cache) loadFromDisk() error {
 		if os.IsNotExist(err) {
 			return nil // No cache file is fine
 		}
+
 		return fmt.Errorf("failed to read cache file: %w", err)
 	}
 
@@ -285,6 +286,7 @@ func (c *Cache) estimateSize(value any) int64 {
 	if err != nil {
 		return 100 // Default estimate
 	}
+
 	return int64(len(jsonData))
 }
 
