@@ -23,6 +23,7 @@ Thumbs.db
 
 # Vendor
 go.sum
+/.dccache
 
 /gh-action-readme
 *.out
