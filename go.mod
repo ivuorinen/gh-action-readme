@@ -6,6 +6,7 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/fatih/color v1.18.0
 	github.com/gofri/go-github-ratelimit v1.1.1
+	github.com/gofri/go-github-ratelimit/v2 v2.0.2
 	github.com/google/go-github/v57 v57.0.0
 	github.com/google/go-github/v58 v58.0.0
 	github.com/schollz/progressbar/v3 v3.18.0
