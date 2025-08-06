@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/adrg/xdg v0.5.3
 	github.com/fatih/color v1.18.0
-	github.com/goccy/go-yaml v1.15.13
+	github.com/goccy/go-yaml v1.18.0
 	github.com/gofri/go-github-ratelimit v1.1.1
 	github.com/google/go-github/v74 v74.0.0
 	github.com/schollz/progressbar/v3 v3.18.0
