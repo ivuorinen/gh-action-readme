@@ -55,10 +55,11 @@ editorconfig: ## Check EditorConfig compliance
 		-name "*.json" -o \
 		-name "*.md" -o \
 		-name "Makefile" -o \
+		-name ".snyk" -o \
 		-name "*.tmpl" -o \
 		-name "*.adoc" -o \
 		-name "*.sh" \
-	\) -not -path "./.*" -not -path "./gh-action-readme" -not -path "./coverage*" \
+	\) -not -path "./gh-action-readme" -not -path "./coverage*" \
 		-not -path "./testutil.test" -not -path "./test_*" | \
 		xargs eclint check
 
@@ -74,10 +75,11 @@ editorconfig-fix: ## Fix EditorConfig violations
 		-name "*.json" -o \
 		-name "*.md" -o \
 		-name "Makefile" -o \
+		-name ".snyk" -o \
 		-name "*.tmpl" -o \
 		-name "*.adoc" -o \
 		-name "*.sh" \
-	\) -not -path "./.*" -not -path "./gh-action-readme" -not -path "./coverage*" \
+	\) -not -path "./gh-action-readme" -not -path "./coverage*" \
 		-not -path "./testutil.test" -not -path "./test_*" | \
 		xargs eclint fix
 
