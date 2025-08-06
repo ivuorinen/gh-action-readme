@@ -3,7 +3,6 @@ package cache
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -40,15 +39,7 @@ func TestNewCache(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			originalXDGCache := os.Getenv("XDG_CACHE_HOME")
-			_ = os.Setenv("XDG_CACHE_HOME", tmpDir)
-			defer func() {
-				if originalXDGCache != "" {
-					_ = os.Setenv("XDG_CACHE_HOME", originalXDGCache)
-				} else {
-					_ = os.Unsetenv("XDG_CACHE_HOME")
-				}
-			}()
+			t.Setenv("XDG_CACHE_HOME", tmpDir)
 
 			cache, err := NewCache(tt.config)
 
@@ -415,15 +406,7 @@ func TestCache_CleanupExpiredEntries(t *testing.T) {
 		MaxSize:         1024 * 1024,
 	}
 
-	originalXDGCache := os.Getenv("XDG_CACHE_HOME")
-	_ = os.Setenv("XDG_CACHE_HOME", tmpDir)
-	defer func() {
-		if originalXDGCache != "" {
-			_ = os.Setenv("XDG_CACHE_HOME", originalXDGCache)
-		} else {
-			_ = os.Unsetenv("XDG_CACHE_HOME")
-		}
-	}()
+	t.Setenv("XDG_CACHE_HOME", tmpDir)
 
 	cache, err := NewCache(config)
 	testutil.AssertNoError(t, err)
@@ -459,6 +442,7 @@ func TestCache_ErrorHandling(t *testing.T) {
 		{
 			name: "invalid cache directory permissions",
 			setupFunc: func(t *testing.T) *Cache {
+				t.Helper()
 				// This test would require special setup for permission testing
 				// For now, we'll create a valid cache and test other error scenarios
 				tmpDir, _ := testutil.TempDir(t)
@@ -466,6 +450,7 @@ func TestCache_ErrorHandling(t *testing.T) {
 				return createTestCache(t, tmpDir)
 			},
 			testFunc: func(t *testing.T, cache *Cache) {
+				t.Helper()
 				// Test setting a value that might cause issues during marshaling
 				// Circular reference would cause JSON marshal to fail, but
 				// Go's JSON package handles most cases gracefully
@@ -561,15 +546,7 @@ func TestCache_EstimateSize(t *testing.T) {
 func createTestCache(t *testing.T, tmpDir string) *Cache {
 	t.Helper()
 
-	originalXDGCache := os.Getenv("XDG_CACHE_HOME")
-	_ = os.Setenv("XDG_CACHE_HOME", tmpDir)
-	t.Cleanup(func() {
-		if originalXDGCache != "" {
-			_ = os.Setenv("XDG_CACHE_HOME", originalXDGCache)
-		} else {
-			_ = os.Unsetenv("XDG_CACHE_HOME")
-		}
-	})
+	t.Setenv("XDG_CACHE_HOME", tmpDir)
 
 	cache, err := NewCache(DefaultConfig())
 	testutil.AssertNoError(t, err)

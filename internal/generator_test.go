@@ -44,6 +44,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "single action.yml in root",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				fixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), fixture.Content)
@@ -54,6 +55,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "action.yaml variant",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				fixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yaml"), fixture.Content)
@@ -64,6 +66,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "both yml and yaml files",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				minimalFixture, err := testutil.LoadActionFixture("minimal-action.yml")
@@ -77,6 +80,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "recursive discovery",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				compositeFixture, err := testutil.LoadActionFixture("actions/composite/basic.yml")
@@ -92,6 +96,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "non-recursive skips subdirectories",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				compositeFixture, err := testutil.LoadActionFixture("actions/composite/basic.yml")
@@ -107,6 +112,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "no action files",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "README.md"), "# Test")
 			},
 			recursive:   false,
@@ -324,6 +330,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 		{
 			name: "process multiple valid files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				// Create separate directories for each action
 				dir1 := filepath.Join(tmpDir, "action1")
 				dir2 := filepath.Join(tmpDir, "action2")
@@ -349,6 +356,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 		{
 			name: "handle mixed valid and invalid files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				// Create separate directories for mixed test too
 				dir1 := filepath.Join(tmpDir, "valid-action")
 				dir2 := filepath.Join(tmpDir, "invalid-action")
@@ -441,6 +449,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 		{
 			name: "all valid files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				files := []string{
 					filepath.Join(tmpDir, "action1.yml"),
 					filepath.Join(tmpDir, "action2.yml"),
@@ -455,6 +464,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 		{
 			name: "files with validation issues",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				files := []string{
 					filepath.Join(tmpDir, "valid.yml"),
 					filepath.Join(tmpDir, "invalid.yml"),
@@ -603,6 +613,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 		{
 			name: "invalid template path",
 			setupFunc: func(t *testing.T, tmpDir string) (*Generator, string) {
+				t.Helper()
 				config := &AppConfig{
 					Template:     "/nonexistent/template.tmpl",
 					OutputFormat: "md",
@@ -620,6 +631,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 		{
 			name: "permission denied on output directory",
 			setupFunc: func(t *testing.T, tmpDir string) (*Generator, string) {
+				t.Helper()
 				// Set up test templates
 				testutil.SetupTestTemplates(t, tmpDir)
 

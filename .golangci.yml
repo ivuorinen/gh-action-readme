@@ -17,6 +17,7 @@ linters:
     - revive
     - bodyclose
     - contextcheck
+    - dupl
     - errname
     - exhaustive
     - forcetypeassert
@@ -29,6 +30,8 @@ linters:
     - lll
     - gosec
     - nlreturn
+    - thelper
+    - usetesting
 
   disable:
     # Disable noisy linters

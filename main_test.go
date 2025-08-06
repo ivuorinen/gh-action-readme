@@ -50,6 +50,7 @@ func TestCLICommands(t *testing.T) {
 			name: "gen command with valid action",
 			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -59,6 +60,7 @@ func TestCLICommands(t *testing.T) {
 			name: "gen command with theme flag",
 			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -74,6 +76,7 @@ func TestCLICommands(t *testing.T) {
 			name: "validate command with valid action",
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -84,6 +87,7 @@ func TestCLICommands(t *testing.T) {
 			name: "validate command with invalid action",
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(
 					t,
@@ -127,6 +131,7 @@ func TestCLICommands(t *testing.T) {
 			name: "deps list command with composite action",
 			args: []string{"deps", "list"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/composite/basic.yml"))
 			},
@@ -370,6 +375,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "permission denied on output directory",
 			args: []string{"gen", "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -380,6 +386,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "invalid YAML in action file",
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), "invalid: yaml: content: [")
 			},
 			wantExit: 1,
@@ -388,6 +395,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "unknown output format",
 			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -397,6 +405,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "unknown theme",
 			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},

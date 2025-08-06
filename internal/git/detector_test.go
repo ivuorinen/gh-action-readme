@@ -18,6 +18,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "git repository with .git directory",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -40,6 +41,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "git repository with .git file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git file (for git worktrees)
 				gitFile := filepath.Join(tmpDir, ".git")
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
@@ -52,6 +54,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "no git repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create subdirectory without .git
 				subDir := filepath.Join(tmpDir, "subdir")
 				err := os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
@@ -66,6 +69,8 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "nonexistent directory",
 			setupFunc: func(_ *testing.T, tmpDir string) string {
+				t.Helper()
+
 				return filepath.Join(tmpDir, "nonexistent")
 			},
 			expectError: true,
@@ -117,6 +122,7 @@ func TestDetectGitRepository(t *testing.T) {
 		{
 			name: "GitHub repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -143,6 +149,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, "owner", info.Organization)
 				testutil.AssertEqual(t, "repo", info.Repository)
 				testutil.AssertEqual(t, "https://github.com/owner/repo.git", info.RemoteURL)
@@ -151,6 +158,7 @@ func TestDetectGitRepository(t *testing.T) {
 		{
 			name: "SSH remote URL",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
@@ -167,6 +175,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, "owner", info.Organization)
 				testutil.AssertEqual(t, "repo", info.Repository)
 				testutil.AssertEqual(t, "git@github.com:owner/repo.git", info.RemoteURL)
@@ -178,6 +187,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, false, info.IsGitRepo)
 				testutil.AssertEqual(t, "", info.Organization)
 				testutil.AssertEqual(t, "", info.Repository)
@@ -186,6 +196,7 @@ func TestDetectGitRepository(t *testing.T) {
 		{
 			name: "git repository without origin remote",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
@@ -203,6 +214,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, true, info.IsGitRepo)
 				testutil.AssertEqual(t, "", info.Organization)
 				testutil.AssertEqual(t, "", info.Repository)

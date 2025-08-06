@@ -100,6 +100,7 @@ func TestGitHubAPIResponses(t *testing.T) {
 
 // testGitHubReleaseResponse validates the GitHub release response format.
 func testGitHubReleaseResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubReleaseResponse)
 
 	if data["id"] == nil {
@@ -115,6 +116,7 @@ func testGitHubReleaseResponse(t *testing.T) {
 
 // testGitHubTagResponse validates the GitHub tag response format.
 func testGitHubTagResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubTagResponse)
 
 	if data["name"] != testVersion {
@@ -127,6 +129,7 @@ func testGitHubTagResponse(t *testing.T) {
 
 // testGitHubRepoResponse validates the GitHub repository response format.
 func testGitHubRepoResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubRepoResponse)
 
 	if data["name"] != "checkout" {
@@ -139,6 +142,7 @@ func testGitHubRepoResponse(t *testing.T) {
 
 // testGitHubCommitResponse validates the GitHub commit response format.
 func testGitHubCommitResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubCommitResponse)
 
 	if data["sha"] == nil {
@@ -151,6 +155,7 @@ func testGitHubCommitResponse(t *testing.T) {
 
 // testGitHubRateLimitResponse validates the GitHub rate limit response format.
 func testGitHubRateLimitResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubRateLimitResponse)
 
 	if data["resources"] == nil {
@@ -163,6 +168,7 @@ func testGitHubRateLimitResponse(t *testing.T) {
 
 // testGitHubErrorResponse validates the GitHub error response format.
 func testGitHubErrorResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubErrorResponse)
 
 	if data["message"] != "Not Found" {
@@ -172,6 +178,7 @@ func testGitHubErrorResponse(t *testing.T) {
 
 // parseJSONResponse parses a JSON response string and returns the data map.
 func parseJSONResponse(t *testing.T, response string) map[string]any {
+	t.Helper()
 	var data map[string]any
 	if err := json.Unmarshal([]byte(response), &data); err != nil {
 		t.Fatalf("failed to parse JSON response: %v", err)

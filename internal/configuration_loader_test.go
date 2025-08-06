@@ -172,12 +172,10 @@ quiet: false
 		},
 		{
 			name: "environment variable overrides",
-			setupFunc: func(_ *testing.T, tempDir string) (string, string, string) {
+			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
+				t.Helper()
 				// Set environment variables
-				_ = os.Setenv("GH_README_GITHUB_TOKEN", "env-token")
-				t.Cleanup(func() {
-					_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-				})
+				t.Setenv("GH_README_GITHUB_TOKEN", "env-token")
 
 				// Create config file with different token
 				configPath := filepath.Join(tempDir, "config.yml")
@@ -246,15 +244,7 @@ verbose: true
 			defer cleanup()
 
 			// Set HOME to temp directory for fallback
-			originalHome := os.Getenv("HOME")
-			_ = os.Setenv("HOME", tmpDir)
-			defer func() {
-				if originalHome != "" {
-					_ = os.Setenv("HOME", originalHome)
-				} else {
-					_ = os.Unsetenv("HOME")
-				}
-			}()
+			t.Setenv("HOME", tmpDir)
 
 			configFile, repoRoot, actionDir := tt.setupFunc(t, tmpDir)
 
@@ -296,6 +286,7 @@ func TestConfigurationLoader_LoadGlobalConfig(t *testing.T) {
 		{
 			name: "valid global config",
 			setupFunc: func(t *testing.T, tempDir string) string {
+				t.Helper()
 				configPath := filepath.Join(tempDir, "config.yaml")
 				testutil.WriteTestFile(t, configPath, `
 theme: professional
@@ -323,6 +314,7 @@ verbose: true
 		{
 			name: "invalid YAML",
 			setupFunc: func(t *testing.T, tempDir string) string {
+				t.Helper()
 				configPath := filepath.Join(tempDir, "invalid.yaml")
 				testutil.WriteTestFile(t, configPath, "invalid: yaml: content: [")
 
@@ -338,15 +330,7 @@ verbose: true
 			defer cleanup()
 
 			// Set HOME to temp directory
-			originalHome := os.Getenv("HOME")
-			_ = os.Setenv("HOME", tmpDir)
-			defer func() {
-				if originalHome != "" {
-					_ = os.Setenv("HOME", originalHome)
-				} else {
-					_ = os.Unsetenv("HOME")
-				}
-			}()
+			t.Setenv("HOME", tmpDir)
 
 			configFile := tt.setupFunc(t, tmpDir)
 
@@ -515,51 +499,11 @@ func TestConfigurationSource_String(t *testing.T) {
 }
 
 func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
-	tests := []struct {
-		name          string
-		setupFunc     func(t *testing.T) func()
-		expectedToken string
-	}{
-		{
-			name: "GH_README_GITHUB_TOKEN priority",
-			setupFunc: func(_ *testing.T) func() {
-				_ = os.Setenv("GH_README_GITHUB_TOKEN", "priority-token")
-				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
-
-				return func() {
-					_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-					_ = os.Unsetenv("GITHUB_TOKEN")
-				}
-			},
-			expectedToken: "priority-token",
-		},
-		{
-			name: "GITHUB_TOKEN fallback",
-			setupFunc: func(_ *testing.T) func() {
-				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
-
-				return func() {
-					_ = os.Unsetenv("GITHUB_TOKEN")
-				}
-			},
-			expectedToken: "fallback-token",
-		},
-		{
-			name: "no environment variables",
-			setupFunc: func(_ *testing.T) func() {
-				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-				_ = os.Unsetenv("GITHUB_TOKEN")
-
-				return func() {}
-			},
-			expectedToken: "",
-		},
-	}
+	tests := testutil.GetGitHubTokenHierarchyTests()
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cleanup := tt.setupFunc(t)
+		t.Run(tt.Name, func(t *testing.T) {
+			cleanup := tt.SetupFunc(t)
 			defer cleanup()
 
 			tmpDir, tmpCleanup := testutil.TempDir(t)
@@ -569,7 +513,7 @@ func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
 			config, err := loader.LoadConfiguration("", tmpDir, "")
 			testutil.AssertNoError(t, err)
 
-			testutil.AssertEqual(t, tt.expectedToken, config.GitHubToken)
+			testutil.AssertEqual(t, tt.ExpectedToken, config.GitHubToken)
 		})
 	}
 }
@@ -596,15 +540,7 @@ func TestConfigurationLoader_RepoOverrides(t *testing.T) {
 	testutil.WriteTestFile(t, globalConfigPath, globalConfigContent)
 
 	// Set environment for XDG compliance
-	originalHome := os.Getenv("HOME")
-	_ = os.Setenv("HOME", tmpDir)
-	defer func() {
-		if originalHome != "" {
-			_ = os.Setenv("HOME", originalHome)
-		} else {
-			_ = os.Unsetenv("HOME")
-		}
-	}()
+	t.Setenv("HOME", tmpDir)
 
 	loader := NewConfigurationLoader()
 	config, err := loader.LoadConfiguration(globalConfigPath, repoRoot, "")
@@ -678,6 +614,7 @@ func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
 		{
 			name: "action directory with config file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionDir := filepath.Join(tmpDir, "action")
 				_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
 
@@ -699,6 +636,7 @@ verbose: true
 		{
 			name: "action directory with malformed config file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionDir := filepath.Join(tmpDir, "action")
 				_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
 

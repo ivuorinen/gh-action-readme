@@ -110,6 +110,7 @@ func TestGenerator_AllInvalidFixtures(t *testing.T) {
 func TestGenerator_AllThemes(t *testing.T) {
 	// Use the helper function to test all themes
 	testutil.TestAllThemes(t, func(t *testing.T, theme string) {
+		t.Helper()
 		// Create a simple action for testing
 		actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
 
@@ -131,6 +132,7 @@ func TestGenerator_AllThemes(t *testing.T) {
 func TestGenerator_AllFormats(t *testing.T) {
 	// Use the helper function to test all formats
 	testutil.TestAllFormats(t, func(t *testing.T, format string) {
+		t.Helper()
 		// Create a simple action for testing
 		actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
 

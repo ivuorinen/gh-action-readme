@@ -109,6 +109,7 @@ func TestFindGitRepoRoot(t *testing.T) {
 		{
 			name: "directory with git repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -134,6 +135,7 @@ func TestFindGitRepoRoot(t *testing.T) {
 		{
 			name: "nested directory in git repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory at root
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -221,6 +223,7 @@ func TestGetGitRepoRootAndInfo(t *testing.T) {
 
 // Helper functions to reduce complexity.
 func setupCompleteGitRepo(t *testing.T, tmpDir string) string {
+	t.Helper()
 	// Create .git directory
 	gitDir := filepath.Join(tmpDir, ".git")
 	err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -246,6 +249,7 @@ func setupCompleteGitRepo(t *testing.T, tmpDir string) string {
 }
 
 func setupMinimalGitRepo(t *testing.T, tmpDir string) string {
+	t.Helper()
 	// Create .git directory but with minimal content
 	gitDir := filepath.Join(tmpDir, ".git")
 	err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -255,6 +259,7 @@ func setupMinimalGitRepo(t *testing.T, tmpDir string) string {
 }
 
 func verifyRepoRoot(t *testing.T, repoRoot, tmpDir string) {
+	t.Helper()
 	if repoRoot != "" && !strings.Contains(repoRoot, tmpDir) {
 		t.Errorf("expected repo root to be within %s, got %s", tmpDir, repoRoot)
 	}

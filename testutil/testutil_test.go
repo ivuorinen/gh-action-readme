@@ -28,6 +28,7 @@ func TestMockHTTPClient(t *testing.T) {
 
 // testMockHTTPClientConfiguredResponse tests that configured responses are returned correctly.
 func testMockHTTPClientConfiguredResponse(t *testing.T) {
+	t.Helper()
 	client := createMockHTTPClientWithResponse("GET https://api.github.com/test", 200, `{"test": "response"}`)
 
 	req := createTestRequest(t, "GET", "https://api.github.com/test")
@@ -40,6 +41,7 @@ func testMockHTTPClientConfiguredResponse(t *testing.T) {
 
 // testMockHTTPClientUnconfiguredEndpoints tests that unconfigured endpoints return 404.
 func testMockHTTPClientUnconfiguredEndpoints(t *testing.T) {
+	t.Helper()
 	client := &MockHTTPClient{
 		Responses: make(map[string]*http.Response),
 	}
@@ -53,6 +55,7 @@ func testMockHTTPClientUnconfiguredEndpoints(t *testing.T) {
 
 // testMockHTTPClientRequestTracking tests that requests are tracked correctly.
 func testMockHTTPClientRequestTracking(t *testing.T) {
+	t.Helper()
 	client := &MockHTTPClient{
 		Responses: make(map[string]*http.Response),
 	}
@@ -80,6 +83,7 @@ func createMockHTTPClientWithResponse(key string, statusCode int, body string) *
 
 // createTestRequest creates an HTTP request for testing purposes.
 func createTestRequest(t *testing.T, method, url string) *http.Request {
+	t.Helper()
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
@@ -90,6 +94,7 @@ func createTestRequest(t *testing.T, method, url string) *http.Request {
 
 // executeRequest executes an HTTP request and returns the response.
 func executeRequest(t *testing.T, client *MockHTTPClient, req *http.Request) *http.Response {
+	t.Helper()
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -107,6 +112,7 @@ func executeAndCloseResponse(client *MockHTTPClient, req *http.Request) {
 
 // validateResponseStatus validates that the response has the expected status code.
 func validateResponseStatus(t *testing.T, resp *http.Response, expectedStatus int) {
+	t.Helper()
 	if resp.StatusCode != expectedStatus {
 		t.Errorf("expected status %d, got %d", expectedStatus, resp.StatusCode)
 	}
@@ -114,6 +120,7 @@ func validateResponseStatus(t *testing.T, resp *http.Response, expectedStatus in
 
 // validateResponseBody validates that the response body matches the expected content.
 func validateResponseBody(t *testing.T, resp *http.Response, expected string) {
+	t.Helper()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
@@ -131,6 +138,7 @@ func validateRequestTracking(
 	expectedCount int,
 	expectedURL, expectedMethod string,
 ) {
+	t.Helper()
 	if len(client.Requests) != expectedCount {
 		t.Errorf("expected %d tracked requests, got %d", expectedCount, len(client.Requests))
 
@@ -400,6 +408,7 @@ func TestMockColoredOutput(t *testing.T) {
 
 // testMockColoredOutputCreation tests basic mock output creation.
 func testMockColoredOutputCreation(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	validateMockOutputCreated(t, output)
 	validateQuietMode(t, output, false)
@@ -408,12 +417,14 @@ func testMockColoredOutputCreation(t *testing.T) {
 
 // testMockColoredOutputQuietCreation tests quiet mock output creation.
 func testMockColoredOutputQuietCreation(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(true)
 	validateQuietMode(t, output, true)
 }
 
 // testMockColoredOutputInfoMessages tests info message capture.
 func testMockColoredOutputInfoMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Info("test info: %s", "value")
 	validateSingleMessage(t, output, "INFO: test info: value")
@@ -421,6 +432,7 @@ func testMockColoredOutputInfoMessages(t *testing.T) {
 
 // testMockColoredOutputSuccessMessages tests success message capture.
 func testMockColoredOutputSuccessMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Success("operation completed")
 	validateSingleMessage(t, output, "SUCCESS: operation completed")
@@ -428,6 +440,7 @@ func testMockColoredOutputSuccessMessages(t *testing.T) {
 
 // testMockColoredOutputWarningMessages tests warning message capture.
 func testMockColoredOutputWarningMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Warning("this is a warning")
 	validateSingleMessage(t, output, "WARNING: this is a warning")
@@ -435,6 +448,7 @@ func testMockColoredOutputWarningMessages(t *testing.T) {
 
 // testMockColoredOutputErrorMessages tests error message capture.
 func testMockColoredOutputErrorMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Error("error occurred: %d", 404)
 	validateSingleError(t, output, "ERROR: error occurred: 404")
@@ -447,6 +461,7 @@ func testMockColoredOutputErrorMessages(t *testing.T) {
 
 // testMockColoredOutputBoldMessages tests bold message capture.
 func testMockColoredOutputBoldMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Bold("bold text")
 	validateSingleMessage(t, output, "BOLD: bold text")
@@ -454,6 +469,7 @@ func testMockColoredOutputBoldMessages(t *testing.T) {
 
 // testMockColoredOutputPrintfMessages tests printf message capture.
 func testMockColoredOutputPrintfMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Printf("formatted: %s = %d", "key", 42)
 	validateSingleMessage(t, output, "formatted: key = 42")
@@ -461,6 +477,7 @@ func testMockColoredOutputPrintfMessages(t *testing.T) {
 
 // testMockColoredOutputQuietMode tests quiet mode behavior.
 func testMockColoredOutputQuietMode(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(true)
 
 	// Send various message types
@@ -479,6 +496,7 @@ func testMockColoredOutputQuietMode(t *testing.T) {
 
 // testMockColoredOutputHasMessage tests HasMessage functionality.
 func testMockColoredOutputHasMessage(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Info("test message with keyword")
 	output.Success("another message")
@@ -490,6 +508,7 @@ func testMockColoredOutputHasMessage(t *testing.T) {
 
 // testMockColoredOutputHasError tests HasError functionality.
 func testMockColoredOutputHasError(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Error("connection failed")
 	output.Error("timeout occurred")
@@ -501,6 +520,7 @@ func testMockColoredOutputHasError(t *testing.T) {
 
 // testMockColoredOutputReset tests Reset functionality.
 func testMockColoredOutputReset(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Info("test message")
 	output.Error("test error")
@@ -516,6 +536,7 @@ func testMockColoredOutputReset(t *testing.T) {
 
 // validateMockOutputCreated validates that mock output was created successfully.
 func validateMockOutputCreated(t *testing.T, output *MockColoredOutput) {
+	t.Helper()
 	if output == nil {
 		t.Fatal("expected output to be created")
 	}
@@ -523,6 +544,7 @@ func validateMockOutputCreated(t *testing.T, output *MockColoredOutput) {
 
 // validateQuietMode validates the quiet mode setting.
 func validateQuietMode(t *testing.T, output *MockColoredOutput, expected bool) {
+	t.Helper()
 	if output.Quiet != expected {
 		t.Errorf("expected Quiet to be %v, got %v", expected, output.Quiet)
 	}
@@ -530,12 +552,14 @@ func validateQuietMode(t *testing.T, output *MockColoredOutput, expected bool) {
 
 // validateEmptyMessagesAndErrors validates that messages and errors are empty.
 func validateEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) {
+	t.Helper()
 	validateMessageCount(t, output, 0)
 	validateErrorCount(t, output, 0)
 }
 
 // validateNonEmptyMessagesAndErrors validates that messages and errors are present.
 func validateNonEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) {
+	t.Helper()
 	if len(output.Messages) == 0 || len(output.Errors) == 0 {
 		t.Fatal("expected messages and errors to be present before reset")
 	}
@@ -543,6 +567,7 @@ func validateNonEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) 
 
 // validateSingleMessage validates a single message was captured.
 func validateSingleMessage(t *testing.T, output *MockColoredOutput, expected string) {
+	t.Helper()
 	validateMessageCount(t, output, 1)
 	if output.Messages[0] != expected {
 		t.Errorf("expected message %s, got %s", expected, output.Messages[0])
@@ -551,6 +576,7 @@ func validateSingleMessage(t *testing.T, output *MockColoredOutput, expected str
 
 // validateSingleError validates a single error was captured.
 func validateSingleError(t *testing.T, output *MockColoredOutput, expected string) {
+	t.Helper()
 	validateErrorCount(t, output, 1)
 	if output.Errors[0] != expected {
 		t.Errorf("expected error %s, got %s", expected, output.Errors[0])
@@ -559,6 +585,7 @@ func validateSingleError(t *testing.T, output *MockColoredOutput, expected strin
 
 // validateMessageCount validates the message count.
 func validateMessageCount(t *testing.T, output *MockColoredOutput, expected int) {
+	t.Helper()
 	if len(output.Messages) != expected {
 		t.Errorf("expected %d messages, got %d", expected, len(output.Messages))
 	}
@@ -566,6 +593,7 @@ func validateMessageCount(t *testing.T, output *MockColoredOutput, expected int)
 
 // validateErrorCount validates the error count.
 func validateErrorCount(t *testing.T, output *MockColoredOutput, expected int) {
+	t.Helper()
 	if len(output.Errors) != expected {
 		t.Errorf("expected %d errors, got %d", expected, len(output.Errors))
 	}
@@ -573,6 +601,7 @@ func validateErrorCount(t *testing.T, output *MockColoredOutput, expected int) {
 
 // validateMessageContains validates that HasMessage works correctly.
 func validateMessageContains(t *testing.T, output *MockColoredOutput, keyword string, expected bool) {
+	t.Helper()
 	if output.HasMessage(keyword) != expected {
 		t.Errorf("expected HasMessage('%s') to return %v", keyword, expected)
 	}
@@ -580,6 +609,7 @@ func validateMessageContains(t *testing.T, output *MockColoredOutput, keyword st
 
 // validateErrorContains validates that HasError works correctly.
 func validateErrorContains(t *testing.T, output *MockColoredOutput, keyword string, expected bool) {
+	t.Helper()
 	if output.HasError(keyword) != expected {
 		t.Errorf("expected HasError('%s') to return %v", keyword, expected)
 	}
@@ -692,6 +722,7 @@ func TestMockAppConfig(t *testing.T) {
 
 // testMockAppConfigDefaults tests default config creation.
 func testMockAppConfigDefaults(t *testing.T) {
+	t.Helper()
 	config := MockAppConfig(nil)
 
 	validateConfigCreated(t, config)
@@ -700,6 +731,7 @@ func testMockAppConfigDefaults(t *testing.T) {
 
 // testMockAppConfigOverrides tests full override application.
 func testMockAppConfigOverrides(t *testing.T) {
+	t.Helper()
 	overrides := createFullOverrides()
 	config := MockAppConfig(overrides)
 
@@ -708,6 +740,7 @@ func testMockAppConfigOverrides(t *testing.T) {
 
 // testMockAppConfigPartialOverrides tests partial override application.
 func testMockAppConfigPartialOverrides(t *testing.T) {
+	t.Helper()
 	overrides := createPartialOverrides()
 	config := MockAppConfig(overrides)
 
@@ -739,6 +772,7 @@ func createPartialOverrides() *TestAppConfig {
 
 // validateConfigCreated validates that config was created successfully.
 func validateConfigCreated(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	if config == nil {
 		t.Fatal("expected config to be created")
 	}
@@ -746,6 +780,7 @@ func validateConfigCreated(t *testing.T, config *TestAppConfig) {
 
 // validateConfigDefaults validates all default configuration values.
 func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.Theme, "default", "theme")
 	validateStringField(t, config.OutputFormat, "md", "output format")
 	validateStringField(t, config.OutputDir, ".", "output dir")
@@ -757,6 +792,7 @@ func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
 
 // validateOverriddenValues validates all overridden configuration values.
 func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.Theme, "github", "theme")
 	validateStringField(t, config.OutputFormat, "html", "output format")
 	validateStringField(t, config.OutputDir, "docs", "output dir")
@@ -769,18 +805,21 @@ func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
 
 // validatePartialOverrides validates partially overridden values.
 func validatePartialOverrides(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.Theme, "professional", "theme")
 	validateBoolField(t, config.Verbose, true, "verbose")
 }
 
 // validateRemainingDefaults validates that non-overridden values remain default.
 func validateRemainingDefaults(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.OutputFormat, "md", "output format")
 	validateBoolField(t, config.Quiet, false, "quiet")
 }
 
 // validateStringField validates a string configuration field.
 func validateStringField(t *testing.T, actual, expected, fieldName string) {
+	t.Helper()
 	if actual != expected {
 		t.Errorf("expected %s %s, got %s", fieldName, expected, actual)
 	}
@@ -788,6 +827,7 @@ func validateStringField(t *testing.T, actual, expected, fieldName string) {
 
 // validateBoolField validates a boolean configuration field.
 func validateBoolField(t *testing.T, actual, expected bool, fieldName string) {
+	t.Helper()
 	if actual != expected {
 		t.Errorf("expected %s to be %v, got %v", fieldName, expected, actual)
 	}
@@ -821,7 +861,7 @@ func TestSetEnv(t *testing.T) {
 
 	t.Run("overrides existing variable", func(t *testing.T) {
 		// Set original value
-		_ = os.Setenv(testKey, originalValue)
+		t.Setenv(testKey, originalValue)
 
 		cleanup := SetEnv(t, testKey, newValue)
 		defer cleanup()
@@ -833,7 +873,7 @@ func TestSetEnv(t *testing.T) {
 
 	t.Run("cleanup restores original variable", func(t *testing.T) {
 		// Set original value
-		_ = os.Setenv(testKey, originalValue)
+		t.Setenv(testKey, originalValue)
 
 		cleanup := SetEnv(t, testKey, newValue)
 		cleanup()

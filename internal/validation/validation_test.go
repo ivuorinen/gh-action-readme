@@ -18,6 +18,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 		{
 			name: "valid action.yml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 
@@ -28,6 +29,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 		{
 			name: "valid action.yaml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yaml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("minimal-action.yml"))
 
@@ -45,6 +47,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 		{
 			name: "file with wrong extension",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.txt")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 
@@ -310,6 +313,7 @@ func TestIsGitRepository(t *testing.T) {
 		{
 			name: "directory with .git file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				gitFile := filepath.Join(tmpDir, ".git")
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
 
