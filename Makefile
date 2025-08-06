@@ -1,4 +1,4 @@
-.PHONY: help test lint run example clean readme config-verify security vulncheck audit snyk trivy gitleaks \
+.PHONY: help test test-coverage test-coverage-html lint run example clean readme config-verify security vulncheck audit snyk trivy gitleaks \
 	editorconfig editorconfig-fix format devtools
 
 all: help
@@ -12,11 +12,41 @@ help: ## Show this help message
 	@echo "Common workflows:"
 	@echo "  make devtools      # Install all development tools"
 	@echo "  make test lint     # Run tests and linting"
+	@echo "  make test-coverage # Run tests with coverage analysis"
 	@echo "  make format        # Format code and fix EditorConfig issues"
 	@echo "  make security      # Run all security scans"
 
 test: ## Run all tests
 	go test ./...
+
+test-coverage: ## Run tests with coverage and display in CLI
+	@echo "Running tests with coverage analysis..."
+	@go test ./... -coverprofile=coverage.out -covermode=atomic
+	@echo ""
+	@echo "=== Coverage Summary ==="
+	@go tool cover -func=coverage.out | tail -1
+	@echo ""
+	@echo "=== Package Coverage Details ==="
+	@go tool cover -func=coverage.out | grep -v "total:" | \
+		awk '{printf "%-50s %s\n", $$1, $$3}' | \
+		sort -k2 -nr
+	@echo ""
+	@echo "Coverage report saved to: coverage.out"
+	@echo "Run 'make test-coverage-html' to generate HTML report"
+
+test-coverage-html: test-coverage ## Generate HTML coverage report and open in browser
+	@echo "Generating HTML coverage report..."
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "HTML coverage report generated: coverage.html"
+	@if command -v open >/dev/null 2>&1; then \
+		echo "Opening coverage report in browser..."; \
+		open coverage.html; \
+	elif command -v xdg-open >/dev/null 2>&1; then \
+		echo "Opening coverage report in browser..."; \
+		xdg-open coverage.html; \
+	else \
+		echo "Open coverage.html in your browser to view detailed coverage"; \
+	fi
 
 lint: format ## Run linter (after formatting)
 	@echo "Running YAML formatting check..."
@@ -43,6 +73,7 @@ readme: ## Generate project README
 
 clean: ## Clean build artifacts
 	rm -rf dist/
+	rm -f coverage.out coverage.html
 
 # Code formatting and EditorConfig targets
 format: editorconfig-fix ## Format code and fix EditorConfig issues

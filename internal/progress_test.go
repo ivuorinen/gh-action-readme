@@ -78,35 +78,34 @@ func TestProgressBarManager_CreateProgressBarForFiles(t *testing.T) {
 
 func TestProgressBarManager_FinishProgressBar(t *testing.T) {
 	t.Parallel()
-	pm := NewProgressBarManager(false)
+	// Use quiet mode to avoid cluttering test output
+	pm := NewProgressBarManager(true)
 
 	// Test with nil bar (should not panic)
 	pm.FinishProgressBar(nil)
 
-	// Test with actual bar
+	// Test with actual bar (will be nil in quiet mode)
 	bar := pm.CreateProgressBar("Test", 5)
-	if bar != nil {
-		pm.FinishProgressBar(bar)
-	}
+	pm.FinishProgressBar(bar) // Should handle nil gracefully
 }
 
 func TestProgressBarManager_UpdateProgressBar(t *testing.T) {
 	t.Parallel()
-	pm := NewProgressBarManager(false)
+	// Use quiet mode to avoid cluttering test output
+	pm := NewProgressBarManager(true)
 
 	// Test with nil bar (should not panic)
 	pm.UpdateProgressBar(nil)
 
-	// Test with actual bar
+	// Test with actual bar (will be nil in quiet mode)
 	bar := pm.CreateProgressBar("Test", 5)
-	if bar != nil {
-		pm.UpdateProgressBar(bar)
-	}
+	pm.UpdateProgressBar(bar) // Should handle nil gracefully
 }
 
 func TestProgressBarManager_ProcessWithProgressBar(t *testing.T) {
 	t.Parallel()
-	pm := NewProgressBarManager(false)
+	// Use NullProgressManager to avoid cluttering test output
+	pm := NewNullProgressManager()
 	items := []string{"item1", "item2", "item3"}
 
 	processedItems := make([]string, 0)

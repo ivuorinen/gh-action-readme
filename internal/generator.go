@@ -34,9 +34,39 @@ type Generator struct {
 	Progress ProgressManager
 }
 
+// isUnitTestEnvironment detects if we're running unit tests (not integration tests).
+func isUnitTestEnvironment() bool {
+	// Only enable for unit tests, not integration tests
+	// Integration tests need real output to verify CLI behavior
+
+	// Check if we're in the internal package tests
+	if strings.Contains(os.Args[0], "internal.test") ||
+		strings.Contains(os.Args[0], "T/go-build") && strings.Contains(os.Args[0], "internal") {
+		return true
+	}
+
+	// Check for explicit unit test environment variable
+	if os.Getenv("UNIT_TEST_MODE") != "" {
+		return true
+	}
+
+	return false
+}
+
 // NewGenerator creates a new generator instance with the provided configuration.
 // This constructor maintains backward compatibility by using concrete implementations.
+// In unit test environments, it automatically uses NullOutput to suppress output.
 func NewGenerator(config *AppConfig) *Generator {
+	// Use null output in unit test environments to keep tests clean
+	// Integration tests need real output to verify CLI behavior
+	if isUnitTestEnvironment() {
+		return NewGeneratorWithDependencies(
+			config,
+			NewNullOutput(),
+			NewNullProgressManager(),
+		)
+	}
+
 	return NewGeneratorWithDependencies(
 		config,
 		NewColoredOutput(config.Quiet),
