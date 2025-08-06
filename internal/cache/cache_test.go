@@ -1,8 +1,8 @@
 package cache
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -39,20 +39,13 @@ func TestNewCache(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			originalXDGCache := os.Getenv("XDG_CACHE_HOME")
-			_ = os.Setenv("XDG_CACHE_HOME", tmpDir)
-			defer func() {
-				if originalXDGCache != "" {
-					_ = os.Setenv("XDG_CACHE_HOME", originalXDGCache)
-				} else {
-					_ = os.Unsetenv("XDG_CACHE_HOME")
-				}
-			}()
+			t.Setenv("XDG_CACHE_HOME", tmpDir)
 
 			cache, err := NewCache(tt.config)
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -111,6 +104,8 @@ func TestCache_SetAndGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Set value
 			err := cache.Set(tt.key, tt.value)
 			testutil.AssertNoError(t, err)
@@ -168,6 +163,7 @@ func TestCache_GetOrSet(t *testing.T) {
 	callCount := 0
 	getter := func() (any, error) {
 		callCount++
+
 		return fmt.Sprintf("generated-value-%d", callCount), nil
 	}
 
@@ -193,7 +189,7 @@ func TestCache_GetOrSetError(t *testing.T) {
 
 	// Getter that returns error
 	getter := func() (any, error) {
-		return nil, fmt.Errorf("getter error")
+		return nil, errors.New("getter error")
 	}
 
 	value, err := cache.GetOrSet("error-key", getter)
@@ -237,6 +233,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 				err := cache.Set(key, value)
 				if err != nil {
 					t.Errorf("error setting value: %v", err)
+
 					return
 				}
 
@@ -244,11 +241,13 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 				retrieved, exists := cache.Get(key)
 				if !exists {
 					t.Errorf("expected key %s to exist", key)
+
 					return
 				}
 
 				if retrieved != value {
 					t.Errorf("expected %s, got %s", value, retrieved)
+
 					return
 				}
 			}
@@ -409,15 +408,7 @@ func TestCache_CleanupExpiredEntries(t *testing.T) {
 		MaxSize:         1024 * 1024,
 	}
 
-	originalXDGCache := os.Getenv("XDG_CACHE_HOME")
-	_ = os.Setenv("XDG_CACHE_HOME", tmpDir)
-	defer func() {
-		if originalXDGCache != "" {
-			_ = os.Setenv("XDG_CACHE_HOME", originalXDGCache)
-		} else {
-			_ = os.Unsetenv("XDG_CACHE_HOME")
-		}
-	}()
+	t.Setenv("XDG_CACHE_HOME", tmpDir)
 
 	cache, err := NewCache(config)
 	testutil.AssertNoError(t, err)
@@ -453,12 +444,15 @@ func TestCache_ErrorHandling(t *testing.T) {
 		{
 			name: "invalid cache directory permissions",
 			setupFunc: func(t *testing.T) *Cache {
+				t.Helper()
 				// This test would require special setup for permission testing
 				// For now, we'll create a valid cache and test other error scenarios
 				tmpDir, _ := testutil.TempDir(t)
+
 				return createTestCache(t, tmpDir)
 			},
 			testFunc: func(t *testing.T, cache *Cache) {
+				t.Helper()
 				// Test setting a value that might cause issues during marshaling
 				// Circular reference would cause JSON marshal to fail, but
 				// Go's JSON package handles most cases gracefully
@@ -542,6 +536,8 @@ func TestCache_EstimateSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			size := cache.estimateSize(tt.value)
 			if size < tt.minSize || size > tt.maxSize {
 				t.Errorf("expected size between %d and %d, got %d", tt.minSize, tt.maxSize, size)
@@ -554,15 +550,7 @@ func TestCache_EstimateSize(t *testing.T) {
 func createTestCache(t *testing.T, tmpDir string) *Cache {
 	t.Helper()
 
-	originalXDGCache := os.Getenv("XDG_CACHE_HOME")
-	_ = os.Setenv("XDG_CACHE_HOME", tmpDir)
-	t.Cleanup(func() {
-		if originalXDGCache != "" {
-			_ = os.Setenv("XDG_CACHE_HOME", originalXDGCache)
-		} else {
-			_ = os.Unsetenv("XDG_CACHE_HOME")
-		}
-	})
+	t.Setenv("XDG_CACHE_HOME", tmpDir)
 
 	cache, err := NewCache(DefaultConfig())
 	testutil.AssertNoError(t, err)

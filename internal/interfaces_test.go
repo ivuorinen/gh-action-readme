@@ -101,6 +101,7 @@ type MockProgressManager struct {
 
 func (m *MockProgressManager) CreateProgressBar(description string, total int) *progressbar.ProgressBar {
 	m.CreateProgressBarCalls = append(m.CreateProgressBarCalls, formatMessage("%s (total: %d)", description, total))
+
 	return nil // Return nil for mock to avoid actual progress bar
 }
 
@@ -109,6 +110,7 @@ func (m *MockProgressManager) CreateProgressBarForFiles(description string, file
 		m.CreateProgressBarForFilesCalls,
 		formatMessage("%s (files: %d)", description, len(files)),
 	)
+
 	return nil // Return nil for mock to avoid actual progress bar
 }
 
@@ -151,6 +153,7 @@ func formatMessage(format string, args ...any) string {
 		result = strings.Replace(result, "%d", toString(arg), 1)
 		result = strings.Replace(result, "%v", toString(arg), 1)
 	}
+
 	return result
 }
 
@@ -183,11 +186,13 @@ func formatInt(i int) string {
 	if negative {
 		result = "-" + result
 	}
+
 	return result
 }
 
 // Test that demonstrates improved testability with focused interfaces.
 func TestFocusedInterfaces_SimpleLogger(t *testing.T) {
+	t.Parallel()
 	mockLogger := &MockMessageLogger{}
 	simpleLogger := NewSimpleLogger(mockLogger)
 
@@ -216,6 +221,7 @@ func TestFocusedInterfaces_SimpleLogger(t *testing.T) {
 }
 
 func TestFocusedInterfaces_SimpleLogger_WithFailure(t *testing.T) {
+	t.Parallel()
 	mockLogger := &MockMessageLogger{}
 	simpleLogger := NewSimpleLogger(mockLogger)
 
@@ -235,6 +241,7 @@ func TestFocusedInterfaces_SimpleLogger_WithFailure(t *testing.T) {
 }
 
 func TestFocusedInterfaces_ErrorManager(t *testing.T) {
+	t.Parallel()
 	mockReporter := &MockErrorReporter{}
 	mockFormatter := &MockErrorFormatter{}
 	mockManager := &mockErrorManager{
@@ -257,6 +264,7 @@ func TestFocusedInterfaces_ErrorManager(t *testing.T) {
 }
 
 func TestFocusedInterfaces_TaskProgress(t *testing.T) {
+	t.Parallel()
 	mockReporter := &MockProgressReporter{}
 	taskProgress := NewTaskProgress(mockReporter)
 
@@ -274,6 +282,7 @@ func TestFocusedInterfaces_TaskProgress(t *testing.T) {
 }
 
 func TestFocusedInterfaces_ConfigAwareComponent(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		quietMode  bool
@@ -293,6 +302,7 @@ func TestFocusedInterfaces_ConfigAwareComponent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			mockConfig := &MockOutputConfig{QuietMode: tt.quietMode}
 			component := NewConfigAwareComponent(mockConfig)
 
@@ -306,6 +316,7 @@ func TestFocusedInterfaces_ConfigAwareComponent(t *testing.T) {
 }
 
 func TestFocusedInterfaces_CompositeOutputWriter(t *testing.T) {
+	t.Parallel()
 	// Create a composite mock that implements OutputWriter
 	mockLogger := &MockMessageLogger{}
 	mockProgress := &MockProgressReporter{}
@@ -338,6 +349,7 @@ func TestFocusedInterfaces_CompositeOutputWriter(t *testing.T) {
 }
 
 func TestFocusedInterfaces_GeneratorWithDependencyInjection(t *testing.T) {
+	t.Parallel()
 	// Create focused mocks
 	mockOutput := &mockCompleteOutput{
 		logger:    &MockMessageLogger{},
@@ -436,8 +448,10 @@ func (m *MockErrorFormatter) FormatContextualError(err *errors.ContextualError) 
 	if err != nil {
 		formatted := err.Error()
 		m.FormatContextualErrorCalls = append(m.FormatContextualErrorCalls, formatted)
+
 		return formatted
 	}
+
 	return ""
 }
 

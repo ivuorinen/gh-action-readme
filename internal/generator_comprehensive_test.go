@@ -2,9 +2,7 @@ package internal
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/testutil"
@@ -13,6 +11,7 @@ import (
 // TestGenerator_ComprehensiveGeneration demonstrates the new table-driven testing framework
 // by testing generation across all fixtures, themes, and formats systematically.
 func TestGenerator_ComprehensiveGeneration(t *testing.T) {
+	t.Parallel()
 	// Create test cases using the new helper functions
 	cases := testutil.CreateGeneratorTestCases()
 
@@ -35,6 +34,7 @@ func TestGenerator_ComprehensiveGeneration(t *testing.T) {
 
 // TestGenerator_AllValidFixtures tests generation with all valid fixtures.
 func TestGenerator_AllValidFixtures(t *testing.T) {
+	t.Parallel()
 	validFixtures := testutil.GetValidFixtures()
 
 	for _, fixture := range validFixtures {
@@ -66,6 +66,7 @@ func TestGenerator_AllValidFixtures(t *testing.T) {
 
 // TestGenerator_AllInvalidFixtures tests that invalid fixtures produce expected errors.
 func TestGenerator_AllInvalidFixtures(t *testing.T) {
+	t.Parallel()
 	invalidFixtures := testutil.GetInvalidFixtures()
 
 	for _, fixture := range invalidFixtures {
@@ -107,8 +108,10 @@ func TestGenerator_AllInvalidFixtures(t *testing.T) {
 
 // TestGenerator_AllThemes demonstrates theme testing using helper functions.
 func TestGenerator_AllThemes(t *testing.T) {
+	t.Parallel()
 	// Use the helper function to test all themes
 	testutil.TestAllThemes(t, func(t *testing.T, theme string) {
+		t.Helper()
 		// Create a simple action for testing
 		actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
 
@@ -128,8 +131,10 @@ func TestGenerator_AllThemes(t *testing.T) {
 
 // TestGenerator_AllFormats demonstrates format testing using helper functions.
 func TestGenerator_AllFormats(t *testing.T) {
+	t.Parallel()
 	// Use the helper function to test all formats
 	testutil.TestAllFormats(t, func(t *testing.T, format string) {
+		t.Helper()
 		// Create a simple action for testing
 		actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
 
@@ -149,6 +154,7 @@ func TestGenerator_AllFormats(t *testing.T) {
 
 // TestGenerator_ByActionType demonstrates testing by action type.
 func TestGenerator_ByActionType(t *testing.T) {
+	t.Parallel()
 	actionTypes := []testutil.ActionType{
 		testutil.ActionTypeJavaScript,
 		testutil.ActionTypeComposite,
@@ -186,6 +192,7 @@ func TestGenerator_ByActionType(t *testing.T) {
 
 // TestGenerator_WithMockEnvironment demonstrates testing with a complete mock environment.
 func TestGenerator_WithMockEnvironment(t *testing.T) {
+	t.Parallel()
 	// Create a complete test environment
 	envConfig := &testutil.EnvironmentConfig{
 		ActionFixtures: []string{"actions/composite/with-dependencies.yml"},
@@ -222,6 +229,7 @@ func TestGenerator_WithMockEnvironment(t *testing.T) {
 
 // TestGenerator_FixtureValidation demonstrates fixture validation.
 func TestGenerator_FixtureValidation(t *testing.T) {
+	t.Parallel()
 	// Test that all valid fixtures pass validation
 	validFixtures := testutil.GetValidFixtures()
 
@@ -236,6 +244,7 @@ func TestGenerator_FixtureValidation(t *testing.T) {
 
 	for _, fixtureName := range invalidFixtures {
 		t.Run(fixtureName, func(t *testing.T) {
+			t.Parallel()
 			testutil.AssertFixtureInvalid(t, fixtureName)
 		})
 	}
@@ -257,6 +266,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 			fixture, err := ctx.FixtureManager.LoadActionFixture(testCase.Fixture)
 			if err != nil {
 				result.Error = fmt.Errorf("failed to load fixture %s: %w", testCase.Fixture, err)
+
 				return result
 			}
 
@@ -268,48 +278,19 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 		// If we don't have an action file to test, just return success
 		if actionPath == "" {
 			result.Success = true
+
 			return result
 		}
 
 		// Create generator configuration from test config
 		config := createGeneratorConfigFromTestConfig(ctx.Config, ctx.TempDir)
 
-		// Save current working directory and change to project root for template resolution
-		originalWd, err := os.Getwd()
-		if err != nil {
-			result.Error = fmt.Errorf("failed to get working directory: %w", err)
-			return result
-		}
-
-		// Use runtime.Caller to find project root relative to this file
-		_, currentFile, _, ok := runtime.Caller(0)
-		if !ok {
-			result.Error = fmt.Errorf("failed to get current file path")
-			return result
-		}
-
-		// Get the project root (go up from internal/generator_comprehensive_test.go to project root)
-		projectRoot := filepath.Dir(filepath.Dir(currentFile))
-		if err := os.Chdir(projectRoot); err != nil {
-			result.Error = fmt.Errorf("failed to change to project root %s: %w", projectRoot, err)
-			return result
-		}
-
-		// Debug: Log the working directory and template path
-		currentWd, _ := os.Getwd()
-		t.Logf("Test working directory: %s, template path: %s", currentWd, config.Template)
-
-		// Restore working directory after test
-		defer func() {
-			if err := os.Chdir(originalWd); err != nil {
-				// Log error but don't fail the test
-				t.Logf("Failed to restore working directory: %v", err)
-			}
-		}()
+		// Debug: Log the template path (no working directory changes needed with embedded templates)
+		t.Logf("Using template path: %s", config.Template)
 
 		// Create and run generator
 		generator := NewGenerator(config)
-		err = generator.GenerateFromFile(actionPath)
+		err := generator.GenerateFromFile(actionPath)
 
 		if err != nil {
 			result.Error = err
@@ -352,24 +333,8 @@ func createGeneratorConfigFromTestConfig(testConfig *testutil.TestConfig, output
 		config.Quiet = testConfig.Quiet
 	}
 
-	// Set appropriate template path based on theme and output format
-	config.Template = resolveTemplatePathForTest(config.Theme, config.OutputFormat)
+	// Set appropriate template path based on theme - embedded templates will handle resolution
+	config.Template = resolveThemeTemplate(config.Theme)
 
 	return config
-}
-
-// resolveTemplatePathForTest resolves the correct template path for testing.
-func resolveTemplatePathForTest(theme, _ string) string {
-	switch theme {
-	case "github":
-		return "templates/themes/github/readme.tmpl"
-	case "gitlab":
-		return "templates/themes/gitlab/readme.tmpl"
-	case "minimal":
-		return "templates/themes/minimal/readme.tmpl"
-	case "professional":
-		return "templates/themes/professional/readme.tmpl"
-	default:
-		return "templates/readme.tmpl"
-	}
 }

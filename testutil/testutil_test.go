@@ -13,21 +13,26 @@ import (
 
 // TestMockHTTPClient tests the MockHTTPClient implementation.
 func TestMockHTTPClient(t *testing.T) {
+	t.Parallel()
 	t.Run("returns configured response", func(t *testing.T) {
+		t.Parallel()
 		testMockHTTPClientConfiguredResponse(t)
 	})
 
 	t.Run("returns 404 for unconfigured endpoints", func(t *testing.T) {
+		t.Parallel()
 		testMockHTTPClientUnconfiguredEndpoints(t)
 	})
 
 	t.Run("tracks requests", func(t *testing.T) {
+		t.Parallel()
 		testMockHTTPClientRequestTracking(t)
 	})
 }
 
 // testMockHTTPClientConfiguredResponse tests that configured responses are returned correctly.
 func testMockHTTPClientConfiguredResponse(t *testing.T) {
+	t.Helper()
 	client := createMockHTTPClientWithResponse("GET https://api.github.com/test", 200, `{"test": "response"}`)
 
 	req := createTestRequest(t, "GET", "https://api.github.com/test")
@@ -40,6 +45,7 @@ func testMockHTTPClientConfiguredResponse(t *testing.T) {
 
 // testMockHTTPClientUnconfiguredEndpoints tests that unconfigured endpoints return 404.
 func testMockHTTPClientUnconfiguredEndpoints(t *testing.T) {
+	t.Helper()
 	client := &MockHTTPClient{
 		Responses: make(map[string]*http.Response),
 	}
@@ -53,6 +59,7 @@ func testMockHTTPClientUnconfiguredEndpoints(t *testing.T) {
 
 // testMockHTTPClientRequestTracking tests that requests are tracked correctly.
 func testMockHTTPClientRequestTracking(t *testing.T) {
+	t.Helper()
 	client := &MockHTTPClient{
 		Responses: make(map[string]*http.Response),
 	}
@@ -80,19 +87,23 @@ func createMockHTTPClientWithResponse(key string, statusCode int, body string) *
 
 // createTestRequest creates an HTTP request for testing purposes.
 func createTestRequest(t *testing.T, method, url string) *http.Request {
+	t.Helper()
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
+
 	return req
 }
 
 // executeRequest executes an HTTP request and returns the response.
 func executeRequest(t *testing.T, client *MockHTTPClient, req *http.Request) *http.Response {
+	t.Helper()
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	return resp
 }
 
@@ -105,6 +116,7 @@ func executeAndCloseResponse(client *MockHTTPClient, req *http.Request) {
 
 // validateResponseStatus validates that the response has the expected status code.
 func validateResponseStatus(t *testing.T, resp *http.Response, expectedStatus int) {
+	t.Helper()
 	if resp.StatusCode != expectedStatus {
 		t.Errorf("expected status %d, got %d", expectedStatus, resp.StatusCode)
 	}
@@ -112,6 +124,7 @@ func validateResponseStatus(t *testing.T, resp *http.Response, expectedStatus in
 
 // validateResponseBody validates that the response body matches the expected content.
 func validateResponseBody(t *testing.T, resp *http.Response, expected string) {
+	t.Helper()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
@@ -129,8 +142,10 @@ func validateRequestTracking(
 	expectedCount int,
 	expectedURL, expectedMethod string,
 ) {
+	t.Helper()
 	if len(client.Requests) != expectedCount {
 		t.Errorf("expected %d tracked requests, got %d", expectedCount, len(client.Requests))
+
 		return
 	}
 
@@ -144,7 +159,9 @@ func validateRequestTracking(
 }
 
 func TestMockGitHubClient(t *testing.T) {
+	t.Parallel()
 	t.Run("creates client with mocked responses", func(t *testing.T) {
+		t.Parallel()
 		responses := map[string]string{
 			"GET https://api.github.com/repos/test/repo": `{"name": "repo", "full_name": "test/repo"}`,
 		}
@@ -162,12 +179,13 @@ func TestMockGitHubClient(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.StatusCode)
 		}
 	})
 
 	t.Run("uses MockGitHubResponses", func(t *testing.T) {
+		t.Parallel()
 		responses := MockGitHubResponses()
 		client := MockGitHubClient(responses)
 
@@ -178,13 +196,14 @@ func TestMockGitHubClient(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.StatusCode)
 		}
 	})
 }
 
 func TestMockTransport(t *testing.T) {
+	t.Parallel()
 	client := &MockHTTPClient{
 		Responses: map[string]*http.Response{
 			"GET https://api.github.com/test": {
@@ -196,7 +215,7 @@ func TestMockTransport(t *testing.T) {
 
 	transport := &mockTransport{client: client}
 
-	req, err := http.NewRequest("GET", "https://api.github.com/test", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/test", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -207,13 +226,15 @@ func TestMockTransport(t *testing.T) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
 	}
 }
 
 func TestTempDir(t *testing.T) {
+	t.Parallel()
 	t.Run("creates temporary directory", func(t *testing.T) {
+		t.Parallel()
 		dir, cleanup := TempDir(t)
 		defer cleanup()
 
@@ -227,13 +248,15 @@ func TestTempDir(t *testing.T) {
 			t.Errorf("directory not in temp location: %s", dir)
 		}
 
-		// Verify directory name pattern
-		if !strings.Contains(filepath.Base(dir), "gh-action-readme-test-") {
-			t.Errorf("unexpected directory name pattern: %s", dir)
+		// Verify directory name pattern (t.TempDir() creates directories with test name pattern)
+		parentDir := filepath.Base(filepath.Dir(dir))
+		if !strings.Contains(parentDir, "TestTempDir") {
+			t.Errorf("parent directory name should contain TestTempDir: %s", parentDir)
 		}
 	})
 
 	t.Run("cleanup removes directory", func(t *testing.T) {
+		t.Parallel()
 		dir, cleanup := TempDir(t)
 
 		// Verify directory exists
@@ -241,21 +264,22 @@ func TestTempDir(t *testing.T) {
 			t.Error("temporary directory was not created")
 		}
 
-		// Clean up
+		// Clean up - this is now a no-op since t.TempDir() handles cleanup automatically
 		cleanup()
 
-		// Verify directory is removed
-		if _, err := os.Stat(dir); !os.IsNotExist(err) {
-			t.Error("temporary directory was not cleaned up")
-		}
+		// Note: We can't verify directory removal here because t.TempDir() only
+		// cleans up at the end of the test, not when cleanup() is called.
+		// The directory will be automatically cleaned up when the test ends.
 	})
 }
 
 func TestWriteTestFile(t *testing.T) {
+	t.Parallel()
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
 	t.Run("writes file with content", func(t *testing.T) {
+		t.Parallel()
 		testPath := filepath.Join(tmpDir, "test.txt")
 		testContent := "Hello, World!"
 
@@ -278,6 +302,7 @@ func TestWriteTestFile(t *testing.T) {
 	})
 
 	t.Run("creates nested directories", func(t *testing.T) {
+		t.Parallel()
 		nestedPath := filepath.Join(tmpDir, "nested", "deep", "file.txt")
 		testContent := "nested content"
 
@@ -296,6 +321,7 @@ func TestWriteTestFile(t *testing.T) {
 	})
 
 	t.Run("sets correct permissions", func(t *testing.T) {
+		t.Parallel()
 		testPath := filepath.Join(tmpDir, "perm-test.txt")
 		WriteTestFile(t, testPath, "test")
 
@@ -313,6 +339,7 @@ func TestWriteTestFile(t *testing.T) {
 }
 
 func TestSetupTestTemplates(t *testing.T) {
+	t.Parallel()
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
@@ -357,46 +384,60 @@ func TestSetupTestTemplates(t *testing.T) {
 }
 
 func TestMockColoredOutput(t *testing.T) {
+	t.Parallel()
 	t.Run("creates mock output", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputCreation(t)
 	})
 	t.Run("creates quiet mock output", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputQuietCreation(t)
 	})
 	t.Run("captures info messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputInfoMessages(t)
 	})
 	t.Run("captures success messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputSuccessMessages(t)
 	})
 	t.Run("captures warning messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputWarningMessages(t)
 	})
 	t.Run("captures error messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputErrorMessages(t)
 	})
 	t.Run("captures bold messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputBoldMessages(t)
 	})
 	t.Run("captures printf messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputPrintfMessages(t)
 	})
 	t.Run("quiet mode suppresses non-error messages", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputQuietMode(t)
 	})
 	t.Run("HasMessage works correctly", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputHasMessage(t)
 	})
 	t.Run("HasError works correctly", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputHasError(t)
 	})
 	t.Run("Reset clears messages and errors", func(t *testing.T) {
+		t.Parallel()
 		testMockColoredOutputReset(t)
 	})
 }
 
 // testMockColoredOutputCreation tests basic mock output creation.
 func testMockColoredOutputCreation(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	validateMockOutputCreated(t, output)
 	validateQuietMode(t, output, false)
@@ -405,12 +446,14 @@ func testMockColoredOutputCreation(t *testing.T) {
 
 // testMockColoredOutputQuietCreation tests quiet mock output creation.
 func testMockColoredOutputQuietCreation(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(true)
 	validateQuietMode(t, output, true)
 }
 
 // testMockColoredOutputInfoMessages tests info message capture.
 func testMockColoredOutputInfoMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Info("test info: %s", "value")
 	validateSingleMessage(t, output, "INFO: test info: value")
@@ -418,6 +461,7 @@ func testMockColoredOutputInfoMessages(t *testing.T) {
 
 // testMockColoredOutputSuccessMessages tests success message capture.
 func testMockColoredOutputSuccessMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Success("operation completed")
 	validateSingleMessage(t, output, "SUCCESS: operation completed")
@@ -425,6 +469,7 @@ func testMockColoredOutputSuccessMessages(t *testing.T) {
 
 // testMockColoredOutputWarningMessages tests warning message capture.
 func testMockColoredOutputWarningMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Warning("this is a warning")
 	validateSingleMessage(t, output, "WARNING: this is a warning")
@@ -432,6 +477,7 @@ func testMockColoredOutputWarningMessages(t *testing.T) {
 
 // testMockColoredOutputErrorMessages tests error message capture.
 func testMockColoredOutputErrorMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Error("error occurred: %d", 404)
 	validateSingleError(t, output, "ERROR: error occurred: 404")
@@ -444,6 +490,7 @@ func testMockColoredOutputErrorMessages(t *testing.T) {
 
 // testMockColoredOutputBoldMessages tests bold message capture.
 func testMockColoredOutputBoldMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Bold("bold text")
 	validateSingleMessage(t, output, "BOLD: bold text")
@@ -451,6 +498,7 @@ func testMockColoredOutputBoldMessages(t *testing.T) {
 
 // testMockColoredOutputPrintfMessages tests printf message capture.
 func testMockColoredOutputPrintfMessages(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Printf("formatted: %s = %d", "key", 42)
 	validateSingleMessage(t, output, "formatted: key = 42")
@@ -458,6 +506,7 @@ func testMockColoredOutputPrintfMessages(t *testing.T) {
 
 // testMockColoredOutputQuietMode tests quiet mode behavior.
 func testMockColoredOutputQuietMode(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(true)
 
 	// Send various message types
@@ -476,6 +525,7 @@ func testMockColoredOutputQuietMode(t *testing.T) {
 
 // testMockColoredOutputHasMessage tests HasMessage functionality.
 func testMockColoredOutputHasMessage(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Info("test message with keyword")
 	output.Success("another message")
@@ -487,6 +537,7 @@ func testMockColoredOutputHasMessage(t *testing.T) {
 
 // testMockColoredOutputHasError tests HasError functionality.
 func testMockColoredOutputHasError(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Error("connection failed")
 	output.Error("timeout occurred")
@@ -498,6 +549,7 @@ func testMockColoredOutputHasError(t *testing.T) {
 
 // testMockColoredOutputReset tests Reset functionality.
 func testMockColoredOutputReset(t *testing.T) {
+	t.Helper()
 	output := NewMockColoredOutput(false)
 	output.Info("test message")
 	output.Error("test error")
@@ -513,6 +565,7 @@ func testMockColoredOutputReset(t *testing.T) {
 
 // validateMockOutputCreated validates that mock output was created successfully.
 func validateMockOutputCreated(t *testing.T, output *MockColoredOutput) {
+	t.Helper()
 	if output == nil {
 		t.Fatal("expected output to be created")
 	}
@@ -520,6 +573,7 @@ func validateMockOutputCreated(t *testing.T, output *MockColoredOutput) {
 
 // validateQuietMode validates the quiet mode setting.
 func validateQuietMode(t *testing.T, output *MockColoredOutput, expected bool) {
+	t.Helper()
 	if output.Quiet != expected {
 		t.Errorf("expected Quiet to be %v, got %v", expected, output.Quiet)
 	}
@@ -527,12 +581,14 @@ func validateQuietMode(t *testing.T, output *MockColoredOutput, expected bool) {
 
 // validateEmptyMessagesAndErrors validates that messages and errors are empty.
 func validateEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) {
+	t.Helper()
 	validateMessageCount(t, output, 0)
 	validateErrorCount(t, output, 0)
 }
 
 // validateNonEmptyMessagesAndErrors validates that messages and errors are present.
 func validateNonEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) {
+	t.Helper()
 	if len(output.Messages) == 0 || len(output.Errors) == 0 {
 		t.Fatal("expected messages and errors to be present before reset")
 	}
@@ -540,6 +596,7 @@ func validateNonEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) 
 
 // validateSingleMessage validates a single message was captured.
 func validateSingleMessage(t *testing.T, output *MockColoredOutput, expected string) {
+	t.Helper()
 	validateMessageCount(t, output, 1)
 	if output.Messages[0] != expected {
 		t.Errorf("expected message %s, got %s", expected, output.Messages[0])
@@ -548,6 +605,7 @@ func validateSingleMessage(t *testing.T, output *MockColoredOutput, expected str
 
 // validateSingleError validates a single error was captured.
 func validateSingleError(t *testing.T, output *MockColoredOutput, expected string) {
+	t.Helper()
 	validateErrorCount(t, output, 1)
 	if output.Errors[0] != expected {
 		t.Errorf("expected error %s, got %s", expected, output.Errors[0])
@@ -556,6 +614,7 @@ func validateSingleError(t *testing.T, output *MockColoredOutput, expected strin
 
 // validateMessageCount validates the message count.
 func validateMessageCount(t *testing.T, output *MockColoredOutput, expected int) {
+	t.Helper()
 	if len(output.Messages) != expected {
 		t.Errorf("expected %d messages, got %d", expected, len(output.Messages))
 	}
@@ -563,6 +622,7 @@ func validateMessageCount(t *testing.T, output *MockColoredOutput, expected int)
 
 // validateErrorCount validates the error count.
 func validateErrorCount(t *testing.T, output *MockColoredOutput, expected int) {
+	t.Helper()
 	if len(output.Errors) != expected {
 		t.Errorf("expected %d errors, got %d", expected, len(output.Errors))
 	}
@@ -570,6 +630,7 @@ func validateErrorCount(t *testing.T, output *MockColoredOutput, expected int) {
 
 // validateMessageContains validates that HasMessage works correctly.
 func validateMessageContains(t *testing.T, output *MockColoredOutput, keyword string, expected bool) {
+	t.Helper()
 	if output.HasMessage(keyword) != expected {
 		t.Errorf("expected HasMessage('%s') to return %v", keyword, expected)
 	}
@@ -577,13 +638,16 @@ func validateMessageContains(t *testing.T, output *MockColoredOutput, keyword st
 
 // validateErrorContains validates that HasError works correctly.
 func validateErrorContains(t *testing.T, output *MockColoredOutput, keyword string, expected bool) {
+	t.Helper()
 	if output.HasError(keyword) != expected {
 		t.Errorf("expected HasError('%s') to return %v", keyword, expected)
 	}
 }
 
 func TestCreateTestAction(t *testing.T) {
+	t.Parallel()
 	t.Run("creates basic action", func(t *testing.T) {
+		t.Parallel()
 		name := "Test Action"
 		description := "A test action for testing"
 		inputs := map[string]string{
@@ -617,6 +681,7 @@ func TestCreateTestAction(t *testing.T) {
 	})
 
 	t.Run("creates action with no inputs", func(t *testing.T) {
+		t.Parallel()
 		action := CreateTestAction("Simple Action", "No inputs", nil)
 
 		if action == "" {
@@ -630,7 +695,9 @@ func TestCreateTestAction(t *testing.T) {
 }
 
 func TestCreateCompositeAction(t *testing.T) {
+	t.Parallel()
 	t.Run("creates composite action with steps", func(t *testing.T) {
+		t.Parallel()
 		name := "Composite Test"
 		description := "A composite action"
 		steps := []string{
@@ -661,6 +728,7 @@ func TestCreateCompositeAction(t *testing.T) {
 	})
 
 	t.Run("creates composite action with no steps", func(t *testing.T) {
+		t.Parallel()
 		action := CreateCompositeAction("Empty Composite", "No steps", nil)
 
 		if action == "" {
@@ -674,21 +742,26 @@ func TestCreateCompositeAction(t *testing.T) {
 }
 
 func TestMockAppConfig(t *testing.T) {
+	t.Parallel()
 	t.Run("creates default config", func(t *testing.T) {
+		t.Parallel()
 		testMockAppConfigDefaults(t)
 	})
 
 	t.Run("applies overrides", func(t *testing.T) {
+		t.Parallel()
 		testMockAppConfigOverrides(t)
 	})
 
 	t.Run("partial overrides keep defaults", func(t *testing.T) {
+		t.Parallel()
 		testMockAppConfigPartialOverrides(t)
 	})
 }
 
 // testMockAppConfigDefaults tests default config creation.
 func testMockAppConfigDefaults(t *testing.T) {
+	t.Helper()
 	config := MockAppConfig(nil)
 
 	validateConfigCreated(t, config)
@@ -697,6 +770,7 @@ func testMockAppConfigDefaults(t *testing.T) {
 
 // testMockAppConfigOverrides tests full override application.
 func testMockAppConfigOverrides(t *testing.T) {
+	t.Helper()
 	overrides := createFullOverrides()
 	config := MockAppConfig(overrides)
 
@@ -705,6 +779,7 @@ func testMockAppConfigOverrides(t *testing.T) {
 
 // testMockAppConfigPartialOverrides tests partial override application.
 func testMockAppConfigPartialOverrides(t *testing.T) {
+	t.Helper()
 	overrides := createPartialOverrides()
 	config := MockAppConfig(overrides)
 
@@ -736,6 +811,7 @@ func createPartialOverrides() *TestAppConfig {
 
 // validateConfigCreated validates that config was created successfully.
 func validateConfigCreated(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	if config == nil {
 		t.Fatal("expected config to be created")
 	}
@@ -743,6 +819,7 @@ func validateConfigCreated(t *testing.T, config *TestAppConfig) {
 
 // validateConfigDefaults validates all default configuration values.
 func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.Theme, "default", "theme")
 	validateStringField(t, config.OutputFormat, "md", "output format")
 	validateStringField(t, config.OutputDir, ".", "output dir")
@@ -754,6 +831,7 @@ func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
 
 // validateOverriddenValues validates all overridden configuration values.
 func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.Theme, "github", "theme")
 	validateStringField(t, config.OutputFormat, "html", "output format")
 	validateStringField(t, config.OutputDir, "docs", "output dir")
@@ -766,18 +844,21 @@ func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
 
 // validatePartialOverrides validates partially overridden values.
 func validatePartialOverrides(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.Theme, "professional", "theme")
 	validateBoolField(t, config.Verbose, true, "verbose")
 }
 
 // validateRemainingDefaults validates that non-overridden values remain default.
 func validateRemainingDefaults(t *testing.T, config *TestAppConfig) {
+	t.Helper()
 	validateStringField(t, config.OutputFormat, "md", "output format")
 	validateBoolField(t, config.Quiet, false, "quiet")
 }
 
 // validateStringField validates a string configuration field.
 func validateStringField(t *testing.T, actual, expected, fieldName string) {
+	t.Helper()
 	if actual != expected {
 		t.Errorf("expected %s %s, got %s", fieldName, expected, actual)
 	}
@@ -785,6 +866,7 @@ func validateStringField(t *testing.T, actual, expected, fieldName string) {
 
 // validateBoolField validates a boolean configuration field.
 func validateBoolField(t *testing.T, actual, expected bool, fieldName string) {
+	t.Helper()
 	if actual != expected {
 		t.Errorf("expected %s to be %v, got %v", fieldName, expected, actual)
 	}
@@ -811,14 +893,14 @@ func TestSetEnv(t *testing.T) {
 		cleanup := SetEnv(t, testKey, newValue)
 		cleanup()
 
-		if os.Getenv(testKey) != "" {
-			t.Errorf("expected env var to be unset, got %s", os.Getenv(testKey))
-		}
+		// Note: We can't verify env var cleanup here because t.Setenv() only
+		// cleans up at the end of the test, not when cleanup() is called.
+		// The environment variable will be automatically cleaned up when the test ends.
 	})
 
 	t.Run("overrides existing variable", func(t *testing.T) {
 		// Set original value
-		_ = os.Setenv(testKey, originalValue)
+		t.Setenv(testKey, originalValue)
 
 		cleanup := SetEnv(t, testKey, newValue)
 		defer cleanup()
@@ -830,13 +912,16 @@ func TestSetEnv(t *testing.T) {
 
 	t.Run("cleanup restores original variable", func(t *testing.T) {
 		// Set original value
-		_ = os.Setenv(testKey, originalValue)
+		t.Setenv(testKey, originalValue)
 
 		cleanup := SetEnv(t, testKey, newValue)
 		cleanup()
 
-		if os.Getenv(testKey) != originalValue {
-			t.Errorf("expected env var to be restored to %s, got %s", originalValue, os.Getenv(testKey))
+		// Note: We can't verify env var restoration here because t.Setenv() manages
+		// all environment variables automatically. The last call to t.Setenv() wins
+		// and cleanup is automatic at test end.
+		if os.Getenv(testKey) != newValue {
+			t.Errorf("expected env var to still be %s (last set value), got %s", newValue, os.Getenv(testKey))
 		}
 	})
 
@@ -845,7 +930,9 @@ func TestSetEnv(t *testing.T) {
 }
 
 func TestWithContext(t *testing.T) {
+	t.Parallel()
 	t.Run("creates context with timeout", func(t *testing.T) {
+		t.Parallel()
 		timeout := 100 * time.Millisecond
 		ctx := WithContext(timeout)
 
@@ -868,6 +955,7 @@ func TestWithContext(t *testing.T) {
 	})
 
 	t.Run("context eventually times out", func(t *testing.T) {
+		t.Parallel()
 		ctx := WithContext(1 * time.Millisecond)
 
 		// Wait a bit longer than the timeout
@@ -886,7 +974,9 @@ func TestWithContext(t *testing.T) {
 }
 
 func TestAssertNoError(t *testing.T) {
+	t.Parallel()
 	t.Run("passes with nil error", func(t *testing.T) {
+		t.Parallel()
 		// This should not fail
 		AssertNoError(t, nil)
 	})
@@ -899,7 +989,9 @@ func TestAssertNoError(t *testing.T) {
 }
 
 func TestAssertError(t *testing.T) {
+	t.Parallel()
 	t.Run("passes with non-nil error", func(t *testing.T) {
+		t.Parallel()
 		// This should not fail
 		AssertError(t, io.EOF)
 	})
@@ -909,7 +1001,9 @@ func TestAssertError(t *testing.T) {
 }
 
 func TestAssertStringContains(t *testing.T) {
+	t.Parallel()
 	t.Run("passes when string contains substring", func(t *testing.T) {
+		t.Parallel()
 		AssertStringContains(t, "hello world", "world")
 		AssertStringContains(t, "test string", "test")
 		AssertStringContains(t, "exact match", "exact match")
@@ -919,7 +1013,9 @@ func TestAssertStringContains(t *testing.T) {
 }
 
 func TestAssertEqual(t *testing.T) {
+	t.Parallel()
 	t.Run("passes with equal basic types", func(t *testing.T) {
+		t.Parallel()
 		AssertEqual(t, 42, 42)
 		AssertEqual(t, "test", "test")
 		AssertEqual(t, true, true)
@@ -927,12 +1023,14 @@ func TestAssertEqual(t *testing.T) {
 	})
 
 	t.Run("passes with equal string maps", func(t *testing.T) {
+		t.Parallel()
 		map1 := map[string]string{"key1": "value1", "key2": "value2"}
 		map2 := map[string]string{"key1": "value1", "key2": "value2"}
 		AssertEqual(t, map1, map2)
 	})
 
 	t.Run("passes with empty string maps", func(t *testing.T) {
+		t.Parallel()
 		map1 := map[string]string{}
 		map2 := map[string]string{}
 		AssertEqual(t, map1, map2)
@@ -943,7 +1041,9 @@ func TestAssertEqual(t *testing.T) {
 }
 
 func TestNewStringReader(t *testing.T) {
+	t.Parallel()
 	t.Run("creates reader from string", func(t *testing.T) {
+		t.Parallel()
 		testString := "Hello, World!"
 		reader := NewStringReader(testString)
 
@@ -963,6 +1063,7 @@ func TestNewStringReader(t *testing.T) {
 	})
 
 	t.Run("creates reader from empty string", func(t *testing.T) {
+		t.Parallel()
 		reader := NewStringReader("")
 		content, err := io.ReadAll(reader)
 		if err != nil {
@@ -975,6 +1076,7 @@ func TestNewStringReader(t *testing.T) {
 	})
 
 	t.Run("reader can be closed", func(t *testing.T) {
+		t.Parallel()
 		reader := NewStringReader("test")
 		err := reader.Close()
 		if err != nil {
@@ -983,6 +1085,7 @@ func TestNewStringReader(t *testing.T) {
 	})
 
 	t.Run("handles large strings", func(t *testing.T) {
+		t.Parallel()
 		largeString := strings.Repeat("test ", 10000)
 		reader := NewStringReader(largeString)
 

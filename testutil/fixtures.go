@@ -12,13 +12,40 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// fixtureCache provides thread-safe caching of fixture content.
+var fixtureCache = struct {
+	mu    sync.RWMutex
+	cache map[string]string
+}{
+	cache: make(map[string]string),
+}
+
 // MustReadFixture reads a YAML fixture file from testdata/yaml-fixtures.
 func MustReadFixture(filename string) string {
 	return mustReadFixture(filename)
 }
 
-// mustReadFixture reads a YAML fixture file from testdata/yaml-fixtures.
+// mustReadFixture reads a YAML fixture file from testdata/yaml-fixtures with caching.
 func mustReadFixture(filename string) string {
+	// Try to get from cache first (read lock)
+	fixtureCache.mu.RLock()
+	if content, exists := fixtureCache.cache[filename]; exists {
+		fixtureCache.mu.RUnlock()
+
+		return content
+	}
+	fixtureCache.mu.RUnlock()
+
+	// Not in cache, acquire write lock and read from disk
+	fixtureCache.mu.Lock()
+	defer fixtureCache.mu.Unlock()
+
+	// Double-check in case another goroutine loaded it while we were waiting
+	if content, exists := fixtureCache.cache[filename]; exists {
+		return content
+	}
+
+	// Load from disk
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		panic("failed to get current file path")
@@ -28,12 +55,17 @@ func mustReadFixture(filename string) string {
 	projectRoot := filepath.Dir(filepath.Dir(currentFile))
 	fixturePath := filepath.Join(projectRoot, "testdata", "yaml-fixtures", filename)
 
-	content, err := os.ReadFile(fixturePath) // #nosec G304 -- test fixture path from project structure
+	contentBytes, err := os.ReadFile(fixturePath) // #nosec G304 -- test fixture path from project structure
 	if err != nil {
 		panic("failed to read fixture " + filename + ": " + err.Error())
 	}
 
-	return string(content)
+	content := string(contentBytes)
+
+	// Store in cache
+	fixtureCache.cache[filename] = content
+
+	return content
 }
 
 // Constants for fixture management.
@@ -316,6 +348,7 @@ var PackageJSONContent = func() string {
 	result += "    \"webpack\": \"^5.0.0\"\n"
 	result += "  }\n"
 	result += "}\n"
+
 	return result
 }()
 
@@ -373,6 +406,7 @@ func (fm *FixtureManager) LoadActionFixture(name string) (*ActionFixture, error)
 	fm.mu.RLock()
 	if fixture, exists := fm.cache[name]; exists {
 		fm.mu.RUnlock()
+
 		return fixture, nil
 	}
 	fm.mu.RUnlock()
@@ -403,6 +437,7 @@ func (fm *FixtureManager) LoadActionFixture(name string) (*ActionFixture, error)
 	// Double-check cache in case another goroutine cached it while we were loading
 	if cachedFixture, exists := fm.cache[name]; exists {
 		fm.mu.Unlock()
+
 		return cachedFixture, nil
 	}
 	fm.cache[name] = fixture
@@ -505,6 +540,7 @@ func (fm *FixtureManager) ensureYamlExtension(path string) string {
 	if !strings.HasSuffix(path, YmlExtension) && !strings.HasSuffix(path, YamlExtension) {
 		path += YmlExtension
 	}
+
 	return path
 }
 
@@ -524,6 +560,7 @@ func (fm *FixtureManager) searchInDirectories(name string) string {
 			return path
 		}
 	}
+
 	return ""
 }
 
@@ -535,6 +572,7 @@ func (fm *FixtureManager) buildSearchPath(dir, name string) string {
 	} else {
 		path = filepath.Join(fm.basePath, dir, name)
 	}
+
 	return fm.ensureYamlExtension(path)
 }
 
@@ -566,6 +604,7 @@ func (fm *FixtureManager) determineActionTypeByName(name string) ActionType {
 	if strings.Contains(name, "minimal") {
 		return ActionTypeMinimal
 	}
+
 	return ActionTypeMinimal
 }
 
@@ -580,6 +619,7 @@ func (fm *FixtureManager) determineActionTypeByContent(content string) ActionTyp
 	if strings.Contains(content, `using: 'node`) {
 		return ActionTypeJavaScript
 	}
+
 	return ActionTypeMinimal
 }
 
@@ -594,6 +634,7 @@ func (fm *FixtureManager) determineConfigType(name string) string {
 	if strings.Contains(name, "user") {
 		return "user-specific"
 	}
+
 	return "generic"
 }
 
@@ -658,12 +699,14 @@ func isValidRuntime(runtime string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 // validateConfigContent validates configuration fixture content.
 func (fm *FixtureManager) validateConfigContent(content string) bool {
 	var data map[string]any
+
 	return yaml.Unmarshal([]byte(content), &data) == nil
 }
 
@@ -762,6 +805,7 @@ func GetFixtureManager() *FixtureManager {
 			panic(fmt.Sprintf("failed to load test scenarios: %v", err))
 		}
 	}
+
 	return defaultFixtureManager
 }
 

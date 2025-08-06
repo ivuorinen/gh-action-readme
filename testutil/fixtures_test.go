@@ -13,6 +13,7 @@ import (
 const testVersion = "v4.1.1"
 
 func TestMustReadFixture(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		filename string
@@ -32,6 +33,7 @@ func TestMustReadFixture(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if tt.wantErr {
 				defer func() {
 					if r := recover(); r == nil {
@@ -56,7 +58,9 @@ func TestMustReadFixture(t *testing.T) {
 }
 
 func TestMustReadFixture_Panic(t *testing.T) {
+	t.Parallel()
 	t.Run("missing file panics", func(t *testing.T) {
+		t.Parallel()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Error("expected panic but got none")
@@ -64,6 +68,7 @@ func TestMustReadFixture_Panic(t *testing.T) {
 				errStr, ok := r.(string)
 				if !ok {
 					t.Errorf("expected panic to contain string message, got: %T", r)
+
 					return
 				}
 				if !strings.Contains(errStr, "failed to read fixture") {
@@ -77,28 +82,36 @@ func TestMustReadFixture_Panic(t *testing.T) {
 }
 
 func TestGitHubAPIResponses(t *testing.T) {
+	t.Parallel()
 	t.Run("GitHubReleaseResponse", func(t *testing.T) {
+		t.Parallel()
 		testGitHubReleaseResponse(t)
 	})
 	t.Run("GitHubTagResponse", func(t *testing.T) {
+		t.Parallel()
 		testGitHubTagResponse(t)
 	})
 	t.Run("GitHubRepoResponse", func(t *testing.T) {
+		t.Parallel()
 		testGitHubRepoResponse(t)
 	})
 	t.Run("GitHubCommitResponse", func(t *testing.T) {
+		t.Parallel()
 		testGitHubCommitResponse(t)
 	})
 	t.Run("GitHubRateLimitResponse", func(t *testing.T) {
+		t.Parallel()
 		testGitHubRateLimitResponse(t)
 	})
 	t.Run("GitHubErrorResponse", func(t *testing.T) {
+		t.Parallel()
 		testGitHubErrorResponse(t)
 	})
 }
 
 // testGitHubReleaseResponse validates the GitHub release response format.
 func testGitHubReleaseResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubReleaseResponse)
 
 	if data["id"] == nil {
@@ -114,6 +127,7 @@ func testGitHubReleaseResponse(t *testing.T) {
 
 // testGitHubTagResponse validates the GitHub tag response format.
 func testGitHubTagResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubTagResponse)
 
 	if data["name"] != testVersion {
@@ -126,6 +140,7 @@ func testGitHubTagResponse(t *testing.T) {
 
 // testGitHubRepoResponse validates the GitHub repository response format.
 func testGitHubRepoResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubRepoResponse)
 
 	if data["name"] != "checkout" {
@@ -138,6 +153,7 @@ func testGitHubRepoResponse(t *testing.T) {
 
 // testGitHubCommitResponse validates the GitHub commit response format.
 func testGitHubCommitResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubCommitResponse)
 
 	if data["sha"] == nil {
@@ -150,6 +166,7 @@ func testGitHubCommitResponse(t *testing.T) {
 
 // testGitHubRateLimitResponse validates the GitHub rate limit response format.
 func testGitHubRateLimitResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubRateLimitResponse)
 
 	if data["resources"] == nil {
@@ -162,6 +179,7 @@ func testGitHubRateLimitResponse(t *testing.T) {
 
 // testGitHubErrorResponse validates the GitHub error response format.
 func testGitHubErrorResponse(t *testing.T) {
+	t.Helper()
 	data := parseJSONResponse(t, GitHubErrorResponse)
 
 	if data["message"] != "Not Found" {
@@ -171,14 +189,17 @@ func testGitHubErrorResponse(t *testing.T) {
 
 // parseJSONResponse parses a JSON response string and returns the data map.
 func parseJSONResponse(t *testing.T, response string) map[string]any {
+	t.Helper()
 	var data map[string]any
 	if err := json.Unmarshal([]byte(response), &data); err != nil {
 		t.Fatalf("failed to parse JSON response: %v", err)
 	}
+
 	return data
 }
 
 func TestSimpleTemplate(t *testing.T) {
+	t.Parallel()
 	template := SimpleTemplate
 
 	// Check that template contains expected sections
@@ -208,6 +229,7 @@ func TestSimpleTemplate(t *testing.T) {
 }
 
 func TestMockGitHubResponses(t *testing.T) {
+	t.Parallel()
 	responses := MockGitHubResponses()
 
 	// Test that all expected endpoints are present
@@ -236,6 +258,7 @@ func TestMockGitHubResponses(t *testing.T) {
 
 	// Test specific response structures
 	t.Run("checkout releases response", func(t *testing.T) {
+		t.Parallel()
 		response := responses["GET https://api.github.com/repos/actions/checkout/releases/latest"]
 		var release map[string]any
 		if err := json.Unmarshal([]byte(response), &release); err != nil {
@@ -249,6 +272,7 @@ func TestMockGitHubResponses(t *testing.T) {
 }
 
 func TestFixtureConstants(t *testing.T) {
+	t.Parallel()
 	// Test that all fixture variables are properly loaded
 	fixtures := map[string]string{
 		"SimpleActionYML":        MustReadFixture("actions/javascript/simple.yml"),
@@ -263,6 +287,7 @@ func TestFixtureConstants(t *testing.T) {
 
 	for name, content := range fixtures {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if content == "" {
 				t.Errorf("%s is empty", name)
 			}
@@ -289,6 +314,7 @@ func TestFixtureConstants(t *testing.T) {
 }
 
 func TestGitIgnoreContent(t *testing.T) {
+	t.Parallel()
 	content := GitIgnoreContent
 
 	expectedPatterns := []string{
@@ -314,6 +340,7 @@ func TestGitIgnoreContent(t *testing.T) {
 
 // Test helper functions that interact with the filesystem.
 func TestFixtureFileSystem(t *testing.T) {
+	t.Parallel()
 	// Verify that the fixture files actually exist
 	fixtureFiles := []string{
 		"simple-action.yml",
@@ -334,6 +361,7 @@ func TestFixtureFileSystem(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to get working directory: %v", err)
 		}
+
 		return filepath.Dir(wd) // Go up from testutil to project root
 	}()
 
@@ -341,6 +369,7 @@ func TestFixtureFileSystem(t *testing.T) {
 
 	for _, filename := range fixtureFiles {
 		t.Run(filename, func(t *testing.T) {
+			t.Parallel()
 			path := filepath.Join(fixturesDir, filename)
 			if _, err := os.Stat(path); os.IsNotExist(err) {
 				t.Errorf("fixture file does not exist: %s", path)
@@ -352,6 +381,7 @@ func TestFixtureFileSystem(t *testing.T) {
 // Tests for FixtureManager functionality (consolidated from scenarios.go tests)
 
 func TestNewFixtureManager(t *testing.T) {
+	t.Parallel()
 	fm := NewFixtureManager()
 	if fm == nil {
 		t.Fatal("expected fixture manager to be created")
@@ -371,6 +401,7 @@ func TestNewFixtureManager(t *testing.T) {
 }
 
 func TestFixtureManagerLoadScenarios(t *testing.T) {
+	t.Parallel()
 	fm := NewFixtureManager()
 
 	// Test loading scenarios (will create default if none exist)
@@ -386,6 +417,7 @@ func TestFixtureManagerLoadScenarios(t *testing.T) {
 }
 
 func TestFixtureManagerActionTypes(t *testing.T) {
+	t.Parallel()
 	fm := NewFixtureManager()
 
 	tests := []struct {
@@ -417,6 +449,7 @@ func TestFixtureManagerActionTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			actualType := fm.determineActionTypeByContent(tt.content)
 			if actualType != tt.expected {
 				t.Errorf("expected action type %s, got %s", tt.expected, actualType)
@@ -426,6 +459,7 @@ func TestFixtureManagerActionTypes(t *testing.T) {
 }
 
 func TestFixtureManagerValidation(t *testing.T) {
+	t.Parallel()
 	fm := NewFixtureManager()
 
 	tests := []struct {
@@ -462,6 +496,7 @@ func TestFixtureManagerValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			content := MustReadFixture(tt.fixture)
 			isValid := fm.validateFixtureContent(content)
 			if isValid != tt.expected {
@@ -472,6 +507,7 @@ func TestFixtureManagerValidation(t *testing.T) {
 }
 
 func TestGetFixtureManager(t *testing.T) {
+	t.Parallel()
 	// Test singleton behavior
 	fm1 := GetFixtureManager()
 	fm2 := GetFixtureManager()
@@ -486,6 +522,7 @@ func TestGetFixtureManager(t *testing.T) {
 }
 
 func TestActionFixtureLoading(t *testing.T) {
+	t.Parallel()
 	// Test loading a fixture that should exist
 	fixture, err := LoadActionFixture("simple-action.yml")
 	if err != nil {
@@ -512,7 +549,9 @@ func TestActionFixtureLoading(t *testing.T) {
 // Test helper functions for other components
 
 func TestHelperFunctions(t *testing.T) {
+	t.Parallel()
 	t.Run("GetValidFixtures", func(t *testing.T) {
+		t.Parallel()
 		validFixtures := GetValidFixtures()
 		if len(validFixtures) == 0 {
 			t.Skip("no valid fixtures available")
@@ -526,6 +565,7 @@ func TestHelperFunctions(t *testing.T) {
 	})
 
 	t.Run("GetInvalidFixtures", func(t *testing.T) {
+		t.Parallel()
 		invalidFixtures := GetInvalidFixtures()
 		// It's okay if there are no invalid fixtures for testing
 
@@ -536,7 +576,8 @@ func TestHelperFunctions(t *testing.T) {
 		}
 	})
 
-	t.Run("GetFixturesByActionType", func(_ *testing.T) {
+	t.Run("GetFixturesByActionType", func(t *testing.T) {
+		t.Parallel()
 		javascriptFixtures := GetFixturesByActionType(ActionTypeJavaScript)
 		compositeFixtures := GetFixturesByActionType(ActionTypeComposite)
 		dockerFixtures := GetFixturesByActionType(ActionTypeDocker)
@@ -547,7 +588,8 @@ func TestHelperFunctions(t *testing.T) {
 		_ = dockerFixtures
 	})
 
-	t.Run("GetFixturesByTag", func(_ *testing.T) {
+	t.Run("GetFixturesByTag", func(t *testing.T) {
+		t.Parallel()
 		validTaggedFixtures := GetFixturesByTag("valid")
 		invalidTaggedFixtures := GetFixturesByTag("invalid")
 		basicTaggedFixtures := GetFixturesByTag("basic")

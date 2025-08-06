@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -126,6 +127,7 @@ func (cl *ConfigurationLoader) loadGlobalStep(config *AppConfig, configFile stri
 		return fmt.Errorf("failed to load global config: %w", err)
 	}
 	cl.mergeConfigs(config, globalConfig, true) // Allow tokens for global config
+
 	return nil
 }
 
@@ -149,6 +151,7 @@ func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot st
 		return fmt.Errorf("failed to load repo config: %w", err)
 	}
 	cl.mergeConfigs(config, repoConfig, false) // No tokens in repo config
+
 	return nil
 }
 
@@ -163,6 +166,7 @@ func (cl *ConfigurationLoader) loadActionConfigStep(config *AppConfig, actionDir
 		return fmt.Errorf("failed to load action config: %w", err)
 	}
 	cl.mergeConfigs(config, actionConfig, false) // No tokens in action config
+
 	return nil
 }
 
@@ -181,7 +185,7 @@ func (cl *ConfigurationLoader) LoadGlobalConfig(configFile string) (*AppConfig, 
 // ValidateConfiguration validates a configuration for consistency and required values.
 func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
 	if config == nil {
-		return fmt.Errorf("configuration cannot be nil")
+		return errors.New("configuration cannot be nil")
 	}
 
 	// Validate output format
@@ -200,12 +204,12 @@ func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
 
 	// Validate output directory
 	if config.OutputDir == "" {
-		return fmt.Errorf("output directory cannot be empty")
+		return errors.New("output directory cannot be empty")
 	}
 
 	// Validate mutually exclusive flags
 	if config.Verbose && config.Quiet {
-		return fmt.Errorf("verbose and quiet flags are mutually exclusive")
+		return errors.New("verbose and quiet flags are mutually exclusive")
 	}
 
 	return nil
@@ -373,7 +377,7 @@ func (cl *ConfigurationLoader) setViperDefaults(v *viper.Viper) {
 // validateTheme validates that a theme exists and is supported.
 func (cl *ConfigurationLoader) validateTheme(theme string) error {
 	if theme == "" {
-		return fmt.Errorf("theme cannot be empty")
+		return errors.New("theme cannot be empty")
 	}
 
 	// Check if it's a built-in theme
@@ -399,6 +403,7 @@ func containsString(slice []string, str string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -410,6 +415,7 @@ func (cl *ConfigurationLoader) GetConfigurationSources() []ConfigurationSource {
 			sources = append(sources, source)
 		}
 	}
+
 	return sources
 }
 

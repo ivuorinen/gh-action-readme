@@ -2,9 +2,11 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-github/v57/github"
@@ -12,7 +14,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	errCodes "github.com/ivuorinen/gh-action-readme/internal/errors"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
@@ -109,6 +111,7 @@ func (g *Generator) GenerateFromFile(actionPath string) error {
 	}
 
 	outputDir := g.determineOutputDir(actionPath)
+
 	return g.generateByFormat(action, outputDir, actionPath)
 }
 
@@ -151,6 +154,7 @@ func (g *Generator) determineOutputDir(actionPath string) string {
 	if g.Config.OutputDir == "" || g.Config.OutputDir == "." {
 		return filepath.Dir(actionPath)
 	}
+
 	return g.Config.OutputDir
 }
 
@@ -160,8 +164,10 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string 
 		if filepath.IsAbs(g.Config.OutputFilename) {
 			return g.Config.OutputFilename
 		}
+
 		return filepath.Join(outputDir, g.Config.OutputFilename)
 	}
+
 	return filepath.Join(outputDir, defaultFilename)
 }
 
@@ -212,6 +218,7 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 	}
 
 	g.Output.Success("Generated README.md: %s", outputPath)
+
 	return nil
 }
 
@@ -254,6 +261,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 	}
 
 	g.Output.Success("Generated HTML: %s", outputPath)
+
 	return nil
 }
 
@@ -267,6 +275,7 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 	}
 
 	g.Output.Success("Generated JSON: %s", outputPath)
+
 	return nil
 }
 
@@ -298,6 +307,7 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 	}
 
 	g.Output.Success("Generated AsciiDoc: %s", outputPath)
+
 	return nil
 }
 
@@ -330,31 +340,33 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
 	if err != nil {
 		g.Output.ErrorWithContext(
-			errors.ErrCodeFileNotFound,
-			fmt.Sprintf("failed to discover action files for %s", context),
+			errCodes.ErrCodeFileNotFound,
+			"failed to discover action files for "+context,
 			map[string]string{
 				"directory":     dir,
-				"recursive":     fmt.Sprintf("%t", recursive),
+				"recursive":     strconv.FormatBool(recursive),
 				"context":       context,
 				ContextKeyError: err.Error(),
 			},
 		)
+
 		return nil, err
 	}
 
 	// Check if any files were found
 	if len(actionFiles) == 0 {
-		contextMsg := fmt.Sprintf("no GitHub Action files found for %s", context)
+		contextMsg := "no GitHub Action files found for " + context
 		g.Output.ErrorWithContext(
-			errors.ErrCodeNoActionFiles,
+			errCodes.ErrCodeNoActionFiles,
 			contextMsg,
 			map[string]string{
 				"directory":  dir,
-				"recursive":  fmt.Sprintf("%t", recursive),
+				"recursive":  strconv.FormatBool(recursive),
 				"context":    context,
 				"suggestion": "Please run this command in a directory containing GitHub Action files (action.yml or action.yaml)",
 			},
 		)
+
 		return nil, fmt.Errorf("no action files found in directory: %s", dir)
 	}
 
@@ -364,7 +376,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 // ProcessBatch processes multiple action.yml files.
 func (g *Generator) ProcessBatch(paths []string) error {
 	if len(paths) == 0 {
-		return fmt.Errorf("no action files to process")
+		return errors.New("no action files to process")
 	}
 
 	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
@@ -375,6 +387,7 @@ func (g *Generator) ProcessBatch(paths []string) error {
 	if len(errors) > 0 {
 		return fmt.Errorf("encountered %d errors during batch processing", len(errors))
 	}
+
 	return nil
 }
 
@@ -396,6 +409,7 @@ func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) (
 
 		g.Progress.UpdateProgressBar(bar)
 	}
+
 	return errors, successCount
 }
 
@@ -418,7 +432,7 @@ func (g *Generator) reportResults(successCount int, errors []string) {
 // ValidateFiles validates multiple action.yml files and reports results.
 func (g *Generator) ValidateFiles(paths []string) error {
 	if len(paths) == 0 {
-		return fmt.Errorf("no action files to validate")
+		return errors.New("no action files to validate")
 	}
 
 	bar := g.Progress.CreateProgressBarForFiles("Validating files", paths)
@@ -440,8 +454,10 @@ func (g *Generator) ValidateFiles(paths []string) error {
 
 	if len(errors) > 0 || validationFailures > 0 {
 		totalFailures := len(errors) + validationFailures
+
 		return fmt.Errorf("validation failed for %d files", totalFailures)
 	}
+
 	return nil
 }
 
@@ -459,15 +475,17 @@ func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) 
 		if err != nil {
 			errorMsg := fmt.Sprintf("failed to parse %s: %v", path, err)
 			errors = append(errors, errorMsg)
+
 			continue
 		}
 
 		result := ValidateActionYML(action)
-		result.MissingFields = append([]string{fmt.Sprintf("file: %s", path)}, result.MissingFields...)
+		result.MissingFields = append([]string{"file: " + path}, result.MissingFields...)
 		allResults = append(allResults, result)
 
 		g.Progress.UpdateProgressBar(bar)
 	}
+
 	return allResults, errors
 }
 
@@ -490,6 +508,7 @@ func (g *Generator) countValidationStats(results []ValidationResult) (validFiles
 			totalIssues += len(result.MissingFields) - 1 // Subtract file path entry
 		}
 	}
+
 	return validFiles, totalIssues
 }
 

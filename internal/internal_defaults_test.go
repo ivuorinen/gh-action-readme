@@ -3,6 +3,7 @@ package internal
 import "testing"
 
 func TestFillMissing(t *testing.T) {
+	t.Parallel()
 
 	a := &ActionYML{}
 	defs := DefaultValues{

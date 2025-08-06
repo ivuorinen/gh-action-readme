@@ -9,19 +9,6 @@ import (
 )
 
 func TestInitConfig(t *testing.T) {
-	// Save original environment
-	originalXDGConfig := os.Getenv("XDG_CONFIG_HOME")
-	originalHome := os.Getenv("HOME")
-	defer func() {
-		if originalXDGConfig != "" {
-			_ = os.Setenv("XDG_CONFIG_HOME", originalXDGConfig)
-		} else {
-			_ = os.Unsetenv("XDG_CONFIG_HOME")
-		}
-		if originalHome != "" {
-			_ = os.Setenv("HOME", originalHome)
-		}
-	}()
 
 	tests := []struct {
 		name        string
@@ -49,6 +36,7 @@ func TestInitConfig(t *testing.T) {
 			name:       "custom config file",
 			configFile: "custom-config.yml",
 			setupFunc: func(t *testing.T, tempDir string) {
+				t.Helper()
 				configPath := filepath.Join(tempDir, "custom-config.yml")
 				testutil.WriteTestFile(t, configPath, testutil.MustReadFixture("professional-config.yml"))
 			},
@@ -67,6 +55,7 @@ func TestInitConfig(t *testing.T) {
 			name:       "invalid config file",
 			configFile: "config.yml",
 			setupFunc: func(t *testing.T, tempDir string) {
+				t.Helper()
 				configPath := filepath.Join(tempDir, "config.yml")
 				testutil.WriteTestFile(t, configPath, "invalid: yaml: content: [")
 			},
@@ -85,8 +74,8 @@ func TestInitConfig(t *testing.T) {
 			defer cleanup()
 
 			// Set XDG_CONFIG_HOME to our temp directory
-			_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
-			_ = os.Setenv("HOME", tmpDir)
+			t.Setenv("XDG_CONFIG_HOME", tmpDir)
+			t.Setenv("HOME", tmpDir)
 
 			if tt.setupFunc != nil {
 				tt.setupFunc(t, tmpDir)
@@ -102,6 +91,7 @@ func TestInitConfig(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -132,6 +122,7 @@ func TestLoadConfiguration(t *testing.T) {
 		{
 			name: "multi-level config hierarchy",
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
+				t.Helper()
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
 				_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
@@ -161,6 +152,7 @@ output_dir: output
 				return globalConfigPath, repoRoot, currentDir
 			},
 			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
 				// Should have action-level overrides
 				testutil.AssertEqual(t, "professional", config.Theme)
 				testutil.AssertEqual(t, "output", config.OutputDir)
@@ -173,9 +165,10 @@ output_dir: output
 		{
 			name: "environment variable overrides",
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
+				t.Helper()
 				// Set environment variables
-				_ = os.Setenv("GH_README_GITHUB_TOKEN", "env-token")
-				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
+				t.Setenv("GH_README_GITHUB_TOKEN", "env-token")
+				t.Setenv("GITHUB_TOKEN", "fallback-token")
 
 				// Create config file
 				configPath := filepath.Join(tempDir, "config.yml")
@@ -184,14 +177,10 @@ theme: minimal
 github_token: config-token
 `)
 
-				t.Cleanup(func() {
-					_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-					_ = os.Unsetenv("GITHUB_TOKEN")
-				})
-
 				return configPath, tempDir, tempDir
 			},
 			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
 				// Environment variable should override config file
 				testutil.AssertEqual(t, "env-token", config.GitHubToken)
 				testutil.AssertEqual(t, "minimal", config.Theme)
@@ -200,9 +189,10 @@ github_token: config-token
 		{
 			name: "XDG compliance",
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
+				t.Helper()
 				// Set XDG environment variables
 				xdgConfigHome := filepath.Join(tempDir, "xdg-config")
-				_ = os.Setenv("XDG_CONFIG_HOME", xdgConfigHome)
+				t.Setenv("XDG_CONFIG_HOME", xdgConfigHome)
 
 				// Create XDG-compliant config
 				configDir := filepath.Join(xdgConfigHome, "gh-action-readme")
@@ -213,13 +203,10 @@ theme: github
 verbose: true
 `)
 
-				t.Cleanup(func() {
-					_ = os.Unsetenv("XDG_CONFIG_HOME")
-				})
-
 				return configPath, tempDir, tempDir
 			},
 			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
 				testutil.AssertEqual(t, "github", config.Theme)
 				testutil.AssertEqual(t, true, config.Verbose)
 			},
@@ -227,6 +214,7 @@ verbose: true
 		{
 			name: "hidden config file discovery",
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
+				t.Helper()
 				repoRoot := filepath.Join(tempDir, "repo")
 				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 
@@ -249,6 +237,7 @@ verbose: true
 				return "", repoRoot, repoRoot
 			},
 			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
 				// Should use the first found config (.ghreadme.yaml has priority)
 				testutil.AssertEqual(t, "minimal", config.Theme)
 				testutil.AssertEqual(t, "json", config.OutputFormat)
@@ -262,15 +251,7 @@ verbose: true
 			defer cleanup()
 
 			// Set HOME to temp directory for fallback
-			originalHome := os.Getenv("HOME")
-			_ = os.Setenv("HOME", tmpDir)
-			defer func() {
-				if originalHome != "" {
-					_ = os.Setenv("HOME", originalHome)
-				} else {
-					_ = os.Unsetenv("HOME")
-				}
-			}()
+			t.Setenv("HOME", tmpDir)
 
 			configFile, repoRoot, currentDir := tt.setupFunc(t, tmpDir)
 
@@ -278,6 +259,7 @@ verbose: true
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -291,19 +273,6 @@ verbose: true
 }
 
 func TestGetConfigPath(t *testing.T) {
-	// Save original environment
-	originalXDGConfig := os.Getenv("XDG_CONFIG_HOME")
-	originalHome := os.Getenv("HOME")
-	defer func() {
-		if originalXDGConfig != "" {
-			_ = os.Setenv("XDG_CONFIG_HOME", originalXDGConfig)
-		} else {
-			_ = os.Unsetenv("XDG_CONFIG_HOME")
-		}
-		if originalHome != "" {
-			_ = os.Setenv("HOME", originalHome)
-		}
-	}()
 
 	tests := []struct {
 		name      string
@@ -312,17 +281,19 @@ func TestGetConfigPath(t *testing.T) {
 	}{
 		{
 			name: "XDG_CONFIG_HOME set",
-			setupFunc: func(_ *testing.T, tempDir string) {
-				_ = os.Setenv("XDG_CONFIG_HOME", tempDir)
-				_ = os.Unsetenv("HOME")
+			setupFunc: func(t *testing.T, tempDir string) {
+				t.Helper()
+				t.Setenv("XDG_CONFIG_HOME", tempDir)
+				t.Setenv("HOME", "")
 			},
 			contains: "gh-action-readme",
 		},
 		{
 			name: "HOME fallback",
-			setupFunc: func(_ *testing.T, tempDir string) {
-				_ = os.Unsetenv("XDG_CONFIG_HOME")
-				_ = os.Setenv("HOME", tempDir)
+			setupFunc: func(t *testing.T, tempDir string) {
+				t.Helper()
+				t.Setenv("XDG_CONFIG_HOME", "")
+				t.Setenv("HOME", tempDir)
 			},
 			contains: ".config",
 		},
@@ -352,15 +323,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 	defer cleanup()
 
 	// Set XDG_CONFIG_HOME to our temp directory
-	originalXDGConfig := os.Getenv("XDG_CONFIG_HOME")
-	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
-	defer func() {
-		if originalXDGConfig != "" {
-			_ = os.Setenv("XDG_CONFIG_HOME", originalXDGConfig)
-		} else {
-			_ = os.Unsetenv("XDG_CONFIG_HOME")
-		}
-	}()
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	err := WriteDefaultConfig()
 	testutil.AssertNoError(t, err)
@@ -387,6 +350,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 }
 
 func TestResolveThemeTemplate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		theme        string
@@ -443,12 +407,14 @@ func TestResolveThemeTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			path := resolveThemeTemplate(tt.theme)
 
 			if tt.expectError {
 				if path != "" {
 					t.Errorf("expected empty path on error, got: %s", path)
 				}
+
 				return
 			}
 
@@ -467,48 +433,11 @@ func TestResolveThemeTemplate(t *testing.T) {
 }
 
 func TestConfigTokenHierarchy(t *testing.T) {
-	tests := []struct {
-		name          string
-		setupFunc     func(t *testing.T) func()
-		expectedToken string
-	}{
-		{
-			name: "GH_README_GITHUB_TOKEN has highest priority",
-			setupFunc: func(_ *testing.T) func() {
-				_ = os.Setenv("GH_README_GITHUB_TOKEN", "priority-token")
-				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
-				return func() {
-					_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-					_ = os.Unsetenv("GITHUB_TOKEN")
-				}
-			},
-			expectedToken: "priority-token",
-		},
-		{
-			name: "GITHUB_TOKEN as fallback",
-			setupFunc: func(_ *testing.T) func() {
-				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-				_ = os.Setenv("GITHUB_TOKEN", "fallback-token")
-				return func() {
-					_ = os.Unsetenv("GITHUB_TOKEN")
-				}
-			},
-			expectedToken: "fallback-token",
-		},
-		{
-			name: "no environment variables",
-			setupFunc: func(_ *testing.T) func() {
-				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-				_ = os.Unsetenv("GITHUB_TOKEN")
-				return func() {}
-			},
-			expectedToken: "",
-		},
-	}
+	tests := testutil.GetGitHubTokenHierarchyTests()
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cleanup := tt.setupFunc(t)
+		t.Run(tt.Name, func(t *testing.T) {
+			cleanup := tt.SetupFunc(t)
 			defer cleanup()
 
 			tmpDir, tmpCleanup := testutil.TempDir(t)
@@ -518,7 +447,7 @@ func TestConfigTokenHierarchy(t *testing.T) {
 			config, err := LoadConfiguration("", tmpDir, tmpDir)
 			testutil.AssertNoError(t, err)
 
-			testutil.AssertEqual(t, tt.expectedToken, config.GitHubToken)
+			testutil.AssertEqual(t, tt.ExpectedToken, config.GitHubToken)
 		})
 	}
 }
@@ -547,22 +476,8 @@ verbose: true
 `)
 
 	// Set HOME and XDG_CONFIG_HOME to temp directory
-	originalHome := os.Getenv("HOME")
-	originalXDGConfig := os.Getenv("XDG_CONFIG_HOME")
-	_ = os.Setenv("HOME", tmpDir)
-	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
-	defer func() {
-		if originalHome != "" {
-			_ = os.Setenv("HOME", originalHome)
-		} else {
-			_ = os.Unsetenv("HOME")
-		}
-		if originalXDGConfig != "" {
-			_ = os.Setenv("XDG_CONFIG_HOME", originalXDGConfig)
-		} else {
-			_ = os.Unsetenv("XDG_CONFIG_HOME")
-		}
-	}()
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
 
 	// Use the specific config file path instead of relying on XDG discovery
 	configPath := filepath.Join(tmpDir, ".config", "gh-action-readme", "config.yaml")
@@ -579,21 +494,6 @@ verbose: true
 
 // TestGetGitHubToken tests GitHub token resolution with different priority levels.
 func TestGetGitHubToken(t *testing.T) {
-	// Save and restore original environment
-	originalToolToken := os.Getenv(EnvGitHubToken)
-	originalStandardToken := os.Getenv(EnvGitHubTokenStandard)
-	defer func() {
-		if originalToolToken != "" {
-			_ = os.Setenv(EnvGitHubToken, originalToolToken)
-		} else {
-			_ = os.Unsetenv(EnvGitHubToken)
-		}
-		if originalStandardToken != "" {
-			_ = os.Setenv(EnvGitHubTokenStandard, originalStandardToken)
-		} else {
-			_ = os.Unsetenv(EnvGitHubTokenStandard)
-		}
-	}()
 
 	tests := []struct {
 		name          string
@@ -643,14 +543,14 @@ func TestGetGitHubToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set up environment
 			if tt.toolEnvToken != "" {
-				_ = os.Setenv(EnvGitHubToken, tt.toolEnvToken)
+				t.Setenv(EnvGitHubToken, tt.toolEnvToken)
 			} else {
-				_ = os.Unsetenv(EnvGitHubToken)
+				t.Setenv(EnvGitHubToken, "")
 			}
 			if tt.stdEnvToken != "" {
-				_ = os.Setenv(EnvGitHubTokenStandard, tt.stdEnvToken)
+				t.Setenv(EnvGitHubTokenStandard, tt.stdEnvToken)
 			} else {
-				_ = os.Unsetenv(EnvGitHubTokenStandard)
+				t.Setenv(EnvGitHubTokenStandard, "")
 			}
 
 			config := &AppConfig{GitHubToken: tt.configToken}
@@ -663,6 +563,7 @@ func TestGetGitHubToken(t *testing.T) {
 
 // TestMergeMapFields tests the merging of map fields in configuration.
 func TestMergeMapFields(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		dst      *AppConfig
@@ -743,6 +644,7 @@ func TestMergeMapFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Deep copy dst to avoid modifying test data
 			dst := &AppConfig{}
 			if tt.dst.Permissions != nil {
@@ -768,6 +670,7 @@ func TestMergeMapFields(t *testing.T) {
 
 // TestMergeSliceFields tests the merging of slice fields in configuration.
 func TestMergeSliceFields(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		dst      *AppConfig
@@ -808,16 +711,19 @@ func TestMergeSliceFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			mergeSliceFields(tt.dst, tt.src)
 
 			// Compare slices manually since they can't be compared directly
 			if len(tt.expected) != len(tt.dst.RunsOn) {
 				t.Errorf("expected slice length %d, got %d", len(tt.expected), len(tt.dst.RunsOn))
+
 				return
 			}
 			for i, expected := range tt.expected {
 				if i >= len(tt.dst.RunsOn) || tt.dst.RunsOn[i] != expected {
 					t.Errorf("expected %v, got %v", tt.expected, tt.dst.RunsOn)
+
 					return
 				}
 			}

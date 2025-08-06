@@ -184,6 +184,7 @@ func runAllTestCases(t *testing.T, suite TestSuite, globalContext *TestContext) 
 
 		if testCase.SkipReason != "" {
 			runSkippedTest(t, testCase)
+
 			continue
 		}
 
@@ -276,6 +277,7 @@ func createTestContext(t *testing.T, testCase TestCase, globalContext *TestConte
 		ctx.TempDir = tempDir
 		ctx.Cleanup = append(ctx.Cleanup, func() error {
 			cleanup()
+
 			return nil
 		})
 	}
@@ -348,6 +350,7 @@ func executeTest(t *testing.T, testCase TestCase, ctx *TestContext) *TestResult 
 		fixture, err := ctx.FixtureManager.LoadActionFixture(testCase.Fixture)
 		if err != nil {
 			result.Error = fmt.Errorf("failed to load fixture %s: %w", testCase.Fixture, err)
+
 			return result
 		}
 
@@ -358,6 +361,7 @@ func executeTest(t *testing.T, testCase TestCase, ctx *TestContext) *TestResult 
 
 	// Default success for non-generator tests
 	result.Success = true
+
 	return result
 }
 
@@ -401,6 +405,7 @@ func validateError(t *testing.T, expected *ExpectedResult, result *TestResult) {
 
 	if result.Error == nil {
 		t.Errorf("expected error %q, but got no error", expected.ExpectedError)
+
 		return
 	}
 
@@ -432,6 +437,7 @@ func validateFiles(t *testing.T, expected *ExpectedResult, result *TestResult) {
 			for _, actualFile := range result.Files {
 				if strings.HasSuffix(actualFile, pattern) {
 					found = true
+
 					break
 				}
 			}
@@ -541,6 +547,7 @@ func containsString(slice any, item string) bool {
 	case string:
 		return len(s) > 0 && s == item
 	}
+
 	return false
 }
 
@@ -701,6 +708,7 @@ func CreateTestEnvironment(t *testing.T, config *EnvironmentConfig) *TestEnviron
 	env.TempDir = tempDir
 	env.Cleanup = append(env.Cleanup, func() error {
 		cleanup()
+
 		return nil
 	})
 
@@ -822,7 +830,7 @@ func TestAllThemes(t *testing.T, testFunc func(*testing.T, string)) {
 
 	for _, theme := range themes {
 		theme := theme // capture loop variable
-		t.Run(fmt.Sprintf("theme_%s", theme), func(t *testing.T) {
+		t.Run("theme_"+theme, func(t *testing.T) {
 			t.Parallel()
 			testFunc(t, theme)
 		})
@@ -837,7 +845,7 @@ func TestAllFormats(t *testing.T, testFunc func(*testing.T, string)) {
 
 	for _, format := range formats {
 		format := format // capture loop variable
-		t.Run(fmt.Sprintf("format_%s", format), func(t *testing.T) {
+		t.Run("format_"+format, func(t *testing.T) {
 			t.Parallel()
 			testFunc(t, format)
 		})
@@ -852,7 +860,7 @@ func TestValidationScenarios(t *testing.T, validatorFunc func(*testing.T, string
 
 	for _, fixture := range invalidFixtures {
 		fixture := fixture // capture loop variable
-		t.Run(fmt.Sprintf("invalid_%s", strings.ReplaceAll(fixture, "/", "_")), func(t *testing.T) {
+		t.Run("invalid_"+strings.ReplaceAll(fixture, "/", "_"), func(t *testing.T) {
 			t.Parallel()
 
 			err := validatorFunc(t, fixture)
@@ -918,8 +926,8 @@ func CreateActionTestCases() []ActionTestCase {
 
 		cases = append(cases, ActionTestCase{
 			TestCase: TestCase{
-				Name:        fmt.Sprintf("valid_%s", strings.ReplaceAll(fixture, "/", "_")),
-				Description: fmt.Sprintf("Test valid action fixture: %s", fixture),
+				Name:        "valid_" + strings.ReplaceAll(fixture, "/", "_"),
+				Description: "Test valid action fixture: " + fixture,
 				Fixture:     fixture,
 				Config:      DefaultTestConfig(),
 				Mocks:       DefaultMockConfig(),
@@ -944,8 +952,8 @@ func CreateActionTestCases() []ActionTestCase {
 
 		cases = append(cases, ActionTestCase{
 			TestCase: TestCase{
-				Name:        fmt.Sprintf("invalid_%s", strings.ReplaceAll(fixture, "/", "_")),
-				Description: fmt.Sprintf("Test invalid action fixture: %s", fixture),
+				Name:        "invalid_" + strings.ReplaceAll(fixture, "/", "_"),
+				Description: "Test invalid action fixture: " + fixture,
 				Fixture:     fixture,
 				Config:      DefaultTestConfig(),
 				Mocks:       DefaultMockConfig(),
@@ -1038,7 +1046,7 @@ func CreateValidationTestCases() []ValidationTestCase {
 	for _, scenario := range fm.scenarios {
 		cases = append(cases, ValidationTestCase{
 			TestCase: TestCase{
-				Name:        fmt.Sprintf("validate_%s", scenario.ID),
+				Name:        "validate_" + scenario.ID,
 				Description: scenario.Description,
 				Fixture:     scenario.Fixture,
 				Config:      DefaultTestConfig(),

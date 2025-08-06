@@ -8,6 +8,7 @@ import (
 )
 
 func TestRenderReadme(t *testing.T) {
+	t.Parallel()
 	// Set up test templates
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()

@@ -7,10 +7,35 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
+
+var (
+	// sharedBinaryPath holds the path to the shared test binary.
+	sharedBinaryPath string
+	// sharedBinaryOnce ensures the binary is built only once.
+	sharedBinaryOnce sync.Once
+	// errSharedBinary holds any error from building the shared binary.
+	errSharedBinary error
+	// sharedBinaryTmpDir holds the temporary directory for cleanup.
+	sharedBinaryTmpDir string
+)
+
+// TestMain handles setup and cleanup for all tests.
+func TestMain(m *testing.M) {
+	// Run all tests
+	code := m.Run()
+
+	// Cleanup shared binary directory
+	if sharedBinaryTmpDir != "" {
+		_ = os.RemoveAll(sharedBinaryTmpDir)
+	}
+
+	os.Exit(code)
+}
 
 // copyDir recursively copies a directory.
 func copyDir(src, dst string) error {
@@ -48,40 +73,68 @@ func copyDir(src, dst string) error {
 		defer func() { _ = dstFile.Close() }()
 
 		_, err = io.Copy(dstFile, srcFile)
+
 		return err
 	})
 }
 
-// buildTestBinary builds the test binary for integration testing.
+// getSharedTestBinary returns the path to the shared test binary, building it once if needed.
+func getSharedTestBinary(t *testing.T) string {
+	t.Helper()
+
+	sharedBinaryOnce.Do(func() {
+		// Create a shared temporary directory that will be cleaned up in TestMain
+		// Note: Cannot use t.TempDir() here because we need the directory to persist
+		// across all tests and be cleaned up only at the end in TestMain
+		tmpDir, err := os.MkdirTemp("", "gh-action-readme-shared-test-*") //nolint:usetesting
+		if err != nil {
+			errSharedBinary = err
+
+			return
+		}
+
+		sharedBinaryTmpDir = tmpDir
+
+		binaryPath := filepath.Join(tmpDir, "gh-action-readme")
+		cmd := exec.Command("go", "build", "-o", binaryPath, ".") // #nosec G204 -- controlled test input
+
+		var stderr strings.Builder
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			errSharedBinary = err
+
+			return
+		}
+
+		// Copy templates directory to binary directory (for compatibility with embedded templates fallback)
+		templatesDir := filepath.Join(filepath.Dir(binaryPath), "templates")
+		if err := copyDir("templates", templatesDir); err != nil {
+			errSharedBinary = err
+
+			return
+		}
+
+		sharedBinaryPath = binaryPath
+	})
+
+	if errSharedBinary != nil {
+		t.Fatalf("failed to build shared test binary: %v", errSharedBinary)
+	}
+
+	return sharedBinaryPath
+}
+
+// buildTestBinary is maintained for compatibility but now uses the shared binary system.
 func buildTestBinary(t *testing.T) string {
 	t.Helper()
 
-	tmpDir, err := os.MkdirTemp("", "gh-action-readme-binary-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir for binary: %v", err)
-	}
-
-	binaryPath := filepath.Join(tmpDir, "gh-action-readme")
-	cmd := exec.Command("go", "build", "-o", binaryPath, ".") // #nosec G204 -- controlled test input
-
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to build test binary: %v\nstderr: %s", err, stderr.String())
-	}
-
-	// Copy templates directory to binary directory
-	templatesDir := filepath.Join(filepath.Dir(binaryPath), "templates")
-	if err := copyDir("templates", templatesDir); err != nil {
-		t.Fatalf("failed to copy templates: %v", err)
-	}
-
-	return binaryPath
+	return getSharedTestBinary(t)
 }
 
 // setupCompleteWorkflow creates a realistic project structure for testing.
 func setupCompleteWorkflow(t *testing.T, tmpDir string) {
+	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/composite/basic.yml"))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "README.md"), "# Old README")
@@ -91,6 +144,7 @@ func setupCompleteWorkflow(t *testing.T, tmpDir string) {
 
 // setupMultiActionWorkflow creates a project with multiple actions.
 func setupMultiActionWorkflow(t *testing.T, tmpDir string) {
+	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/javascript/simple.yml"))
 
@@ -107,18 +161,21 @@ func setupMultiActionWorkflow(t *testing.T, tmpDir string) {
 
 // setupConfigWorkflow creates a simple action for config testing.
 func setupConfigWorkflow(t *testing.T, tmpDir string) {
+	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/javascript/simple.yml"))
 }
 
 // setupErrorWorkflow creates an invalid action file for error testing.
 func setupErrorWorkflow(t *testing.T, tmpDir string) {
+	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/invalid/missing-description.yml"))
 }
 
 // setupConfigurationHierarchy creates a complex configuration hierarchy for testing.
 func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Create action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/composite/basic.yml"))
@@ -138,11 +195,12 @@ func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture("repo-config.yml"))
 
 	// Set XDG config home to our test directory
-	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
 }
 
 // setupMultiActionWithTemplates creates multiple actions with custom templates.
 func setupMultiActionWithTemplates(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Root action
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/javascript/simple.yml"))
@@ -174,6 +232,7 @@ func setupMultiActionWithTemplates(t *testing.T, tmpDir string) {
 
 // setupCompleteServiceChain creates a comprehensive test environment.
 func setupCompleteServiceChain(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Setup configuration hierarchy
 	setupConfigurationHierarchy(t, tmpDir)
 
@@ -193,6 +252,7 @@ func setupCompleteServiceChain(t *testing.T, tmpDir string) {
 
 // setupDependencyAnalysisWorkflow creates a project with complex dependencies.
 func setupDependencyAnalysisWorkflow(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Create a composite action with multiple dependencies
 	compositeAction := testutil.CreateCompositeAction(
 		"Complex Workflow",
@@ -226,13 +286,14 @@ func setupDependencyAnalysisWorkflow(t *testing.T, tmpDir string) {
 
 // setupConfigurationHierarchyWorkflow creates a comprehensive configuration hierarchy.
 func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Create action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/composite/basic.yml"))
 
 	// Set up XDG config home
 	configHome := filepath.Join(tmpDir, ".config")
-	_ = os.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("XDG_CONFIG_HOME", configHome)
 
 	// Global configuration (lowest priority)
 	globalConfigDir := filepath.Join(configHome, "gh-action-readme")
@@ -259,14 +320,15 @@ output_dir: docs`
 	testutil.WriteTestFile(t, filepath.Join(githubDir, "gh-action-readme.yml"), actionConfig)
 
 	// Environment variables (highest priority before CLI flags)
-	_ = os.Setenv("GH_ACTION_README_THEME", "minimal")
-	_ = os.Setenv("GH_ACTION_README_QUIET", "false")
+	t.Setenv("GH_ACTION_README_THEME", "minimal")
+	t.Setenv("GH_ACTION_README_QUIET", "false")
 }
 
 // Error scenario setup functions.
 
 // setupTemplateErrorScenario creates a scenario with template-related errors.
 func setupTemplateErrorScenario(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Create valid action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/javascript/simple.yml"))
@@ -284,6 +346,7 @@ func setupTemplateErrorScenario(t *testing.T, tmpDir string) {
 
 // setupConfigurationErrorScenario creates a scenario with configuration errors.
 func setupConfigurationErrorScenario(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Create valid action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/javascript/simple.yml"))
@@ -302,11 +365,12 @@ invalid_theme: nonexistent`
 	testutil.WriteTestFile(t, filepath.Join(configDir, "config.yml"), incompleteConfig)
 
 	// Set XDG config home
-	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
 }
 
 // setupFileDiscoveryErrorScenario creates a scenario with file discovery issues.
 func setupFileDiscoveryErrorScenario(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Create directory structure but no action files
 	_ = os.MkdirAll(filepath.Join(tmpDir, "actions"), 0750) // #nosec G301 -- test directory permissions
 	_ = os.MkdirAll(filepath.Join(tmpDir, ".github"), 0750) // #nosec G301 -- test directory permissions
@@ -321,6 +385,7 @@ func setupFileDiscoveryErrorScenario(t *testing.T, tmpDir string) {
 
 // setupServiceIntegrationErrorScenario creates a mixed scenario with various issues.
 func setupServiceIntegrationErrorScenario(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Valid action at root
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/javascript/simple.yml"))
@@ -345,6 +410,8 @@ template: /path/to/nonexistent/template.tmpl`
 
 // checkStepExitCode validates command exit code expectations.
 func checkStepExitCode(t *testing.T, step workflowStep, exitCode int, stdout, stderr strings.Builder) {
+	t.Helper()
+
 	if step.expectSuccess && exitCode != 0 {
 		t.Errorf("expected success but got exit code %d", exitCode)
 		t.Logf("stdout: %s", stdout.String())
@@ -356,6 +423,8 @@ func checkStepExitCode(t *testing.T, step workflowStep, exitCode int, stdout, st
 
 // checkStepOutput validates command output expectations.
 func checkStepOutput(t *testing.T, step workflowStep, output string) {
+	t.Helper()
+
 	if step.expectOutput != "" && !strings.Contains(output, step.expectOutput) {
 		t.Errorf("expected output to contain %q, got: %s", step.expectOutput, output)
 	}
@@ -367,6 +436,8 @@ func checkStepOutput(t *testing.T, step workflowStep, output string) {
 
 // executeWorkflowStep runs a single workflow step.
 func executeWorkflowStep(t *testing.T, binaryPath, tmpDir string, step workflowStep) {
+	t.Helper()
+
 	t.Run(step.name, func(t *testing.T) {
 		cmd := exec.Command(binaryPath, step.cmd...) // #nosec G204 -- controlled test input
 		cmd.Dir = tmpDir
@@ -390,8 +461,8 @@ func executeWorkflowStep(t *testing.T, binaryPath, tmpDir string, step workflowS
 
 // TestServiceIntegration tests integration between refactored services.
 func TestServiceIntegration(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name          string
@@ -494,8 +565,8 @@ func TestServiceIntegration(t *testing.T) {
 
 // TestEndToEndWorkflows tests complete workflows from start to finish.
 func TestEndToEndWorkflows(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -711,6 +782,7 @@ type errorScenario struct {
 
 // testProjectSetup tests basic project validation.
 func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
+	t.Helper()
 	// Create a new GitHub Action project
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("my-new-action.yml"))
@@ -724,6 +796,7 @@ func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 
 // testDocumentationGeneration tests generation with different themes.
 func testDocumentationGeneration(t *testing.T, binaryPath, tmpDir string) {
+	t.Helper()
 	themes := []string{"default", "github", "minimal"}
 
 	for _, theme := range themes {
@@ -747,6 +820,7 @@ func testDocumentationGeneration(t *testing.T, binaryPath, tmpDir string) {
 
 // testDependencyManagement tests dependency listing functionality.
 func testDependencyManagement(t *testing.T, binaryPath, tmpDir string) {
+	t.Helper()
 	// Update action to be composite with dependencies
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/composite/basic.yml"))
@@ -767,6 +841,7 @@ func testDependencyManagement(t *testing.T, binaryPath, tmpDir string) {
 
 // testOutputFormats tests generation with different output formats.
 func testOutputFormats(t *testing.T, binaryPath, tmpDir string) {
+	t.Helper()
 	formats := []string{"md", "html", "json"}
 
 	for _, format := range formats {
@@ -802,6 +877,7 @@ func testOutputFormats(t *testing.T, binaryPath, tmpDir string) {
 
 // testCacheManagement tests cache-related commands.
 func testCacheManagement(t *testing.T, binaryPath, tmpDir string) {
+	t.Helper()
 	// Check cache stats
 	cmd := exec.Command(binaryPath, "cache", "stats")
 	cmd.Dir = tmpDir
@@ -822,8 +898,8 @@ func testCacheManagement(t *testing.T, binaryPath, tmpDir string) {
 }
 
 func TestCompleteProjectLifecycle(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -856,8 +932,8 @@ func TestCompleteProjectLifecycle(t *testing.T) {
 
 // TestMultiFormatIntegration tests all output formats with real data.
 func TestMultiFormatIntegration(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -885,6 +961,7 @@ func TestMultiFormatIntegration(t *testing.T) {
 
 // testFormatGeneration tests documentation generation for a specific format.
 func testFormatGeneration(t *testing.T, binaryPath, tmpDir, format, extension, theme string) {
+	t.Helper()
 	// Generate documentation in this format
 	stdout, stderr := runGenerationCommand(t, binaryPath, tmpDir, format, theme)
 
@@ -894,6 +971,7 @@ func testFormatGeneration(t *testing.T, binaryPath, tmpDir, format, extension, t
 	// Handle missing files
 	if len(files) == 0 {
 		handleMissingFiles(t, format, extension, stdout, stderr)
+
 		return
 	}
 
@@ -903,6 +981,7 @@ func testFormatGeneration(t *testing.T, binaryPath, tmpDir, format, extension, t
 
 // runGenerationCommand executes the generation command and returns output.
 func runGenerationCommand(t *testing.T, binaryPath, tmpDir, format, theme string) (string, string) {
+	t.Helper()
 	cmd := exec.Command(
 		binaryPath,
 		"gen",
@@ -946,6 +1025,7 @@ func findGeneratedFiles(tmpDir, extension string) []string {
 
 // handleMissingFiles logs information about missing files and skips if expected.
 func handleMissingFiles(t *testing.T, format, extension, stdout, stderr string) {
+	t.Helper()
 	patterns := []string{
 		extension,
 		"**/" + extension,
@@ -964,12 +1044,14 @@ func handleMissingFiles(t *testing.T, format, extension, stdout, stderr string) 
 
 // validateGeneratedFiles validates the content of generated files.
 func validateGeneratedFiles(t *testing.T, files []string, format string) {
+	t.Helper()
 	for _, file := range files {
 		content, err := os.ReadFile(file) // #nosec G304 -- test file path
 		testutil.AssertNoError(t, err)
 
 		if len(content) == 0 {
 			t.Errorf("generated file %s is empty", file)
+
 			continue
 		}
 
@@ -979,6 +1061,7 @@ func validateGeneratedFiles(t *testing.T, files []string, format string) {
 
 // validateFormatSpecificContent performs format-specific content validation.
 func validateFormatSpecificContent(t *testing.T, file string, content []byte, format string) {
+	t.Helper()
 	switch format {
 	case "json":
 		var jsonData any
@@ -995,8 +1078,8 @@ func validateFormatSpecificContent(t *testing.T, file string, content []byte, fo
 
 // TestErrorScenarioIntegration tests error handling across service components.
 func TestErrorScenarioIntegration(t *testing.T) {
+	// Note: Cannot use t.Parallel() because setup functions use t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -1098,8 +1181,8 @@ func TestErrorScenarioIntegration(t *testing.T) {
 }
 
 func TestStressTestWorkflow(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -1136,8 +1219,8 @@ func TestStressTestWorkflow(t *testing.T) {
 
 // TestProgressBarIntegration tests progress bar functionality in various scenarios.
 func TestProgressBarIntegration(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -1201,6 +1284,7 @@ func TestProgressBarIntegration(t *testing.T) {
 			for _, indicator := range progressIndicators {
 				if strings.Contains(output, indicator) {
 					foundIndicator = true
+
 					break
 				}
 			}
@@ -1234,8 +1318,8 @@ func TestProgressBarIntegration(t *testing.T) {
 }
 
 func TestErrorRecoveryWorkflow(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -1284,16 +1368,15 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 }
 
 func TestConfigurationWorkflow(t *testing.T) {
+	// Note: Cannot use t.Parallel() because this test uses t.Setenv
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
 	// Set up XDG config environment
 	configHome := filepath.Join(tmpDir, "config")
-	_ = os.Setenv("XDG_CONFIG_HOME", configHome)
-	defer func() { _ = os.Unsetenv("XDG_CONFIG_HOME") }()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
 
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 		testutil.MustReadFixture("actions/javascript/simple.yml"))
@@ -1334,6 +1417,7 @@ func TestConfigurationWorkflow(t *testing.T) {
 
 // verifyConfigurationLoading checks that configuration was loaded from multiple sources.
 func verifyConfigurationLoading(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Since files may be cleaned up between runs, we'll check if the configuration loading succeeded
 	// by verifying that the setup created the expected configuration files
 	configFiles := []string{
@@ -1351,6 +1435,7 @@ func verifyConfigurationLoading(t *testing.T, tmpDir string) {
 
 	if configFound == 0 {
 		t.Error("no configuration files found, configuration hierarchy setup failed")
+
 		return
 	}
 
@@ -1361,6 +1446,7 @@ func verifyConfigurationLoading(t *testing.T, tmpDir string) {
 
 // verifyProgressIndicators checks that progress indicators were displayed properly.
 func verifyProgressIndicators(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Progress indicators are verified through successful command execution
 	// The actual progress output is captured during the workflow step execution
 	// Here we verify the infrastructure was set up correctly
@@ -1368,6 +1454,7 @@ func verifyProgressIndicators(t *testing.T, tmpDir string) {
 	actionFile := filepath.Join(tmpDir, "action.yml")
 	if _, err := os.Stat(actionFile); err != nil {
 		t.Error("action file missing, progress tracking test setup failed")
+
 		return
 	}
 
@@ -1375,6 +1462,7 @@ func verifyProgressIndicators(t *testing.T, tmpDir string) {
 	content, err := os.ReadFile(actionFile) // #nosec G304 -- test file path
 	if err != nil || len(content) == 0 {
 		t.Error("action file is empty, progress tracking test setup failed")
+
 		return
 	}
 
@@ -1383,6 +1471,7 @@ func verifyProgressIndicators(t *testing.T, tmpDir string) {
 
 // verifyFileDiscovery checks that all action files were discovered correctly.
 func verifyFileDiscovery(t *testing.T, tmpDir string) {
+	t.Helper()
 	expectedActions := []string{
 		filepath.Join(tmpDir, "action.yml"),
 		filepath.Join(tmpDir, "actions", "composite", "action.yml"),
@@ -1406,6 +1495,7 @@ func verifyFileDiscovery(t *testing.T, tmpDir string) {
 
 	if discoveredActions == 0 {
 		t.Error("no action files found, file discovery test setup failed")
+
 		return
 	}
 
@@ -1414,6 +1504,7 @@ func verifyFileDiscovery(t *testing.T, tmpDir string) {
 
 // verifyTemplateRendering checks that templates were rendered correctly with real data.
 func verifyTemplateRendering(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Verify template infrastructure was set up correctly
 	templatesDir := filepath.Join(tmpDir, "templates")
 	if _, err := os.Stat(templatesDir); err != nil {
@@ -1432,6 +1523,7 @@ func verifyTemplateRendering(t *testing.T, tmpDir string) {
 				filepath.Join(tmpDir, "**/action.yml"),
 				filepath.Join(tmpDir, "action.yml"),
 			)
+
 			return
 		}
 	}
@@ -1447,6 +1539,7 @@ func verifyTemplateRendering(t *testing.T, tmpDir string) {
 
 	if validActions == 0 {
 		t.Error("no valid action files found for template rendering")
+
 		return
 	}
 
@@ -1455,6 +1548,7 @@ func verifyTemplateRendering(t *testing.T, tmpDir string) {
 
 // verifyCompleteServiceChain checks that all services worked together correctly.
 func verifyCompleteServiceChain(t *testing.T, tmpDir string) {
+	t.Helper()
 	// Verify configuration loading worked
 	verifyConfigurationLoading(t, tmpDir)
 
@@ -1487,6 +1581,7 @@ func verifyCompleteServiceChain(t *testing.T, tmpDir string) {
 			foundComponents,
 			len(requiredComponents),
 		)
+
 		return
 	}
 

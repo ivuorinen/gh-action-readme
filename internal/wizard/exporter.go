@@ -80,6 +80,7 @@ func (e *ConfigExporter) exportYAML(config *internal.AppConfig, outputPath strin
 	}
 
 	e.output.Success("Configuration exported to: %s", outputPath)
+
 	return nil
 }
 
@@ -104,6 +105,7 @@ func (e *ConfigExporter) exportJSON(config *internal.AppConfig, outputPath strin
 	}
 
 	e.output.Success("Configuration exported to: %s", outputPath)
+
 	return nil
 }
 
@@ -129,6 +131,7 @@ func (e *ConfigExporter) exportTOML(config *internal.AppConfig, outputPath strin
 	e.writeTOMLConfig(file, exportConfig)
 
 	e.output.Success("Configuration exported to: %s", outputPath)
+
 	return nil
 }
 

@@ -8,6 +8,7 @@ import (
 // CleanVersionString removes common prefixes and normalizes version strings.
 func CleanVersionString(version string) string {
 	cleaned := strings.TrimSpace(version)
+
 	return strings.TrimPrefix(cleaned, "v")
 }
 
@@ -40,6 +41,7 @@ func SanitizeActionName(name string) string {
 func TrimAndNormalize(input string) string {
 	// Remove leading/trailing whitespace and normalize internal whitespace
 	re := regexp.MustCompile(`\s+`)
+
 	return re.ReplaceAllString(strings.TrimSpace(input), " ")
 }
 

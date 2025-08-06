@@ -9,6 +9,8 @@ import (
 )
 
 func TestFindRepositoryRoot(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) string
@@ -18,6 +20,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "git repository with .git directory",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -40,6 +43,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "git repository with .git file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git file (for git worktrees)
 				gitFile := filepath.Join(tmpDir, ".git")
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
@@ -52,12 +56,14 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "no git repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create subdirectory without .git
 				subDir := filepath.Join(tmpDir, "subdir")
 				err := os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create subdirectory: %v", err)
 				}
+
 				return subDir
 			},
 			expectError: true,
@@ -65,6 +71,8 @@ func TestFindRepositoryRoot(t *testing.T) {
 		{
 			name: "nonexistent directory",
 			setupFunc: func(_ *testing.T, tmpDir string) string {
+				t.Helper()
+
 				return filepath.Join(tmpDir, "nonexistent")
 			},
 			expectError: true,
@@ -73,6 +81,8 @@ func TestFindRepositoryRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -82,6 +92,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -107,6 +118,8 @@ func TestFindRepositoryRoot(t *testing.T) {
 }
 
 func TestDetectGitRepository(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) string
@@ -115,6 +128,7 @@ func TestDetectGitRepository(t *testing.T) {
 		{
 			name: "GitHub repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -141,6 +155,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, "owner", info.Organization)
 				testutil.AssertEqual(t, "repo", info.Repository)
 				testutil.AssertEqual(t, "https://github.com/owner/repo.git", info.RemoteURL)
@@ -149,6 +164,7 @@ func TestDetectGitRepository(t *testing.T) {
 		{
 			name: "SSH remote URL",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
@@ -165,6 +181,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, "owner", info.Organization)
 				testutil.AssertEqual(t, "repo", info.Repository)
 				testutil.AssertEqual(t, "git@github.com:owner/repo.git", info.RemoteURL)
@@ -176,6 +193,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, false, info.IsGitRepo)
 				testutil.AssertEqual(t, "", info.Organization)
 				testutil.AssertEqual(t, "", info.Repository)
@@ -184,6 +202,7 @@ func TestDetectGitRepository(t *testing.T) {
 		{
 			name: "git repository without origin remote",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
@@ -201,6 +220,7 @@ func TestDetectGitRepository(t *testing.T) {
 				return tmpDir
 			},
 			checkFunc: func(t *testing.T, info *RepoInfo) {
+				t.Helper()
 				testutil.AssertEqual(t, true, info.IsGitRepo)
 				testutil.AssertEqual(t, "", info.Organization)
 				testutil.AssertEqual(t, "", info.Repository)
@@ -210,6 +230,8 @@ func TestDetectGitRepository(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -226,6 +248,8 @@ func TestDetectGitRepository(t *testing.T) {
 }
 
 func TestParseGitHubURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		remoteURL    string
@@ -266,6 +290,8 @@ func TestParseGitHubURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			org, repo := parseGitHubURL(tt.remoteURL)
 
 			testutil.AssertEqual(t, tt.expectedOrg, org)
@@ -275,6 +301,8 @@ func TestParseGitHubURL(t *testing.T) {
 }
 
 func TestRepoInfo_GetRepositoryName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		repoInfo RepoInfo
@@ -311,6 +339,8 @@ func TestRepoInfo_GetRepositoryName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := tt.repoInfo.GetRepositoryName()
 			testutil.AssertEqual(t, tt.expected, result)
 		})

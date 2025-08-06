@@ -3,6 +3,7 @@ package dependencies
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -145,7 +146,7 @@ func (a *Analyzer) AnalyzeActionFileWithProgress(
 	progressCallback func(current, total int, message string),
 ) ([]Dependency, error) {
 	if progressCallback != nil {
-		progressCallback(0, 1, fmt.Sprintf("Parsing %s", actionPath))
+		progressCallback(0, 1, "Parsing "+actionPath)
 	}
 
 	// Read and parse the action.yml file
@@ -179,8 +180,10 @@ func (a *Analyzer) validateAndCheckComposite(
 		if progressCallback != nil {
 			progressCallback(1, 1, "No dependencies (non-composite action)")
 		}
+
 		return []Dependency{}, false, nil
 	}
+
 	return nil, true, nil
 }
 
@@ -192,6 +195,7 @@ func (a *Analyzer) validateActionType(usingType string) error {
 			return nil
 		}
 	}
+
 	return fmt.Errorf("invalid action runtime: %s", usingType)
 }
 
@@ -230,11 +234,13 @@ func (a *Analyzer) processStep(step CompositeStep, stepNumber int) *Dependency {
 			// Log error but continue processing
 			return nil
 		}
+
 		return dep
 	} else if step.Run != "" {
 		// This is a shell script step
 		return a.analyzeShellScript(step, stepNumber)
 	}
+
 	return nil
 }
 
@@ -361,6 +367,7 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 func (a *Analyzer) isCommitSHA(version string) bool {
 	// Check if it's a 40-character hex string (full SHA) or 7+ character hex (short SHA)
 	re := regexp.MustCompile(`^[a-f0-9]{7,40}$`)
+
 	return len(version) >= minSHALength && re.MatchString(version)
 }
 
@@ -368,6 +375,7 @@ func (a *Analyzer) isCommitSHA(version string) bool {
 func (a *Analyzer) isSemanticVersion(version string) bool {
 	// Check for vX, vX.Y, vX.Y.Z format
 	re := regexp.MustCompile(`^v?\d+(\.\d+)*(\.\d+)?(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
+
 	return re.MatchString(version)
 }
 
@@ -379,6 +387,7 @@ func (a *Analyzer) isVersionPinned(version string) bool {
 		return true
 	}
 	re := regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
+
 	return re.MatchString(version)
 }
 
@@ -392,6 +401,7 @@ func (a *Analyzer) convertWithParams(with map[string]any) map[string]string {
 			params[k] = fmt.Sprintf("%v", v)
 		}
 	}
+
 	return params
 }
 
@@ -432,7 +442,7 @@ func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error
 // getLatestVersion fetches the latest release/tag for a repository.
 func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, err error) {
 	if a.GitHubClient == nil {
-		return "", "", fmt.Errorf("GitHub client not available")
+		return "", "", errors.New("GitHub client not available")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
@@ -447,6 +457,7 @@ func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, er
 	// Try to get latest release first
 	if version, sha, err := a.getLatestRelease(ctx, owner, repo); err == nil {
 		a.cacheVersion(cacheKey, version, sha)
+
 		return version, sha, nil
 	}
 
@@ -457,6 +468,7 @@ func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, er
 	}
 
 	a.cacheVersion(cacheKey, version, sha)
+
 	return version, sha, nil
 }
 
@@ -483,11 +495,12 @@ func (a *Analyzer) getCachedVersion(cacheKey string) (version, sha string, found
 func (a *Analyzer) getLatestRelease(ctx context.Context, owner, repo string) (version, sha string, err error) {
 	release, _, err := a.GitHubClient.Repositories.GetLatestRelease(ctx, owner, repo)
 	if err != nil || release.GetTagName() == "" {
-		return "", "", fmt.Errorf("no release found")
+		return "", "", errors.New("no release found")
 	}
 
 	version = release.GetTagName()
 	sha = a.getCommitSHAForTag(ctx, owner, repo, version)
+
 	return version, sha, nil
 }
 
@@ -497,6 +510,7 @@ func (a *Analyzer) getCommitSHAForTag(ctx context.Context, owner, repo, tagName 
 	if err != nil || tag.GetObject() == nil {
 		return ""
 	}
+
 	return tag.GetObject().GetSHA()
 }
 
@@ -506,10 +520,11 @@ func (a *Analyzer) getLatestTag(ctx context.Context, owner, repo string) (versio
 		PerPage: 10,
 	})
 	if err != nil || len(tags) == 0 {
-		return "", "", fmt.Errorf("no releases or tags found")
+		return "", "", errors.New("no releases or tags found")
 	}
 
 	latestTag := tags[0]
+
 	return latestTag.GetName(), latestTag.GetCommit().GetSHA(), nil
 }
 
@@ -550,6 +565,7 @@ func (a *Analyzer) parseVersionParts(version string) []string {
 	for len(parts) < versionPartsCount {
 		parts = append(parts, "0")
 	}
+
 	return parts
 }
 
@@ -564,6 +580,7 @@ func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) strin
 	if currentParts[2] != latestParts[2] {
 		return updateTypePatch
 	}
+
 	return updateTypeNone
 }
 
@@ -636,6 +653,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 				indent := strings.Repeat(" ", len(line)-len(strings.TrimLeft(line, " ")))
 				lines[i] = indent + usesFieldPrefix + update.NewUses
 				update.LineNumber = i + 1 // Store line number for reference
+
 				break
 			}
 		}
@@ -652,8 +670,9 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 	if err := a.validateActionFile(filePath); err != nil {
 		// Rollback on validation failure
 		if rollbackErr := os.Rename(backupPath, filePath); rollbackErr != nil {
-			return fmt.Errorf("validation failed and rollback failed: %v (original error: %w)", rollbackErr, err)
+			return fmt.Errorf("validation failed and rollback failed: %w (original error: %w)", rollbackErr, err)
 		}
+
 		return fmt.Errorf("validation failed, rolled back changes: %w", err)
 	}
 
@@ -666,6 +685,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 // validateActionFile validates that an action.yml file is still valid after updates.
 func (a *Analyzer) validateActionFile(filePath string) error {
 	_, err := a.parseCompositeAction(filePath)
+
 	return err
 }
 
@@ -680,6 +700,7 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 		if cached, exists := a.Cache.Get(cacheKey); exists {
 			if repository, ok := cached.(*github.Repository); ok {
 				dep.Description = repository.GetDescription()
+
 				return nil
 			}
 		}

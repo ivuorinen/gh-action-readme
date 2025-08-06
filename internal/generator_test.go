@@ -10,6 +10,7 @@ import (
 )
 
 func TestGenerator_NewGenerator(t *testing.T) {
+	t.Parallel()
 	config := &AppConfig{
 		Theme:        "default",
 		OutputFormat: "md",
@@ -34,6 +35,7 @@ func TestGenerator_NewGenerator(t *testing.T) {
 }
 
 func TestGenerator_DiscoverActionFiles(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string)
@@ -44,6 +46,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "single action.yml in root",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				fixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), fixture.Content)
@@ -54,6 +57,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "action.yaml variant",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				fixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yaml"), fixture.Content)
@@ -64,6 +68,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "both yml and yaml files",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				minimalFixture, err := testutil.LoadActionFixture("minimal-action.yml")
@@ -77,6 +82,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "recursive discovery",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				compositeFixture, err := testutil.LoadActionFixture("actions/composite/basic.yml")
@@ -92,6 +98,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "non-recursive skips subdirectories",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
 				testutil.AssertNoError(t, err)
 				compositeFixture, err := testutil.LoadActionFixture("actions/composite/basic.yml")
@@ -107,6 +114,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 		{
 			name: "no action files",
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "README.md"), "# Test")
 			},
 			recursive:   false,
@@ -122,6 +130,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -139,6 +148,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -160,6 +170,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 }
 
 func TestGenerator_GenerateFromFile(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		actionYML    string
@@ -218,6 +229,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -242,6 +254,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -260,6 +273,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 			readmeFiles, _ := filepath.Glob(pattern)
 			if len(readmeFiles) == 0 {
 				t.Errorf("no output file was created for format %s", tt.outputFormat)
+
 				return
 			}
 
@@ -289,11 +303,13 @@ func countREADMEFiles(t *testing.T, dir string) int {
 		if strings.HasSuffix(path, "README.md") {
 			count++
 		}
+
 		return nil
 	})
 	if err != nil {
 		t.Errorf("error walking directory: %v", err)
 	}
+
 	return count
 }
 
@@ -304,11 +320,13 @@ func logREADMELocations(t *testing.T, dir string) {
 		if err == nil && strings.HasSuffix(path, "README.md") {
 			t.Logf("Found README at: %s", path)
 		}
+
 		return nil
 	})
 }
 
 func TestGenerator_ProcessBatch(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) []string
@@ -318,6 +336,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 		{
 			name: "process multiple valid files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				// Create separate directories for each action
 				dir1 := filepath.Join(tmpDir, "action1")
 				dir2 := filepath.Join(tmpDir, "action2")
@@ -334,6 +353,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/composite/basic.yml"))
+
 				return files
 			},
 			expectError: false,
@@ -342,6 +362,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 		{
 			name: "handle mixed valid and invalid files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				// Create separate directories for mixed test too
 				dir1 := filepath.Join(tmpDir, "valid-action")
 				dir2 := filepath.Join(tmpDir, "invalid-action")
@@ -358,6 +379,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/invalid/invalid-using.yml"))
+
 				return files
 			},
 			expectError: true, // Invalid runtime configuration should cause batch to fail
@@ -382,6 +404,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -401,11 +424,13 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
+
 				return
 			}
 
@@ -423,6 +448,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 }
 
 func TestGenerator_ValidateFiles(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) []string
@@ -431,12 +457,14 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 		{
 			name: "all valid files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				files := []string{
 					filepath.Join(tmpDir, "action1.yml"),
 					filepath.Join(tmpDir, "action2.yml"),
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("minimal-action.yml"))
+
 				return files
 			},
 			expectError: false,
@@ -444,12 +472,14 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 		{
 			name: "files with validation issues",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
 				files := []string{
 					filepath.Join(tmpDir, "valid.yml"),
 					filepath.Join(tmpDir, "invalid.yml"),
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/invalid/missing-description.yml"))
+
 				return files
 			},
 			expectError: true, // Validation should fail for invalid runtime configuration
@@ -465,6 +495,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -484,6 +515,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 }
 
 func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		token       string
@@ -503,6 +535,7 @@ func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			config := &AppConfig{
 				GitHubToken: tt.token,
 				Quiet:       true,
@@ -513,6 +546,7 @@ func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+
 				return
 			}
 
@@ -526,6 +560,7 @@ func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
 }
 
 func TestGenerator_WithDifferentThemes(t *testing.T) {
+	t.Parallel()
 	themes := []string{"default", "github", "gitlab", "minimal", "professional"}
 
 	tmpDir, cleanup := testutil.TempDir(t)
@@ -539,19 +574,8 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 
 	for _, theme := range themes {
 		t.Run("theme_"+theme, func(t *testing.T) {
-			// Change to tmpDir so templates can be found
-			origDir, err := os.Getwd()
-			if err != nil {
-				t.Fatalf("failed to get working directory: %v", err)
-			}
-			if err := os.Chdir(tmpDir); err != nil {
-				t.Fatalf("failed to change directory: %v", err)
-			}
-			defer func() {
-				if err := os.Chdir(origDir); err != nil {
-					t.Errorf("failed to restore directory: %v", err)
-				}
-			}()
+			t.Parallel()
+			// Templates are now embedded, no working directory changes needed
 
 			config := &AppConfig{
 				Theme:        theme,
@@ -563,6 +587,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 
 			if err := generator.GenerateFromFile(actionPath); err != nil {
 				t.Errorf("unexpected error: %v", err)
+
 				return
 			}
 
@@ -581,6 +606,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 }
 
 func TestGenerator_ErrorHandling(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) (*Generator, string)
@@ -589,6 +615,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 		{
 			name: "invalid template path",
 			setupFunc: func(t *testing.T, tmpDir string) (*Generator, string) {
+				t.Helper()
 				config := &AppConfig{
 					Template:     "/nonexistent/template.tmpl",
 					OutputFormat: "md",
@@ -598,6 +625,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 				generator := NewGenerator(config)
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return generator, actionPath
 			},
 			wantError: "template",
@@ -605,6 +633,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 		{
 			name: "permission denied on output directory",
 			setupFunc: func(t *testing.T, tmpDir string) (*Generator, string) {
+				t.Helper()
 				// Set up test templates
 				testutil.SetupTestTemplates(t, tmpDir)
 
@@ -621,6 +650,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 				generator := NewGenerator(config)
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return generator, actionPath
 			},
 			wantError: "permission denied",
@@ -629,6 +659,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 

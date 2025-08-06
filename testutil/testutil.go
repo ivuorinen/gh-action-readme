@@ -48,7 +48,7 @@ func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 
 	// Default 404 response
 	return &http.Response{
-		StatusCode: 404,
+		StatusCode: http.StatusNotFound,
 		Body:       io.NopCloser(strings.NewReader(`{"error": "not found"}`)),
 	}, nil
 }
@@ -61,13 +61,14 @@ func MockGitHubClient(responses map[string]string) *github.Client {
 
 	for key, body := range responses {
 		mockClient.Responses[key] = &http.Response{
-			StatusCode: 200,
+			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(body)),
 			Header:     make(http.Header),
 		}
 	}
 
 	client := github.NewClient(&http.Client{Transport: &mockTransport{client: mockClient}})
+
 	return client
 }
 
@@ -83,13 +84,10 @@ func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 func TempDir(t *testing.T) (string, func()) {
 	t.Helper()
 
-	dir, err := os.MkdirTemp("", "gh-action-readme-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
+	dir := t.TempDir()
 
 	return dir, func() {
-		_ = os.RemoveAll(dir)
+		// t.TempDir() automatically cleans up, so no action needed
 	}
 }
 
@@ -172,6 +170,7 @@ func (m *MockColoredOutput) HasMessage(substring string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -182,6 +181,7 @@ func (m *MockColoredOutput) HasError(substring string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -205,6 +205,7 @@ func CreateTestAction(name, description string, inputs map[string]string) string
 	result += "branding:\n"
 	result += "  icon: 'zap'\n"
 	result += "  color: 'yellow'\n"
+
 	return result
 }
 
@@ -245,6 +246,7 @@ func CreateCompositeAction(name, description string, steps []string) string {
 	result += "  using: 'composite'\n"
 	result += "  steps:\n"
 	result += stepsYAML.String()
+
 	return result
 }
 
@@ -303,15 +305,10 @@ func MockAppConfig(overrides *TestAppConfig) *TestAppConfig {
 func SetEnv(t *testing.T, key, value string) func() {
 	t.Helper()
 
-	original := os.Getenv(key)
-	_ = os.Setenv(key, value)
+	t.Setenv(key, value)
 
 	return func() {
-		if original == "" {
-			_ = os.Unsetenv(key)
-		} else {
-			_ = os.Setenv(key, original)
-		}
+		// t.Setenv() automatically handles cleanup, so no action needed
 	}
 }
 
@@ -319,6 +316,7 @@ func SetEnv(t *testing.T, key, value string) func() {
 func WithContext(timeout time.Duration) context.Context {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	_ = cancel // Avoid lostcancel - we're intentionally creating a context without cleanup for testing
+
 	return ctx
 }
 
@@ -366,6 +364,7 @@ func AssertEqual(t *testing.T, expected, actual any) {
 				t.Fatalf("expected map[%s] = %s, got %s", k, v, actualMap[k])
 			}
 		}
+
 		return
 	}
 
@@ -377,4 +376,53 @@ func AssertEqual(t *testing.T, expected, actual any) {
 // NewStringReader creates an io.ReadCloser from a string.
 func NewStringReader(s string) io.ReadCloser {
 	return io.NopCloser(strings.NewReader(s))
+}
+
+// GitHubTokenTestCase represents a test case for GitHub token hierarchy testing.
+type GitHubTokenTestCase struct {
+	Name          string
+	SetupFunc     func(t *testing.T) func()
+	ExpectedToken string
+}
+
+// GetGitHubTokenHierarchyTests returns shared test cases for GitHub token hierarchy.
+func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
+	return []GitHubTokenTestCase{
+		{
+			Name: "GH_README_GITHUB_TOKEN has highest priority",
+			SetupFunc: func(t *testing.T) func() {
+				t.Helper()
+				cleanup1 := SetEnv(t, "GH_README_GITHUB_TOKEN", "priority-token")
+				cleanup2 := SetEnv(t, "GITHUB_TOKEN", "fallback-token")
+
+				return func() {
+					cleanup1()
+					cleanup2()
+				}
+			},
+			ExpectedToken: "priority-token",
+		},
+		{
+			Name: "GITHUB_TOKEN as fallback",
+			SetupFunc: func(t *testing.T) func() {
+				t.Helper()
+				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
+				cleanup := SetEnv(t, "GITHUB_TOKEN", "fallback-token")
+
+				return cleanup
+			},
+			ExpectedToken: "fallback-token",
+		},
+		{
+			Name: "no environment variables",
+			SetupFunc: func(t *testing.T) func() {
+				t.Helper()
+				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
+				_ = os.Unsetenv("GITHUB_TOKEN")
+
+				return func() {}
+			},
+			ExpectedToken: "",
+		},
+	}
 }

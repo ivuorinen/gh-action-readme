@@ -9,6 +9,8 @@ import (
 )
 
 func TestValidateActionYMLPath(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) string
@@ -18,8 +20,10 @@ func TestValidateActionYMLPath(t *testing.T) {
 		{
 			name: "valid action.yml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return actionPath
 			},
 			expectError: false,
@@ -27,8 +31,10 @@ func TestValidateActionYMLPath(t *testing.T) {
 		{
 			name: "valid action.yaml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yaml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("minimal-action.yml"))
+
 				return actionPath
 			},
 			expectError: false,
@@ -43,8 +49,10 @@ func TestValidateActionYMLPath(t *testing.T) {
 		{
 			name: "file with wrong extension",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.txt")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+
 				return actionPath
 			},
 			expectError: true,
@@ -60,6 +68,8 @@ func TestValidateActionYMLPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -77,6 +87,8 @@ func TestValidateActionYMLPath(t *testing.T) {
 }
 
 func TestIsCommitSHA(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		version  string
@@ -116,6 +128,8 @@ func TestIsCommitSHA(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := IsCommitSHA(tt.version)
 			testutil.AssertEqual(t, tt.expected, result)
 		})
@@ -123,6 +137,8 @@ func TestIsCommitSHA(t *testing.T) {
 }
 
 func TestIsSemanticVersion(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		version  string
@@ -172,6 +188,8 @@ func TestIsSemanticVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := IsSemanticVersion(tt.version)
 			testutil.AssertEqual(t, tt.expected, result)
 		})
@@ -179,6 +197,8 @@ func TestIsSemanticVersion(t *testing.T) {
 }
 
 func TestIsVersionPinned(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		version  string
@@ -223,6 +243,8 @@ func TestIsVersionPinned(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := IsVersionPinned(tt.version)
 			testutil.AssertEqual(t, tt.expected, result)
 		})
@@ -230,6 +252,8 @@ func TestIsVersionPinned(t *testing.T) {
 }
 
 func TestValidateGitBranch(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) (string, string)
@@ -252,6 +276,7 @@ func TestValidateGitBranch(t *testing.T) {
 	merge = refs/heads/main
 `
 				testutil.WriteTestFile(t, filepath.Join(gitDir, "config"), configContent)
+
 				return tmpDir, "main"
 			},
 			expected: true, // This may vary based on actual git repo state
@@ -274,6 +299,8 @@ func TestValidateGitBranch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -288,6 +315,8 @@ func TestValidateGitBranch(t *testing.T) {
 }
 
 func TestIsGitRepository(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) string
@@ -298,6 +327,7 @@ func TestIsGitRepository(t *testing.T) {
 			setupFunc: func(_ *testing.T, tmpDir string) string {
 				gitDir := filepath.Join(tmpDir, ".git")
 				_ = os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
+
 				return tmpDir
 			},
 			expected: true,
@@ -305,8 +335,10 @@ func TestIsGitRepository(t *testing.T) {
 		{
 			name: "directory with .git file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				gitFile := filepath.Join(tmpDir, ".git")
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
+
 				return tmpDir
 			},
 			expected: true,
@@ -329,6 +361,8 @@ func TestIsGitRepository(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -340,6 +374,8 @@ func TestIsGitRepository(t *testing.T) {
 }
 
 func TestCleanVersionString(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -374,6 +410,8 @@ func TestCleanVersionString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := CleanVersionString(tt.input)
 			testutil.AssertEqual(t, tt.expected, result)
 		})
@@ -381,6 +419,8 @@ func TestCleanVersionString(t *testing.T) {
 }
 
 func TestParseGitHubURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		url          string
@@ -421,6 +461,8 @@ func TestParseGitHubURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			org, repo := ParseGitHubURL(tt.url)
 			testutil.AssertEqual(t, tt.expectedOrg, org)
 			testutil.AssertEqual(t, tt.expectedRepo, repo)
@@ -429,6 +471,8 @@ func TestParseGitHubURL(t *testing.T) {
 }
 
 func TestSanitizeActionName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -457,7 +501,9 @@ func TestSanitizeActionName(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(_ *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := SanitizeActionName(tt.input)
 			// The exact behavior may vary, so we'll just verify it doesn't panic
 			_ = result
@@ -466,6 +512,8 @@ func TestSanitizeActionName(t *testing.T) {
 }
 
 func TestGetBinaryDir(t *testing.T) {
+	t.Parallel()
+
 	dir, err := GetBinaryDir()
 	testutil.AssertNoError(t, err)
 
@@ -480,6 +528,8 @@ func TestGetBinaryDir(t *testing.T) {
 }
 
 func TestEnsureAbsolutePath(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		input      string
@@ -509,6 +559,8 @@ func TestEnsureAbsolutePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := EnsureAbsolutePath(tt.input)
 
 			if tt.input == "" {

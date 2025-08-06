@@ -12,8 +12,10 @@ func CreateAnalyzer(generator *internal.Generator, output *internal.ColoredOutpu
 	analyzer, err := generator.CreateDependencyAnalyzer()
 	if err != nil {
 		output.Warning("Could not create dependency analyzer: %v", err)
+
 		return nil
 	}
+
 	return analyzer
 }
 
@@ -24,5 +26,6 @@ func CreateAnalyzerOrExit(generator *internal.Generator, output *internal.Colore
 		// Error already logged, just exit
 		return nil
 	}
+
 	return analyzer
 }

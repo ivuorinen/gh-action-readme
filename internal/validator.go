@@ -89,5 +89,6 @@ func isValidRuntime(runtime string) bool {
 			return true
 		}
 	}
+
 	return false
 }

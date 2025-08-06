@@ -105,6 +105,7 @@ func (v *ConfigValidator) ValidateField(fieldName, value string) *ValidationResu
 	}
 
 	result.Valid = len(result.Errors) == 0
+
 	return result
 }
 
@@ -116,6 +117,7 @@ func (v *ConfigValidator) validateOrganization(org string, result *ValidationRes
 			Message: "Organization is empty - will use auto-detected value",
 			Value:   org,
 		})
+
 		return
 	}
 
@@ -139,6 +141,7 @@ func (v *ConfigValidator) validateRepository(repo string, result *ValidationResu
 			Message: "Repository is empty - will use auto-detected value",
 			Value:   repo,
 		})
+
 		return
 	}
 
@@ -181,6 +184,7 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 	for _, validTheme := range validThemes {
 		if theme == validTheme {
 			found = true
+
 			break
 		}
 	}
@@ -192,7 +196,7 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 			Value:   theme,
 		})
 		result.Suggestions = append(result.Suggestions,
-			fmt.Sprintf("Valid themes: %s", strings.Join(validThemes, ", ")))
+			"Valid themes: "+strings.Join(validThemes, ", "))
 	}
 }
 
@@ -204,6 +208,7 @@ func (v *ConfigValidator) validateOutputFormat(format string, result *Validation
 	for _, validFormat := range validFormats {
 		if format == validFormat {
 			found = true
+
 			break
 		}
 	}
@@ -215,7 +220,7 @@ func (v *ConfigValidator) validateOutputFormat(format string, result *Validation
 			Value:   format,
 		})
 		result.Suggestions = append(result.Suggestions,
-			fmt.Sprintf("Valid formats: %s", strings.Join(validFormats, ", ")))
+			"Valid formats: "+strings.Join(validFormats, ", "))
 	}
 }
 
@@ -227,6 +232,7 @@ func (v *ConfigValidator) validateOutputDir(dir string, result *ValidationResult
 			Message: "Output directory cannot be empty",
 			Value:   dir,
 		})
+
 		return
 	}
 
@@ -314,9 +320,10 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		if !permissionExists {
 			result.Warnings = append(result.Warnings, ValidationWarning{
 				Field:   "permissions",
-				Message: fmt.Sprintf("Unknown permission: %s", permission),
+				Message: "Unknown permission: " + permission,
 				Value:   value,
 			})
+
 			continue
 		}
 
@@ -325,6 +332,7 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		for _, validVal := range validValues {
 			if value == validVal {
 				validValue = true
+
 				break
 			}
 		}
@@ -332,7 +340,7 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		if !validValue {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "permissions",
-				Message: fmt.Sprintf("Invalid value for permission %s", permission),
+				Message: "Invalid value for permission " + permission,
 				Value:   value,
 			})
 			result.Suggestions = append(result.Suggestions,
@@ -351,6 +359,7 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 		})
 		result.Suggestions = append(result.Suggestions,
 			"Consider specifying at least one runner (e.g., ubuntu-latest)")
+
 		return
 	}
 
@@ -366,6 +375,7 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 		for _, validRunner := range validRunners {
 			if runner == validRunner {
 				isValid = true
+
 				break
 			}
 		}
@@ -375,7 +385,7 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 			if !strings.HasPrefix(runner, "self-hosted") {
 				result.Warnings = append(result.Warnings, ValidationWarning{
 					Field:   "runs_on",
-					Message: fmt.Sprintf("Unknown runner: %s", runner),
+					Message: "Unknown runner: " + runner,
 					Value:   runner,
 				})
 				result.Suggestions = append(result.Suggestions,
@@ -398,9 +408,10 @@ func (v *ConfigValidator) validateVariables(variables map[string]string, result 
 			if strings.EqualFold(key, reserved) {
 				result.Warnings = append(result.Warnings, ValidationWarning{
 					Field:   "variables",
-					Message: fmt.Sprintf("Variable name conflicts with GitHub environment variable: %s", key),
+					Message: "Variable name conflicts with GitHub environment variable: " + key,
 					Value:   value,
 				})
+
 				break
 			}
 		}
@@ -409,7 +420,7 @@ func (v *ConfigValidator) validateVariables(variables map[string]string, result 
 		if !v.isValidVariableName(key) {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "variables",
-				Message: fmt.Sprintf("Invalid variable name: %s", key),
+				Message: "Invalid variable name: " + key,
 				Value:   value,
 			})
 			result.Suggestions = append(result.Suggestions,
@@ -427,6 +438,7 @@ func (v *ConfigValidator) isValidGitHubName(name string) bool {
 	// GitHub names can contain alphanumeric characters and hyphens
 	// Cannot start or end with hyphen
 	matched, _ := regexp.MatchString(`^[a-zA-Z0-9]([a-zA-Z0-9\-_]*[a-zA-Z0-9])?$`, name)
+
 	return matched
 }
 
@@ -437,6 +449,7 @@ func (v *ConfigValidator) isValidSemanticVersion(version string) bool {
 		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
 		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
 	matched, _ := regexp.MatchString(pattern, version)
+
 	return matched
 }
 
@@ -462,6 +475,7 @@ func (v *ConfigValidator) isValidVariableName(name string) bool {
 	// Variable names should start with letter or underscore
 	// and contain only letters, numbers, and underscores
 	matched, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*$`, name)
+
 	return matched
 }
 

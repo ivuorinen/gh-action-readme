@@ -9,6 +9,7 @@ import (
 )
 
 func TestProjectDetector_analyzeProjectFiles(t *testing.T) {
+	t.Parallel()
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
 
@@ -50,6 +51,7 @@ func TestProjectDetector_analyzeProjectFiles(t *testing.T) {
 	for _, validType := range validTypes {
 		if projectType == validType {
 			typeValid = true
+
 			break
 		}
 	}
@@ -63,6 +65,7 @@ func TestProjectDetector_analyzeProjectFiles(t *testing.T) {
 }
 
 func TestProjectDetector_detectVersionFromPackageJSON(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 
 	// Create package.json with version
@@ -90,6 +93,7 @@ func TestProjectDetector_detectVersionFromPackageJSON(t *testing.T) {
 }
 
 func TestProjectDetector_detectVersionFromFiles(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 
 	// Create VERSION file
@@ -112,6 +116,7 @@ func TestProjectDetector_detectVersionFromFiles(t *testing.T) {
 }
 
 func TestProjectDetector_findActionFiles(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 
 	// Create action files
@@ -167,6 +172,7 @@ func TestProjectDetector_findActionFiles(t *testing.T) {
 }
 
 func TestProjectDetector_isActionFile(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
 		output: output,
@@ -186,6 +192,7 @@ func TestProjectDetector_isActionFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.filename, func(t *testing.T) {
+			t.Parallel()
 			result := detector.isActionFile(tt.filename)
 			if result != tt.expected {
 				t.Errorf("isActionFile(%s) = %v, want %v", tt.filename, result, tt.expected)
@@ -195,6 +202,7 @@ func TestProjectDetector_isActionFile(t *testing.T) {
 }
 
 func TestProjectDetector_suggestConfiguration(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
 		output: output,
@@ -242,6 +250,7 @@ func TestProjectDetector_suggestConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			detector.suggestConfiguration(tt.settings)
 			if tt.settings.SuggestedTheme != tt.expected {
 				t.Errorf("Expected theme %s, got %s", tt.expected, tt.settings.SuggestedTheme)

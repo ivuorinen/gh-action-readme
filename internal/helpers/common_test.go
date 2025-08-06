@@ -11,6 +11,8 @@ import (
 )
 
 func TestGetCurrentDir(t *testing.T) {
+	t.Parallel()
+
 	t.Run("successfully get current directory", func(t *testing.T) {
 		currentDir, err := GetCurrentDir()
 
@@ -33,6 +35,8 @@ func TestGetCurrentDir(t *testing.T) {
 }
 
 func TestSetupGeneratorContext(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		config *internal.AppConfig
@@ -71,6 +75,8 @@ func TestSetupGeneratorContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			generator, currentDir, err := SetupGeneratorContext(tt.config)
 
 			// Verify no error occurred
@@ -79,6 +85,7 @@ func TestSetupGeneratorContext(t *testing.T) {
 			// Verify generator was created
 			if generator == nil {
 				t.Error("expected generator to be created")
+
 				return
 			}
 
@@ -100,6 +107,8 @@ func TestSetupGeneratorContext(t *testing.T) {
 }
 
 func TestFindGitRepoRoot(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		setupFunc func(t *testing.T, tmpDir string) string
@@ -108,6 +117,7 @@ func TestFindGitRepoRoot(t *testing.T) {
 		{
 			name: "directory with git repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -133,6 +143,7 @@ func TestFindGitRepoRoot(t *testing.T) {
 		{
 			name: "nested directory in git repository",
 			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				// Create .git directory at root
 				gitDir := filepath.Join(tmpDir, ".git")
 				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -151,6 +162,8 @@ func TestFindGitRepoRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
@@ -172,7 +185,11 @@ func TestFindGitRepoRoot(t *testing.T) {
 }
 
 func TestGetGitRepoRootAndInfo(t *testing.T) {
+	t.Parallel()
+
 	t.Run("valid git repository with complete info", func(t *testing.T) {
+		t.Parallel()
+
 		tmpDir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
@@ -187,6 +204,8 @@ func TestGetGitRepoRootAndInfo(t *testing.T) {
 	})
 
 	t.Run("git repository but info detection fails", func(t *testing.T) {
+		t.Parallel()
+
 		tmpDir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
@@ -201,6 +220,8 @@ func TestGetGitRepoRootAndInfo(t *testing.T) {
 	})
 
 	t.Run("directory without git repository", func(t *testing.T) {
+		t.Parallel()
+
 		tmpDir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
@@ -220,6 +241,7 @@ func TestGetGitRepoRootAndInfo(t *testing.T) {
 
 // Helper functions to reduce complexity.
 func setupCompleteGitRepo(t *testing.T, tmpDir string) string {
+	t.Helper()
 	// Create .git directory
 	gitDir := filepath.Join(tmpDir, ".git")
 	err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -245,6 +267,7 @@ func setupCompleteGitRepo(t *testing.T, tmpDir string) string {
 }
 
 func setupMinimalGitRepo(t *testing.T, tmpDir string) string {
+	t.Helper()
 	// Create .git directory but with minimal content
 	gitDir := filepath.Join(tmpDir, ".git")
 	err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
@@ -254,6 +277,7 @@ func setupMinimalGitRepo(t *testing.T, tmpDir string) string {
 }
 
 func verifyRepoRoot(t *testing.T, repoRoot, tmpDir string) {
+	t.Helper()
 	if repoRoot != "" && !strings.Contains(repoRoot, tmpDir) {
 		t.Errorf("expected repo root to be within %s, got %s", tmpDir, repoRoot)
 	}
@@ -261,7 +285,11 @@ func verifyRepoRoot(t *testing.T, repoRoot, tmpDir string) {
 
 // Test error handling in GetGitRepoRootAndInfo.
 func TestGetGitRepoRootAndInfo_ErrorHandling(t *testing.T) {
+	t.Parallel()
+
 	t.Run("nonexistent directory", func(t *testing.T) {
+		t.Parallel()
+
 		nonexistentPath := "/this/path/should/not/exist"
 		repoRoot, gitInfo, err := GetGitRepoRootAndInfo(nonexistentPath)
 

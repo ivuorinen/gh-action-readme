@@ -7,6 +7,8 @@ import (
 )
 
 func TestContextualError_Error(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		err      *ContextualError
@@ -103,6 +105,8 @@ func TestContextualError_Error(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := tt.err.Error()
 
 			for _, expected := range tt.contains {
@@ -119,6 +123,8 @@ func TestContextualError_Error(t *testing.T) {
 }
 
 func TestContextualError_Unwrap(t *testing.T) {
+	t.Parallel()
+
 	originalErr := errors.New("original error")
 	contextualErr := &ContextualError{
 		Code: ErrCodeFileNotFound,
@@ -131,6 +137,8 @@ func TestContextualError_Unwrap(t *testing.T) {
 }
 
 func TestContextualError_Is(t *testing.T) {
+	t.Parallel()
+
 	originalErr := errors.New("original error")
 	contextualErr := &ContextualError{
 		Code: ErrCodeFileNotFound,
@@ -156,6 +164,8 @@ func TestContextualError_Is(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	err := New(ErrCodeFileNotFound, "test message")
 
 	if err.Code != ErrCodeFileNotFound {
@@ -168,6 +178,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestWrap(t *testing.T) {
+	t.Parallel()
+
 	originalErr := errors.New("original error")
 
 	// Test wrapping normal error
@@ -204,6 +216,8 @@ func TestWrap(t *testing.T) {
 }
 
 func TestContextualError_WithMethods(t *testing.T) {
+	t.Parallel()
+
 	err := New(ErrCodeFileNotFound, "test error")
 
 	// Test WithSuggestions
@@ -234,6 +248,8 @@ func TestContextualError_WithMethods(t *testing.T) {
 }
 
 func TestGetHelpURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		code     ErrorCode
 		contains string
@@ -246,6 +262,8 @@ func TestGetHelpURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.code), func(t *testing.T) {
+			t.Parallel()
+
 			url := GetHelpURL(tt.code)
 			if !strings.Contains(url, tt.contains) {
 				t.Errorf("GetHelpURL(%s) = %s, should contain %s", tt.code, url, tt.contains)

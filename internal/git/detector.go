@@ -3,6 +3,7 @@ package git
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,6 +31,7 @@ func (r *RepoInfo) GetRepositoryName() string {
 	if r.Organization != "" && r.Repository != "" {
 		return fmt.Sprintf("%s/%s", r.Organization, r.Repository)
 	}
+
 	return ""
 }
 
@@ -50,7 +52,7 @@ func FindRepositoryRoot(startPath string) (string, error) {
 		parent := filepath.Dir(absPath)
 		if parent == absPath {
 			// Reached root without finding .git
-			return "", fmt.Errorf("not a git repository")
+			return "", errors.New("not a git repository")
 		}
 		absPath = parent
 	}
@@ -129,12 +131,14 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 		// Check for [remote "origin"] section
 		if strings.Contains(line, `[remote "origin"]`) {
 			inOriginSection = true
+
 			continue
 		}
 
 		// Check for new section
 		if strings.HasPrefix(line, "[") && inOriginSection {
 			inOriginSection = false
+
 			continue
 		}
 
@@ -144,7 +148,7 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no origin remote URL found in git config")
+	return "", errors.New("no origin remote URL found in git config")
 }
 
 // getDefaultBranch gets the default branch name.
@@ -160,6 +164,7 @@ func getDefaultBranch(repoRoot string) string {
 				return branch
 			}
 		}
+
 		return DefaultBranch // Default fallback
 	}
 
@@ -182,6 +187,7 @@ func branchExists(repoRoot, branch string) bool {
 		"refs/heads/"+branch,
 	) // #nosec G204 -- branch name validated by git
 	cmd.Dir = repoRoot
+
 	return cmd.Run() == nil
 }
 
@@ -225,5 +231,6 @@ func (r *RepoInfo) GenerateUsesStatement(actionName, version string) string {
 	if actionName != "" {
 		return fmt.Sprintf("your-org/%s@%s", actionName, version)
 	}
+
 	return "your-org/your-action@v1"
 }

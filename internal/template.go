@@ -3,7 +3,6 @@ package internal
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"strings"
 	"text/template"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
+	"github.com/ivuorinen/gh-action-readme/templates_embed"
 )
 
 const (
@@ -70,6 +70,7 @@ func getGitOrg(data any) string {
 			return td.Config.Organization
 		}
 	}
+
 	return defaultOrgPlaceholder
 }
 
@@ -83,6 +84,7 @@ func getGitRepo(data any) string {
 			return td.Config.Repository
 		}
 	}
+
 	return defaultRepoPlaceholder
 }
 
@@ -101,6 +103,7 @@ func getGitUsesString(data any) string {
 	}
 
 	version := formatVersion(getActionVersion(data))
+
 	return buildUsesString(td, org, repo, version)
 }
 
@@ -118,6 +121,7 @@ func formatVersion(version string) string {
 	if !strings.HasPrefix(version, "@") {
 		return "@" + version
 	}
+
 	return version
 }
 
@@ -129,6 +133,7 @@ func buildUsesString(td *TemplateData, org, repo, version string) string {
 			return fmt.Sprintf("%s/%s/%s%s", org, repo, actionName, version)
 		}
 	}
+
 	return fmt.Sprintf("%s/%s%s", org, repo, version)
 }
 
@@ -139,6 +144,7 @@ func getActionVersion(data any) string {
 			return td.Config.Version
 		}
 	}
+
 	return "v1"
 }
 
@@ -217,7 +223,7 @@ func analyzeDependencies(actionPath string, config *AppConfig, gitInfo git.RepoI
 
 // RenderReadme renders a README using a Go template and the parsed action.yml data.
 func RenderReadme(action any, opts TemplateOptions) (string, error) {
-	tmplContent, err := os.ReadFile(opts.TemplatePath)
+	tmplContent, err := templates_embed.ReadTemplate(opts.TemplatePath)
 	if err != nil {
 		return "", err
 	}
@@ -229,11 +235,11 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 		}
 		var head, foot string
 		if opts.HeaderPath != "" {
-			h, _ := os.ReadFile(opts.HeaderPath)
+			h, _ := templates_embed.ReadTemplate(opts.HeaderPath)
 			head = string(h)
 		}
 		if opts.FooterPath != "" {
-			f, _ := os.ReadFile(opts.FooterPath)
+			f, _ := templates_embed.ReadTemplate(opts.FooterPath)
 			foot = string(f)
 		}
 		// Wrap template output in header/footer
@@ -243,6 +249,7 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 			return "", err
 		}
 		buf.WriteString(foot)
+
 		return buf.String(), nil
 	}
 
@@ -254,5 +261,6 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	if err := tmpl.Execute(buf, action); err != nil {
 		return "", err
 	}
+
 	return buf.String(), nil
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,9 +15,9 @@ import (
 
 // TestCLICommands tests the main CLI commands using subprocess execution.
 func TestCLICommands(t *testing.T) {
+	t.Parallel()
 	// Build the binary for testing
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name       string
@@ -51,6 +50,7 @@ func TestCLICommands(t *testing.T) {
 			name: "gen command with valid action",
 			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -60,6 +60,7 @@ func TestCLICommands(t *testing.T) {
 			name: "gen command with theme flag",
 			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -75,6 +76,7 @@ func TestCLICommands(t *testing.T) {
 			name: "validate command with valid action",
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -85,6 +87,7 @@ func TestCLICommands(t *testing.T) {
 			name: "validate command with invalid action",
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(
 					t,
@@ -128,6 +131,7 @@ func TestCLICommands(t *testing.T) {
 			name: "deps list command with composite action",
 			args: []string{"deps", "list"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				actionPath := filepath.Join(tmpDir, "action.yml")
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/composite/basic.yml"))
 			},
@@ -209,8 +213,8 @@ func TestCLICommands(t *testing.T) {
 
 // TestCLIFlags tests various flag combinations.
 func TestCLIFlags(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name     string
@@ -286,8 +290,8 @@ func TestCLIFlags(t *testing.T) {
 
 // TestCLIRecursiveFlag tests the recursive flag functionality.
 func TestCLIRecursiveFlag(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -357,8 +361,8 @@ func TestCLIRecursiveFlag(t *testing.T) {
 
 // TestCLIErrorHandling tests error scenarios.
 func TestCLIErrorHandling(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tests := []struct {
 		name      string
@@ -371,6 +375,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "permission denied on output directory",
 			args: []string{"gen", "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -381,6 +386,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "invalid YAML in action file",
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), "invalid: yaml: content: [")
 			},
 			wantExit: 1,
@@ -389,6 +395,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "unknown output format",
 			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -398,6 +405,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			name: "unknown theme",
 			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
 					testutil.MustReadFixture("actions/javascript/simple.yml"))
 			},
@@ -447,8 +455,8 @@ func TestCLIErrorHandling(t *testing.T) {
 
 // TestCLIConfigInitialization tests configuration initialization.
 func TestCLIConfigInitialization(t *testing.T) {
+	t.Parallel()
 	binaryPath := buildTestBinary(t)
-	defer func() { _ = os.Remove(binaryPath) }()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
@@ -458,7 +466,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 	cmd.Dir = tmpDir
 
 	// Set XDG_CONFIG_HOME to temp directory
-	cmd.Env = append(os.Environ(), fmt.Sprintf("XDG_CONFIG_HOME=%s", tmpDir))
+	cmd.Env = append(os.Environ(), "XDG_CONFIG_HOME="+tmpDir)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -496,6 +504,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 // These test the actual functions directly rather than through subprocess execution.
 
 func TestCreateOutputManager(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		quiet bool
@@ -515,6 +524,7 @@ func TestCreateOutputManager(t *testing.T) {
 }
 
 func TestFormatSize(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		size     int64
@@ -541,6 +551,7 @@ func TestFormatSize(t *testing.T) {
 }
 
 func TestResolveExportFormat(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		format   string
@@ -564,6 +575,7 @@ func TestResolveExportFormat(t *testing.T) {
 }
 
 func TestCreateErrorHandler(t *testing.T) {
+	t.Parallel()
 	output := internal.NewColoredOutput(false)
 	handler := createErrorHandler(output)
 
@@ -573,6 +585,7 @@ func TestCreateErrorHandler(t *testing.T) {
 }
 
 func TestSetupOutputAndErrorHandling(t *testing.T) {
+	// Note: This test cannot use t.Parallel() because it modifies globalConfig
 	// Setup globalConfig for the test
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
@@ -592,6 +605,7 @@ func TestSetupOutputAndErrorHandling(t *testing.T) {
 // Unit Tests for Command Creation Functions
 
 func TestNewGenCmd(t *testing.T) {
+	t.Parallel()
 	cmd := newGenCmd()
 
 	if cmd.Use != "gen [directory_or_file]" {
@@ -616,6 +630,7 @@ func TestNewGenCmd(t *testing.T) {
 }
 
 func TestNewValidateCmd(t *testing.T) {
+	t.Parallel()
 	cmd := newValidateCmd()
 
 	if cmd.Use != "validate" {
@@ -632,6 +647,7 @@ func TestNewValidateCmd(t *testing.T) {
 }
 
 func TestNewSchemaCmd(t *testing.T) {
+	t.Parallel()
 	cmd := newSchemaCmd()
 
 	if cmd.Use != "schema" {

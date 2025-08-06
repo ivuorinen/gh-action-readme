@@ -7,6 +7,7 @@ import (
 )
 
 func TestParseActionYML_Valid(t *testing.T) {
+	t.Parallel()
 	// Create temporary action file using fixture
 	actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
 	action, err := ParseActionYML(actionPath)
@@ -25,6 +26,7 @@ func TestParseActionYML_Valid(t *testing.T) {
 }
 
 func TestParseActionYML_MissingFile(t *testing.T) {
+	t.Parallel()
 	_, err := ParseActionYML("notfound/action.yml")
 	if err == nil {
 		t.Error("expected error on missing file")

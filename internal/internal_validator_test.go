@@ -3,6 +3,7 @@ package internal
 import "testing"
 
 func TestValidateActionYML_Required(t *testing.T) {
+	t.Parallel()
 
 	a := &ActionYML{
 		Name:        "",
@@ -16,6 +17,7 @@ func TestValidateActionYML_Required(t *testing.T) {
 }
 
 func TestValidateActionYML_Valid(t *testing.T) {
+	t.Parallel()
 	a := &ActionYML{
 		Name:        "MyAction",
 		Description: "desc",

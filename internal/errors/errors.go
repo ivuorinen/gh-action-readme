@@ -65,13 +65,13 @@ func (ce *ContextualError) Error() string {
 	if len(ce.Suggestions) > 0 {
 		b.WriteString("\n\nSuggestions:")
 		for _, suggestion := range ce.Suggestions {
-			b.WriteString(fmt.Sprintf("\n  • %s", suggestion))
+			b.WriteString("\n  • " + suggestion)
 		}
 	}
 
 	// Add help URL
 	if ce.HelpURL != "" {
-		b.WriteString(fmt.Sprintf("\n\nFor more help: %s", ce.HelpURL))
+		b.WriteString("\n\nFor more help: " + ce.HelpURL)
 	}
 
 	return b.String()
@@ -120,6 +120,7 @@ func Wrap(err error, code ErrorCode, context string) *ContextualError {
 		if ce.Context == "" {
 			ce.Context = context
 		}
+
 		return ce
 	}
 
@@ -133,6 +134,7 @@ func Wrap(err error, code ErrorCode, context string) *ContextualError {
 // WithSuggestions adds suggestions to a ContextualError.
 func (ce *ContextualError) WithSuggestions(suggestions ...string) *ContextualError {
 	ce.Suggestions = append(ce.Suggestions, suggestions...)
+
 	return ce
 }
 
@@ -144,12 +146,14 @@ func (ce *ContextualError) WithDetails(details map[string]string) *ContextualErr
 	for k, v := range details {
 		ce.Details[k] = v
 	}
+
 	return ce
 }
 
 // WithHelpURL adds a help URL to a ContextualError.
 func (ce *ContextualError) WithHelpURL(url string) *ContextualError {
 	ce.HelpURL = url
+
 	return ce
 }
 
