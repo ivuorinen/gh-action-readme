@@ -1,4 +1,5 @@
-.PHONY: help test test-coverage test-coverage-html lint run example clean readme config-verify security vulncheck audit snyk trivy gitleaks \
+.PHONY: help test test-coverage test-coverage-html lint run example clean readme config-verify \
+	security vulncheck audit snyk trivy gitleaks \
 	editorconfig editorconfig-fix format devtools
 
 all: help
@@ -130,7 +131,8 @@ devtools: ## Install all development tools
 	@echo "=== Go Tools ==="
 	@command -v golangci-lint >/dev/null 2>&1 || \
 		{ echo "Installing golangci-lint..."; \
-		  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin; }
+			curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+			sh -s -- -b $(go env GOPATH)/bin; }
 	@command -v govulncheck >/dev/null 2>&1 || \
 		{ echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
 	@echo "✓ Go tools installed"

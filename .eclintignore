@@ -40,4 +40,3 @@ testdata/yaml-fixtures/validation/missing-*
 testdata/yaml-fixtures/actions/invalid/*
 testdata/yaml-fixtures/invalid-action.yml
 testdata/yaml-fixtures/*-template.yml
-
