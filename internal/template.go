@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/google/go-github/v57/github"
+	"github.com/google/go-github/v58/github"
 
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"

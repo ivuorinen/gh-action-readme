@@ -62,6 +62,7 @@ gh-action-readme about               # About tool
 **Build:** `go build .`
 **Test:** `go test ./internal`
 **Lint:** `golangci-lint run`
+**Dependencies:** `make deps-check` / `make deps-update`
 
 **Testing Generation (SAFE):**
 ```bash
@@ -173,6 +174,26 @@ gh-action-readme gen testdata/ --recursive --theme professional
 **New Template Functions:**
 Add to `templateFuncs()` in `internal_template.go:19`
 
+## 📦 Dependency Management
+
+**Check for updates:**
+```bash
+make deps-check          # Show outdated dependencies
+```
+
+**Update dependencies:**
+```bash
+make deps-update         # Interactive updates with go-mod-upgrade
+make deps-update-all     # Update all to latest versions
+```
+
+**Automated updates:**
+- Renovate bot runs weekly on Mondays at 4am UTC
+- Creates PRs for minor/patch updates (auto-merge enabled)
+- Major updates disabled (require manual review)
+- Groups golang.org/x packages together
+- Runs `go mod tidy` after updates
+
 ---
 
 **Status: ENTERPRISE READY ✅**
@@ -185,3 +206,4 @@ Add to `templateFuncs()` in `internal_template.go:19`
 - ✅ GitHub Actions workflow integration with new capabilities
 - ✅ Complete linting and code quality compliance
 - ✅ Zero known race conditions or threading issues
+- ✅ Dependency management automation with Renovate and go-mod-upgrade

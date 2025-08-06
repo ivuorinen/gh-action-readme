@@ -1,6 +1,57 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>ivuorinen/renovate-config"
-  ]
+    "github>ivuorinen/renovate-config",
+    "config:recommended"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "assigneesFromCodeOwners": true,
+  "reviewersFromCodeOwners": true,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "golang": {
+    "enabled": true,
+    "gomodUpdateImportPaths": true
+  },
+  "packageRules": [
+    {
+      "matchDatasources": [
+        "go"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "matchDatasources": [
+        "go"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "requiredStatusChecks": null
+    },
+    {
+      "matchPackagePatterns": [
+        "^golang.org/x/"
+      ],
+      "groupName": "golang.org/x packages"
+    }
+  ],
+  "schedule": [
+    "before 4am on monday"
+  ],
+  "timezone": "UTC",
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2
 }

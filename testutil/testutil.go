@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-github/v57/github"
+	"github.com/google/go-github/v58/github"
 )
 
 // MockHTTPClient is a mock HTTP client for testing.

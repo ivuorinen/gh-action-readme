@@ -1,6 +1,7 @@
 .PHONY: help test test-coverage test-coverage-html lint build run example \
 	clean readme config-verify security vulncheck audit snyk trivy gitleaks \
-	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update
+	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update \
+	deps-check deps-update deps-update-all
 
 all: help
 
@@ -17,6 +18,8 @@ help: ## Show this help message
 	@echo "  make test lint           # Run tests and all linters via pre-commit"
 	@echo "  make test-coverage       # Run tests with coverage analysis"
 	@echo "  make pre-commit-update   # Update pre-commit hooks to latest versions"
+	@echo "  make deps-check          # Check for outdated dependencies"
+	@echo "  make deps-update         # Update dependencies interactively"
 	@echo "  make security            # Run all security scans"
 
 test: ## Run all tests
@@ -126,6 +129,9 @@ devtools: ## Install all development tools
 			go install github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@latest; }
 	@command -v yamlfmt >/dev/null 2>&1 || \
 		{ echo "Installing yamlfmt..."; go install github.com/google/yamlfmt/cmd/yamlfmt@latest; }
+	@command -v go-mod-upgrade >/dev/null 2>&1 || \
+		{ echo "Installing go-mod-upgrade..."; \
+			go install github.com/oligot/go-mod-upgrade@latest; }
 	@echo "✓ Go tools installed"
 	@echo ""
 	@echo "=== Node.js Tools ==="
@@ -183,3 +189,23 @@ gitleaks: ## Run gitleaks secrets detection
 	@command -v gitleaks >/dev/null 2>&1 || \
 		{ echo "Please install gitleaks: https://github.com/gitleaks/gitleaks"; exit 1; }
 	gitleaks detect --source . --verbose
+
+# Dependency management targets
+deps-check: ## Show outdated dependencies
+	@echo "Checking for outdated dependencies..."
+	@go list -u -m all | grep -v "^go: finding"
+
+deps-update: ## Update dependencies interactively
+	@echo "Starting interactive dependency update..."
+	@command -v go-mod-upgrade >/dev/null 2>&1 || \
+		{ echo "Please install go-mod-upgrade or run 'make devtools'"; exit 1; }
+	go-mod-upgrade
+	@echo "Running go mod tidy..."
+	go mod tidy
+
+deps-update-all: ## Update all dependencies to latest versions
+	@echo "Updating all dependencies to latest versions..."
+	@go get -u ./...
+	@echo "Running go mod tidy..."
+	go mod tidy
+	@echo "All dependencies updated"
