@@ -10,35 +10,44 @@ linters:
 
   enable:
     # Additional linters beyond standard
-    - misspell
-    - gocyclo
-    - goconst
-    - gocritic
-    - revive
+    - asciicheck
+    - bidichk
     - bodyclose
+    - canonicalheader
     - contextcheck
     - dupl
     - errname
     - exhaustive
     - forcetypeassert
-    - nilerr
-    - nolintlint
-    - prealloc
     - goconst
+    - gocritic
+    - gocyclo
     - godot
-    - predeclared
-    - lll
+    - godox
+    - goheader
     - gosec
+    - iface
+    - importas
+    - lll
+    - maintidx
+    - misspell
+    - nilerr
     - nlreturn
+    - nolintlint
+    - perfsprint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - tagalign
+    - testableexamples
     - thelper
+    - usestdlibvars
     - usetesting
 
   disable:
     # Disable noisy linters
     - funlen
-    - gocognit
-    - nestif
-    - cyclop
     - wsl
     - wrapcheck
 

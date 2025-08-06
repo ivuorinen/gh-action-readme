@@ -670,7 +670,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 	if err := a.validateActionFile(filePath); err != nil {
 		// Rollback on validation failure
 		if rollbackErr := os.Rename(backupPath, filePath); rollbackErr != nil {
-			return fmt.Errorf("validation failed and rollback failed: %v (original error: %w)", rollbackErr, err)
+			return fmt.Errorf("validation failed and rollback failed: %w (original error: %w)", rollbackErr, err)
 		}
 
 		return fmt.Errorf("validation failed, rolled back changes: %w", err)
