@@ -29,9 +29,10 @@ type AppConfig struct {
 	Version      string `mapstructure:"version"      yaml:"version,omitempty"`
 
 	// Template Settings
-	Theme        string `mapstructure:"theme"         yaml:"theme"`
-	OutputFormat string `mapstructure:"output_format" yaml:"output_format"`
-	OutputDir    string `mapstructure:"output_dir"    yaml:"output_dir"`
+	Theme          string `mapstructure:"theme"           yaml:"theme"`
+	OutputFormat   string `mapstructure:"output_format"   yaml:"output_format"`
+	OutputDir      string `mapstructure:"output_dir"      yaml:"output_dir"`
+	OutputFilename string `mapstructure:"output_filename" yaml:"output_filename,omitempty"`
 
 	// Legacy template fields (backward compatibility)
 	Template string `mapstructure:"template" yaml:"template,omitempty"`

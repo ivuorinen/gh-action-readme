@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -96,6 +97,7 @@ type FixtureManager struct {
 	basePath  string
 	scenarios map[string]*TestScenario
 	cache     map[string]*ActionFixture
+	mu        sync.RWMutex // protects cache map
 }
 
 // GitHub API response fixtures for testing.
@@ -367,10 +369,13 @@ func (fm *FixtureManager) LoadScenarios() error {
 
 // LoadActionFixture loads an action fixture with metadata.
 func (fm *FixtureManager) LoadActionFixture(name string) (*ActionFixture, error) {
-	// Check cache first
+	// Check cache first with read lock
+	fm.mu.RLock()
 	if fixture, exists := fm.cache[name]; exists {
+		fm.mu.RUnlock()
 		return fixture, nil
 	}
+	fm.mu.RUnlock()
 
 	// Determine fixture path based on naming convention
 	fixturePath := fm.resolveFixturePath(name)
@@ -393,8 +398,15 @@ func (fm *FixtureManager) LoadActionFixture(name string) (*ActionFixture, error)
 		fixture.Scenario = scenario
 	}
 
-	// Cache the fixture
+	// Cache the fixture with write lock
+	fm.mu.Lock()
+	// Double-check cache in case another goroutine cached it while we were loading
+	if cachedFixture, exists := fm.cache[name]; exists {
+		fm.mu.Unlock()
+		return cachedFixture, nil
+	}
 	fm.cache[name] = fixture
+	fm.mu.Unlock()
 
 	return fixture, nil
 }

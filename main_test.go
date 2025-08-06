@@ -594,8 +594,8 @@ func TestSetupOutputAndErrorHandling(t *testing.T) {
 func TestNewGenCmd(t *testing.T) {
 	cmd := newGenCmd()
 
-	if cmd.Use != "gen" {
-		t.Errorf("expected Use to be 'gen', got %q", cmd.Use)
+	if cmd.Use != "gen [directory_or_file]" {
+		t.Errorf("expected Use to be 'gen [directory_or_file]', got %q", cmd.Use)
 	}
 
 	if cmd.Short == "" {

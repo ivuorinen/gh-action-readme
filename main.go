@@ -165,13 +165,24 @@ func initConfig(_ *cobra.Command, _ []string) {
 
 func newGenCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "gen",
-		Short: "Generate README.md and/or HTML for all action.yml files.",
-		Run:   genHandler,
+		Use:   "gen [directory_or_file]",
+		Short: "Generate README.md and/or HTML for GitHub Action files.",
+		Long: `Generate documentation for GitHub Actions.
+
+Examples:
+  gh-action-readme gen                               # Current directory
+  gh-action-readme gen testdata/example-action/     # Specific directory  
+  gh-action-readme gen testdata/action.yml          # Specific file
+  gh-action-readme gen -f html testdata/action/     # HTML format
+  gh-action-readme gen -f html --output custom.html testdata/action/
+  gh-action-readme gen --output docs/action1.html testdata/action1/`,
+		Args: cobra.MaximumNArgs(1),
+		Run:  genHandler,
 	}
 
 	cmd.Flags().StringP("output-format", "f", "md", "output format: md, html, json, asciidoc")
 	cmd.Flags().StringP("output-dir", "o", ".", "output directory")
+	cmd.Flags().StringP("output", "", "", "custom output filename (overrides default naming)")
 	cmd.Flags().StringP("theme", "t", "", "template theme: github, gitlab, minimal, professional")
 	cmd.Flags().BoolP("recursive", "r", false, "search for action.yml files recursively")
 
@@ -194,28 +205,65 @@ func newSchemaCmd() *cobra.Command {
 	}
 }
 
-func genHandler(cmd *cobra.Command, _ []string) {
+func genHandler(cmd *cobra.Command, args []string) {
 	output := createOutputManager(globalConfig.Quiet)
-	currentDir, err := helpers.GetCurrentDir()
+	
+	// Determine target path from arguments or current directory
+	var targetPath string
+	if len(args) > 0 {
+		targetPath = args[0]
+	} else {
+		var err error
+		targetPath, err = helpers.GetCurrentDir()
+		if err != nil {
+			output.Error("Error getting current directory: %v", err)
+			os.Exit(1)
+		}
+	}
+
+	// Resolve target path to absolute path
+	absTargetPath, err := filepath.Abs(targetPath)
 	if err != nil {
-		output.Error("Error getting current directory: %v", err)
+		output.Error("Error resolving path %s: %v", targetPath, err)
 		os.Exit(1)
 	}
 
-	repoRoot := helpers.FindGitRepoRoot(currentDir)
-	config := loadGenConfig(repoRoot, currentDir)
+	// Check if target exists
+	info, err := os.Stat(absTargetPath)
+	if err != nil {
+		output.Error("Path does not exist: %s", targetPath)
+		os.Exit(1)
+	}
+
+	var workingDir string
+	var actionFiles []string
+
+	if info.IsDir() {
+		// Target is a directory
+		workingDir = absTargetPath
+		generator := internal.NewGenerator(globalConfig) // Temporary generator for discovery
+		recursive, _ := cmd.Flags().GetBool("recursive")
+		actionFiles, err = generator.DiscoverActionFilesWithValidation(workingDir, recursive, "documentation generation")
+		if err != nil {
+			os.Exit(1)
+		}
+	} else {
+		// Target is a file - validate it's an action file
+		if !strings.HasSuffix(strings.ToLower(absTargetPath), ".yml") && !strings.HasSuffix(strings.ToLower(absTargetPath), ".yaml") {
+			output.Error("File must be a YAML file (.yml or .yaml): %s", targetPath)
+			os.Exit(1)
+		}
+		workingDir = filepath.Dir(absTargetPath)
+		actionFiles = []string{absTargetPath}
+	}
+
+	repoRoot := helpers.FindGitRepoRoot(workingDir)
+	config := loadGenConfig(repoRoot, workingDir)
 	applyGlobalFlags(config)
 	applyCommandFlags(cmd, config)
 
 	generator := internal.NewGenerator(config)
 	logConfigInfo(generator, config, repoRoot)
-
-	// Get recursive flag for discovery
-	recursive, _ := cmd.Flags().GetBool("recursive")
-	actionFiles, err := generator.DiscoverActionFilesWithValidation(currentDir, recursive, "documentation generation")
-	if err != nil {
-		os.Exit(1)
-	}
 
 	processActionFiles(generator, actionFiles)
 }
@@ -253,6 +301,7 @@ func applyGlobalFlags(config *internal.AppConfig) {
 func applyCommandFlags(cmd *cobra.Command, config *internal.AppConfig) {
 	outputFormat, _ := cmd.Flags().GetString("output-format")
 	outputDir, _ := cmd.Flags().GetString("output-dir")
+	outputFilename, _ := cmd.Flags().GetString("output")
 	theme, _ := cmd.Flags().GetString("theme")
 
 	if outputFormat != "md" {
@@ -260,6 +309,9 @@ func applyCommandFlags(cmd *cobra.Command, config *internal.AppConfig) {
 	}
 	if outputDir != "." {
 		config.OutputDir = outputDir
+	}
+	if outputFilename != "" {
+		config.OutputFilename = outputFilename
 	}
 	if theme != "" {
 		config.Theme = theme
