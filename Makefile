@@ -27,10 +27,10 @@ run: ## Run the application
 	go run .
 
 example: ## Generate example README
-	go run . gen --config config.yaml --output-format=md
+	go run . gen --config config.yml --output-format=md
 
 readme: ## Generate project README
-	go run . gen --config config.yaml --output-format=md
+	go run . gen --config config.yml --output-format=md
 
 clean: ## Clean build artifacts
 	rm -rf dist/

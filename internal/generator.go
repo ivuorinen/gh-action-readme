@@ -154,6 +154,17 @@ func (g *Generator) determineOutputDir(actionPath string) string {
 	return g.Config.OutputDir
 }
 
+// resolveOutputPath resolves the final output path, considering custom filename.
+func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string {
+	if g.Config.OutputFilename != "" {
+		if filepath.IsAbs(g.Config.OutputFilename) {
+			return g.Config.OutputFilename
+		}
+		return filepath.Join(outputDir, g.Config.OutputFilename)
+	}
+	return filepath.Join(outputDir, defaultFilename)
+}
+
 // generateByFormat generates documentation in the specified format.
 func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
 	switch g.Config.OutputFormat {
@@ -194,7 +205,7 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 		return fmt.Errorf("failed to render markdown template: %w", err)
 	}
 
-	outputPath := filepath.Join(outputDir, "README.md")
+	outputPath := g.resolveOutputPath(outputDir, "README.md")
 	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write README.md to %s: %w", outputPath, err)
@@ -236,7 +247,8 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Footer: "",
 	}
 
-	outputPath := filepath.Join(outputDir, action.Name+".html")
+	defaultFilename := action.Name + ".html"
+	outputPath := g.resolveOutputPath(outputDir, defaultFilename)
 	if err := writer.Write(content, outputPath); err != nil {
 		return fmt.Errorf("failed to write HTML to %s: %w", outputPath, err)
 	}
@@ -249,7 +261,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 	writer := NewJSONWriter(g.Config)
 
-	outputPath := filepath.Join(outputDir, "action-docs.json")
+	outputPath := g.resolveOutputPath(outputDir, "action-docs.json")
 	if err := writer.Write(action, outputPath); err != nil {
 		return fmt.Errorf("failed to write JSON to %s: %w", outputPath, err)
 	}
@@ -279,7 +291,7 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 		return fmt.Errorf("failed to render AsciiDoc template: %w", err)
 	}
 
-	outputPath := filepath.Join(outputDir, "README.adoc")
+	outputPath := g.resolveOutputPath(outputDir, "README.adoc")
 	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write AsciiDoc to %s: %w", outputPath, err)

@@ -8,13 +8,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@v4 # v4.2.2
       - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        uses: actions/setup-go@v5 # v5.5.0
       - name: Install dependencies
         run: go mod tidy
       - name: Setup Node.js for EditorConfig tools
-        uses: actions/setup-node@8257c7bb9bd8cefc6ddbc22fb862ec83f2e01c2c # v4.1.0
+        uses: actions/setup-node@v4 # v4.4.0
         with:
           node-version: '18'
       - name: Install EditorConfig tools
@@ -25,5 +25,41 @@ jobs:
         run: go test ./...
       - name: Example Action Readme Generation
         run: |
-          go run . gen --config config.yaml
-        working-directory: ./testdata/example-action
+          go run . gen testdata/example-action --output example-README.md
+      - name: Comprehensive Documentation Generation
+        run: |
+          # Create docs directory
+          mkdir -p docs
+
+          # Generate multiple formats for different actions to demonstrate new functionality
+          echo "Generating documentation for example-action..."
+          go run . gen testdata/example-action/ --output $PWD/docs/example-action.md
+          go run . gen testdata/example-action/ -f html --output $PWD/docs/example-action.html
+          go run . gen testdata/example-action/ -f json --output $PWD/docs/example-action.json
+
+          echo "Generating documentation for composite-action..."
+          go run . gen testdata/composite-action/ --output $PWD/docs/composite-action.md
+          go run . gen testdata/composite-action/ -f html --output $PWD/docs/composite-action.html
+
+          # Test single file targeting
+          echo "Generating from specific action.yml files..."
+          go run . gen testdata/example-action/action.yml --output $PWD/docs/direct-example.md
+          go run . gen testdata/composite-action/action.yml --output $PWD/docs/direct-composite.md
+
+          # Test recursive generation with different themes
+          echo "Testing recursive generation with themes..."
+          go run . gen testdata/ --recursive --theme minimal -f html --output $PWD/docs/all-actions-minimal.html
+          go run . gen testdata/ --recursive --theme professional -f json --output $PWD/docs/all-actions-professional.json
+
+          # Verify files were generated
+          echo "Verifying generated documentation files..."
+          ls -la docs/
+      - name: Upload Generated Documentation
+        uses: actions/upload-artifact@v4 # v4.4.3
+        if: always()
+        with:
+          name: generated-documentation
+          path: |
+            docs/
+            testdata/example-action/example-README.md
+          retention-days: 7

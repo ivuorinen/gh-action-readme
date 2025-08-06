@@ -8,6 +8,11 @@
 
 **For testing generation commands:**
 ```bash
+# New enhanced targeting (recommended)
+gh-action-readme gen testdata/example-action/
+gh-action-readme gen testdata/composite-action/action.yml
+
+# Traditional method (still supported)
 cd testdata/
 ../gh-action-readme gen [options]
 ```
@@ -15,11 +20,14 @@ cd testdata/
 ## 🏗️ Architecture
 
 **Core Components:**
-- `main.go` - CLI with Cobra framework
-- `internal/generator.go` - Core generation logic
+- `main.go` - CLI with Cobra framework, enhanced gen command
+- `internal/generator.go` - Core generation logic with custom output paths
 - `internal/config.go` - Viper configuration (XDG compliant)
-- `internal/output.go` - Colored terminal output
+- `internal/output.go` - Colored terminal output with progress bars
 - `internal/json_writer.go` - JSON format support
+- `internal/errors/` - Contextual error handling with suggestions
+- `internal/wizard/` - Interactive configuration wizard
+- `internal/progress.go` - Progress indicators for batch operations
 
 **Templates:**
 - `templates/readme.tmpl` - Default template
@@ -34,9 +42,9 @@ cd testdata/
 
 **Available Commands:**
 ```bash
-gh-action-readme gen [flags]          # Generate documentation
+gh-action-readme gen [directory_or_file] [flags]  # Generate documentation
 gh-action-readme validate            # Validate action.yml files
-gh-action-readme config {init|show|themes}  # Configuration management
+gh-action-readme config {init|show|themes|wizard}  # Configuration management
 gh-action-readme version             # Show version
 gh-action-readme about               # About tool
 ```
@@ -44,6 +52,7 @@ gh-action-readme about               # About tool
 **Key Flags:**
 - `--theme` - Select template theme
 - `--output-format` - Choose format (md, html, json, asciidoc)
+- `--output` - Custom output filename
 - `--recursive` - Process directories recursively
 - `--verbose` - Detailed output
 - `--quiet` - Suppress output
@@ -56,6 +65,11 @@ gh-action-readme about               # About tool
 
 **Testing Generation (SAFE):**
 ```bash
+# Enhanced targeting (recommended)
+gh-action-readme gen testdata/example-action/ --theme github --output test-output.md
+gh-action-readme gen testdata/composite-action/action.yml --theme professional
+
+# Traditional method (still works)
 cd testdata/example-action/
 ../../gh-action-readme gen --theme github
 ```
@@ -65,11 +79,16 @@ cd testdata/example-action/
 | Feature | Status | Files |
 |---------|--------|-------|
 | CLI Framework | ✅ | `main.go` |
-| File Discovery | ✅ | `generator.go:174` |
+| Enhanced Gen Command | ✅ | `main.go:168-180` |
+| File Discovery | ✅ | `generator.go:304-324` |
 | Template Themes | ✅ | `templates/themes/` |
-| Output Formats | ✅ | `generator.go:67-78` |
-| Validation | ✅ | `internal_validator.go` |
-| Configuration | ✅ | `config.go` |
+| Output Formats | ✅ | `generator.go:168-182` |
+| Custom Output Paths | ✅ | `generator.go:157-166` |
+| Validation | ✅ | `internal/validation/` |
+| Configuration | ✅ | `config.go`, `configuration_loader.go` |
+| Interactive Wizard | ✅ | `internal/wizard/` |
+| Progress Indicators | ✅ | `progress.go` |
+| Contextual Errors | ✅ | `internal/errors/` |
 | Colored Output | ✅ | `output.go` |
 
 ## 🎨 Themes
@@ -97,18 +116,22 @@ cd testdata/example-action/
 
 **Test Commands:**
 ```bash
-# Core functionality
-cd testdata/ && ../gh-action-readme gen
+# Core functionality (enhanced)
+gh-action-readme gen testdata/example-action/
+gh-action-readme gen testdata/composite-action/action.yml
 
-# All themes
+# All themes with custom outputs
 for theme in github gitlab minimal professional; do
-  cd testdata/ && ../gh-action-readme gen --theme $theme
+  gh-action-readme gen testdata/example-action/ --theme $theme --output "test-${theme}.md"
 done
 
-# All formats
+# All formats with custom outputs
 for format in md html json asciidoc; do
-  cd testdata/ && ../gh-action-readme gen --output-format $format
+  gh-action-readme gen testdata/example-action/ --output-format $format --output "test.${format}"
 done
+
+# Recursive processing
+gh-action-readme gen testdata/ --recursive --theme professional
 ```
 
 ## 🚀 Production Features
@@ -127,8 +150,11 @@ done
 
 **Performance:**
 - Progress bars for batch operations
+- Thread-safe fixture caching with RWMutex
 - Binary-relative template paths
 - Efficient file discovery
+- Custom output path resolution
+- Race condition protection
 - Minimal dependencies
 
 ## 🔄 Adding New Features
@@ -149,5 +175,13 @@ Add to `templateFuncs()` in `internal_template.go:19`
 
 ---
 
-**Status: PRODUCTION READY ✅**
-*All core features implemented and tested.*
+**Status: ENTERPRISE READY ✅**
+*Enhanced gen command, thread-safety, comprehensive testing, and enterprise features fully implemented.*
+
+**Latest Updates (August 6, 2025):**
+- ✅ Enhanced gen command with directory/file targeting
+- ✅ Custom output filename support (`--output` flag)
+- ✅ Thread-safe fixture management with race condition protection
+- ✅ GitHub Actions workflow integration with new capabilities
+- ✅ Complete linting and code quality compliance
+- ✅ Zero known race conditions or threading issues

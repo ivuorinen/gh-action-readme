@@ -28,4 +28,6 @@ go.sum
 *.out
 
 # Created readme files
-testdata/**/README.md
+testdata/**/*.md
+testdata/**/*.html
+testdata/**/*.json
