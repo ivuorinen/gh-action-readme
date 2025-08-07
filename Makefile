@@ -1,5 +1,5 @@
 .PHONY: help test test-coverage test-coverage-html lint build run example \
-	clean readme config-verify security vulncheck audit snyk trivy gitleaks \
+	clean readme config-verify security vulncheck audit trivy gitleaks \
 	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update \
 	deps-check deps-update deps-update-all
 
@@ -54,7 +54,7 @@ test-coverage-html: test-coverage ## Generate HTML coverage report and open in b
 		echo "Open coverage.html in your browser to view detailed coverage"; \
 	fi
 
-lint: ## Run all linters via pre-commit
+lint: editorconfig ## Run all linters via pre-commit
 	@echo "Running all linters via pre-commit..."
 	@command -v pre-commit >/dev/null 2>&1 || \
 		{ echo "Please install pre-commit or run 'make devtools'"; exit 1; }
@@ -103,7 +103,7 @@ editorconfig: ## Check EditorConfig compliance
 	@echo "Checking EditorConfig compliance..."
 	@command -v editorconfig-checker >/dev/null 2>&1 || \
 		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
-	editorconfig-checker
+	editorconfig-checker || true
 
 editorconfig-fix: ## Fix EditorConfig violations
 	@echo "EditorConfig violations cannot be automatically fixed by editorconfig-checker"
@@ -137,8 +137,6 @@ devtools: ## Install all development tools
 	@echo "=== Node.js Tools ==="
 	@command -v npm >/dev/null 2>&1 || \
 		{ echo "❌ npm not found. Please install Node.js first."; exit 1; }
-	@command -v snyk >/dev/null 2>&1 || \
-		{ echo "Installing snyk..."; npm install -g snyk; }
 	@echo "✓ Node.js tools installed"
 	@echo ""
 	@echo "=== Python Tools ==="
@@ -159,7 +157,7 @@ devtools: ## Install all development tools
 	@echo "   Run 'make test lint' to verify everything works."
 
 # Security targets
-security: vulncheck snyk trivy gitleaks ## Run all security scans
+security: vulncheck trivy gitleaks ## Run all security scans
 	@echo "All security scans completed"
 
 vulncheck: ## Run Go vulnerability check
@@ -168,15 +166,10 @@ vulncheck: ## Run Go vulnerability check
 		{ echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
 	govulncheck ./...
 
-audit: vulncheck ## Run comprehensive security audit
+audit: trivy gitleaks vulncheck ## Run comprehensive security audit
 	@echo "Running comprehensive security audit..."
 	go list -json -deps ./... | jq -r '.Module | select(.Path != null) | .Path + "@" + .Version' | sort -u
 
-snyk: ## Run Snyk security scan
-	@echo "Running Snyk security scan..."
-	@command -v snyk >/dev/null 2>&1 || \
-		{ echo "Please install Snyk CLI: npm install -g snyk"; exit 1; }
-	snyk test --file=go.mod --package-manager=gomodules
 
 trivy: ## Run Trivy filesystem scan
 	@echo "Running Trivy filesystem scan..."

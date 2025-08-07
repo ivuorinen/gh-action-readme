@@ -2,10 +2,10 @@
 
 ![GitHub](https://img.shields.io/badge/GitHub%20Action-Documentation%20Generator-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Go](https://img.shields.io/badge/Go-1.23+-00ADD8)
+![Go](https://img.shields.io/badge/Go-1.24+-00ADD8)
 ![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)
 
-[![Security](https://img.shields.io/badge/security-hardened-brightgreen)](SECURITY.md)
+[![Security](https://img.shields.io/badge/security-hardened-brightgreen)](docs/security.md)
 [![Go Vulnerability Check](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml)
 [![CodeQL](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml)
 
@@ -28,56 +28,18 @@ Transform your GitHub Actions into professional documentation with multiple them
 
 ### Installation
 
-#### 📦 Binary Releases (Recommended)
-
-Download pre-built binaries for your platform:
-
-```bash
-# Linux x86_64
-curl -L https://github.com/ivuorinen/gh-action-readme/releases/latest/download/gh-action-readme_Linux_x86_64.tar.gz | tar -xz
-
-# macOS x86_64 (Intel)
-curl -L https://github.com/ivuorinen/gh-action-readme/releases/latest/download/gh-action-readme_Darwin_x86_64.tar.gz | tar -xz
-
-# macOS ARM64 (Apple Silicon)
-curl -L https://github.com/ivuorinen/gh-action-readme/releases/latest/download/gh-action-readme_Darwin_arm64.tar.gz | tar -xz
-
-# Windows x86_64 (PowerShell)
-Invoke-WebRequest -Uri "https://github.com/ivuorinen/gh-action-readme/releases/latest/download/gh-action-readme_Windows_x86_64.zip" -OutFile "gh-action-readme.zip"
-Expand-Archive gh-action-readme.zip
-```
-
-#### 🍺 Package Managers
-
 ```bash
 # macOS with Homebrew
 brew install ivuorinen/tap/gh-action-readme
 
-# Windows with Scoop
-scoop bucket add ivuorinen https://github.com/ivuorinen/scoop-bucket
-scoop install gh-action-readme
-
 # Using Go
 go install github.com/ivuorinen/gh-action-readme@latest
+
+# Download binary from releases
+curl -L https://github.com/ivuorinen/gh-action-readme/releases/latest/download/gh-action-readme_Linux_x86_64.tar.gz | tar -xz
 ```
 
-#### 🐳 Docker
-
-```bash
-# Run directly with Docker
-docker run --rm -v $(pwd):/workspace ghcr.io/ivuorinen/gh-action-readme:latest gen
-
-# Or use as base image
-FROM ghcr.io/ivuorinen/gh-action-readme:latest
-```
-
-#### 🔨 Build from Source
-
-```bash
-git clone https://github.com/ivuorinen/gh-action-readme.git
-cd gh-action-readme
-go build .
-```
+📖 **[Complete Installation Guide →](docs/installation.md)**
 
 ### Basic Usage
 
@@ -102,6 +64,7 @@ gh-action-readme gen --recursive --theme professional
 ## 📋 Examples
 
 ### Input: `action.yml`
+
 ```yaml
 name: My Action
 description: Does something awesome
@@ -123,6 +86,7 @@ runs:
 ### Output: Professional README.md
 
 The tool generates comprehensive documentation including:
+
 - 📊 **Parameter tables** with types, requirements, defaults
 - 💡 **Usage examples** with proper YAML formatting
 - 🎨 **Badges** for marketplace visibility
@@ -131,183 +95,82 @@ The tool generates comprehensive documentation including:
 
 ## 🎨 Themes
 
-| Theme | Description | Best For |
-|-------|-------------|----------|
-| **github** | Badges, tables, collapsible sections | GitHub marketplace |
-| **gitlab** | GitLab CI/CD focused examples | GitLab repositories |
-| **minimal** | Clean, concise documentation | Simple actions |
-| **professional** | Comprehensive with troubleshooting | Enterprise use |
-| **default** | Original simple template | Basic needs |
+Choose from 5 built-in themes: `github`, `gitlab`, `minimal`, `professional`, `default`
+
+📖 **[Theme Gallery & Examples →](docs/themes.md)**
 
 ## 📄 Output Formats
 
-| Format | Description | Use Case |
-|--------|-------------|----------|
-| **md** | Markdown (default) | GitHub README files |
-| **html** | Styled HTML | Web documentation |
-| **json** | Structured data | API integration |
-| **asciidoc** | AsciiDoc format | Technical docs |
+Supports 4 formats: `md`, `html`, `json`, `asciidoc`
 
 ## 🛠️ Commands
 
-### Generation
 ```bash
+# Generation
 gh-action-readme gen [directory_or_file] [flags]
-  -f, --output-format string   md, html, json, asciidoc (default "md")
-  -o, --output-dir string      output directory (default ".")
-      --output string          custom output filename
-  -t, --theme string           github, gitlab, minimal, professional
-  -r, --recursive              search recursively
-```
 
-### Validation
-```bash
+# Validation with suggestions
 gh-action-readme validate
-# Validates action.yml files with helpful suggestions
+
+# Interactive configuration
+gh-action-readme config wizard
 ```
 
-### Configuration
-```bash
-gh-action-readme config init     # Create default config
-gh-action-readme config show     # Show current settings
-gh-action-readme config themes   # List available themes
-gh-action-readme config wizard   # Interactive configuration wizard
-```
+📖 **[Complete CLI Reference →](docs/api.md)**
 
 ## ⚙️ Configuration
 
-Create persistent settings with XDG-compliant configuration:
-
 ```bash
+# Interactive setup wizard
+gh-action-readme config wizard
+
+# XDG-compliant config file
 gh-action-readme config init
 ```
 
-Configuration file (`~/.config/gh-action-readme/config.yaml`):
-```yaml
-theme: github
-output_format: md
-output_dir: .
-verbose: false
-```
-
-**Environment Variables:**
-```bash
-export GH_ACTION_README_THEME=github
-export GH_ACTION_README_VERBOSE=true
-```
+📖 **[Configuration Guide →](docs/configuration.md)**
 
 ## 🎯 Advanced Usage
 
-### Batch Processing
 ```bash
-# Process multiple repositories with custom outputs
-find . -name "action.yml" -execdir gh-action-readme gen --theme github --output README-generated.md \;
+# Batch processing with custom themes
+gh-action-readme gen --recursive --theme github --output-dir docs/
 
-# Recursive processing with JSON output and custom directory structure
-gh-action-readme gen --recursive --output-format json --output-dir docs/
-
-# Target multiple specific actions with different themes
-gh-action-readme gen actions/checkout/ --theme github --output docs/checkout.md
-gh-action-readme gen actions/setup-node/ --theme professional --output docs/setup-node.md
-```
-
-### Custom Themes
-```bash
-# Copy and modify existing theme
+# Custom themes
 cp -r templates/themes/github templates/themes/custom
-# Edit templates/themes/custom/readme.tmpl
 gh-action-readme gen --theme custom
 ```
 
-### Validation with Suggestions
-```bash
-gh-action-readme validate --verbose
-# ❌ Missing required field: description
-# 💡 Add 'description: Brief description of what your action does'
-```
+📖 **[Complete Usage Guide →](docs/usage.md)**
 
 ## 🏗️ Development
 
-### Prerequisites
-- Go 1.22+
-- golangci-lint
-
-### Build
 ```bash
+# Build and test
 go build .
-go test ./internal
+go test ./...
 golangci-lint run
 ```
 
-### Code Quality
-This project maintains high code quality standards:
+Maintains enterprise-grade code quality with 0 linting violations and 80%+ test coverage.
 
-- ✅ **0 linting violations** - Clean, maintainable codebase
-- ✅ **Comprehensive test coverage** - 80%+ coverage across critical modules
-- ✅ **Low cyclomatic complexity** - All functions under 10 complexity
-- ✅ **Minimal code duplication** - Shared utilities and helper functions
-- ✅ **Proper error handling** - All errors properly acknowledged and handled
-- ✅ **Standardized formatting** - `gofmt` and `goimports` applied consistently
-
-**Recent Improvements (August 6, 2025)**:
-- **Enhanced Gen Command**: Added directory/file targeting with `--output` flag for custom filenames
-- **Thread Safety**: Implemented RWMutex synchronization for race condition protection
-- **GitHub Actions Integration**: Enhanced CI workflow showcasing all new gen command features
-- **Code Quality**: Achieved zero linting violations with complete EditorConfig compliance
-- **Architecture**: Added contextual error handling, interactive wizard, and progress indicators
-
-### Testing
-```bash
-# Test generation (safe - uses testdata/)
-gh-action-readme gen testdata/example-action/ --theme github --output test-output.md
-gh-action-readme gen testdata/composite-action/action.yml --theme professional
-
-# Run full test suite
-go test ./...
-
-# Generate coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
+📖 **[Development Guide →](docs/development.md)**
 
 ## 🔒 Security
 
-gh-action-readme follows security best practices with comprehensive vulnerability scanning and protection measures:
+Comprehensive security scanning with govulncheck, Trivy, gitleaks, and CodeQL.
 
-### Automated Security Scanning
-- **govulncheck**: Go-specific vulnerability detection
-- **Snyk**: Dependency vulnerability analysis
-- **Trivy**: Container and filesystem security scanning
-- **gitleaks**: Secrets detection and prevention
-- **CodeQL**: Static code analysis for security issues
-- **Dependabot**: Automated dependency updates
-
-### Local Security Testing
 ```bash
-# Run all security scans
-make security
-
-# Individual security checks
-make vulncheck  # Go vulnerability scanning
-make snyk       # Dependency analysis
-make trivy      # Filesystem scanning
-make gitleaks   # Secrets detection
-make audit      # Comprehensive security audit
+make security  # Run all security scans
 ```
 
-### Security Policy
-For reporting security vulnerabilities, please see our [Security Policy](SECURITY.md).
+📖 **[Security Policy →](docs/security.md)**
 
 ## 🤝 Contributing
 
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions welcome! Fork, create feature branch, add tests, submit PR.
 
-**Quick Start:**
-1. Fork the repository
-2. Create a feature branch
-3. Make changes (see [CLAUDE.md](CLAUDE.md) for development guide)
-4. Add tests
-5. Submit pull request
+📖 **[Contributing Guide →](CONTRIBUTING.md)**
 
 ## 📊 Comparison
 

@@ -37,7 +37,7 @@ repos:
     rev: v0.18.1
     hooks:
       - id: markdownlint-cli2
-        exclude: '^(testdata/|CHANGELOG\.md|TODO\.md|\.github/|CLAUDE\.md|README\.md|SECURITY\.md)'
+        exclude: '^testdata/'
 
   # EditorConfig checking
   - repo: https://github.com/editorconfig-checker/editorconfig-checker
