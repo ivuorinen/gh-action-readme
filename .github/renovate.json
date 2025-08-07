@@ -37,7 +37,7 @@
       ],
       "automerge": true,
       "automergeType": "pr",
-      "ignoreTests": true
+      "ignoreTests": false
     },
     {
       "groupName": "golang.org/x packages",
