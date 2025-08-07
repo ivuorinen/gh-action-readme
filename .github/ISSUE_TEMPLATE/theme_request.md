@@ -32,7 +32,7 @@ Describe the desired appearance and formatting:
 **Badges and shields:**
 
 - [ ] Platform-specific badges
-- [ ] Version/release shields  
+- [ ] Version/release shields
 - [ ] Build status badges
 - [ ] License/security badges
 - [ ] Custom badge styling
@@ -99,7 +99,7 @@ Which existing theme should this be based on?
 
 - [ ] Start from scratch
 - [ ] Extend `github` theme
-- [ ] Extend `gitlab` theme  
+- [ ] Extend `gitlab` theme
 - [ ] Extend `minimal` theme
 - [ ] Extend `professional` theme
 - [ ] Extend `default` theme
