@@ -13,7 +13,7 @@ Add this action to your GitLab CI/CD pipeline or GitHub workflow:
 ```yaml
 steps:
   - name: {{.Name}}
-    uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+    uses: {{gitUsesString .}}
     {{if .Inputs}}with:
     {{- range $key, $val := .Inputs}}
       {{$key}}: {{if $val.Default}}{{$val.Default}}{{else}}value{{end}}

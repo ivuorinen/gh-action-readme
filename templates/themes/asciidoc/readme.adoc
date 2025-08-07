@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: {{.Name}}
-        uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+        uses: {{gitUsesString .}}
         {{if .Inputs}}with:
         {{- range $key, $val := .Inputs}}
           {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"value"{{end}}
@@ -91,7 +91,7 @@ with:
 ----
 - name: {{.Name}}
   id: action-step
-  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  uses: {{gitUsesString .}}
 
 - name: Use Output
   run: |
@@ -108,7 +108,7 @@ with:
 [source,yaml]
 ----
 - name: Basic {{.Name}}
-  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  uses: {{gitUsesString .}}
   {{if .Inputs}}with:
   {{- range $key, $val := .Inputs}}
     {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"example-value"{{end}}
@@ -120,7 +120,7 @@ with:
 [source,yaml]
 ----
 - name: Advanced {{.Name}}
-  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  uses: {{gitUsesString .}}
   {{if .Inputs}}with:
   {{- range $key, $val := .Inputs}}
     {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"\${{"{{"}} vars.{{$key | upper}} {{"}}"}}"{{end}}
@@ -135,7 +135,7 @@ with:
 ----
 - name: Conditional {{.Name}}
   if: github.event_name == 'push'
-  uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+  uses: {{gitUsesString .}}
   {{if .Inputs}}with:
   {{- range $key, $val := .Inputs}}
     {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"production-value"{{end}}
