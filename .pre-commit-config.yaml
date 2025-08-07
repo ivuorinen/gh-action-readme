@@ -25,6 +25,12 @@ repos:
       - id: pretty-format-json
         args: [--autofix, --no-sort-keys]
 
+  # Renovatebot pre-commit hooks
+  - repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: 41.56.1
+    hooks:
+      - id: renovate-config-validator
+
   # YAML formatting with yamlfmt (replaces yamllint for formatting)
   - repo: https://github.com/google/yamlfmt
     rev: v0.17.2
@@ -37,7 +43,7 @@ repos:
     rev: v0.18.1
     hooks:
       - id: markdownlint-cli2
-        exclude: '^testdata/'
+        exclude: "^testdata/"
 
   # EditorConfig checking
   - repo: https://github.com/editorconfig-checker/editorconfig-checker
