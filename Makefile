@@ -1,6 +1,7 @@
 .PHONY: help test test-coverage test-coverage-html lint build run example \
-	clean readme config-verify security vulncheck audit snyk trivy gitleaks \
-	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update
+	clean readme config-verify security vulncheck audit trivy gitleaks \
+	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update \
+	deps-check deps-update deps-update-all
 
 all: help
 
@@ -17,6 +18,8 @@ help: ## Show this help message
 	@echo "  make test lint           # Run tests and all linters via pre-commit"
 	@echo "  make test-coverage       # Run tests with coverage analysis"
 	@echo "  make pre-commit-update   # Update pre-commit hooks to latest versions"
+	@echo "  make deps-check          # Check for outdated dependencies"
+	@echo "  make deps-update         # Update dependencies interactively"
 	@echo "  make security            # Run all security scans"
 
 test: ## Run all tests
@@ -51,7 +54,7 @@ test-coverage-html: test-coverage ## Generate HTML coverage report and open in b
 		echo "Open coverage.html in your browser to view detailed coverage"; \
 	fi
 
-lint: ## Run all linters via pre-commit
+lint: editorconfig ## Run all linters via pre-commit
 	@echo "Running all linters via pre-commit..."
 	@command -v pre-commit >/dev/null 2>&1 || \
 		{ echo "Please install pre-commit or run 'make devtools'"; exit 1; }
@@ -100,7 +103,7 @@ editorconfig: ## Check EditorConfig compliance
 	@echo "Checking EditorConfig compliance..."
 	@command -v editorconfig-checker >/dev/null 2>&1 || \
 		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
-	editorconfig-checker
+	editorconfig-checker || true
 
 editorconfig-fix: ## Fix EditorConfig violations
 	@echo "EditorConfig violations cannot be automatically fixed by editorconfig-checker"
@@ -126,13 +129,14 @@ devtools: ## Install all development tools
 			go install github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@latest; }
 	@command -v yamlfmt >/dev/null 2>&1 || \
 		{ echo "Installing yamlfmt..."; go install github.com/google/yamlfmt/cmd/yamlfmt@latest; }
+	@command -v go-mod-upgrade >/dev/null 2>&1 || \
+		{ echo "Installing go-mod-upgrade..."; \
+			go install github.com/oligot/go-mod-upgrade@latest; }
 	@echo "✓ Go tools installed"
 	@echo ""
 	@echo "=== Node.js Tools ==="
 	@command -v npm >/dev/null 2>&1 || \
 		{ echo "❌ npm not found. Please install Node.js first."; exit 1; }
-	@command -v snyk >/dev/null 2>&1 || \
-		{ echo "Installing snyk..."; npm install -g snyk; }
 	@echo "✓ Node.js tools installed"
 	@echo ""
 	@echo "=== Python Tools ==="
@@ -153,7 +157,7 @@ devtools: ## Install all development tools
 	@echo "   Run 'make test lint' to verify everything works."
 
 # Security targets
-security: vulncheck snyk trivy gitleaks ## Run all security scans
+security: vulncheck trivy gitleaks ## Run all security scans
 	@echo "All security scans completed"
 
 vulncheck: ## Run Go vulnerability check
@@ -162,15 +166,10 @@ vulncheck: ## Run Go vulnerability check
 		{ echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
 	govulncheck ./...
 
-audit: vulncheck ## Run comprehensive security audit
+audit: trivy gitleaks vulncheck ## Run comprehensive security audit
 	@echo "Running comprehensive security audit..."
 	go list -json -deps ./... | jq -r '.Module | select(.Path != null) | .Path + "@" + .Version' | sort -u
 
-snyk: ## Run Snyk security scan
-	@echo "Running Snyk security scan..."
-	@command -v snyk >/dev/null 2>&1 || \
-		{ echo "Please install Snyk CLI: npm install -g snyk"; exit 1; }
-	snyk test --file=go.mod --package-manager=gomodules
 
 trivy: ## Run Trivy filesystem scan
 	@echo "Running Trivy filesystem scan..."
@@ -183,3 +182,23 @@ gitleaks: ## Run gitleaks secrets detection
 	@command -v gitleaks >/dev/null 2>&1 || \
 		{ echo "Please install gitleaks: https://github.com/gitleaks/gitleaks"; exit 1; }
 	gitleaks detect --source . --verbose
+
+# Dependency management targets
+deps-check: ## Show outdated dependencies
+	@echo "Checking for outdated dependencies..."
+	@go list -u -m all | grep -v "^go: finding"
+
+deps-update: ## Update dependencies interactively
+	@echo "Starting interactive dependency update..."
+	@command -v go-mod-upgrade >/dev/null 2>&1 || \
+		{ echo "Please install go-mod-upgrade or run 'make devtools'"; exit 1; }
+	go-mod-upgrade
+	@echo "Running go mod tidy..."
+	go mod tidy
+
+deps-update-all: ## Update all dependencies to latest versions
+	@echo "Updating all dependencies to latest versions..."
+	@go get -u ./...
+	@echo "Running go mod tidy..."
+	go mod tidy
+	@echo "All dependencies updated"

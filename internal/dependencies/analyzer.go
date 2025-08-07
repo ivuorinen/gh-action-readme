@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v57/github"
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )

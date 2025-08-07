@@ -2,11 +2,10 @@ package internal
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"text/template"
 
-	"github.com/google/go-github/v57/github"
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
@@ -18,6 +17,7 @@ import (
 const (
 	defaultOrgPlaceholder  = "your-org"
 	defaultRepoPlaceholder = "your-repo"
+	defaultUsesPlaceholder = "your-org/your-action@v1"
 )
 
 // TemplateOptions defines options for rendering templates.
@@ -92,14 +92,14 @@ func getGitRepo(data any) string {
 func getGitUsesString(data any) string {
 	td, ok := data.(*TemplateData)
 	if !ok {
-		return "your-org/your-action@v1"
+		return defaultUsesPlaceholder
 	}
 
 	org := strings.TrimSpace(getGitOrg(data))
 	repo := strings.TrimSpace(getGitRepo(data))
 
 	if !isValidOrgRepo(org, repo) {
-		return "your-org/your-action@v1"
+		return defaultUsesPlaceholder
 	}
 
 	version := formatVersion(getActionVersion(data))
@@ -127,14 +127,21 @@ func formatVersion(version string) string {
 
 // buildUsesString constructs the uses string with optional action name.
 func buildUsesString(td *TemplateData, org, repo, version string) string {
-	if td.Name != "" {
+	// Use the validation package's FormatUsesStatement for consistency
+	if org == "" || repo == "" {
+		return defaultUsesPlaceholder
+	}
+
+	// For actions within subdirectories, include the action name
+	if td.Name != "" && repo != "" {
 		actionName := validation.SanitizeActionName(td.Name)
 		if actionName != "" && actionName != repo {
-			return fmt.Sprintf("%s/%s/%s%s", org, repo, actionName, version)
+			// Check if this looks like a subdirectory action
+			return validation.FormatUsesStatement(org, repo+"/"+actionName, version)
 		}
 	}
 
-	return fmt.Sprintf("%s/%s%s", org, repo, version)
+	return validation.FormatUsesStatement(org, repo, version)
 }
 
 // getActionVersion returns the action version from template data.

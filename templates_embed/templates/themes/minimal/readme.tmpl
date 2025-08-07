@@ -5,7 +5,7 @@
 ## Usage
 
 ```yaml
-- uses: your-org/{{.Name | lower | replace " " "-"}}@v1
+- uses: {{gitUsesString .}}
   {{if .Inputs}}with:
   {{- range $key, $val := .Inputs}}
     {{$key}}: {{if $val.Default}}{{$val.Default}}{{else}}value{{end}}

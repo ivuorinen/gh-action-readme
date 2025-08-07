@@ -10,7 +10,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/gofri/go-github-ratelimit/github_ratelimit"
-	"github.com/google/go-github/v57/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 

@@ -17,10 +17,11 @@ We take security vulnerabilities seriously. If you discover a security issue in 
 
 1. **Do NOT create a public GitHub issue** for security vulnerabilities
 2. Send an email to [security@ivuorinen.dev](mailto:security@ivuorinen.dev) with:
-  - Description of the vulnerability
-  - Steps to reproduce the issue
-  - Potential impact assessment
-  - Any suggested fixes (if available)
+
+- Description of the vulnerability
+- Steps to reproduce the issue
+- Potential impact assessment
+- Any suggested fixes (if available)
 
 ### What to Expect
 
@@ -36,7 +37,6 @@ We take security vulnerabilities seriously. If you discover a security issue in 
 We employ multiple layers of automated security scanning:
 
 - **govulncheck**: Go-specific vulnerability scanning
-- **Snyk**: Dependency vulnerability analysis
 - **Trivy**: Container and filesystem security scanning
 - **gitleaks**: Secrets detection and prevention
 - **CodeQL**: Static code analysis
@@ -106,7 +106,6 @@ make security
 
 # Individual scans
 make vulncheck  # Go vulnerability check
-make snyk       # Dependency analysis
 make trivy      # Filesystem scanning
 make gitleaks   # Secrets detection
 
@@ -144,7 +143,6 @@ Our GitHub Actions workflows automatically run:
 ```bash
 # Install security tools
 go install golang.org/x/vuln/cmd/govulncheck@latest
-npm install -g snyk
 # Install trivy: https://aquasecurity.github.io/trivy/
 # Install gitleaks: https://github.com/gitleaks/gitleaks
 

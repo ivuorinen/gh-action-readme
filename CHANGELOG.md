@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - GoReleaser configuration for automated releases
 - Multi-platform binary builds (Linux, macOS, Windows)
 - Docker images with multi-architecture support
@@ -18,10 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced version command with build information
 
 ### Changed
+
 - Updated GitHub Actions workflow for automated releases
 - Improved release process with GoReleaser
 
 ### Infrastructure
+
 - Added Dockerfile for containerized deployments
 - Set up automated Docker image publishing to GitHub Container Registry
 - Added support for ARM64 and AMD64 architectures
@@ -29,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - Initial Release
 
 ### Added
+
 - Core CLI framework with Cobra
 - Documentation generation from action.yml files
 - Multiple output formats (Markdown, HTML, JSON, AsciiDoc)
@@ -46,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zero linting violations
 
 ### Features
+
 - **CLI Commands**: gen, validate, schema, version, about, config, deps, cache
 - **Configuration**: Multi-level hierarchy with hidden config files
 - **Dependency Management**: Outdated detection, security analysis, version pinning
@@ -54,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cache Management**: XDG-compliant caching with TTL support
 
 ### Quality
+
 - Comprehensive code quality improvements
 - Extracted helper functions for code deduplication
 - Reduced cyclomatic complexity in all functions
