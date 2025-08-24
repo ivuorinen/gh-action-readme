@@ -32,4 +32,4 @@ JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.json
 TYPESCRIPT_ES_CONFIG_FILE: .eslintrc.json
 
 FILTER_REGEX_EXCLUDE: >-
-  (node_modules|\.automation/test|docs/json-schemas|\.github/workflows)
+  (node_modules|\.automation/test|docs/json-schemas|\.github/workflows|testdata)
