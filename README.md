@@ -1,5 +1,6 @@
 # gh-action-readme
 
+<div align="center">
 ![GitHub](https://img.shields.io/badge/GitHub%20Action-Documentation%20Generator-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Go](https://img.shields.io/badge/Go-1.24+-00ADD8)
@@ -8,6 +9,7 @@
 [![Security](https://img.shields.io/badge/security-hardened-brightgreen)](docs/security.md)
 [![Go Vulnerability Check](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml)
 [![CodeQL](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml)
+</div>
 
 > **The definitive CLI tool for generating beautiful documentation from GitHub Actions `action.yml` files**
 
@@ -15,23 +17,20 @@ Transform your GitHub Actions into professional documentation with multiple them
 
 ## ✨ Features
 
-🎨 **5 Beautiful Themes** - GitHub, GitLab, Minimal, Professional, Default
-📄 **4 Output Formats** - Markdown, HTML, JSON, AsciiDoc
-🎯 **Smart Validation** - Context-aware suggestions for fixing action.yml files
-🚀 **Modern CLI** - Colored output, progress bars, comprehensive help
-⚙️ **Enterprise Ready** - XDG-compliant configuration, recursive processing
-🔧 **Developer Friendly** - Template customization, batch operations
-📁 **Flexible Targeting** - Directory/file arguments, custom output filenames
-🛡️ **Thread Safe** - Race condition protection, concurrent processing ready
+- 🎨 **5 Beautiful Themes** - GitHub, GitLab, Minimal, Professional, Default
+- 📄 **4 Output Formats** - Markdown, HTML, JSON, AsciiDoc
+- 🎯 **Smart Validation** - Context-aware suggestions for fixing action.yml files
+- 🚀 **Modern CLI** - Colored output, progress bars, comprehensive help
+- ⚙️ **Enterprise Ready** - XDG-compliant configuration, recursive processing
+- 🔧 **Developer Friendly** - Template customization, batch operations
+- 📁 **Flexible Targeting** - Directory/file arguments, custom output filenames
+- 🛡️ **Thread Safe** - Race condition protection, concurrent processing ready
 
 ## 🚀 Quick Start
 
 ### Installation
 
 ```bash
-# macOS with Homebrew
-brew install ivuorinen/tap/gh-action-readme
-
 # Using Go
 go install github.com/ivuorinen/gh-action-readme@latest
 
