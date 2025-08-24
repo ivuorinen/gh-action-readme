@@ -2,13 +2,13 @@
 # https://github.com/gitleaks/gitleaks
 
 # Ignore test files with dummy secrets
-**/testdata/**
-**/test/**
-**/*_test.go
+*/testdata/*
+*/test/*
+*_test.go
 
 # Ignore example configurations
-**/examples/**
-**/docs/**
+*/examples/*
+*/docs/*
 
 # Common false positives
 # Generic test tokens
