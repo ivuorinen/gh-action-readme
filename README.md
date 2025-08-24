@@ -1,6 +1,7 @@
 # gh-action-readme
 
 <div align="center">
+
 ![GitHub](https://img.shields.io/badge/GitHub%20Action-Documentation%20Generator-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Go](https://img.shields.io/badge/Go-1.24+-00ADD8)
@@ -9,6 +10,7 @@
 [![Security](https://img.shields.io/badge/security-hardened-brightgreen)](docs/security.md)
 [![Go Vulnerability Check](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml)
 [![CodeQL](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml)
+
 </div>
 
 > **The definitive CLI tool for generating beautiful documentation from GitHub Actions `action.yml` files**
