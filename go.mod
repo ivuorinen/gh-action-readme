@@ -1,6 +1,7 @@
 module github.com/ivuorinen/gh-action-readme
 
-go 1.24.6
+go 1.24
+toolchain go1.24.6
 
 require (
 	github.com/adrg/xdg v0.5.3
