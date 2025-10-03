@@ -78,9 +78,9 @@ changelog:
       - "^ci:"
       - "^docs:"
       - "merge conflict"
-      - Merge pull request
-      - Merge remote-tracking branch
-      - Merge branch
+      - "Merge pull request"
+      - "Merge remote-tracking branch"
+      - "Merge branch"
   groups:
     - title: 🚀 Features
       regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
@@ -155,6 +155,7 @@ brews:
       owner: ivuorinen
       name: homebrew-tap
       branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
     commit_author:
       name: goreleaserbot
@@ -169,20 +170,20 @@ brews:
     test: |
       system "#{bin}/gh-action-readme", "version"
 
-# Scoop bucket for Windows
-scoops:
-  - name: gh-action-readme
-    homepage: https://github.com/ivuorinen/gh-action-readme
-    description: "Auto-generate beautiful README and HTML documentation for GitHub Actions"
-    license: MIT
-    repository:
-      owner: ivuorinen
-      name: scoop-bucket
-      branch: main
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+# Scoop bucket for Windows (disabled - repository doesn't exist)
+# scoops:
+#   - name: gh-action-readme
+#     homepage: https://github.com/ivuorinen/gh-action-readme
+#     description: "Auto-generate beautiful README and HTML documentation for GitHub Actions"
+#     license: MIT
+#     repository:
+#       owner: ivuorinen
+#       name: scoop-bucket
+#       branch: main
+#     commit_author:
+#       name: goreleaserbot
+#       email: bot@goreleaser.com
+#     commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
 
 # Docker images
 dockers:
