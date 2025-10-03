@@ -93,6 +93,19 @@ if ! golangci-lint run; then
   exit 1
 fi
 
+# Validate recent commit messages follow semantic commit format
+log_info "Validating commit messages..."
+if command -v npx &>/dev/null; then
+  # Check last 10 commits for semantic commit format
+  if ! npx --yes @commitlint/cli@19.6.1 --from HEAD~10 --to HEAD --verbose 2>/dev/null; then
+    log_warning "Some commit messages don't follow conventional commit format"
+    log_warning "Consider using semantic commit messages: feat:, fix:, docs:, etc."
+  fi
+else
+  log_warning "npx not found. Skipping commit message validation."
+  log_warning "Install Node.js to enable commit message validation."
+fi
+
 # Build and test GoReleaser config
 log_info "Testing GoReleaser configuration..."
 if ! goreleaser check; then
