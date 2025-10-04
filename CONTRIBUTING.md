@@ -135,7 +135,7 @@ Improve documentation and examples:
 - [ ] Tests added for new features (`make test` passes)
 - [ ] Documentation updated for user-facing changes
 - [ ] No security vulnerabilities (`make security` passes)
-- [ ] Commit messages follow conventional format
+- [ ] Commit messages follow [conventional commit format](docs/COMMIT_MESSAGES.md)
 
 ### PR Requirements
 
@@ -204,7 +204,7 @@ if err != nil {
 
 ### Commit Message Format
 
-Follow [Conventional Commits](https://conventionalcommits.org/):
+Follow [Conventional Commits](https://conventionalcommits.org/). See [docs/COMMIT_MESSAGES.md](docs/COMMIT_MESSAGES.md) for detailed guidelines.
 
 ```bash
 # Feature additions

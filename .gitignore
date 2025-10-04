@@ -27,6 +27,7 @@ go.sum
 
 /gh-action-readme
 *.out
+actionlint
 
 # Created readme files
 testdata/**/*.md
