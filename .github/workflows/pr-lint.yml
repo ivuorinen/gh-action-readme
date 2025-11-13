@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       actions: write
-      contents: read
+      contents: write
       issues: write
       packages: read
       pull-requests: write
