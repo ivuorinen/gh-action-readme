@@ -1,5 +1,8 @@
 # Gitleaks ignore patterns
 # https://github.com/gitleaks/gitleaks
+#
+# Format: <commit-hash>:<file-path>:<rule-name>:<line-number>
+# Or without commit hash for dir scans: <file-path>:<rule-name>:<line-number>
 
 f9823eef3ec602b92ab4f17b3b4b93b2f219fb6a:internal/wizard/validator_test.go:generic-api-key:195
 f9823eef3ec602b92ab4f17b3b4b93b2f219fb6a:internal/wizard/validator_test.go:generic-api-key:197
@@ -7,3 +10,16 @@ f9823eef3ec602b92ab4f17b3b4b93b2f219fb6a:internal/wizard/validator_test.go:gener
 f9823eef3ec602b92ab4f17b3b4b93b2f219fb6a:internal/wizard/validator_test.go:generic-api-key:199
 f9823eef3ec602b92ab4f17b3b4b93b2f219fb6a:internal/wizard/validator_test.go:generic-api-key:200
 f9823eef3ec602b92ab4f17b3b4b93b2f219fb6a:internal/wizard/validator_test.go:github-pat:195
+
+# Test tokens (using fingerprint format for dir scans)
+internal/configuration_loader_test.go:github-pat:141
+internal/configuration_loader_test.go:github-pat:173
+internal/wizard/validator_test.go:generic-api-key:204
+internal/wizard/validator_test.go:generic-api-key:206
+internal/wizard/validator_test.go:generic-api-key:207
+internal/wizard/validator_test.go:generic-api-key:208
+internal/wizard/validator_test.go:generic-api-key:209
+internal/wizard/validator_test.go:github-pat:204
+integration_test.go:github-pat:304
+internal/config_test.go:github-pat:133
+internal/config_test.go:github-pat:162

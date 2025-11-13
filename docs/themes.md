@@ -92,7 +92,7 @@ gh-action-readme gen --theme default
 ## 🎯 Theme Comparison
 
 | Feature | GitHub | GitLab | Minimal | Professional | Default |
-|---------|--------|--------|---------|-------------|---------|
+| --------- | -------- | -------- | --------- | ------------- | --------- |
 | **Badges** | ✅ Rich | ✅ GitLab | ❌ None | ✅ Comprehensive | ❌ None |
 | **TOC** | ✅ Yes | ✅ Yes | ❌ No | ✅ Advanced | ❌ No |
 | **Examples** | ✅ GitHub | ✅ CI/CD | ✅ Basic | ✅ Comprehensive | ✅ Basic |
@@ -146,10 +146,10 @@ runs:
 <details>
 <summary>📋 Inputs</summary>
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `aws-region` | AWS region to deploy to | Yes | `us-east-1` |
-| `environment` | Deployment environment | No | `production` |
+| Input         | Description              | Required | Default       |
+| ------------- | ------------------------ | -------- | ------------- |
+| `aws-region`  | AWS region to deploy to  | Yes      | `us-east-1`   |
+| `environment` | Deployment environment   | No       | `production`  |
 
 </details>
 ```

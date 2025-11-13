@@ -138,7 +138,7 @@ func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
 				testutil.WriteTestFile(t, globalConfigPath, `
 theme: default
 output_format: md
-github_token: global-token
+github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
 verbose: false
 `)
 
@@ -170,7 +170,7 @@ quiet: false
 				testutil.AssertEqual(t, "html", config.OutputFormat)
 				testutil.AssertEqual(t, true, config.Verbose)
 				// Should inherit GitHub token from global config
-				testutil.AssertEqual(t, "global-token", config.GitHubToken)
+				testutil.AssertEqual(t, "ghp_test1234567890abcdefghijklmnopqrstuvwxyz", config.GitHubToken)
 			},
 		},
 		{

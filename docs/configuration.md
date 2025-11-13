@@ -33,7 +33,7 @@ cache_ttl: 3600
 ### Core Settings
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| -------- | ------ | --------- | ------------- |
 | `theme` | string | `default` | Default theme to use |
 | `output_format` | string | `md` | Default output format |
 | `output_dir` | string | `.` | Default output directory |
@@ -42,7 +42,7 @@ cache_ttl: 3600
 ### GitHub Integration
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| -------- | ------ | --------- | ------------- |
 | `github_token` | string | `""` | GitHub personal access token |
 | `dependencies_enabled` | boolean | `true` | Enable dependency analysis |
 | `rate_limit_delay` | int | `1000` | Delay between API calls (ms) |
@@ -50,7 +50,7 @@ cache_ttl: 3600
 ### Performance Settings
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| -------- | ------ | --------- | ------------- |
 | `cache_ttl` | int | `3600` | Cache TTL in seconds |
 | `concurrent_requests` | int | `3` | Max concurrent GitHub API requests |
 | `timeout` | int | `30` | Request timeout in seconds |

@@ -147,7 +147,7 @@ gh-action-readme gen --output-format json --output api/action.json
 ## 📄 Output Formats
 
 | Format | Description | Use Case | Extension |
-|--------|-------------|----------|-----------|
+| -------- | ------------- | ---------- | ----------- |
 | **md** | Markdown (default) | GitHub README files | `.md` |
 | **html** | Styled HTML | Web documentation | `.html` |
 | **json** | Structured data | API integration | `.json` |
@@ -174,7 +174,7 @@ gh-action-readme gen --output-format asciidoc --output docs/action.adoc
 See [themes.md](themes.md) for detailed theme documentation.
 
 | Theme | Best For | Features |
-|-------|----------|----------|
+| ------- | ---------- | ---------- |
 | **github** | GitHub marketplace | Badges, collapsible sections |
 | **gitlab** | GitLab repositories | CI/CD examples |
 | **minimal** | Simple actions | Clean, concise |

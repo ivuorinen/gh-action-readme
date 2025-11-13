@@ -130,7 +130,7 @@ func TestLoadConfiguration(t *testing.T) {
 				testutil.WriteTestFile(t, globalConfigPath, `
 theme: default
 output_format: md
-github_token: global-token
+github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
 `)
 
 				// Create repo root with repo-specific config
@@ -159,7 +159,7 @@ output_dir: output
 				// Should inherit from repo level
 				testutil.AssertEqual(t, "html", config.OutputFormat)
 				// Should inherit GitHub token from global config
-				testutil.AssertEqual(t, "global-token", config.GitHubToken)
+				testutil.AssertEqual(t, "ghp_test1234567890abcdefghijklmnopqrstuvwxyz", config.GitHubToken)
 			},
 		},
 		{
