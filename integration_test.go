@@ -301,7 +301,7 @@ func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 	globalConfig := `theme: default
 output_format: md
 verbose: false
-github_token: global-token`
+github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz`
 	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, "config.yml"), globalConfig)
 
 	// Repository configuration (medium priority)
