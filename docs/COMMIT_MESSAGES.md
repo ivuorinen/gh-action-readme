@@ -4,7 +4,7 @@ This project follows [Conventional Commits](https://www.conventionalcommits.org/
 
 ## Format
 
-```
+```text
 <type>(<scope>): <subject>
 
 <body>
@@ -42,7 +42,7 @@ The subject contains a succinct description of the change:
 
 ### Examples
 
-```
+```text
 feat: add support for AsciiDoc output format
 fix: correct template rendering for empty descriptions
 docs: update installation instructions

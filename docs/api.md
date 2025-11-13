@@ -36,21 +36,21 @@ gh-action-readme gen [directory_or_file] [flags]
 #### Output Options
 
 | Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
+| ------ | ------- | ------ | --------- | ------------- |
 | `--output-format` | `-f` | string | `md` | Output format: md, html, json, asciidoc |
 | `--output-dir` | `-o` | string | `.` | Output directory for generated files |
 | `--output` | | string | | Custom output filename (overrides default naming) |
 
 #### Theme Options
 
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--theme` | `-t` | string | `default` | Theme: github, gitlab, minimal, professional, default |
+| Flag      | Short | Type   | Default   | Description                                              |
+| --------- | ----- | ------ | --------- | -------------------------------------------------------- |
+| `--theme` | `-t`  | string | `default` | Theme: github, gitlab, minimal, professional, default    |
 
 #### Processing Options
 
 | Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
+| ------ | ------- | ------ | --------- | ------------- |
 | `--recursive` | `-r` | boolean | `false` | Search directories recursively for action.yml files |
 | `--quiet` | `-q` | boolean | `false` | Suppress progress output |
 | `--verbose` | `-v` | boolean | `false` | Enable verbose logging |
@@ -58,7 +58,7 @@ gh-action-readme gen [directory_or_file] [flags]
 #### GitHub Integration
 
 | Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
+| ------ | ------- | ------ | --------- | ------------- |
 | `--github-token` | | string | | GitHub personal access token (or use GITHUB_TOKEN env) |
 | `--no-dependencies` | | boolean | `false` | Disable dependency analysis |
 
@@ -152,7 +152,7 @@ gh-action-readme validate [file_or_directory] [flags]
 ### Flags
 
 | Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
+| ------ | ------- | ------ | --------- | ------------- |
 | `--verbose` | `-v` | boolean | `false` | Show detailed validation messages |
 | `--quiet` | `-q` | boolean | `false` | Only show errors, suppress warnings |
 | `--recursive` | `-r` | boolean | `false` | Validate recursively |
@@ -343,7 +343,7 @@ gh-action-readme help config wizard
 These flags are available for all commands:
 
 | Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
+| ------ | ------- | ------ | --------- | ------------- |
 | `--config` | | string | | Custom configuration file path |
 | `--help` | `-h` | boolean | `false` | Show help for command |
 | `--quiet` | `-q` | boolean | `false` | Suppress non-error output |
@@ -352,7 +352,7 @@ These flags are available for all commands:
 ## 📊 Exit Codes
 
 | Code | Description |
-|------|-------------|
+| ------ | ------------- |
 | `0` | Success |
 | `1` | General error |
 | `2` | Invalid arguments |

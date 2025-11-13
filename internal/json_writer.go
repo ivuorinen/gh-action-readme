@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -244,6 +245,7 @@ func (jw *JSONWriter) generateBasicExample(action *ActionYML) string {
 
 	if len(action.Inputs) > 0 {
 		example += "\n  with:"
+		var exampleSb247 strings.Builder
 		for key, input := range action.Inputs {
 			value := "value"
 			if input.Default != nil {
@@ -253,8 +255,9 @@ func (jw *JSONWriter) generateBasicExample(action *ActionYML) string {
 					value = fmt.Sprintf("%v", input.Default)
 				}
 			}
-			example += "\n    " + key + ": \"" + value + "\""
+			exampleSb247.WriteString("\n    " + key + ": \"" + value + "\"")
 		}
+		example += exampleSb247.String()
 	}
 
 	return example

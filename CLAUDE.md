@@ -84,7 +84,7 @@ cd testdata/example-action/
 ## 📊 Feature Matrix
 
 | Feature | Status | Files |
-|---------|--------|-------|
+| --------- | -------- | ------- |
 | CLI Framework | ✅ | `main.go` |
 | Enhanced Gen Command | ✅ | `main.go:168-180` |
 | File Discovery | ✅ | `generator.go:304-324` |

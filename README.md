@@ -176,7 +176,7 @@ Contributions welcome! Fork, create feature branch, add tests, submit PR.
 ## 📊 Comparison
 
 | Feature | gh-action-readme | action-docs | gh-actions-auto-docs |
-|---------|------------------|-------------|----------------------|
+| --------- | ------------------ | ------------- | ---------------------- |
 | **Themes** | 5 themes | 1 basic | 1 basic |
 | **Output Formats** | 4 formats | 1 format | 1 format |
 | **Validation** | Smart suggestions | Basic | None |
