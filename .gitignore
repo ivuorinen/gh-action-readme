@@ -34,3 +34,6 @@ testdata/**/*.md
 testdata/**/*.html
 testdata/**/*.json
 coverage.*
+
+# Other
+/megalinter-reports/
