@@ -11,7 +11,7 @@ require (
 	github.com/gofri/go-github-ratelimit v1.1.1
 	github.com/google/go-github/v74 v74.0.0
 	github.com/schollz/progressbar/v3 v3.18.0
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	golang.org/x/oauth2 v0.33.0
 )
