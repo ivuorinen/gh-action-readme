@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -547,14 +548,14 @@ func TestGetGitHubToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set up environment
 			if tt.toolEnvToken != "" {
-				t.Setenv(EnvGitHubToken, tt.toolEnvToken)
+				t.Setenv(appconstants.EnvGitHubToken, tt.toolEnvToken)
 			} else {
-				t.Setenv(EnvGitHubToken, "")
+				t.Setenv(appconstants.EnvGitHubToken, "")
 			}
 			if tt.stdEnvToken != "" {
-				t.Setenv(EnvGitHubTokenStandard, tt.stdEnvToken)
+				t.Setenv(appconstants.EnvGitHubTokenStandard, tt.stdEnvToken)
 			} else {
-				t.Setenv(EnvGitHubTokenStandard, "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
 			}
 
 			config := &AppConfig{GitHubToken: tt.configToken}

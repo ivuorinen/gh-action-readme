@@ -12,18 +12,10 @@ import (
 	"github.com/google/go-github/v74/github"
 	"github.com/schollz/progressbar/v3"
 
-	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
-)
-
-// Output format constants.
-const (
-	OutputFormatHTML     = "html"
-	OutputFormatMD       = "md"
-	OutputFormatJSON     = "json"
-	OutputFormatASCIIDoc = "asciidoc"
 )
 
 // Generator orchestrates the documentation generation process.
@@ -174,13 +166,13 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
 	if err != nil {
 		g.Output.ErrorWithContext(
-			apperrors.ErrCodeFileNotFound,
+			appconstants.ErrCodeFileNotFound,
 			"failed to discover action files for "+context,
 			map[string]string{
-				"directory":     dir,
-				"recursive":     strconv.FormatBool(recursive),
-				"context":       context,
-				ContextKeyError: err.Error(),
+				"directory":                  dir,
+				"recursive":                  strconv.FormatBool(recursive),
+				"context":                    context,
+				appconstants.ContextKeyError: err.Error(),
 			},
 		)
 
@@ -191,7 +183,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	if len(actionFiles) == 0 {
 		contextMsg := "no GitHub Action files found for " + context
 		g.Output.ErrorWithContext(
-			apperrors.ErrCodeNoActionFiles,
+			appconstants.ErrCodeNoActionFiles,
 			contextMsg,
 			map[string]string{
 				"directory":  dir,
@@ -281,8 +273,8 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 		return fmt.Errorf("failed to render markdown template: %w", err)
 	}
 
-	outputPath := g.resolveOutputPath(outputDir, "README.md")
-	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
+	outputPath := g.resolveOutputPath(outputDir, appconstants.ReadmeMarkdown)
+	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write README.md to %s: %w", outputPath, err)
 	}
@@ -339,7 +331,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 	writer := NewJSONWriter(g.Config)
 
-	outputPath := g.resolveOutputPath(outputDir, "action-docs.json")
+	outputPath := g.resolveOutputPath(outputDir, appconstants.ActionDocsJSON)
 	if err := writer.Write(action, outputPath); err != nil {
 		return fmt.Errorf("failed to write JSON to %s: %w", outputPath, err)
 	}
@@ -370,8 +362,8 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 		return fmt.Errorf("failed to render AsciiDoc template: %w", err)
 	}
 
-	outputPath := g.resolveOutputPath(outputDir, "README.adoc")
-	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
+	outputPath := g.resolveOutputPath(outputDir, appconstants.ReadmeASCIIDoc)
+	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write AsciiDoc to %s: %w", outputPath, err)
 	}
@@ -431,7 +423,8 @@ func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error
 		// Check for critical validation errors that cannot be fixed with defaults
 		for _, field := range validationResult.MissingFields {
 			// All core required fields should cause validation failure
-			if field == "name" || field == "description" || field == "runs" || field == "runs.using" {
+			if field == appconstants.FieldName || field == appconstants.FieldDescription ||
+				field == appconstants.FieldRuns || field == appconstants.FieldRunsUsing {
 				// Required fields missing - cannot be fixed with defaults, must fail
 				return nil, fmt.Errorf(
 					"action file %s has invalid configuration, missing required field(s): %v",
@@ -478,13 +471,13 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string 
 // generateByFormat generates documentation in the specified format.
 func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
 	switch g.Config.OutputFormat {
-	case "md":
+	case appconstants.OutputFormatMarkdown:
 		return g.generateMarkdown(action, outputDir, actionPath)
-	case OutputFormatHTML:
+	case appconstants.OutputFormatHTML:
 		return g.generateHTML(action, outputDir, actionPath)
-	case OutputFormatJSON:
+	case appconstants.OutputFormatJSON:
 		return g.generateJSON(action, outputDir)
-	case OutputFormatASCIIDoc:
+	case appconstants.OutputFormatASCIIDoc:
 		return g.generateASCIIDoc(action, outputDir, actionPath)
 	default:
 		return fmt.Errorf("unsupported output format: %s", g.Config.OutputFormat)

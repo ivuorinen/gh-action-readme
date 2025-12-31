@@ -12,19 +12,13 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
 	"github.com/ivuorinen/gh-action-readme/internal/wizard"
-)
-
-const (
-	// Export format constants.
-	formatJSON = "json"
-	formatTOML = "toml"
-	formatYAML = "yaml"
 )
 
 var (
@@ -69,9 +63,9 @@ func formatSize(totalSize int64) string {
 // resolveExportFormat converts a format string to wizard.ExportFormat.
 func resolveExportFormat(format string) wizard.ExportFormat {
 	switch format {
-	case formatJSON:
+	case appconstants.OutputFormatJSON:
 		return wizard.FormatJSON
-	case formatTOML:
+	case appconstants.OutputFormatTOML:
 		return wizard.FormatTOML
 	default:
 		return wizard.FormatYAML
@@ -105,9 +99,11 @@ func main() {
 	}
 
 	// Global flags
-	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default: XDG config directory)")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet output (overrides verbose)")
+	configDesc := "config file (default: XDG config directory)"
+	rootCmd.PersistentFlags().StringVar(&configFile, appconstants.ContextKeyConfig, "", configDesc)
+	rootCmd.PersistentFlags().BoolVarP(&verbose, appconstants.ConfigKeyVerbose, "v", false, "verbose output")
+	quietDesc := "quiet output (overrides verbose)"
+	rootCmd.PersistentFlags().BoolVarP(&quiet, appconstants.ConfigKeyQuiet, "q", false, quietDesc)
 
 	rootCmd.AddCommand(newGenCmd())
 	rootCmd.AddCommand(newValidateCmd())
@@ -117,7 +113,7 @@ func main() {
 		Short: "Print the version number",
 		Long:  "Print the version number and build information",
 		Run: func(cmd *cobra.Command, _ []string) {
-			verbose, _ := cmd.Flags().GetBool("verbose")
+			verbose, _ := cmd.Flags().GetBool(appconstants.ConfigKeyVerbose)
 			if verbose {
 				fmt.Printf("gh-action-readme version %s\n", version)
 				fmt.Printf("  commit: %s\n", commit)
@@ -182,11 +178,11 @@ Examples:
 		Run:  genHandler,
 	}
 
-	cmd.Flags().StringP("output-format", "f", "md", "output format: md, html, json, asciidoc")
-	cmd.Flags().StringP("output-dir", "o", ".", "output directory")
-	cmd.Flags().StringP("output", "", "", "custom output filename (overrides default naming)")
-	cmd.Flags().StringP("theme", "t", "", "template theme: github, gitlab, minimal, professional")
-	cmd.Flags().BoolP("recursive", "r", false, "search for action.yml files recursively")
+	cmd.Flags().StringP(appconstants.FlagOutputFormat, "f", "md", "output format: md, html, json, asciidoc")
+	cmd.Flags().StringP(appconstants.FlagOutputDir, "o", ".", "output directory")
+	cmd.Flags().StringP(appconstants.FlagOutput, "", "", "custom output filename (overrides default naming)")
+	cmd.Flags().StringP(appconstants.ConfigKeyTheme, "t", "", "template theme: github, gitlab, minimal, professional")
+	cmd.Flags().BoolP(appconstants.FlagRecursive, "r", false, "search for action.yml files recursively")
 
 	return cmd
 }
@@ -218,7 +214,7 @@ func genHandler(cmd *cobra.Command, args []string) {
 		var err error
 		targetPath, err = helpers.GetCurrentDir()
 		if err != nil {
-			output.Error("Error getting current directory: %v", err)
+			output.Error(appconstants.ErrErrorGettingCurrentDir, err)
 			os.Exit(1)
 		}
 	}
@@ -244,7 +240,7 @@ func genHandler(cmd *cobra.Command, args []string) {
 		// Target is a directory
 		workingDir = absTargetPath
 		generator := internal.NewGenerator(globalConfig) // Temporary generator for discovery
-		recursive, _ := cmd.Flags().GetBool("recursive")
+		recursive, _ := cmd.Flags().GetBool(appconstants.FlagRecursive)
 		actionFiles, err = generator.DiscoverActionFilesWithValidation(
 			workingDir,
 			recursive,
@@ -306,10 +302,10 @@ func applyGlobalFlags(config *internal.AppConfig) {
 
 // applyCommandFlags applies command-specific flags.
 func applyCommandFlags(cmd *cobra.Command, config *internal.AppConfig) {
-	outputFormat, _ := cmd.Flags().GetString("output-format")
-	outputDir, _ := cmd.Flags().GetString("output-dir")
-	outputFilename, _ := cmd.Flags().GetString("output")
-	theme, _ := cmd.Flags().GetString("theme")
+	outputFormat, _ := cmd.Flags().GetString(appconstants.FlagOutputFormat)
+	outputDir, _ := cmd.Flags().GetString(appconstants.FlagOutputDir)
+	outputFilename, _ := cmd.Flags().GetString(appconstants.FlagOutput)
+	theme, _ := cmd.Flags().GetString(appconstants.ConfigKeyTheme)
 
 	if outputFormat != "md" {
 		config.OutputFormat = outputFormat
@@ -363,11 +359,11 @@ func validateHandler(_ *cobra.Command, _ []string) {
 	// Validate the discovered files
 	if err := generator.ValidateFiles(actionFiles); err != nil {
 		generator.Output.ErrorWithContext(
-			apperrors.ErrCodeValidation,
+			appconstants.ErrCodeValidation,
 			"validation failed",
 			map[string]string{
-				"files_count":            strconv.Itoa(len(actionFiles)),
-				internal.ContextKeyError: err.Error(),
+				"files_count":                strconv.Itoa(len(actionFiles)),
+				appconstants.ContextKeyError: err.Error(),
 			},
 		)
 		os.Exit(1)
@@ -416,8 +412,8 @@ func newConfigCmd() *cobra.Command {
 		Long:  "Launch an interactive wizard to set up your configuration step by step",
 		Run:   configWizardHandler,
 	}
-	initCmd.Flags().String("format", "yaml", "Export format: yaml, json, toml")
-	initCmd.Flags().String("output", "", "Output path (default: XDG config directory)")
+	initCmd.Flags().String(appconstants.FlagFormat, "yaml", "Export format: yaml, json, toml")
+	initCmd.Flags().String(appconstants.FlagOutput, "", "Output path (default: XDG config directory)")
 	cmd.AddCommand(initCmd)
 
 	cmd.AddCommand(&cobra.Command{
@@ -483,11 +479,11 @@ func configThemesHandler(_ *cobra.Command, _ []string) {
 		name string
 		desc string
 	}{
-		{internal.ThemeDefault, "Original simple template"},
-		{internal.ThemeGitHub, "GitHub-style with badges and collapsible sections"},
-		{internal.ThemeGitLab, "GitLab-focused with CI/CD examples"},
-		{internal.ThemeMinimal, "Clean and concise documentation"},
-		{internal.ThemeProfessional, "Comprehensive with troubleshooting and ToC"},
+		{appconstants.ThemeDefault, "Original simple template"},
+		{appconstants.ThemeGitHub, "GitHub-style with badges and collapsible sections"},
+		{appconstants.ThemeGitLab, "GitLab-focused with CI/CD examples"},
+		{appconstants.ThemeMinimal, "Clean and concise documentation"},
+		{appconstants.ThemeProfessional, "Comprehensive with troubleshooting and ToC"},
 	}
 
 	for _, theme := range themes {
@@ -539,8 +535,8 @@ func newDepsCmd() *cobra.Command {
 		Run:   depsUpgradeHandler,
 	}
 	upgradeCmd.Flags().Bool("ci", false, "CI/CD mode: automatically pin all updates to commit SHAs")
-	upgradeCmd.Flags().Bool("all", false, "Update all outdated dependencies without prompts")
-	upgradeCmd.Flags().Bool("dry-run", false, "Show what would be updated without making changes")
+	upgradeCmd.Flags().Bool(appconstants.InputAll, false, "Update all outdated dependencies without prompts")
+	upgradeCmd.Flags().Bool(appconstants.InputDryRun, false, "Show what would be updated without making changes")
 	cmd.AddCommand(upgradeCmd)
 
 	pinCmd := &cobra.Command{
@@ -549,8 +545,8 @@ func newDepsCmd() *cobra.Command {
 		Long:  "Convert floating versions (like @v4) to pinned commit SHAs with version comments.",
 		Run:   depsUpgradeHandler, // Uses same handler with different flags
 	}
-	pinCmd.Flags().Bool("all", false, "Pin all floating dependencies")
-	pinCmd.Flags().Bool("dry-run", false, "Show what would be pinned without making changes")
+	pinCmd.Flags().Bool(appconstants.InputAll, false, "Pin all floating dependencies")
+	pinCmd.Flags().Bool(appconstants.InputDryRun, false, "Show what would be pinned without making changes")
 	cmd.AddCommand(pinCmd)
 
 	return cmd
@@ -588,7 +584,7 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 	output := createOutputManager(globalConfig.Quiet)
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output.Error("Error getting current directory: %v", err)
+		output.Error(appconstants.ErrErrorGettingCurrentDir, err)
 		os.Exit(1)
 	}
 
@@ -596,7 +592,7 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 	actionFiles, err := generator.DiscoverActionFilesWithValidation(currentDir, true, "dependency listing")
 	if err != nil {
 		// For deps list, we can continue if no files found (show warning instead of error)
-		output.Warning("No action files found")
+		output.Warning(appconstants.ErrNoActionFilesFound)
 
 		return
 	}
@@ -765,7 +761,7 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 	output := createOutputManager(globalConfig.Quiet)
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output.Error("Error getting current directory: %v", err)
+		output.Error(appconstants.ErrErrorGettingCurrentDir, err)
 		os.Exit(1)
 	}
 
@@ -773,7 +769,7 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 	actionFiles, err := generator.DiscoverActionFilesWithValidation(currentDir, true, "outdated dependency analysis")
 	if err != nil {
 		// For deps outdated, we can continue if no files found (show warning instead of error)
-		output.Warning("No action files found")
+		output.Warning(appconstants.ErrNoActionFilesFound)
 
 		return
 	}
@@ -794,9 +790,9 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 // validateGitHubToken checks if GitHub token is available.
 func validateGitHubToken(output *internal.ColoredOutput) bool {
 	if globalConfig.GitHubToken == "" {
-		contextualErr := apperrors.New(apperrors.ErrCodeGitHubAuth, "GitHub token not found").
-			WithSuggestions(apperrors.GetSuggestions(apperrors.ErrCodeGitHubAuth, map[string]string{})...).
-			WithHelpURL(apperrors.GetHelpURL(apperrors.ErrCodeGitHubAuth))
+		contextualErr := apperrors.New(appconstants.ErrCodeGitHubAuth, "GitHub token not found").
+			WithSuggestions(apperrors.GetSuggestions(appconstants.ErrCodeGitHubAuth, map[string]string{})...).
+			WithHelpURL(apperrors.GetHelpURL(appconstants.ErrCodeGitHubAuth))
 
 		output.Warning("⚠️  %s", contextualErr.Error())
 
@@ -818,14 +814,14 @@ func checkAllOutdated(
 	for _, actionFile := range actionFiles {
 		deps, err := analyzer.AnalyzeActionFile(actionFile)
 		if err != nil {
-			output.Warning("Error analyzing %s: %v", actionFile, err)
+			output.Warning(appconstants.ErrErrorAnalyzing, actionFile, err)
 
 			continue
 		}
 
 		outdated, err := analyzer.CheckOutdated(deps)
 		if err != nil {
-			output.Warning("Error checking outdated for %s: %v", actionFile, err)
+			output.Warning(appconstants.ErrErrorCheckingOutdated, actionFile, err)
 
 			continue
 		}
@@ -863,7 +859,7 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) {
 	output := createOutputManager(globalConfig.Quiet)
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output.Error("Error getting current directory: %v", err)
+		output.Error(appconstants.ErrErrorGettingCurrentDir, err)
 		os.Exit(1)
 	}
 
@@ -875,8 +871,8 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) {
 
 	// Parse flags and show mode
 	ciMode, _ := cmd.Flags().GetBool("ci")
-	allFlag, _ := cmd.Flags().GetBool("all")
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	allFlag, _ := cmd.Flags().GetBool(appconstants.InputAll)
+	dryRun, _ := cmd.Flags().GetBool(appconstants.InputDryRun)
 	isPinCmd := cmd.Use == "pin"
 
 	showUpgradeMode(output, ciMode, isPinCmd)
@@ -915,7 +911,7 @@ func setupDepsUpgrade(output *internal.ColoredOutput, currentDir string) (*depen
 
 	analyzer, err := generator.CreateDependencyAnalyzer()
 	if err != nil {
-		output.Warning("Could not create dependency analyzer: %v", err)
+		output.Warning(appconstants.ErrCouldNotCreateDependencyAnalyzer, err)
 
 		return nil, nil
 	}
@@ -952,14 +948,14 @@ func collectAllUpdates(
 	for _, actionFile := range actionFiles {
 		deps, err := analyzer.AnalyzeActionFile(actionFile)
 		if err != nil {
-			output.Warning("Error analyzing %s: %v", actionFile, err)
+			output.Warning(appconstants.ErrErrorAnalyzing, actionFile, err)
 
 			continue
 		}
 
 		outdated, err := analyzer.CheckOutdated(deps)
 		if err != nil {
-			output.Warning("Error checking outdated for %s: %v", actionFile, err)
+			output.Warning(appconstants.ErrErrorCheckingOutdated, actionFile, err)
 
 			continue
 		}
@@ -1008,7 +1004,7 @@ func applyUpdates(
 	if automatic {
 		output.Info("\n🚀 Applying updates...")
 		if err := analyzer.ApplyPinnedUpdates(allUpdates); err != nil {
-			output.Error("Failed to apply updates: %v", err)
+			output.Error(appconstants.ErrFailedToApplyUpdates, err)
 			os.Exit(1)
 		}
 		output.Success("✅ Successfully updated %d dependencies with pinned commit SHAs", len(allUpdates))
@@ -1017,7 +1013,7 @@ func applyUpdates(
 		output.Info("\n❓ This will modify your action.yml files. Continue? (y/N): ")
 		var response string
 		_, _ = fmt.Scanln(&response) // User input, scan error not critical
-		if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
+		if strings.ToLower(response) != "y" && strings.ToLower(response) != appconstants.InputYes {
 			output.Info("Canceled")
 
 			return
@@ -1025,7 +1021,7 @@ func applyUpdates(
 
 		output.Info("🚀 Applying updates...")
 		if err := analyzer.ApplyPinnedUpdates(allUpdates); err != nil {
-			output.Error("Failed to apply updates: %v", err)
+			output.Error(appconstants.ErrFailedToApplyUpdates, err)
 			os.Exit(1)
 		}
 		output.Success("✅ Successfully updated %d dependencies", len(allUpdates))
@@ -1046,7 +1042,7 @@ func cacheClearHandler(_ *cobra.Command, _ []string) {
 	// Create a cache instance
 	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
 	if err != nil {
-		output.Error("Failed to access cache: %v", err)
+		output.Error(appconstants.ErrFailedToAccessCache, err)
 		os.Exit(1)
 	}
 
@@ -1064,7 +1060,7 @@ func cacheStatsHandler(_ *cobra.Command, _ []string) {
 	// Create a cache instance
 	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
 	if err != nil {
-		output.Error("Failed to access cache: %v", err)
+		output.Error(appconstants.ErrFailedToAccessCache, err)
 		os.Exit(1)
 	}
 
@@ -1090,14 +1086,14 @@ func cachePathHandler(_ *cobra.Command, _ []string) {
 	// Create a cache instance
 	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
 	if err != nil {
-		output.Error("Failed to access cache: %v", err)
+		output.Error(appconstants.ErrFailedToAccessCache, err)
 		os.Exit(1)
 	}
 
 	stats := cacheInstance.Stats()
 	cachePath, ok := stats["cache_dir"].(string)
 	if !ok {
-		cachePath = "unknown"
+		cachePath = appconstants.ScopeUnknown
 	}
 
 	output.Bold("Cache Directory:")
@@ -1123,8 +1119,8 @@ func configWizardHandler(cmd *cobra.Command, _ []string) {
 	}
 
 	// Get export format and output path
-	format, _ := cmd.Flags().GetString("format")
-	outputPath, _ := cmd.Flags().GetString("output")
+	format, _ := cmd.Flags().GetString(appconstants.FlagFormat)
+	outputPath, _ := cmd.Flags().GetString(appconstants.FlagOutput)
 
 	// Create exporter and export configuration
 	exporter := wizard.NewConfigExporter(output)

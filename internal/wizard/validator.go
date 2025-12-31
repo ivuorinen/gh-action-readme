@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 )
 
@@ -88,11 +89,11 @@ func (v *ConfigValidator) ValidateField(fieldName, value string) *ValidationResu
 		v.validateRepository(value, result)
 	case "version":
 		v.validateVersion(value, result)
-	case "theme":
+	case appconstants.ConfigKeyTheme:
 		v.validateTheme(value, result)
-	case "output_format":
+	case appconstants.ConfigKeyOutputFormat:
 		v.validateOutputFormat(value, result)
-	case "output_dir":
+	case appconstants.ConfigKeyOutputDir:
 		v.validateOutputDir(value, result)
 	case "github_token":
 		v.validateGitHubToken(value, result)
@@ -129,7 +130,7 @@ func (v *ConfigValidator) DisplayValidationResult(result *ValidationResult) {
 
 	// Display suggestions
 	if len(result.Suggestions) > 0 {
-		v.output.Info("\nSuggestions:")
+		v.output.Info(appconstants.SectionSuggestions)
 		for _, suggestion := range result.Suggestions {
 			v.output.Printf("  💡 %s", suggestion)
 		}
@@ -485,8 +486,8 @@ func (v *ConfigValidator) isValidGitHubToken(token string) bool {
 	// GitHub personal access tokens start with ghp_ or github_pat_
 	// Classic tokens are 40 characters after the prefix
 	// Fine-grained tokens have different formats
-	return strings.HasPrefix(token, "ghp_") ||
-		strings.HasPrefix(token, "github_pat_") ||
+	return strings.HasPrefix(token, appconstants.TokenPrefixGitHubPersonal) ||
+		strings.HasPrefix(token, appconstants.TokenPrefixGitHubPAT) ||
 		strings.HasPrefix(token, "gho_") ||
 		strings.HasPrefix(token, "ghu_") ||
 		strings.HasPrefix(token, "ghs_") ||

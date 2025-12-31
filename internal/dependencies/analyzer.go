@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-github/v74/github"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
@@ -27,44 +28,6 @@ const (
 	BranchName VersionType = "branch"
 	// LocalPath represents a local file path reference.
 	LocalPath VersionType = "local"
-
-	// Common string constants.
-	compositeUsing  = "composite"
-	updateTypeNone  = "none"
-	updateTypeMajor = "major"
-	updateTypePatch = "patch"
-	updateTypeMinor = "minor"
-
-	// Timeout constants.
-	apiCallTimeout  = 10 * time.Second
-	cacheDefaultTTL = 1 * time.Hour
-
-	// GitHub URL patterns.
-	githubBaseURL      = "https://github.com"
-	marketplaceBaseURL = "https://github.com/marketplace/actions/"
-
-	// Version parsing constants.
-	fullSHALength     = 40
-	minSHALength      = 7
-	versionPartsCount = 3
-
-	// File path patterns.
-	dockerPrefix      = "docker://"
-	localPathPrefix   = "./"
-	localPathUpPrefix = "../"
-
-	// File extensions.
-	backupExtension = ".backup"
-
-	// Cache key prefixes.
-	cacheKeyLatest = "latest:"
-	cacheKeyRepo   = "repo:"
-
-	// YAML structure constants.
-	usesFieldPrefix = "uses: "
-
-	// Special line estimation for script URLs.
-	scriptLineEstimate = 10
 )
 
 // Dependency represents a GitHub Action dependency with detailed information.
@@ -183,13 +146,13 @@ func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error
 		}
 
 		updateType := a.compareVersions(currentVersion, latestVersion)
-		if updateType != updateTypeNone {
+		if updateType != appconstants.UpdateTypeNone {
 			outdated = append(outdated, OutdatedDependency{
 				Current:          dep,
 				LatestVersion:    latestVersion,
 				LatestSHA:        latestSHA,
 				UpdateType:       updateType,
-				IsSecurityUpdate: updateType == updateTypeMajor, // Assume major updates might be security
+				IsSecurityUpdate: updateType == appconstants.UpdateTypeMajor, // Assume major updates might be security
 			})
 		}
 	}
@@ -247,7 +210,7 @@ func (a *Analyzer) validateAndCheckComposite(
 	action *ActionWithComposite,
 	progressCallback func(current, total int, message string),
 ) ([]Dependency, bool, error) {
-	if action.Runs.Using != compositeUsing {
+	if action.Runs.Using != appconstants.ActionTypeComposite {
 		if err := a.validateActionType(action.Runs.Using); err != nil {
 			return nil, false, err
 		}
@@ -331,13 +294,13 @@ func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependen
 
 	// Build dependency
 	dep := &Dependency{
-		Name:          fmt.Sprintf("%s/%s", owner, repo),
+		Name:          fmt.Sprintf(appconstants.URLPatternGitHubRepo, owner, repo),
 		Uses:          step.Uses,
 		Version:       version,
 		VersionType:   versionType,
 		IsPinned:      versionType == CommitSHA || (versionType == SemanticVersion && a.isVersionPinned(version)),
 		Author:        owner,
-		SourceURL:     fmt.Sprintf("%s/%s/%s", githubBaseURL, owner, repo),
+		SourceURL:     fmt.Sprintf("%s/%s/%s", appconstants.GitHubBaseURL, owner, repo),
 		IsLocalAction: isLocal,
 		IsShellScript: false,
 		WithParams:    a.convertWithParams(step.With),
@@ -345,7 +308,7 @@ func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependen
 
 	// Add marketplace URL for public actions
 	if !isLocal {
-		dep.MarketplaceURL = marketplaceBaseURL + repo
+		dep.MarketplaceURL = appconstants.MarketplaceBaseURL + repo
 	}
 
 	// Fetch additional metadata from GitHub API if available
@@ -370,11 +333,11 @@ func (a *Analyzer) analyzeShellScript(step CompositeStep, stepNumber int) *Depen
 		// This would ideally link to the specific line in the action.yml file
 		scriptURL = fmt.Sprintf(
 			"%s/%s/%s/blob/%s/action.yml#L%d",
-			githubBaseURL,
+			appconstants.GitHubBaseURL,
 			a.RepoInfo.Organization,
 			a.RepoInfo.Repository,
 			a.RepoInfo.DefaultBranch,
-			stepNumber*scriptLineEstimate,
+			stepNumber*appconstants.ScriptLineEstimate,
 		) // Rough estimate
 	}
 
@@ -403,11 +366,12 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 	// - ./local-action
 	// - docker://alpine:3.14
 
-	if strings.HasPrefix(uses, localPathPrefix) || strings.HasPrefix(uses, localPathUpPrefix) {
+	if strings.HasPrefix(uses, appconstants.LocalPathPrefix) ||
+		strings.HasPrefix(uses, appconstants.LocalPathUpPrefix) {
 		return "", "", uses, LocalPath
 	}
 
-	if strings.HasPrefix(uses, dockerPrefix) {
+	if strings.HasPrefix(uses, appconstants.DockerPrefix) {
 		return "", "", uses, LocalPath
 	}
 
@@ -438,9 +402,9 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 // isCommitSHA checks if a version string is a commit SHA.
 func (a *Analyzer) isCommitSHA(version string) bool {
 	// Check if it's a 40-character hex string (full SHA) or 7+ character hex (short SHA)
-	re := regexp.MustCompile(`^[a-f0-9]{7,40}$`)
+	re := regexp.MustCompile(appconstants.RegexGitSHA)
 
-	return len(version) >= minSHALength && re.MatchString(version)
+	return len(version) >= appconstants.MinSHALength && re.MatchString(version)
 }
 
 // isSemanticVersion checks if a version string follows semantic versioning.
@@ -455,7 +419,7 @@ func (a *Analyzer) isSemanticVersion(version string) bool {
 func (a *Analyzer) isVersionPinned(version string) bool {
 	// Consider it pinned if it specifies patch version (v1.2.3) or is a commit SHA
 	// Also check for full commit SHAs (40 chars)
-	if len(version) == fullSHALength {
+	if len(version) == appconstants.FullSHALength {
 		return true
 	}
 	re := regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
@@ -483,11 +447,11 @@ func (a *Analyzer) getLatestVersion(owner, repo string) (version, sha string, er
 		return "", "", errors.New("GitHub client not available")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), appconstants.APICallTimeout)
 	defer cancel()
 
 	// Check cache first
-	cacheKey := cacheKeyLatest + fmt.Sprintf("%s/%s", owner, repo)
+	cacheKey := appconstants.CacheKeyLatest + fmt.Sprintf(appconstants.URLPatternGitHubRepo, owner, repo)
 	if version, sha, found := a.getCachedVersion(cacheKey); found {
 		return version, sha, nil
 	}
@@ -573,7 +537,7 @@ func (a *Analyzer) cacheVersion(cacheKey, version, sha string) {
 	}
 
 	versionInfo := map[string]string{"version": version, "sha": sha}
-	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, cacheDefaultTTL)
+	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, appconstants.CacheDefaultTTL)
 }
 
 // compareVersions compares two version strings and returns the update type.
@@ -582,12 +546,12 @@ func (a *Analyzer) compareVersions(current, latest string) string {
 	latestClean := strings.TrimPrefix(latest, "v")
 
 	if currentClean == latestClean {
-		return updateTypeNone
+		return appconstants.UpdateTypeNone
 	}
 
 	// Special case: floating major version (e.g., "4" -> "4.1.1") should be patch
 	if !strings.Contains(currentClean, ".") && strings.HasPrefix(latestClean, currentClean+".") {
-		return updateTypePatch
+		return appconstants.UpdateTypePatch
 	}
 
 	currentParts := a.parseVersionParts(currentClean)
@@ -600,7 +564,7 @@ func (a *Analyzer) compareVersions(current, latest string) string {
 func (a *Analyzer) parseVersionParts(version string) []string {
 	parts := strings.Split(version, ".")
 	// For floating versions like "v4", treat as "v4.0.0" for comparison
-	for len(parts) < versionPartsCount {
+	for len(parts) < appconstants.VersionPartsCount {
 		parts = append(parts, "0")
 	}
 
@@ -610,16 +574,16 @@ func (a *Analyzer) parseVersionParts(version string) []string {
 // determineUpdateType compares version parts and returns update type.
 func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) string {
 	if currentParts[0] != latestParts[0] {
-		return updateTypeMajor
+		return appconstants.UpdateTypeMajor
 	}
 	if currentParts[1] != latestParts[1] {
-		return updateTypeMinor
+		return appconstants.UpdateTypeMinor
 	}
 	if currentParts[2] != latestParts[2] {
-		return updateTypePatch
+		return appconstants.UpdateTypePatch
 	}
 
-	return updateTypeNone
+	return appconstants.UpdateTypeNone
 }
 
 // updateActionFile applies updates to a single action file.
@@ -631,8 +595,9 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 	}
 
 	// Create backup
-	backupPath := filePath + backupExtension
-	if err := os.WriteFile(backupPath, content, 0600); err != nil { // #nosec G306 -- backup file permissions
+	backupPath := filePath + appconstants.BackupExtension
+	// #nosec G306 -- backup file permissions
+	if err := os.WriteFile(backupPath, content, appconstants.FilePermDefault); err != nil {
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -644,7 +609,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 			if strings.Contains(line, update.OldUses) {
 				// Replace the uses statement while preserving indentation
 				indent := strings.Repeat(" ", len(line)-len(strings.TrimLeft(line, " ")))
-				lines[i] = indent + usesFieldPrefix + update.NewUses
+				lines[i] = indent + appconstants.UsesFieldPrefix + update.NewUses
 				update.LineNumber = i + 1 // Store line number for reference
 
 				break
@@ -654,7 +619,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
-	if err := os.WriteFile(filePath, []byte(updatedContent), 0600); err != nil {
+	if err := os.WriteFile(filePath, []byte(updatedContent), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- updated file permissions
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
@@ -684,11 +649,11 @@ func (a *Analyzer) validateActionFile(filePath string) error {
 
 // enrichWithGitHubData fetches additional information from GitHub API.
 func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), appconstants.APICallTimeout)
 	defer cancel()
 
 	// Check cache first
-	cacheKey := cacheKeyRepo + fmt.Sprintf("%s/%s", owner, repo)
+	cacheKey := appconstants.CacheKeyRepo + fmt.Sprintf("%s/%s", owner, repo)
 	if a.Cache != nil {
 		if cached, exists := a.Cache.Get(cacheKey); exists {
 			if repository, ok := cached.(*github.Repository); ok {
@@ -707,7 +672,7 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 
 	// Cache the result with 1 hour TTL
 	if a.Cache != nil {
-		_ = a.Cache.SetWithTTL(cacheKey, repository, cacheDefaultTTL) // Ignore cache errors
+		_ = a.Cache.SetWithTTL(cacheKey, repository, appconstants.CacheDefaultTTL) // Ignore cache errors
 	}
 
 	// Enrich dependency with API data

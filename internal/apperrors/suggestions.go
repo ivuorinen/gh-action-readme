@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // GetSuggestions returns context-aware suggestions for the given error code.
-func GetSuggestions(code ErrorCode, context map[string]string) []string {
+func GetSuggestions(code appconstants.ErrorCode, context map[string]string) []string {
 	if handler := getSuggestionHandler(code); handler != nil {
 		return handler(context)
 	}
@@ -18,27 +20,27 @@ func GetSuggestions(code ErrorCode, context map[string]string) []string {
 }
 
 // getSuggestionHandler returns the appropriate suggestion function for the error code.
-func getSuggestionHandler(code ErrorCode) func(map[string]string) []string {
-	handlers := map[ErrorCode]func(map[string]string) []string{
-		ErrCodeFileNotFound:       getFileNotFoundSuggestions,
-		ErrCodePermission:         getPermissionSuggestions,
-		ErrCodeInvalidYAML:        getInvalidYAMLSuggestions,
-		ErrCodeInvalidAction:      getInvalidActionSuggestions,
-		ErrCodeNoActionFiles:      getNoActionFilesSuggestions,
-		ErrCodeGitHubAPI:          getGitHubAPISuggestions,
-		ErrCodeConfiguration:      getConfigurationSuggestions,
-		ErrCodeValidation:         getValidationSuggestions,
-		ErrCodeTemplateRender:     getTemplateSuggestions,
-		ErrCodeFileWrite:          getFileWriteSuggestions,
-		ErrCodeDependencyAnalysis: getDependencyAnalysisSuggestions,
-		ErrCodeCacheAccess:        getCacheAccessSuggestions,
+func getSuggestionHandler(code appconstants.ErrorCode) func(map[string]string) []string {
+	handlers := map[appconstants.ErrorCode]func(map[string]string) []string{
+		appconstants.ErrCodeFileNotFound:       getFileNotFoundSuggestions,
+		appconstants.ErrCodePermission:         getPermissionSuggestions,
+		appconstants.ErrCodeInvalidYAML:        getInvalidYAMLSuggestions,
+		appconstants.ErrCodeInvalidAction:      getInvalidActionSuggestions,
+		appconstants.ErrCodeNoActionFiles:      getNoActionFilesSuggestions,
+		appconstants.ErrCodeGitHubAPI:          getGitHubAPISuggestions,
+		appconstants.ErrCodeConfiguration:      getConfigurationSuggestions,
+		appconstants.ErrCodeValidation:         getValidationSuggestions,
+		appconstants.ErrCodeTemplateRender:     getTemplateSuggestions,
+		appconstants.ErrCodeFileWrite:          getFileWriteSuggestions,
+		appconstants.ErrCodeDependencyAnalysis: getDependencyAnalysisSuggestions,
+		appconstants.ErrCodeCacheAccess:        getCacheAccessSuggestions,
 	}
 
 	// Special cases for handlers without context
-	if code == ErrCodeGitHubRateLimit {
+	if code == appconstants.ErrCodeGitHubRateLimit {
 		return func(_ map[string]string) []string { return getGitHubRateLimitSuggestions() }
 	}
-	if code == ErrCodeGitHubAuth {
+	if code == appconstants.ErrCodeGitHubAuth {
 		return func(_ map[string]string) []string { return getGitHubAuthSuggestions() }
 	}
 

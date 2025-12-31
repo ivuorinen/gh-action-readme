@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
@@ -72,7 +73,7 @@ func (w *ConfigWizard) detectProjectSettings() error {
 	// Detect current directory
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
+		return fmt.Errorf(appconstants.ErrFailedToGetCurrentDir, err)
 	}
 
 	w.actionDir = currentDir
@@ -180,7 +181,7 @@ func (w *ConfigWizard) displayThemeOptions(themes []struct {
 	for i, theme := range themes {
 		marker := " "
 		if theme.name == w.config.Theme {
-			marker = "►"
+			marker = appconstants.SymbolArrow
 		}
 		w.output.Printf("  %s %d. %s - %s", marker, i+1, theme.name, theme.desc)
 	}
@@ -191,7 +192,7 @@ func (w *ConfigWizard) displayFormatOptions(formats []string) {
 	for i, format := range formats {
 		marker := " "
 		if format == w.config.OutputFormat {
-			marker = "►"
+			marker = appconstants.SymbolArrow
 		}
 		w.output.Printf("  %s %d. %s", marker, i+1, format)
 	}
@@ -247,7 +248,9 @@ func (w *ConfigWizard) configureGitHubIntegration() {
 	token := w.promptSensitive("Enter your GitHub token (or press Enter to skip)")
 	if token != "" {
 		// Validate token format (basic check)
-		if strings.HasPrefix(token, "ghp_") || strings.HasPrefix(token, "github_pat_") {
+		hasPersonalPrefix := strings.HasPrefix(token, appconstants.TokenPrefixGitHubPersonal)
+		hasPATPrefix := strings.HasPrefix(token, appconstants.TokenPrefixGitHubPAT)
+		if hasPersonalPrefix || hasPATPrefix {
 			w.config.GitHubToken = token
 			w.output.Success("GitHub token configured ✓")
 		} else {
@@ -297,9 +300,9 @@ func (w *ConfigWizard) confirmConfiguration() error {
 // promptWithDefault prompts for input with a default value.
 func (w *ConfigWizard) promptWithDefault(prompt, defaultValue string) string {
 	if defaultValue != "" {
-		w.output.Printf("%s [%s]: ", prompt, defaultValue)
+		w.output.Printf(appconstants.FormatPromptDefault, prompt, defaultValue)
 	} else {
-		w.output.Printf("%s: ", prompt)
+		w.output.Printf(appconstants.FormatPrompt, prompt)
 	}
 
 	if w.scanner.Scan() {
@@ -316,7 +319,7 @@ func (w *ConfigWizard) promptWithDefault(prompt, defaultValue string) string {
 
 // promptSensitive prompts for sensitive input (like tokens) without echoing.
 func (w *ConfigWizard) promptSensitive(prompt string) string {
-	w.output.Printf("%s: ", prompt)
+	w.output.Printf(appconstants.FormatPrompt, prompt)
 	if w.scanner.Scan() {
 		return strings.TrimSpace(w.scanner.Text())
 	}
@@ -331,12 +334,12 @@ func (w *ConfigWizard) promptYesNo(prompt string, defaultValue bool) bool {
 		defaultStr = "Y/n"
 	}
 
-	w.output.Printf("%s [%s]: ", prompt, defaultStr)
+	w.output.Printf(appconstants.FormatPromptDefault, prompt, defaultStr)
 
 	if w.scanner.Scan() {
 		input := strings.ToLower(strings.TrimSpace(w.scanner.Text()))
 		switch input {
-		case "y", "yes":
+		case "y", appconstants.InputYes:
 			return true
 		case "n", "no":
 			return false

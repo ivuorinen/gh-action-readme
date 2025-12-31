@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 func TestGetSuggestions(t *testing.T) {
@@ -11,13 +13,13 @@ func TestGetSuggestions(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		code     ErrorCode
+		code     appconstants.ErrorCode
 		context  map[string]string
 		contains []string
 	}{
 		{
 			name: "file not found with path",
-			code: ErrCodeFileNotFound,
+			code: appconstants.ErrCodeFileNotFound,
 			context: map[string]string{
 				"path": "/path/to/action.yml",
 			},
@@ -29,7 +31,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "file not found action file",
-			code: ErrCodeFileNotFound,
+			code: appconstants.ErrCodeFileNotFound,
 			context: map[string]string{
 				"path": "/project/action.yml",
 			},
@@ -40,7 +42,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "permission denied",
-			code: ErrCodePermission,
+			code: appconstants.ErrCodePermission,
 			context: map[string]string{
 				"path": "/restricted/file.txt",
 			},
@@ -51,7 +53,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "invalid YAML with line number",
-			code: ErrCodeInvalidYAML,
+			code: appconstants.ErrCodeInvalidYAML,
 			context: map[string]string{
 				"line": "25",
 			},
@@ -64,7 +66,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "invalid YAML with tab error",
-			code: ErrCodeInvalidYAML,
+			code: appconstants.ErrCodeInvalidYAML,
 			context: map[string]string{
 				"error": "found character that cannot start any token (tab)",
 			},
@@ -75,7 +77,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "invalid action with missing fields",
-			code: ErrCodeInvalidAction,
+			code: appconstants.ErrCodeInvalidAction,
 			context: map[string]string{
 				"missing_fields": "name, description",
 			},
@@ -87,7 +89,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "no action files",
-			code: ErrCodeNoActionFiles,
+			code: appconstants.ErrCodeNoActionFiles,
 			context: map[string]string{
 				"directory": "/project",
 			},
@@ -100,7 +102,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "GitHub API 401 error",
-			code: ErrCodeGitHubAPI,
+			code: appconstants.ErrCodeGitHubAPI,
 			context: map[string]string{
 				"status_code": "401",
 			},
@@ -112,7 +114,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "GitHub API 403 error",
-			code: ErrCodeGitHubAPI,
+			code: appconstants.ErrCodeGitHubAPI,
 			context: map[string]string{
 				"status_code": "403",
 			},
@@ -124,7 +126,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "GitHub API 404 error",
-			code: ErrCodeGitHubAPI,
+			code: appconstants.ErrCodeGitHubAPI,
 			context: map[string]string{
 				"status_code": "404",
 			},
@@ -135,7 +137,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name:    "GitHub rate limit",
-			code:    ErrCodeGitHubRateLimit,
+			code:    appconstants.ErrCodeGitHubRateLimit,
 			context: map[string]string{},
 			contains: []string{
 				"rate limit exceeded",
@@ -146,7 +148,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name:    "GitHub auth",
-			code:    ErrCodeGitHubAuth,
+			code:    appconstants.ErrCodeGitHubAuth,
 			context: map[string]string{},
 			contains: []string{
 				"export GITHUB_TOKEN",
@@ -157,7 +159,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "configuration error with path",
-			code: ErrCodeConfiguration,
+			code: appconstants.ErrCodeConfiguration,
 			context: map[string]string{
 				"config_path": "~/.config/gh-action-readme/config.yaml",
 			},
@@ -169,7 +171,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "validation error with invalid fields",
-			code: ErrCodeValidation,
+			code: appconstants.ErrCodeValidation,
 			context: map[string]string{
 				"invalid_fields": "runs.using, inputs.test",
 			},
@@ -181,7 +183,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "template error with theme",
-			code: ErrCodeTemplateRender,
+			code: appconstants.ErrCodeTemplateRender,
 			context: map[string]string{
 				"theme": "custom",
 			},
@@ -193,7 +195,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "file write error with output path",
-			code: ErrCodeFileWrite,
+			code: appconstants.ErrCodeFileWrite,
 			context: map[string]string{
 				"output_path": "/output/README.md",
 			},
@@ -205,7 +207,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "dependency analysis error",
-			code: ErrCodeDependencyAnalysis,
+			code: appconstants.ErrCodeDependencyAnalysis,
 			context: map[string]string{
 				"action": "my-action",
 			},
@@ -217,7 +219,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "cache access error",
-			code: ErrCodeCacheAccess,
+			code: appconstants.ErrCodeCacheAccess,
 			context: map[string]string{
 				"cache_path": "~/.cache/gh-action-readme",
 			},
@@ -295,21 +297,21 @@ func TestGetSuggestionsEmptyContext(t *testing.T) {
 	t.Parallel()
 
 	// Test that all error codes work with empty context
-	errorCodes := []ErrorCode{
-		ErrCodeFileNotFound,
-		ErrCodePermission,
-		ErrCodeInvalidYAML,
-		ErrCodeInvalidAction,
-		ErrCodeNoActionFiles,
-		ErrCodeGitHubAPI,
-		ErrCodeGitHubRateLimit,
-		ErrCodeGitHubAuth,
-		ErrCodeConfiguration,
-		ErrCodeValidation,
-		ErrCodeTemplateRender,
-		ErrCodeFileWrite,
-		ErrCodeDependencyAnalysis,
-		ErrCodeCacheAccess,
+	errorCodes := []appconstants.ErrorCode{
+		appconstants.ErrCodeFileNotFound,
+		appconstants.ErrCodePermission,
+		appconstants.ErrCodeInvalidYAML,
+		appconstants.ErrCodeInvalidAction,
+		appconstants.ErrCodeNoActionFiles,
+		appconstants.ErrCodeGitHubAPI,
+		appconstants.ErrCodeGitHubRateLimit,
+		appconstants.ErrCodeGitHubAuth,
+		appconstants.ErrCodeConfiguration,
+		appconstants.ErrCodeValidation,
+		appconstants.ErrCodeTemplateRender,
+		appconstants.ErrCodeFileWrite,
+		appconstants.ErrCodeDependencyAnalysis,
+		appconstants.ErrCodeCacheAccess,
 	}
 
 	for _, code := range errorCodes {

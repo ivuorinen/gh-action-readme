@@ -9,27 +9,14 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/spf13/viper"
-)
 
-// ConfigurationSource represents different sources of configuration.
-type ConfigurationSource int
-
-// Configuration source priority order (lowest to highest priority).
-const (
-	// SourceDefaults represents default configuration values.
-	SourceDefaults ConfigurationSource = iota
-	SourceGlobal
-	SourceRepoOverride
-	SourceRepoConfig
-	SourceActionConfig
-	SourceEnvironment
-	SourceCLIFlags
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // ConfigurationLoader handles loading and merging configuration from multiple sources.
 type ConfigurationLoader struct {
 	// sources tracks which sources are enabled
-	sources map[ConfigurationSource]bool
+	sources map[appconstants.ConfigurationSource]bool
 	// viper instance for global configuration
 	viper *viper.Viper
 }
@@ -41,20 +28,20 @@ type ConfigurationOptions struct {
 	// AllowTokens controls whether security-sensitive fields can be loaded
 	AllowTokens bool
 	// EnabledSources controls which configuration sources are used
-	EnabledSources []ConfigurationSource
+	EnabledSources []appconstants.ConfigurationSource
 }
 
 // NewConfigurationLoader creates a new configuration loader with default options.
 func NewConfigurationLoader() *ConfigurationLoader {
 	return &ConfigurationLoader{
-		sources: map[ConfigurationSource]bool{
-			SourceDefaults:     true,
-			SourceGlobal:       true,
-			SourceRepoOverride: true,
-			SourceRepoConfig:   true,
-			SourceActionConfig: true,
-			SourceEnvironment:  true,
-			SourceCLIFlags:     false, // CLI flags are applied separately
+		sources: map[appconstants.ConfigurationSource]bool{
+			appconstants.SourceDefaults:     true,
+			appconstants.SourceGlobal:       true,
+			appconstants.SourceRepoOverride: true,
+			appconstants.SourceRepoConfig:   true,
+			appconstants.SourceActionConfig: true,
+			appconstants.SourceEnvironment:  true,
+			appconstants.SourceCLIFlags:     false, // CLI flags are applied separately
 		},
 		viper: viper.New(),
 	}
@@ -63,15 +50,15 @@ func NewConfigurationLoader() *ConfigurationLoader {
 // NewConfigurationLoaderWithOptions creates a configuration loader with custom options.
 func NewConfigurationLoaderWithOptions(opts ConfigurationOptions) *ConfigurationLoader {
 	loader := &ConfigurationLoader{
-		sources: make(map[ConfigurationSource]bool),
+		sources: make(map[appconstants.ConfigurationSource]bool),
 		viper:   viper.New(),
 	}
 
 	// Set default sources if none specified
 	if len(opts.EnabledSources) == 0 {
-		opts.EnabledSources = []ConfigurationSource{
-			SourceDefaults, SourceGlobal, SourceRepoOverride,
-			SourceRepoConfig, SourceActionConfig, SourceEnvironment,
+		opts.EnabledSources = []appconstants.ConfigurationSource{
+			appconstants.SourceDefaults, appconstants.SourceGlobal, appconstants.SourceRepoOverride,
+			appconstants.SourceRepoConfig, appconstants.SourceActionConfig, appconstants.SourceEnvironment,
 		}
 	}
 
@@ -158,8 +145,8 @@ func containsString(slice []string, str string) bool {
 }
 
 // GetConfigurationSources returns the currently enabled configuration sources.
-func (cl *ConfigurationLoader) GetConfigurationSources() []ConfigurationSource {
-	var sources []ConfigurationSource
+func (cl *ConfigurationLoader) GetConfigurationSources() []appconstants.ConfigurationSource {
+	var sources []appconstants.ConfigurationSource
 	for source, enabled := range cl.sources {
 		if enabled {
 			sources = append(sources, source)
@@ -170,18 +157,18 @@ func (cl *ConfigurationLoader) GetConfigurationSources() []ConfigurationSource {
 }
 
 // EnableSource enables a specific configuration source.
-func (cl *ConfigurationLoader) EnableSource(source ConfigurationSource) {
+func (cl *ConfigurationLoader) EnableSource(source appconstants.ConfigurationSource) {
 	cl.sources[source] = true
 }
 
 // DisableSource disables a specific configuration source.
-func (cl *ConfigurationLoader) DisableSource(source ConfigurationSource) {
+func (cl *ConfigurationLoader) DisableSource(source appconstants.ConfigurationSource) {
 	cl.sources[source] = false
 }
 
 // loadDefaultsStep loads default configuration values.
 func (cl *ConfigurationLoader) loadDefaultsStep(config *AppConfig) {
-	if cl.sources[SourceDefaults] {
+	if cl.sources[appconstants.SourceDefaults] {
 		defaults := DefaultAppConfig()
 		*config = *defaults
 	}
@@ -189,13 +176,13 @@ func (cl *ConfigurationLoader) loadDefaultsStep(config *AppConfig) {
 
 // loadGlobalStep loads global configuration.
 func (cl *ConfigurationLoader) loadGlobalStep(config *AppConfig, configFile string) error {
-	if !cl.sources[SourceGlobal] {
+	if !cl.sources[appconstants.SourceGlobal] {
 		return nil
 	}
 
 	globalConfig, err := cl.loadGlobalConfig(configFile)
 	if err != nil {
-		return fmt.Errorf("failed to load global config: %w", err)
+		return fmt.Errorf(appconstants.ErrFailedToLoadGlobalConfig, err)
 	}
 	cl.mergeConfigs(config, globalConfig, true) // Allow tokens for global config
 
@@ -204,7 +191,7 @@ func (cl *ConfigurationLoader) loadGlobalStep(config *AppConfig, configFile stri
 
 // loadRepoOverrideStep applies repo-specific overrides from global config.
 func (cl *ConfigurationLoader) loadRepoOverrideStep(config *AppConfig, repoRoot string) {
-	if !cl.sources[SourceRepoOverride] || repoRoot == "" {
+	if !cl.sources[appconstants.SourceRepoOverride] || repoRoot == "" {
 		return
 	}
 
@@ -213,13 +200,13 @@ func (cl *ConfigurationLoader) loadRepoOverrideStep(config *AppConfig, repoRoot 
 
 // loadRepoConfigStep loads repository root configuration.
 func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot string) error {
-	if !cl.sources[SourceRepoConfig] || repoRoot == "" {
+	if !cl.sources[appconstants.SourceRepoConfig] || repoRoot == "" {
 		return nil
 	}
 
 	repoConfig, err := cl.loadRepoConfig(repoRoot)
 	if err != nil {
-		return fmt.Errorf("failed to load repo config: %w", err)
+		return fmt.Errorf(appconstants.ErrFailedToLoadRepoConfig, err)
 	}
 	cl.mergeConfigs(config, repoConfig, false) // No tokens in repo config
 
@@ -228,13 +215,13 @@ func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot st
 
 // loadActionConfigStep loads action-specific configuration.
 func (cl *ConfigurationLoader) loadActionConfigStep(config *AppConfig, actionDir string) error {
-	if !cl.sources[SourceActionConfig] || actionDir == "" {
+	if !cl.sources[appconstants.SourceActionConfig] || actionDir == "" {
 		return nil
 	}
 
 	actionConfig, err := cl.loadActionConfig(actionDir)
 	if err != nil {
-		return fmt.Errorf("failed to load action config: %w", err)
+		return fmt.Errorf(appconstants.ErrFailedToLoadActionConfig, err)
 	}
 	cl.mergeConfigs(config, actionConfig, false) // No tokens in action config
 
@@ -243,7 +230,7 @@ func (cl *ConfigurationLoader) loadActionConfigStep(config *AppConfig, actionDir
 
 // loadEnvironmentStep applies environment variable overrides.
 func (cl *ConfigurationLoader) loadEnvironmentStep(config *AppConfig) {
-	if cl.sources[SourceEnvironment] {
+	if cl.sources[appconstants.SourceEnvironment] {
 		cl.applyEnvironmentOverrides(config)
 	}
 }
@@ -253,23 +240,23 @@ func (cl *ConfigurationLoader) loadGlobalConfig(configFile string) (*AppConfig, 
 	v := viper.New()
 
 	// Set configuration file name and type
-	v.SetConfigName(ConfigFileName)
-	v.SetConfigType("yaml")
+	v.SetConfigName(appconstants.ConfigFileName)
+	v.SetConfigType(appconstants.OutputFormatYAML)
 
 	// Add XDG-compliant configuration directory
-	configDir, err := xdg.ConfigFile("gh-action-readme")
+	configDir, err := xdg.ConfigFile(appconstants.AppName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get XDG config directory: %w", err)
+		return nil, fmt.Errorf(appconstants.ErrFailedToGetXDGConfigDir, err)
 	}
 	v.AddConfigPath(filepath.Dir(configDir))
 
 	// Add additional search paths
-	v.AddConfigPath(".")                              // current directory
-	v.AddConfigPath("$HOME/.config/gh-action-readme") // fallback
-	v.AddConfigPath("/etc/gh-action-readme")          // system-wide
+	v.AddConfigPath(".")                         // current directory
+	v.AddConfigPath(appconstants.PathHomeConfig) // fallback
+	v.AddConfigPath(appconstants.PathEtcConfig)  // system-wide
 
 	// Set environment variable prefix
-	v.SetEnvPrefix("GH_ACTION_README")
+	v.SetEnvPrefix(appconstants.EnvPrefix)
 	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 	v.AutomaticEnv()
 
@@ -284,7 +271,7 @@ func (cl *ConfigurationLoader) loadGlobalConfig(configFile string) (*AppConfig, 
 	// Read configuration
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
+			return nil, fmt.Errorf(appconstants.ErrFailedToReadConfigFile, err)
 		}
 		// Config file not found is not an error - we'll use defaults and env vars
 	}
@@ -292,7 +279,7 @@ func (cl *ConfigurationLoader) loadGlobalConfig(configFile string) (*AppConfig, 
 	// Unmarshal configuration into struct
 	var config AppConfig
 	if err := v.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
 
 	// Resolve template paths relative to binary if they're not absolute
@@ -327,7 +314,7 @@ func (cl *ConfigurationLoader) loadRepoConfig(repoRoot string) (*AppConfig, erro
 
 // loadActionConfig loads action-level configuration from config.yaml.
 func (cl *ConfigurationLoader) loadActionConfig(actionDir string) (*AppConfig, error) {
-	configPath := filepath.Join(actionDir, "config.yaml")
+	configPath := filepath.Join(actionDir, appconstants.ConfigYAML)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return &AppConfig{}, nil // No action config is fine
 	}
@@ -339,7 +326,7 @@ func (cl *ConfigurationLoader) loadActionConfig(actionDir string) (*AppConfig, e
 func (cl *ConfigurationLoader) loadConfigFromFile(configPath string) (*AppConfig, error) {
 	v := viper.New()
 	v.SetConfigFile(configPath)
-	v.SetConfigType("yaml")
+	v.SetConfigType(appconstants.OutputFormatYAML)
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("failed to read config %s: %w", configPath, err)
@@ -347,7 +334,7 @@ func (cl *ConfigurationLoader) loadConfigFromFile(configPath string) (*AppConfig
 
 	var config AppConfig
 	if err := v.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
 
 	return &config, nil
@@ -372,9 +359,9 @@ func (cl *ConfigurationLoader) applyRepoOverrides(config *AppConfig, repoRoot st
 // applyEnvironmentOverrides applies environment variable overrides.
 func (cl *ConfigurationLoader) applyEnvironmentOverrides(config *AppConfig) {
 	// Check environment variables directly with higher priority
-	if token := os.Getenv(EnvGitHubToken); token != "" {
+	if token := os.Getenv(appconstants.EnvGitHubToken); token != "" {
 		config.GitHubToken = token
-	} else if token := os.Getenv(EnvGitHubTokenStandard); token != "" {
+	} else if token := os.Getenv(appconstants.EnvGitHubTokenStandard); token != "" {
 		config.GitHubToken = token
 	}
 }
@@ -387,24 +374,24 @@ func (cl *ConfigurationLoader) mergeConfigs(dst *AppConfig, src *AppConfig, allo
 // setViperDefaults sets default values in viper.
 func (cl *ConfigurationLoader) setViperDefaults(v *viper.Viper) {
 	defaults := DefaultAppConfig()
-	v.SetDefault("organization", defaults.Organization)
-	v.SetDefault("repository", defaults.Repository)
-	v.SetDefault("version", defaults.Version)
-	v.SetDefault("theme", defaults.Theme)
-	v.SetDefault("output_format", defaults.OutputFormat)
-	v.SetDefault("output_dir", defaults.OutputDir)
-	v.SetDefault("template", defaults.Template)
-	v.SetDefault("header", defaults.Header)
-	v.SetDefault("footer", defaults.Footer)
-	v.SetDefault("schema", defaults.Schema)
-	v.SetDefault("analyze_dependencies", defaults.AnalyzeDependencies)
-	v.SetDefault("show_security_info", defaults.ShowSecurityInfo)
-	v.SetDefault("verbose", defaults.Verbose)
-	v.SetDefault("quiet", defaults.Quiet)
-	v.SetDefault("defaults.name", defaults.Defaults.Name)
-	v.SetDefault("defaults.description", defaults.Defaults.Description)
-	v.SetDefault("defaults.branding.icon", defaults.Defaults.Branding.Icon)
-	v.SetDefault("defaults.branding.color", defaults.Defaults.Branding.Color)
+	v.SetDefault(appconstants.ConfigKeyOrganization, defaults.Organization)
+	v.SetDefault(appconstants.ConfigKeyRepository, defaults.Repository)
+	v.SetDefault(appconstants.ConfigKeyVersion, defaults.Version)
+	v.SetDefault(appconstants.ConfigKeyTheme, defaults.Theme)
+	v.SetDefault(appconstants.ConfigKeyOutputFormat, defaults.OutputFormat)
+	v.SetDefault(appconstants.ConfigKeyOutputDir, defaults.OutputDir)
+	v.SetDefault(appconstants.ConfigKeyTemplate, defaults.Template)
+	v.SetDefault(appconstants.ConfigKeyHeader, defaults.Header)
+	v.SetDefault(appconstants.ConfigKeyFooter, defaults.Footer)
+	v.SetDefault(appconstants.ConfigKeySchema, defaults.Schema)
+	v.SetDefault(appconstants.ConfigKeyAnalyzeDependencies, defaults.AnalyzeDependencies)
+	v.SetDefault(appconstants.ConfigKeyShowSecurityInfo, defaults.ShowSecurityInfo)
+	v.SetDefault(appconstants.ConfigKeyVerbose, defaults.Verbose)
+	v.SetDefault(appconstants.ConfigKeyQuiet, defaults.Quiet)
+	v.SetDefault(appconstants.ConfigKeyDefaultsName, defaults.Defaults.Name)
+	v.SetDefault(appconstants.ConfigKeyDefaultsDescription, defaults.Defaults.Description)
+	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingIcon, defaults.Defaults.Branding.Icon)
+	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingColor, defaults.Defaults.Branding.Color)
 }
 
 // validateTheme validates that a theme exists and is supported.
@@ -427,26 +414,4 @@ func (cl *ConfigurationLoader) validateTheme(theme string) error {
 
 	return fmt.Errorf("unsupported theme '%s', must be one of: %s",
 		theme, strings.Join(supportedThemes, ", "))
-}
-
-// String returns a string representation of a ConfigurationSource.
-func (s ConfigurationSource) String() string {
-	switch s {
-	case SourceDefaults:
-		return "defaults"
-	case SourceGlobal:
-		return "global"
-	case SourceRepoOverride:
-		return "repo-override"
-	case SourceRepoConfig:
-		return "repo-config"
-	case SourceActionConfig:
-		return "action-config"
-	case SourceEnvironment:
-		return "environment"
-	case SourceCLIFlags:
-		return "cli-flags"
-	default:
-		return "unknown"
-	}
 }

@@ -7,17 +7,12 @@ import (
 
 	"github.com/google/go-github/v74/github"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
 	"github.com/ivuorinen/gh-action-readme/templates_embed"
-)
-
-const (
-	defaultOrgPlaceholder  = "your-org"
-	defaultRepoPlaceholder = "your-repo"
-	defaultUsesPlaceholder = "your-org/your-action@v1"
 )
 
 // TemplateOptions defines options for rendering templates.
@@ -71,7 +66,7 @@ func getGitOrg(data any) string {
 		}
 	}
 
-	return defaultOrgPlaceholder
+	return appconstants.DefaultOrgPlaceholder
 }
 
 // getGitRepo returns the Git repository name from template data.
@@ -85,21 +80,21 @@ func getGitRepo(data any) string {
 		}
 	}
 
-	return defaultRepoPlaceholder
+	return appconstants.DefaultRepoPlaceholder
 }
 
 // getGitUsesString returns a complete uses string for the action.
 func getGitUsesString(data any) string {
 	td, ok := data.(*TemplateData)
 	if !ok {
-		return defaultUsesPlaceholder
+		return appconstants.DefaultUsesPlaceholder
 	}
 
 	org := strings.TrimSpace(getGitOrg(data))
 	repo := strings.TrimSpace(getGitRepo(data))
 
 	if !isValidOrgRepo(org, repo) {
-		return defaultUsesPlaceholder
+		return appconstants.DefaultUsesPlaceholder
 	}
 
 	version := formatVersion(getActionVersion(data))
@@ -109,7 +104,9 @@ func getGitUsesString(data any) string {
 
 // isValidOrgRepo checks if org and repo are valid.
 func isValidOrgRepo(org, repo string) bool {
-	return org != "" && repo != "" && org != defaultOrgPlaceholder && repo != defaultRepoPlaceholder
+	return org != "" && repo != "" &&
+		org != appconstants.DefaultOrgPlaceholder &&
+		repo != appconstants.DefaultRepoPlaceholder
 }
 
 // formatVersion ensures version has proper @ prefix.
@@ -129,7 +126,7 @@ func formatVersion(version string) string {
 func buildUsesString(td *TemplateData, org, repo, version string) string {
 	// Use the validation package's FormatUsesStatement for consistency
 	if org == "" || repo == "" {
-		return defaultUsesPlaceholder
+		return appconstants.DefaultUsesPlaceholder
 	}
 
 	// For actions within subdirectories, include the action name
@@ -235,8 +232,8 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 		return "", err
 	}
 	var tmpl *template.Template
-	if opts.Format == OutputFormatHTML {
-		tmpl, err = template.New("readme").Funcs(templateFuncs()).Parse(string(tmplContent))
+	if opts.Format == appconstants.OutputFormatHTML {
+		tmpl, err = template.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(tmplContent))
 		if err != nil {
 			return "", err
 		}
@@ -260,7 +257,7 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 		return buf.String(), nil
 	}
 
-	tmpl, err = template.New("readme").Funcs(templateFuncs()).Parse(string(tmplContent))
+	tmpl, err = template.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return "", err
 	}

@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // ActionYML models the action.yml metadata (fields are updateable as schema evolves).
@@ -78,7 +80,7 @@ func DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
 
 			// Check for action.yml or action.yaml files
 			filename := strings.ToLower(info.Name())
-			if filename == "action.yml" || filename == "action.yaml" {
+			if filename == appconstants.ActionFileNameYML || filename == appconstants.ActionFileNameYAML {
 				actionFiles = append(actionFiles, path)
 			}
 
@@ -89,7 +91,7 @@ func DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
 		}
 	} else {
 		// Check only the specified directory
-		for _, filename := range []string{"action.yml", "action.yaml"} {
+		for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
 			path := filepath.Join(dir, filename)
 			if _, err := os.Stat(path); err == nil {
 				actionFiles = append(actionFiles, path)

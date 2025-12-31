@@ -5,6 +5,7 @@ import (
 
 	"github.com/schollz/progressbar/v3"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
@@ -61,7 +62,7 @@ func (no *NullOutput) ErrorWithSuggestions(_ *apperrors.ContextualError) {}
 
 // ErrorWithContext is a no-op.
 func (no *NullOutput) ErrorWithContext(
-	_ apperrors.ErrorCode,
+	_ appconstants.ErrorCode,
 	_ string,
 	_ map[string]string,
 ) {

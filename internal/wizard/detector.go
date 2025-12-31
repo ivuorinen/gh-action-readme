@@ -11,15 +11,10 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
-)
-
-const (
-	// Language constants to avoid repetition.
-	langJavaScriptTypeScript = "JavaScript/TypeScript"
-	langGo                   = "Go"
 )
 
 // ProjectDetector handles auto-detection of project settings.
@@ -33,7 +28,7 @@ type ProjectDetector struct {
 func NewProjectDetector(output *internal.ColoredOutput) (*ProjectDetector, error) {
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current directory: %w", err)
+		return nil, fmt.Errorf(appconstants.ErrFailedToGetCurrentDir, err)
 	}
 
 	return &ProjectDetector{
@@ -172,7 +167,7 @@ func (d *ProjectDetector) detectVersion() string {
 
 // detectVersionFromPackageJSON detects version from package.json.
 func (d *ProjectDetector) detectVersionFromPackageJSON() string {
-	packageJSONPath := filepath.Join(d.currentDir, "package.json")
+	packageJSONPath := filepath.Join(d.currentDir, appconstants.PackageJSON)
 	data, err := os.ReadFile(packageJSONPath) // #nosec G304 -- path is constructed from current directory
 	if err != nil {
 		return ""
@@ -264,7 +259,7 @@ func (d *ProjectDetector) handleDirectory(info os.FileInfo) error {
 func (d *ProjectDetector) findActionFilesInDirectory(dir string) ([]string, error) {
 	var actionFiles []string
 
-	for _, filename := range []string{"action.yml", "action.yaml"} {
+	for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
 		actionPath := filepath.Join(dir, filename)
 		if _, err := os.Stat(actionPath); err == nil {
 			actionFiles = append(actionFiles, actionPath)
@@ -276,7 +271,7 @@ func (d *ProjectDetector) findActionFilesInDirectory(dir string) ([]string, erro
 
 // isActionFile checks if a filename is an action file.
 func (d *ProjectDetector) isActionFile(filename string) bool {
-	return filename == "action.yml" || filename == "action.yaml"
+	return filename == appconstants.ActionFileNameYML || filename == appconstants.ActionFileNameYAML
 }
 
 // analyzeActionFile analyzes an action file to extract characteristics.
@@ -315,7 +310,7 @@ func (d *ProjectDetector) analyzeRunsSection(action map[string]any, settings *De
 	}
 
 	// Check if it's a composite action
-	if using, ok := runs["using"].(string); ok && using == "composite" {
+	if using, ok := runs["using"].(string); ok && using == appconstants.ActionTypeComposite {
 		settings.HasCompositeAction = true
 	}
 
@@ -377,17 +372,17 @@ func (d *ProjectDetector) analyzeProjectFiles() map[string]string {
 // detectLanguageFromFile detects programming language from filename.
 func (d *ProjectDetector) detectLanguageFromFile(filename string, characteristics map[string]string) {
 	switch filename {
-	case "package.json":
-		characteristics["language"] = langJavaScriptTypeScript
+	case appconstants.PackageJSON:
+		characteristics["language"] = appconstants.LangJavaScriptTypeScript
 		characteristics["type"] = "Node.js Project"
 	case "go.mod":
-		characteristics["language"] = langGo
+		characteristics["language"] = appconstants.LangGo
 		characteristics["type"] = "Go Module"
 	case "Cargo.toml":
 		characteristics["language"] = "Rust"
 		characteristics["type"] = "Rust Project"
 	case "pyproject.toml", "requirements.txt":
-		characteristics["language"] = "Python"
+		characteristics["language"] = appconstants.ActionTypePython
 		characteristics["type"] = "Python Project"
 	case "Gemfile":
 		characteristics["language"] = "Ruby"
@@ -447,11 +442,11 @@ func (d *ProjectDetector) suggestTheme(settings *DetectedSettings) {
 	case settings.HasCompositeAction:
 		settings.SuggestedTheme = "professional"
 	case settings.HasDockerfile:
-		settings.SuggestedTheme = "github"
-	case settings.Language == langGo:
-		settings.SuggestedTheme = "minimal"
+		settings.SuggestedTheme = appconstants.ThemeGitHub
+	case settings.Language == appconstants.LangGo:
+		settings.SuggestedTheme = appconstants.ThemeMinimal
 	case settings.Framework != "":
-		settings.SuggestedTheme = "github"
+		settings.SuggestedTheme = appconstants.ThemeGitHub
 	default:
 		settings.SuggestedTheme = "default"
 	}
@@ -464,9 +459,9 @@ func (d *ProjectDetector) suggestRunsOn(settings *DetectedSettings) {
 	}
 
 	switch settings.Language {
-	case langJavaScriptTypeScript:
+	case appconstants.LangJavaScriptTypeScript:
 		settings.SuggestedRunsOn = []string{"ubuntu-latest", "windows-latest", "macos-latest"}
-	case langGo, "Python":
+	case appconstants.LangGo, appconstants.ActionTypePython:
 		settings.SuggestedRunsOn = []string{"ubuntu-latest"}
 	}
 }

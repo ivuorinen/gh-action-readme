@@ -5,33 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-)
 
-// ErrorCode represents a category of error for providing specific help.
-type ErrorCode string
-
-// Error code constants for categorizing errors.
-const (
-	ErrCodeFileNotFound       ErrorCode = "FILE_NOT_FOUND"
-	ErrCodePermission         ErrorCode = "PERMISSION_DENIED"
-	ErrCodeInvalidYAML        ErrorCode = "INVALID_YAML"
-	ErrCodeInvalidAction      ErrorCode = "INVALID_ACTION"
-	ErrCodeNoActionFiles      ErrorCode = "NO_ACTION_FILES"
-	ErrCodeGitHubAPI          ErrorCode = "GITHUB_API_ERROR"
-	ErrCodeGitHubRateLimit    ErrorCode = "GITHUB_RATE_LIMIT"
-	ErrCodeGitHubAuth         ErrorCode = "GITHUB_AUTH_ERROR"
-	ErrCodeConfiguration      ErrorCode = "CONFIG_ERROR"
-	ErrCodeValidation         ErrorCode = "VALIDATION_ERROR"
-	ErrCodeTemplateRender     ErrorCode = "TEMPLATE_ERROR"
-	ErrCodeFileWrite          ErrorCode = "FILE_WRITE_ERROR"
-	ErrCodeDependencyAnalysis ErrorCode = "DEPENDENCY_ERROR"
-	ErrCodeCacheAccess        ErrorCode = "CACHE_ERROR"
-	ErrCodeUnknown            ErrorCode = "UNKNOWN_ERROR"
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // ContextualError provides enhanced error information with actionable suggestions.
 type ContextualError struct {
-	Code        ErrorCode
+	Code        appconstants.ErrorCode
 	Err         error
 	Context     string
 	Suggestions []string
@@ -98,7 +78,7 @@ func (ce *ContextualError) Is(target error) bool {
 }
 
 // New creates a new ContextualError with the given code and message.
-func New(code ErrorCode, message string) *ContextualError {
+func New(code appconstants.ErrorCode, message string) *ContextualError {
 	return &ContextualError{
 		Code: code,
 		Err:  errors.New(message),
@@ -106,7 +86,7 @@ func New(code ErrorCode, message string) *ContextualError {
 }
 
 // Wrap wraps an existing error with contextual information.
-func Wrap(err error, code ErrorCode, context string) *ContextualError {
+func Wrap(err error, code appconstants.ErrorCode, context string) *ContextualError {
 	if err == nil {
 		return nil
 	}
@@ -129,7 +109,7 @@ func Wrap(err error, code ErrorCode, context string) *ContextualError {
 		}
 
 		// Only update if not already set
-		if errCopy.Code == ErrCodeUnknown {
+		if errCopy.Code == appconstants.ErrCodeUnknown {
 			errCopy.Code = code
 		}
 		if errCopy.Context == "" {
@@ -173,24 +153,24 @@ func (ce *ContextualError) WithHelpURL(url string) *ContextualError {
 }
 
 // GetHelpURL returns a help URL for the given error code.
-func GetHelpURL(code ErrorCode) string {
+func GetHelpURL(code appconstants.ErrorCode) string {
 	baseURL := "https://github.com/ivuorinen/gh-action-readme/blob/main/docs/troubleshooting.md"
 
-	anchors := map[ErrorCode]string{
-		ErrCodeFileNotFound:       "#file-not-found",
-		ErrCodePermission:         "#permission-denied",
-		ErrCodeInvalidYAML:        "#invalid-yaml",
-		ErrCodeInvalidAction:      "#invalid-action-file",
-		ErrCodeNoActionFiles:      "#no-action-files",
-		ErrCodeGitHubAPI:          "#github-api-errors",
-		ErrCodeGitHubRateLimit:    "#rate-limit-exceeded",
-		ErrCodeGitHubAuth:         "#authentication-errors",
-		ErrCodeConfiguration:      "#configuration-errors",
-		ErrCodeValidation:         "#validation-errors",
-		ErrCodeTemplateRender:     "#template-errors",
-		ErrCodeFileWrite:          "#file-write-errors",
-		ErrCodeDependencyAnalysis: "#dependency-analysis",
-		ErrCodeCacheAccess:        "#cache-errors",
+	anchors := map[appconstants.ErrorCode]string{
+		appconstants.ErrCodeFileNotFound:       "#file-not-found",
+		appconstants.ErrCodePermission:         "#permission-denied",
+		appconstants.ErrCodeInvalidYAML:        "#invalid-yaml",
+		appconstants.ErrCodeInvalidAction:      "#invalid-action-file",
+		appconstants.ErrCodeNoActionFiles:      "#no-action-files",
+		appconstants.ErrCodeGitHubAPI:          "#github-api-errors",
+		appconstants.ErrCodeGitHubRateLimit:    "#rate-limit-exceeded",
+		appconstants.ErrCodeGitHubAuth:         "#authentication-errors",
+		appconstants.ErrCodeConfiguration:      "#configuration-errors",
+		appconstants.ErrCodeValidation:         "#validation-errors",
+		appconstants.ErrCodeTemplateRender:     "#template-errors",
+		appconstants.ErrCodeFileWrite:          "#file-write-errors",
+		appconstants.ErrCodeDependencyAnalysis: "#dependency-analysis",
+		appconstants.ErrCodeCacheAccess:        "#cache-errors",
 	}
 
 	if anchor, ok := anchors[code]; ok {

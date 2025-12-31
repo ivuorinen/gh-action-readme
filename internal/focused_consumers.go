@@ -4,6 +4,7 @@ package internal
 import (
 	"fmt"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
@@ -50,7 +51,7 @@ func (fem *FocusedErrorManager) HandleValidationError(file string, missingFields
 	}
 
 	fem.manager.ErrorWithContext(
-		apperrors.ErrCodeValidation,
+		appconstants.ErrCodeValidation,
 		"Validation failed for "+file,
 		context,
 	)

@@ -5,24 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
-)
-
-// Error detection constants for automatic error code determination.
-const (
-	// File system error patterns.
-	errorPatternFileNotFound = "no such file or directory"
-	errorPatternPermission   = "permission denied"
-
-	// Content format error patterns.
-	errorPatternYAML = "yaml"
-
-	// Service-specific error patterns.
-	errorPatternGitHub = "github"
-	errorPatternConfig = "config"
-
-	// Exit code constants.
-	exitCodeError = 1
 )
 
 // ErrorHandler provides centralized error handling and exit management.
@@ -40,11 +24,11 @@ func NewErrorHandler(output *ColoredOutput) *ErrorHandler {
 // HandleError handles contextual errors and exits with appropriate code.
 func (eh *ErrorHandler) HandleError(err *apperrors.ContextualError) {
 	eh.output.ErrorWithSuggestions(err)
-	os.Exit(exitCodeError)
+	os.Exit(appconstants.ExitCodeError)
 }
 
 // HandleFatalError handles fatal errors with contextual information.
-func (eh *ErrorHandler) HandleFatalError(code apperrors.ErrorCode, message string, context map[string]string) {
+func (eh *ErrorHandler) HandleFatalError(code appconstants.ErrorCode, message string, context map[string]string) {
 	suggestions := apperrors.GetSuggestions(code, context)
 	helpURL := apperrors.GetHelpURL(code)
 
@@ -61,12 +45,12 @@ func (eh *ErrorHandler) HandleFatalError(code apperrors.ErrorCode, message strin
 
 // HandleSimpleError handles simple errors with automatic context detection.
 func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
-	code := apperrors.ErrCodeUnknown
+	code := appconstants.ErrCodeUnknown
 	context := make(map[string]string)
 
 	// Try to determine appropriate error code based on error content
 	if err != nil {
-		context[ContextKeyError] = err.Error()
+		context[appconstants.ContextKeyError] = err.Error()
 		code = eh.determineErrorCode(err)
 	}
 
@@ -74,22 +58,22 @@ func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
 }
 
 // determineErrorCode attempts to determine appropriate error code from error content.
-func (eh *ErrorHandler) determineErrorCode(err error) apperrors.ErrorCode {
+func (eh *ErrorHandler) determineErrorCode(err error) appconstants.ErrorCode {
 	errStr := err.Error()
 
 	switch {
-	case contains(errStr, errorPatternFileNotFound):
-		return apperrors.ErrCodeFileNotFound
-	case contains(errStr, errorPatternPermission):
-		return apperrors.ErrCodePermission
-	case contains(errStr, errorPatternYAML):
-		return apperrors.ErrCodeInvalidYAML
-	case contains(errStr, errorPatternGitHub):
-		return apperrors.ErrCodeGitHubAPI
-	case contains(errStr, errorPatternConfig):
-		return apperrors.ErrCodeConfiguration
+	case contains(errStr, appconstants.ErrorPatternFileNotFound):
+		return appconstants.ErrCodeFileNotFound
+	case contains(errStr, appconstants.ErrorPatternPermission):
+		return appconstants.ErrCodePermission
+	case contains(errStr, appconstants.ErrorPatternYAML):
+		return appconstants.ErrCodeInvalidYAML
+	case contains(errStr, appconstants.ErrorPatternGitHub):
+		return appconstants.ErrCodeGitHubAPI
+	case contains(errStr, appconstants.ErrorPatternConfig):
+		return appconstants.ErrCodeConfiguration
 	default:
-		return apperrors.ErrCodeUnknown
+		return appconstants.ErrCodeUnknown
 	}
 }
 

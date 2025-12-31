@@ -8,6 +8,7 @@ import (
 
 	"github.com/schollz/progressbar/v3"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
@@ -63,7 +64,7 @@ func (m *MockErrorReporter) ErrorWithSuggestions(err *apperrors.ContextualError)
 	}
 }
 
-func (m *MockErrorReporter) ErrorWithContext(_ apperrors.ErrorCode, message string, _ map[string]string) {
+func (m *MockErrorReporter) ErrorWithContext(_ appconstants.ErrorCode, message string, _ map[string]string) {
 	m.ErrorWithContextCalls = append(m.ErrorWithContextCalls, message)
 }
 
@@ -408,7 +409,7 @@ func (m *mockCompleteOutput) Error(format string, args ...any) { m.reporter.Erro
 func (m *mockCompleteOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
 	m.reporter.ErrorWithSuggestions(err)
 }
-func (m *mockCompleteOutput) ErrorWithContext(code apperrors.ErrorCode, message string, context map[string]string) {
+func (m *mockCompleteOutput) ErrorWithContext(code appconstants.ErrorCode, message string, context map[string]string) {
 	m.reporter.ErrorWithContext(code, message, context)
 }
 func (m *mockCompleteOutput) ErrorWithSimpleFix(message, suggestion string) {
@@ -465,7 +466,7 @@ func (m *mockErrorManager) Error(format string, args ...any) { m.reporter.Error(
 func (m *mockErrorManager) ErrorWithSuggestions(err *apperrors.ContextualError) {
 	m.reporter.ErrorWithSuggestions(err)
 }
-func (m *mockErrorManager) ErrorWithContext(code apperrors.ErrorCode, message string, context map[string]string) {
+func (m *mockErrorManager) ErrorWithContext(code appconstants.ErrorCode, message string, context map[string]string) {
 	m.reporter.ErrorWithContext(code, message, context)
 }
 func (m *mockErrorManager) ErrorWithSimpleFix(message, suggestion string) {

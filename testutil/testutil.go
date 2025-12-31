@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/google/go-github/v74/github"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // MockHTTPClient is a mock HTTP client for testing.
@@ -96,11 +98,13 @@ func WriteTestFile(t *testing.T, path, content string) {
 	t.Helper()
 
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0750); err != nil { // #nosec G301 -- test directory permissions
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(dir, appconstants.FilePermDir); err != nil {
 		t.Fatalf("failed to create dir %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0600); err != nil { // #nosec G306 -- test file permissions
+	// #nosec G306 -- test file permissions
+	if err := os.WriteFile(path, []byte(content), appconstants.FilePermDefault); err != nil {
 		t.Fatalf("failed to write test file %s: %v", path, err)
 	}
 }
@@ -192,14 +196,14 @@ func CreateTestAction(name, description string, inputs map[string]string) string
 		inputsYAML.WriteString(fmt.Sprintf("  %s:\n    description: %s\n    required: true\n", key, desc))
 	}
 
-	result := fmt.Sprintf("name: %s\n", name)
-	result += fmt.Sprintf("description: %s\n", description)
+	result := fmt.Sprintf(appconstants.YAMLFieldName, name)
+	result += fmt.Sprintf(appconstants.YAMLFieldDescription, description)
 	result += "inputs:\n"
 	result += inputsYAML.String()
 	result += "outputs:\n"
 	result += "  result:\n"
 	result += "    description: 'The result'\n"
-	result += "runs:\n"
+	result += appconstants.YAMLFieldRuns
 	result += "  using: 'node20'\n"
 	result += "  main: 'index.js'\n"
 	result += "branding:\n"
@@ -220,16 +224,17 @@ func SetupTestTemplates(t *testing.T, dir string) {
 	// Create directories
 	for _, theme := range []string{"github", "gitlab", "minimal", "professional"} {
 		themeDir := filepath.Join(themesDir, theme)
-		if err := os.MkdirAll(themeDir, 0750); err != nil { // #nosec G301 -- test directory permissions
+		// #nosec G301 -- test directory permissions
+		if err := os.MkdirAll(themeDir, appconstants.FilePermDir); err != nil {
 			t.Fatalf("failed to create theme dir %s: %v", themeDir, err)
 		}
 		// Write theme template
-		templatePath := filepath.Join(themeDir, "readme.tmpl")
+		templatePath := filepath.Join(themeDir, appconstants.TemplateReadme)
 		WriteTestFile(t, templatePath, SimpleTemplate)
 	}
 
 	// Create default template
-	defaultTemplatePath := filepath.Join(templatesDir, "readme.tmpl")
+	defaultTemplatePath := filepath.Join(templatesDir, appconstants.TemplateReadme)
 	WriteTestFile(t, defaultTemplatePath, SimpleTemplate)
 }
 
@@ -240,9 +245,9 @@ func CreateCompositeAction(name, description string, steps []string) string {
 		stepsYAML.WriteString(fmt.Sprintf("  - name: Step %d\n    uses: %s\n", i+1, step))
 	}
 
-	result := fmt.Sprintf("name: %s\n", name)
-	result += fmt.Sprintf("description: %s\n", description)
-	result += "runs:\n"
+	result := fmt.Sprintf(appconstants.YAMLFieldName, name)
+	result += fmt.Sprintf(appconstants.YAMLFieldDescription, description)
+	result += appconstants.YAMLFieldRuns
 	result += "  using: 'composite'\n"
 	result += "  steps:\n"
 	result += stepsYAML.String()
@@ -392,8 +397,8 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			Name: "GH_README_GITHUB_TOKEN has highest priority",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				cleanup1 := SetEnv(t, "GH_README_GITHUB_TOKEN", "priority-token")
-				cleanup2 := SetEnv(t, "GITHUB_TOKEN", "fallback-token")
+				cleanup1 := SetEnv(t, appconstants.EnvGitHubToken, "priority-token")
+				cleanup2 := SetEnv(t, appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
 				return func() {
 					cleanup1()
@@ -406,19 +411,19 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			Name: "GITHUB_TOKEN as fallback",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-				cleanup := SetEnv(t, "GITHUB_TOKEN", "fallback-token")
+				_ = os.Unsetenv(appconstants.EnvGitHubToken)
+				cleanup := SetEnv(t, appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
 				return cleanup
 			},
-			ExpectedToken: "fallback-token",
+			ExpectedToken: appconstants.TokenFallback,
 		},
 		{
 			Name: "no environment variables",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				_ = os.Unsetenv("GH_README_GITHUB_TOKEN")
-				_ = os.Unsetenv("GITHUB_TOKEN")
+				_ = os.Unsetenv(appconstants.EnvGitHubToken)
+				_ = os.Unsetenv(appconstants.EnvGitHubTokenStandard)
 
 				return func() {}
 			},

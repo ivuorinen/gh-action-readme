@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
 	"github.com/ivuorinen/gh-action-readme/templates_embed"
@@ -80,12 +81,12 @@ type GitHubClient struct {
 // GetGitHubToken returns the GitHub token from environment variables or config.
 func GetGitHubToken(config *AppConfig) string {
 	// Priority 1: Tool-specific env var
-	if token := os.Getenv(EnvGitHubToken); token != "" {
+	if token := os.Getenv(appconstants.EnvGitHubToken); token != "" {
 		return token
 	}
 
 	// Priority 2: Standard GitHub env var
-	if token := os.Getenv(EnvGitHubTokenStandard); token != "" {
+	if token := os.Getenv(appconstants.EnvGitHubTokenStandard); token != "" {
 		return token
 	}
 
@@ -109,7 +110,7 @@ func NewGitHubClient(token string) (*GitHubClient, error) {
 		// Add rate limiting with proper error handling
 		rateLimiter, err := github_ratelimit.NewRateLimitWaiterClient(tc.Transport)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
+			return nil, fmt.Errorf(appconstants.ErrFailedToCreateRateLimiter, err)
 		}
 
 		client = github.NewClient(rateLimiter)
@@ -117,7 +118,7 @@ func NewGitHubClient(token string) (*GitHubClient, error) {
 		// For no token, use basic rate limiter
 		rateLimiter, err := github_ratelimit.NewRateLimitWaiterClient(nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
+			return nil, fmt.Errorf(appconstants.ErrFailedToCreateRateLimiter, err)
 		}
 		client = github.NewClient(rateLimiter)
 	}
@@ -185,16 +186,16 @@ func resolveThemeTemplate(theme string) string {
 	var templatePath string
 
 	switch theme {
-	case ThemeDefault:
-		templatePath = TemplatePathDefault
-	case ThemeGitHub:
-		templatePath = TemplatePathGitHub
-	case ThemeGitLab:
-		templatePath = TemplatePathGitLab
-	case ThemeMinimal:
-		templatePath = TemplatePathMinimal
-	case ThemeProfessional:
-		templatePath = TemplatePathProfessional
+	case appconstants.ThemeDefault:
+		templatePath = appconstants.TemplatePathDefault
+	case appconstants.ThemeGitHub:
+		templatePath = appconstants.TemplatePathGitHub
+	case appconstants.ThemeGitLab:
+		templatePath = appconstants.TemplatePathGitLab
+	case appconstants.ThemeMinimal:
+		templatePath = appconstants.TemplatePathMinimal
+	case appconstants.ThemeProfessional:
+		templatePath = appconstants.TemplatePathProfessional
 	case "":
 		// Empty theme should return empty path
 		return ""
@@ -366,7 +367,7 @@ func LoadRepoConfig(repoRoot string) (*AppConfig, error) {
 			// Config file found, load it
 			v := viper.New()
 			v.SetConfigFile(configPath)
-			v.SetConfigType("yaml")
+			v.SetConfigType(appconstants.OutputFormatYAML)
 
 			if err := v.ReadInConfig(); err != nil {
 				return nil, fmt.Errorf("failed to read repo config %s: %w", configPath, err)
@@ -387,14 +388,14 @@ func LoadRepoConfig(repoRoot string) (*AppConfig, error) {
 
 // LoadActionConfig loads action-level configuration from config.yaml.
 func LoadActionConfig(actionDir string) (*AppConfig, error) {
-	configPath := filepath.Join(actionDir, "config.yaml")
+	configPath := filepath.Join(actionDir, appconstants.ConfigYAML)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return &AppConfig{}, nil // No action config is fine
 	}
 
 	v := viper.New()
 	v.SetConfigFile(configPath)
-	v.SetConfigType("yaml")
+	v.SetConfigType(appconstants.OutputFormatYAML)
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("failed to read action config %s: %w", configPath, err)
@@ -430,7 +431,7 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 	// 2. Load global config
 	globalConfig, err := InitConfig(configFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load global config: %w", err)
+		return nil, fmt.Errorf(appconstants.ErrFailedToLoadGlobalConfig, err)
 	}
 	MergeConfigs(config, globalConfig, true) // Allow tokens for global config
 
@@ -446,7 +447,7 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 	if repoRoot != "" {
 		repoConfig, err := LoadRepoConfig(repoRoot)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load repo config: %w", err)
+			return nil, fmt.Errorf(appconstants.ErrFailedToLoadRepoConfig, err)
 		}
 		MergeConfigs(config, repoConfig, false) // No tokens in repo config
 	}
@@ -455,16 +456,16 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 	if actionDir != "" {
 		actionConfig, err := LoadActionConfig(actionDir)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load action config: %w", err)
+			return nil, fmt.Errorf(appconstants.ErrFailedToLoadActionConfig, err)
 		}
 		MergeConfigs(config, actionConfig, false) // No tokens in action config
 	}
 
 	// 6. Apply environment variable overrides for GitHub token
 	// Check environment variables directly with higher priority
-	if token := os.Getenv(EnvGitHubToken); token != "" {
+	if token := os.Getenv(appconstants.EnvGitHubToken); token != "" {
 		config.GitHubToken = token
-	} else if token := os.Getenv(EnvGitHubTokenStandard); token != "" {
+	} else if token := os.Getenv(appconstants.EnvGitHubTokenStandard); token != "" {
 		config.GitHubToken = token
 	}
 
@@ -476,46 +477,46 @@ func InitConfig(configFile string) (*AppConfig, error) {
 	v := viper.New()
 
 	// Set configuration file name and type
-	v.SetConfigName(ConfigFileName)
-	v.SetConfigType("yaml")
+	v.SetConfigName(appconstants.ConfigFileName)
+	v.SetConfigType(appconstants.OutputFormatYAML)
 
 	// Add XDG-compliant configuration directory
-	configDir, err := xdg.ConfigFile("gh-action-readme")
+	configDir, err := xdg.ConfigFile(appconstants.AppName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get XDG config directory: %w", err)
+		return nil, fmt.Errorf(appconstants.ErrFailedToGetXDGConfigDir, err)
 	}
 	v.AddConfigPath(filepath.Dir(configDir))
 
 	// Add additional search paths
-	v.AddConfigPath(".")                              // current directory
-	v.AddConfigPath("$HOME/.config/gh-action-readme") // fallback
-	v.AddConfigPath("/etc/gh-action-readme")          // system-wide
+	v.AddConfigPath(".")                         // current directory
+	v.AddConfigPath(appconstants.PathHomeConfig) // fallback
+	v.AddConfigPath(appconstants.PathEtcConfig)  // system-wide
 
 	// Set environment variable prefix
-	v.SetEnvPrefix("GH_ACTION_README")
+	v.SetEnvPrefix(appconstants.EnvPrefix)
 	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 	v.AutomaticEnv()
 
 	// Set defaults
 	defaults := DefaultAppConfig()
-	v.SetDefault("organization", defaults.Organization)
-	v.SetDefault("repository", defaults.Repository)
-	v.SetDefault("version", defaults.Version)
-	v.SetDefault("theme", defaults.Theme)
-	v.SetDefault("output_format", defaults.OutputFormat)
-	v.SetDefault("output_dir", defaults.OutputDir)
-	v.SetDefault("template", defaults.Template)
-	v.SetDefault("header", defaults.Header)
-	v.SetDefault("footer", defaults.Footer)
-	v.SetDefault("schema", defaults.Schema)
-	v.SetDefault("analyze_dependencies", defaults.AnalyzeDependencies)
-	v.SetDefault("show_security_info", defaults.ShowSecurityInfo)
-	v.SetDefault("verbose", defaults.Verbose)
-	v.SetDefault("quiet", defaults.Quiet)
-	v.SetDefault("defaults.name", defaults.Defaults.Name)
-	v.SetDefault("defaults.description", defaults.Defaults.Description)
-	v.SetDefault("defaults.branding.icon", defaults.Defaults.Branding.Icon)
-	v.SetDefault("defaults.branding.color", defaults.Defaults.Branding.Color)
+	v.SetDefault(appconstants.ConfigKeyOrganization, defaults.Organization)
+	v.SetDefault(appconstants.ConfigKeyRepository, defaults.Repository)
+	v.SetDefault(appconstants.ConfigKeyVersion, defaults.Version)
+	v.SetDefault(appconstants.ConfigKeyTheme, defaults.Theme)
+	v.SetDefault(appconstants.ConfigKeyOutputFormat, defaults.OutputFormat)
+	v.SetDefault(appconstants.ConfigKeyOutputDir, defaults.OutputDir)
+	v.SetDefault(appconstants.ConfigKeyTemplate, defaults.Template)
+	v.SetDefault(appconstants.ConfigKeyHeader, defaults.Header)
+	v.SetDefault(appconstants.ConfigKeyFooter, defaults.Footer)
+	v.SetDefault(appconstants.ConfigKeySchema, defaults.Schema)
+	v.SetDefault(appconstants.ConfigKeyAnalyzeDependencies, defaults.AnalyzeDependencies)
+	v.SetDefault(appconstants.ConfigKeyShowSecurityInfo, defaults.ShowSecurityInfo)
+	v.SetDefault(appconstants.ConfigKeyVerbose, defaults.Verbose)
+	v.SetDefault(appconstants.ConfigKeyQuiet, defaults.Quiet)
+	v.SetDefault(appconstants.ConfigKeyDefaultsName, defaults.Defaults.Name)
+	v.SetDefault(appconstants.ConfigKeyDefaultsDescription, defaults.Defaults.Description)
+	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingIcon, defaults.Defaults.Branding.Icon)
+	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingColor, defaults.Defaults.Branding.Color)
 
 	// Use specific config file if provided
 	if configFile != "" {
@@ -525,7 +526,7 @@ func InitConfig(configFile string) (*AppConfig, error) {
 	// Read configuration
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
+			return nil, fmt.Errorf(appconstants.ErrFailedToReadConfigFile, err)
 		}
 		// Config file not found is not an error - we'll use defaults and env vars
 	}
@@ -533,7 +534,7 @@ func InitConfig(configFile string) (*AppConfig, error) {
 	// Unmarshal configuration into struct
 	var config AppConfig
 	if err := v.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
 
 	// Resolve template paths relative to binary if they're not absolute
@@ -547,34 +548,36 @@ func InitConfig(configFile string) (*AppConfig, error) {
 
 // WriteDefaultConfig writes a default configuration file to the XDG config directory.
 func WriteDefaultConfig() error {
-	configFile, err := xdg.ConfigFile("gh-action-readme/config.yaml")
+	configFile, err := xdg.ConfigFile(appconstants.PathXDGConfig)
 	if err != nil {
-		return fmt.Errorf("failed to get XDG config file path: %w", err)
+		return fmt.Errorf(appconstants.ErrFailedToGetXDGConfigFile, err)
 	}
 
 	// Ensure the directory exists
-	if err := os.MkdirAll(filepath.Dir(configFile), 0750); err != nil { // #nosec G301 -- config directory permissions
+	configFileDir := filepath.Dir(configFile)
+	// #nosec G301 -- config directory permissions
+	if err := os.MkdirAll(configFileDir, appconstants.FilePermDir); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	v := viper.New()
 	v.SetConfigFile(configFile)
-	v.SetConfigType("yaml")
+	v.SetConfigType(appconstants.OutputFormatYAML)
 
 	// Set default values
 	defaults := DefaultAppConfig()
-	v.Set("theme", defaults.Theme)
-	v.Set("output_format", defaults.OutputFormat)
-	v.Set("output_dir", defaults.OutputDir)
-	v.Set("analyze_dependencies", defaults.AnalyzeDependencies)
-	v.Set("show_security_info", defaults.ShowSecurityInfo)
-	v.Set("verbose", defaults.Verbose)
-	v.Set("quiet", defaults.Quiet)
-	v.Set("template", defaults.Template)
-	v.Set("header", defaults.Header)
-	v.Set("footer", defaults.Footer)
-	v.Set("schema", defaults.Schema)
-	v.Set("defaults", defaults.Defaults)
+	v.Set(appconstants.ConfigKeyTheme, defaults.Theme)
+	v.Set(appconstants.ConfigKeyOutputFormat, defaults.OutputFormat)
+	v.Set(appconstants.ConfigKeyOutputDir, defaults.OutputDir)
+	v.Set(appconstants.ConfigKeyAnalyzeDependencies, defaults.AnalyzeDependencies)
+	v.Set(appconstants.ConfigKeyShowSecurityInfo, defaults.ShowSecurityInfo)
+	v.Set(appconstants.ConfigKeyVerbose, defaults.Verbose)
+	v.Set(appconstants.ConfigKeyQuiet, defaults.Quiet)
+	v.Set(appconstants.ConfigKeyTemplate, defaults.Template)
+	v.Set(appconstants.ConfigKeyHeader, defaults.Header)
+	v.Set(appconstants.ConfigKeyFooter, defaults.Footer)
+	v.Set(appconstants.ConfigKeySchema, defaults.Schema)
+	v.Set(appconstants.ConfigKeyDefaults, defaults.Defaults)
 
 	if err := v.WriteConfig(); err != nil {
 		return fmt.Errorf("failed to write default config: %w", err)
@@ -585,9 +588,9 @@ func WriteDefaultConfig() error {
 
 // GetConfigPath returns the path to the configuration file.
 func GetConfigPath() (string, error) {
-	configDir, err := xdg.ConfigFile("gh-action-readme/config.yaml")
+	configDir, err := xdg.ConfigFile(appconstants.PathXDGConfig)
 	if err != nil {
-		return "", fmt.Errorf("failed to get XDG config file path: %w", err)
+		return "", fmt.Errorf(appconstants.ErrFailedToGetXDGConfigFile, err)
 	}
 
 	return configDir, nil

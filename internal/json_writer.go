@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // getVersion returns the current version - can be overridden at build time.
@@ -119,7 +121,7 @@ func (jw *JSONWriter) Write(action *ActionYML, outputPath string) error {
 	}
 
 	// Write to file
-	return os.WriteFile(outputPath, data, FilePermDefault) // #nosec G306 -- JSON output file permissions
+	return os.WriteFile(outputPath, data, appconstants.FilePermDefault) // #nosec G306 -- JSON output file permissions
 }
 
 // convertToJSONOutput converts ActionYML to structured JSON output.

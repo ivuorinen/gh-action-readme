@@ -7,6 +7,7 @@ import (
 
 	"github.com/fatih/color"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
@@ -138,7 +139,7 @@ func (co *ColoredOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
 
 // ErrorWithContext creates and prints a contextual error with suggestions.
 func (co *ColoredOutput) ErrorWithContext(
-	code apperrors.ErrorCode,
+	code appconstants.ErrorCode,
 	message string,
 	context map[string]string,
 ) {
@@ -158,7 +159,7 @@ func (co *ColoredOutput) ErrorWithContext(
 
 // ErrorWithSimpleFix prints an error with a simple suggestion.
 func (co *ColoredOutput) ErrorWithSimpleFix(message, suggestion string) {
-	contextualErr := apperrors.New(apperrors.ErrCodeUnknown, message).
+	contextualErr := apperrors.New(appconstants.ErrCodeUnknown, message).
 		WithSuggestions(suggestion)
 
 	co.ErrorWithSuggestions(contextualErr)
@@ -208,16 +209,16 @@ func (co *ColoredOutput) formatDetailsSection(details map[string]string) []strin
 	var parts []string
 
 	if co.NoColor {
-		parts = append(parts, "\nDetails:")
+		parts = append(parts, appconstants.SectionDetails)
 	} else {
-		parts = append(parts, color.New(color.Bold).Sprint("\nDetails:"))
+		parts = append(parts, color.New(color.Bold).Sprint(appconstants.SectionDetails))
 	}
 
 	for key, value := range details {
 		if co.NoColor {
-			parts = append(parts, fmt.Sprintf("  %s: %s", key, value))
+			parts = append(parts, fmt.Sprintf(appconstants.FormatDetailKeyValue, key, value))
 		} else {
-			parts = append(parts, fmt.Sprintf("  %s: %s",
+			parts = append(parts, fmt.Sprintf(appconstants.FormatDetailKeyValue,
 				color.CyanString(key),
 				color.WhiteString(value)))
 		}
@@ -231,9 +232,9 @@ func (co *ColoredOutput) formatSuggestionsSection(suggestions []string) []string
 	var parts []string
 
 	if co.NoColor {
-		parts = append(parts, "\nSuggestions:")
+		parts = append(parts, appconstants.SectionSuggestions)
 	} else {
-		parts = append(parts, color.New(color.Bold).Sprint("\nSuggestions:"))
+		parts = append(parts, color.New(color.Bold).Sprint(appconstants.SectionSuggestions))
 	}
 
 	for _, suggestion := range suggestions {

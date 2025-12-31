@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // Entry represents a cached item with TTL support.
@@ -59,7 +61,9 @@ func NewCache(config *Config) (*Cache, error) {
 	}
 
 	// Ensure cache directory exists
-	if err := os.MkdirAll(filepath.Dir(cacheDir), 0750); err != nil { // #nosec G301 -- cache directory permissions
+	cacheDirParent := filepath.Dir(cacheDir)
+	// #nosec G301 -- cache directory permissions
+	if err := os.MkdirAll(cacheDirParent, appconstants.FilePermDir); err != nil {
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -145,7 +149,7 @@ func (c *Cache) Clear() error {
 	c.data = make(map[string]Entry)
 
 	// Remove cache file
-	cacheFile := filepath.Join(c.path, "cache.json")
+	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
 	if err := os.Remove(cacheFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove cache file: %w", err)
 	}
@@ -245,7 +249,7 @@ func (c *Cache) cleanup() {
 
 // loadFromDisk loads cache data from disk.
 func (c *Cache) loadFromDisk() error {
-	cacheFile := filepath.Join(c.path, "cache.json")
+	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
 
 	data, err := os.ReadFile(cacheFile) // #nosec G304 -- cache file path constructed internally
 	if err != nil {
@@ -280,8 +284,9 @@ func (c *Cache) saveToDisk() error {
 		return fmt.Errorf("failed to marshal cache data: %w", err)
 	}
 
-	cacheFile := filepath.Join(c.path, "cache.json")
-	if err := os.WriteFile(cacheFile, jsonData, 0600); err != nil { // #nosec G306 -- cache file permissions
+	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
+	// #nosec G306 -- cache file permissions
+	if err := os.WriteFile(cacheFile, jsonData, appconstants.FilePermDefault); err != nil {
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 

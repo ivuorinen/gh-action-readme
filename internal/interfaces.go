@@ -6,6 +6,7 @@ import (
 
 	"github.com/schollz/progressbar/v3"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
@@ -23,7 +24,7 @@ type MessageLogger interface {
 type ErrorReporter interface {
 	Error(format string, args ...any)
 	ErrorWithSuggestions(err *apperrors.ContextualError)
-	ErrorWithContext(code apperrors.ErrorCode, message string, context map[string]string)
+	ErrorWithContext(code appconstants.ErrorCode, message string, context map[string]string)
 	ErrorWithSimpleFix(message, suggestion string)
 }
 

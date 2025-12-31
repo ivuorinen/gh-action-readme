@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/wizard"
 	"github.com/ivuorinen/gh-action-readme/testutil"
@@ -557,9 +558,9 @@ func TestResolveExportFormat(t *testing.T) {
 		format   string
 		expected wizard.ExportFormat
 	}{
-		{"json format", formatJSON, wizard.FormatJSON},
-		{"toml format", formatTOML, wizard.FormatTOML},
-		{"yaml format", formatYAML, wizard.FormatYAML},
+		{"json format", appconstants.OutputFormatJSON, wizard.FormatJSON},
+		{"toml format", appconstants.OutputFormatTOML, wizard.FormatTOML},
+		{"yaml format", appconstants.OutputFormatYAML, wizard.FormatYAML},
 		{"default format", "unknown", wizard.FormatYAML},
 		{"empty format", "", wizard.FormatYAML},
 	}
