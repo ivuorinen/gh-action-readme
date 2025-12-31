@@ -13,9 +13,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
 	"github.com/ivuorinen/gh-action-readme/internal/wizard"
 )
