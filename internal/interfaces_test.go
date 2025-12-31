@@ -8,7 +8,7 @@ import (
 
 	"github.com/schollz/progressbar/v3"
 
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
 // MockMessageLogger implements MessageLogger for testing.
@@ -57,13 +57,13 @@ func (m *MockErrorReporter) Error(format string, args ...any) {
 	m.ErrorCalls = append(m.ErrorCalls, formatMessage(format, args...))
 }
 
-func (m *MockErrorReporter) ErrorWithSuggestions(err *errors.ContextualError) {
+func (m *MockErrorReporter) ErrorWithSuggestions(err *apperrors.ContextualError) {
 	if err != nil {
 		m.ErrorWithSuggestionsCalls = append(m.ErrorWithSuggestionsCalls, err.Error())
 	}
 }
 
-func (m *MockErrorReporter) ErrorWithContext(_ errors.ErrorCode, message string, _ map[string]string) {
+func (m *MockErrorReporter) ErrorWithContext(_ apperrors.ErrorCode, message string, _ map[string]string) {
 	m.ErrorWithContextCalls = append(m.ErrorWithContextCalls, message)
 }
 
@@ -405,16 +405,16 @@ func (m *mockCompleteOutput) Fprintf(w *os.File, format string, args ...any) {
 	m.logger.Fprintf(w, format, args...)
 }
 func (m *mockCompleteOutput) Error(format string, args ...any) { m.reporter.Error(format, args...) }
-func (m *mockCompleteOutput) ErrorWithSuggestions(err *errors.ContextualError) {
+func (m *mockCompleteOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
 	m.reporter.ErrorWithSuggestions(err)
 }
-func (m *mockCompleteOutput) ErrorWithContext(code errors.ErrorCode, message string, context map[string]string) {
+func (m *mockCompleteOutput) ErrorWithContext(code apperrors.ErrorCode, message string, context map[string]string) {
 	m.reporter.ErrorWithContext(code, message, context)
 }
 func (m *mockCompleteOutput) ErrorWithSimpleFix(message, suggestion string) {
 	m.reporter.ErrorWithSimpleFix(message, suggestion)
 }
-func (m *mockCompleteOutput) FormatContextualError(err *errors.ContextualError) string {
+func (m *mockCompleteOutput) FormatContextualError(err *apperrors.ContextualError) string {
 	return m.formatter.FormatContextualError(err)
 }
 func (m *mockCompleteOutput) Progress(format string, args ...any) {
@@ -444,7 +444,7 @@ type MockErrorFormatter struct {
 	FormatContextualErrorCalls []string
 }
 
-func (m *MockErrorFormatter) FormatContextualError(err *errors.ContextualError) string {
+func (m *MockErrorFormatter) FormatContextualError(err *apperrors.ContextualError) string {
 	if err != nil {
 		formatted := err.Error()
 		m.FormatContextualErrorCalls = append(m.FormatContextualErrorCalls, formatted)
@@ -462,15 +462,15 @@ type mockErrorManager struct {
 }
 
 func (m *mockErrorManager) Error(format string, args ...any) { m.reporter.Error(format, args...) }
-func (m *mockErrorManager) ErrorWithSuggestions(err *errors.ContextualError) {
+func (m *mockErrorManager) ErrorWithSuggestions(err *apperrors.ContextualError) {
 	m.reporter.ErrorWithSuggestions(err)
 }
-func (m *mockErrorManager) ErrorWithContext(code errors.ErrorCode, message string, context map[string]string) {
+func (m *mockErrorManager) ErrorWithContext(code apperrors.ErrorCode, message string, context map[string]string) {
 	m.reporter.ErrorWithContext(code, message, context)
 }
 func (m *mockErrorManager) ErrorWithSimpleFix(message, suggestion string) {
 	m.reporter.ErrorWithSimpleFix(message, suggestion)
 }
-func (m *mockErrorManager) FormatContextualError(err *errors.ContextualError) string {
+func (m *mockErrorManager) FormatContextualError(err *apperrors.ContextualError) string {
 	return m.formatter.FormatContextualError(err)
 }

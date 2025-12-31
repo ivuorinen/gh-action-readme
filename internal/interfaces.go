@@ -6,7 +6,7 @@ import (
 
 	"github.com/schollz/progressbar/v3"
 
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
 // MessageLogger handles informational output messages.
@@ -22,14 +22,14 @@ type MessageLogger interface {
 // ErrorReporter handles error output and reporting.
 type ErrorReporter interface {
 	Error(format string, args ...any)
-	ErrorWithSuggestions(err *errors.ContextualError)
-	ErrorWithContext(code errors.ErrorCode, message string, context map[string]string)
+	ErrorWithSuggestions(err *apperrors.ContextualError)
+	ErrorWithContext(code apperrors.ErrorCode, message string, context map[string]string)
 	ErrorWithSimpleFix(message, suggestion string)
 }
 
 // ErrorFormatter handles formatting of contextual errors.
 type ErrorFormatter interface {
-	FormatContextualError(err *errors.ContextualError) string
+	FormatContextualError(err *apperrors.ContextualError) string
 }
 
 // ProgressReporter handles progress indication and status updates.

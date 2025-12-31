@@ -15,7 +15,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
 	"github.com/ivuorinen/gh-action-readme/internal/wizard"
 )
@@ -363,7 +363,7 @@ func validateHandler(_ *cobra.Command, _ []string) {
 	// Validate the discovered files
 	if err := generator.ValidateFiles(actionFiles); err != nil {
 		generator.Output.ErrorWithContext(
-			errors.ErrCodeValidation,
+			apperrors.ErrCodeValidation,
 			"validation failed",
 			map[string]string{
 				"files_count":            strconv.Itoa(len(actionFiles)),
@@ -794,9 +794,9 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 // validateGitHubToken checks if GitHub token is available.
 func validateGitHubToken(output *internal.ColoredOutput) bool {
 	if globalConfig.GitHubToken == "" {
-		contextualErr := errors.New(errors.ErrCodeGitHubAuth, "GitHub token not found").
-			WithSuggestions(errors.GetSuggestions(errors.ErrCodeGitHubAuth, map[string]string{})...).
-			WithHelpURL(errors.GetHelpURL(errors.ErrCodeGitHubAuth))
+		contextualErr := apperrors.New(apperrors.ErrCodeGitHubAuth, "GitHub token not found").
+			WithSuggestions(apperrors.GetSuggestions(apperrors.ErrCodeGitHubAuth, map[string]string{})...).
+			WithHelpURL(apperrors.GetHelpURL(apperrors.ErrCodeGitHubAuth))
 
 		output.Warning("⚠️  %s", contextualErr.Error())
 

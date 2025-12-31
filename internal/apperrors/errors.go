@@ -1,5 +1,5 @@
-// Package errors provides enhanced error types with contextual information and suggestions.
-package errors
+// Package apperrors provides enhanced error types with contextual information and suggestions.
+package apperrors
 
 import (
 	"errors"

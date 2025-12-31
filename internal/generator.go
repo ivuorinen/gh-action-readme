@@ -12,9 +12,9 @@ import (
 	"github.com/google/go-github/v74/github"
 	"github.com/schollz/progressbar/v3"
 
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	errCodes "github.com/ivuorinen/gh-action-readme/internal/errors"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
@@ -174,7 +174,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
 	if err != nil {
 		g.Output.ErrorWithContext(
-			errCodes.ErrCodeFileNotFound,
+			apperrors.ErrCodeFileNotFound,
 			"failed to discover action files for "+context,
 			map[string]string{
 				"directory":     dir,
@@ -191,7 +191,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	if len(actionFiles) == 0 {
 		contextMsg := "no GitHub Action files found for " + context
 		g.Output.ErrorWithContext(
-			errCodes.ErrCodeNoActionFiles,
+			apperrors.ErrCodeNoActionFiles,
 			contextMsg,
 			map[string]string{
 				"directory":  dir,

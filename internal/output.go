@@ -7,7 +7,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
 // ColoredOutput provides methods for colored terminal output.
@@ -123,7 +123,7 @@ func (co *ColoredOutput) Fprintf(w *os.File, format string, args ...any) {
 }
 
 // ErrorWithSuggestions prints a ContextualError with suggestions and help.
-func (co *ColoredOutput) ErrorWithSuggestions(err *errors.ContextualError) {
+func (co *ColoredOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
 	if err == nil {
 		return
 	}
@@ -138,14 +138,14 @@ func (co *ColoredOutput) ErrorWithSuggestions(err *errors.ContextualError) {
 
 // ErrorWithContext creates and prints a contextual error with suggestions.
 func (co *ColoredOutput) ErrorWithContext(
-	code errors.ErrorCode,
+	code apperrors.ErrorCode,
 	message string,
 	context map[string]string,
 ) {
-	suggestions := errors.GetSuggestions(code, context)
-	helpURL := errors.GetHelpURL(code)
+	suggestions := apperrors.GetSuggestions(code, context)
+	helpURL := apperrors.GetHelpURL(code)
 
-	contextualErr := errors.New(code, message).
+	contextualErr := apperrors.New(code, message).
 		WithSuggestions(suggestions...).
 		WithHelpURL(helpURL)
 
@@ -158,14 +158,14 @@ func (co *ColoredOutput) ErrorWithContext(
 
 // ErrorWithSimpleFix prints an error with a simple suggestion.
 func (co *ColoredOutput) ErrorWithSimpleFix(message, suggestion string) {
-	contextualErr := errors.New(errors.ErrCodeUnknown, message).
+	contextualErr := apperrors.New(apperrors.ErrCodeUnknown, message).
 		WithSuggestions(suggestion)
 
 	co.ErrorWithSuggestions(contextualErr)
 }
 
 // FormatContextualError formats a ContextualError for display.
-func (co *ColoredOutput) FormatContextualError(err *errors.ContextualError) string {
+func (co *ColoredOutput) FormatContextualError(err *apperrors.ContextualError) string {
 	if err == nil {
 		return ""
 	}
@@ -194,7 +194,7 @@ func (co *ColoredOutput) FormatContextualError(err *errors.ContextualError) stri
 }
 
 // formatMainError formats the main error message with code.
-func (co *ColoredOutput) formatMainError(err *errors.ContextualError) string {
+func (co *ColoredOutput) formatMainError(err *apperrors.ContextualError) string {
 	mainMsg := fmt.Sprintf("%s [%s]", err.Error(), err.Code)
 	if co.NoColor {
 		return "❌ " + mainMsg

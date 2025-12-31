@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
 // Error detection constants for automatic error code determination.
@@ -38,17 +38,17 @@ func NewErrorHandler(output *ColoredOutput) *ErrorHandler {
 }
 
 // HandleError handles contextual errors and exits with appropriate code.
-func (eh *ErrorHandler) HandleError(err *errors.ContextualError) {
+func (eh *ErrorHandler) HandleError(err *apperrors.ContextualError) {
 	eh.output.ErrorWithSuggestions(err)
 	os.Exit(exitCodeError)
 }
 
 // HandleFatalError handles fatal errors with contextual information.
-func (eh *ErrorHandler) HandleFatalError(code errors.ErrorCode, message string, context map[string]string) {
-	suggestions := errors.GetSuggestions(code, context)
-	helpURL := errors.GetHelpURL(code)
+func (eh *ErrorHandler) HandleFatalError(code apperrors.ErrorCode, message string, context map[string]string) {
+	suggestions := apperrors.GetSuggestions(code, context)
+	helpURL := apperrors.GetHelpURL(code)
 
-	contextualErr := errors.New(code, message).
+	contextualErr := apperrors.New(code, message).
 		WithSuggestions(suggestions...).
 		WithHelpURL(helpURL)
 
@@ -61,7 +61,7 @@ func (eh *ErrorHandler) HandleFatalError(code errors.ErrorCode, message string, 
 
 // HandleSimpleError handles simple errors with automatic context detection.
 func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
-	code := errors.ErrCodeUnknown
+	code := apperrors.ErrCodeUnknown
 	context := make(map[string]string)
 
 	// Try to determine appropriate error code based on error content
@@ -74,22 +74,22 @@ func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
 }
 
 // determineErrorCode attempts to determine appropriate error code from error content.
-func (eh *ErrorHandler) determineErrorCode(err error) errors.ErrorCode {
+func (eh *ErrorHandler) determineErrorCode(err error) apperrors.ErrorCode {
 	errStr := err.Error()
 
 	switch {
 	case contains(errStr, errorPatternFileNotFound):
-		return errors.ErrCodeFileNotFound
+		return apperrors.ErrCodeFileNotFound
 	case contains(errStr, errorPatternPermission):
-		return errors.ErrCodePermission
+		return apperrors.ErrCodePermission
 	case contains(errStr, errorPatternYAML):
-		return errors.ErrCodeInvalidYAML
+		return apperrors.ErrCodeInvalidYAML
 	case contains(errStr, errorPatternGitHub):
-		return errors.ErrCodeGitHubAPI
+		return apperrors.ErrCodeGitHubAPI
 	case contains(errStr, errorPatternConfig):
-		return errors.ErrCodeConfiguration
+		return apperrors.ErrCodeConfiguration
 	default:
-		return errors.ErrCodeUnknown
+		return apperrors.ErrCodeUnknown
 	}
 }
 

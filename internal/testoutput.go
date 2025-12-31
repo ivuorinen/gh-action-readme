@@ -5,7 +5,7 @@ import (
 
 	"github.com/schollz/progressbar/v3"
 
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
 // NullOutput is a no-op implementation of CompleteOutput for testing.
@@ -57,11 +57,11 @@ func (no *NullOutput) Printf(_ string, _ ...any) {}
 func (no *NullOutput) Fprintf(_ *os.File, _ string, _ ...any) {}
 
 // ErrorWithSuggestions is a no-op.
-func (no *NullOutput) ErrorWithSuggestions(_ *errors.ContextualError) {}
+func (no *NullOutput) ErrorWithSuggestions(_ *apperrors.ContextualError) {}
 
 // ErrorWithContext is a no-op.
 func (no *NullOutput) ErrorWithContext(
-	_ errors.ErrorCode,
+	_ apperrors.ErrorCode,
 	_ string,
 	_ map[string]string,
 ) {
@@ -71,7 +71,7 @@ func (no *NullOutput) ErrorWithContext(
 func (no *NullOutput) ErrorWithSimpleFix(_, _ string) {}
 
 // FormatContextualError returns empty string.
-func (no *NullOutput) FormatContextualError(_ *errors.ContextualError) string {
+func (no *NullOutput) FormatContextualError(_ *apperrors.ContextualError) string {
 	return ""
 }
 
