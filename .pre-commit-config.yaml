@@ -25,12 +25,6 @@ repos:
       - id: pretty-format-json
         args: [--autofix, --no-sort-keys]
 
-  # Renovatebot pre-commit hooks
-  - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 42.64.1
-    hooks:
-      - id: renovate-config-validator
-
   # YAML formatting with yamlfmt (replaces yamllint for formatting)
   - repo: https://github.com/google/yamlfmt
     rev: v0.20.0
