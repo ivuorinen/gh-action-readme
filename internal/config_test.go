@@ -123,6 +123,10 @@ func TestLoadConfiguration(t *testing.T) {
 			name: "multi-level config hierarchy",
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
 				t.Helper()
+				// Clear environment variables to ensure config file values are used
+				t.Setenv("GITHUB_TOKEN", "")
+				t.Setenv("GH_README_GITHUB_TOKEN", "")
+
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
 				_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
