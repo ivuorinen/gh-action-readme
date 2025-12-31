@@ -265,7 +265,7 @@ func TestGetSuggestions(t *testing.T) {
 	}
 }
 
-func TestGetPermissionSuggestions_OSSpecific(t *testing.T) {
+func TestGetPermissionSuggestionsOSSpecific(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]string{"path": "/test/file"}
@@ -291,7 +291,7 @@ func TestGetPermissionSuggestions_OSSpecific(t *testing.T) {
 	}
 }
 
-func TestGetSuggestions_EmptyContext(t *testing.T) {
+func TestGetSuggestionsEmptyContext(t *testing.T) {
 	t.Parallel()
 
 	// Test that all error codes work with empty context
@@ -324,7 +324,7 @@ func TestGetSuggestions_EmptyContext(t *testing.T) {
 	}
 }
 
-func TestGetFileNotFoundSuggestions_ActionFile(t *testing.T) {
+func TestGetFileNotFoundSuggestionsActionFile(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]string{
@@ -344,7 +344,7 @@ func TestGetFileNotFoundSuggestions_ActionFile(t *testing.T) {
 	}
 }
 
-func TestGetInvalidYAMLSuggestions_TabError(t *testing.T) {
+func TestGetInvalidYAMLSuggestionsTabError(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]string{
@@ -360,7 +360,7 @@ func TestGetInvalidYAMLSuggestions_TabError(t *testing.T) {
 	}
 }
 
-func TestGetGitHubAPISuggestions_StatusCodes(t *testing.T) {
+func TestGetGitHubAPISuggestionsStatusCodes(t *testing.T) {
 	t.Parallel()
 
 	statusCodes := map[string]string{

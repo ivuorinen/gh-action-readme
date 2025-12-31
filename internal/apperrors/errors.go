@@ -111,17 +111,32 @@ func Wrap(err error, code ErrorCode, context string) *ContextualError {
 		return nil
 	}
 
-	// If already a ContextualError, preserve existing info
+	// If already a ContextualError, preserve existing info by creating a copy
 	if ce, ok := err.(*ContextualError); ok {
-		// Only update if not already set
-		if ce.Code == ErrCodeUnknown {
-			ce.Code = code
-		}
-		if ce.Context == "" {
-			ce.Context = context
+		// Create a copy to avoid mutating the original
+		errCopy := &ContextualError{
+			Code:        ce.Code,
+			Err:         ce.Err,
+			Context:     ce.Context,
+			Suggestions: ce.Suggestions,
+			HelpURL:     ce.HelpURL,
+			Details:     make(map[string]string),
 		}
 
-		return ce
+		// Copy details map
+		for k, v := range ce.Details {
+			errCopy.Details[k] = v
+		}
+
+		// Only update if not already set
+		if errCopy.Code == ErrCodeUnknown {
+			errCopy.Code = code
+		}
+		if errCopy.Context == "" {
+			errCopy.Context = context
+		}
+
+		return errCopy
 	}
 
 	return &ContextualError{

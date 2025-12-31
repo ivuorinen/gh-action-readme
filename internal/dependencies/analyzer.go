@@ -34,15 +34,10 @@ const (
 	updateTypeMajor = "major"
 	updateTypePatch = "patch"
 	updateTypeMinor = "minor"
-	defaultBranch   = "main"
 
 	// Timeout constants.
 	apiCallTimeout  = 10 * time.Second
 	cacheDefaultTTL = 1 * time.Hour
-
-	// File permission constants.
-	backupFilePerms  = 0600
-	updatedFilePerms = 0600
 
 	// GitHub URL patterns.
 	githubBaseURL      = "https://github.com"
@@ -637,7 +632,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Create backup
 	backupPath := filePath + backupExtension
-	if err := os.WriteFile(backupPath, content, backupFilePerms); err != nil { // #nosec G306 -- backup file permissions
+	if err := os.WriteFile(backupPath, content, 0600); err != nil { // #nosec G306 -- backup file permissions
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -659,7 +654,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
-	if err := os.WriteFile(filePath, []byte(updatedContent), updatedFilePerms); err != nil {
+	if err := os.WriteFile(filePath, []byte(updatedContent), 0600); err != nil {
 		// #nosec G306 -- updated file permissions
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}

@@ -35,18 +35,14 @@ func getSuggestionHandler(code ErrorCode) func(map[string]string) []string {
 	}
 
 	// Special cases for handlers without context
-	switch code {
-	case ErrCodeGitHubRateLimit:
+	if code == ErrCodeGitHubRateLimit {
 		return func(_ map[string]string) []string { return getGitHubRateLimitSuggestions() }
-	case ErrCodeGitHubAuth:
+	}
+	if code == ErrCodeGitHubAuth {
 		return func(_ map[string]string) []string { return getGitHubAuthSuggestions() }
-	case ErrCodeFileNotFound, ErrCodePermission, ErrCodeInvalidYAML, ErrCodeInvalidAction,
-		ErrCodeNoActionFiles, ErrCodeGitHubAPI, ErrCodeConfiguration, ErrCodeValidation,
-		ErrCodeTemplateRender, ErrCodeFileWrite, ErrCodeDependencyAnalysis, ErrCodeCacheAccess,
-		ErrCodeUnknown:
-		// These cases are handled by the map above
 	}
 
+	// All other cases are handled by the handlers map
 	return handlers[code]
 }
 
