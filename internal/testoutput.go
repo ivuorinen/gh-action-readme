@@ -58,7 +58,9 @@ func (no *NullOutput) Printf(_ string, _ ...any) {}
 func (no *NullOutput) Fprintf(_ *os.File, _ string, _ ...any) {}
 
 // ErrorWithSuggestions is a no-op.
-func (no *NullOutput) ErrorWithSuggestions(_ *apperrors.ContextualError) {}
+func (no *NullOutput) ErrorWithSuggestions(_ *apperrors.ContextualError) {
+	// Intentionally empty - no-op implementation for testing
+}
 
 // ErrorWithContext is a no-op.
 func (no *NullOutput) ErrorWithContext(

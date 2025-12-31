@@ -170,42 +170,25 @@ func TestCLICommands(t *testing.T) {
 			}
 
 			// Run the command in the temporary directory
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-
-			// Check exit code
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				} else {
-					t.Fatalf("unexpected error running command: %v", err)
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
+			if result.exitCode != tt.wantExit {
+				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
+				t.Logf("stdout: %s", result.stdout)
+				t.Logf("stderr: %s", result.stderr)
 			}
 
 			// Check stdout if specified
 			if tt.wantStdout != "" {
-				if !strings.Contains(stdout.String(), tt.wantStdout) {
-					t.Errorf("expected stdout to contain %q, got: %s", tt.wantStdout, stdout.String())
+				if !strings.Contains(result.stdout, tt.wantStdout) {
+					t.Errorf("expected stdout to contain %q, got: %s", tt.wantStdout, result.stdout)
 				}
 			}
 
 			// Check stderr if specified
 			if tt.wantStderr != "" {
-				if !strings.Contains(stderr.String(), tt.wantStderr) {
-					t.Errorf("expected stderr to contain %q, got: %s", tt.wantStderr, stderr.String())
+				if !strings.Contains(result.stderr, tt.wantStderr) {
+					t.Errorf("expected stderr to contain %q, got: %s", tt.wantStderr, result.stderr)
 				}
 			}
 		})
@@ -258,29 +241,16 @@ func TestCLIFlags(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
+			if result.exitCode != tt.wantExit {
+				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
+				t.Logf("stdout: %s", result.stdout)
+				t.Logf("stderr: %s", result.stderr)
 			}
 
 			if tt.contains != "" {
-				output := stdout.String() + stderr.String()
+				output := result.stdout + result.stderr
 				if !strings.Contains(output, tt.contains) {
 					t.Errorf("expected output to contain %q, got: %s", tt.contains, output)
 				}
@@ -329,31 +299,17 @@ func TestCLIRecursiveFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
+			if result.exitCode != tt.wantExit {
+				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
+				t.Logf("stdout: %s", result.stdout)
+				t.Logf("stderr: %s", result.stderr)
 			}
 
 			// For recursive tests, check that appropriate number of files were processed
 			// This is a simple heuristic - could be made more sophisticated
-			output := stdout.String()
-			if tt.minFiles > 1 && !strings.Contains(output, "subdir") {
+			if tt.minFiles > 1 && !strings.Contains(result.stdout, "subdir") {
 				t.Errorf("expected recursive processing to include subdirectory")
 			}
 		})
@@ -423,29 +379,16 @@ func TestCLIErrorHandling(t *testing.T) {
 				tt.setupFunc(t, tmpDir)
 			}
 
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
+			if result.exitCode != tt.wantExit {
+				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
+				t.Logf("stdout: %s", result.stdout)
+				t.Logf("stderr: %s", result.stderr)
 			}
 
 			if tt.wantError != "" {
-				output := stdout.String() + stderr.String()
+				output := result.stdout + result.stderr
 				if !strings.Contains(strings.ToLower(output), strings.ToLower(tt.wantError)) {
 					t.Errorf("expected error containing %q, got: %s", tt.wantError, output)
 				}
@@ -661,5 +604,37 @@ func TestNewSchemaCmd(t *testing.T) {
 
 	if cmd.RunE == nil && cmd.Run == nil {
 		t.Error("expected command to have a Run or RunE function")
+	}
+}
+
+// cmdResult holds the results of a command execution.
+type cmdResult struct {
+	stdout   string
+	stderr   string
+	exitCode int
+}
+
+// runTestCommand executes a command with the given args in the specified directory.
+// It returns the stdout, stderr, and exit code.
+func runTestCommand(binaryPath string, args []string, dir string) cmdResult {
+	cmd := exec.Command(binaryPath, args...) // #nosec G204 -- controlled test input
+	cmd.Dir = dir
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			exitCode = exitError.ExitCode()
+		}
+	}
+
+	return cmdResult{
+		stdout:   stdout.String(),
+		stderr:   stderr.String(),
+		exitCode: exitCode,
 	}
 }
