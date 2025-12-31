@@ -8,10 +8,10 @@ on:
       - main
       - master
     paths:
-      - '.github/labels.yml'
-      - '.github/workflows/sync-labels.yml'
+      - ".github/labels.yml"
+      - ".github/workflows/sync-labels.yml"
   schedule:
-    - cron: '34 5 * * *' # Run every day at 05:34 AM UTC
+    - cron: "34 5 * * *" # Run every day at 05:34 AM UTC
   workflow_call:
   workflow_dispatch:
   merge_group:
@@ -20,7 +20,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   labels:
@@ -39,4 +40,4 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: ⤵️ Sync Latest Labels Definitions
-        uses: ivuorinen/actions/sync-labels@5cc7373a22402ee8985376bc713f00e09b5b2edb # v2025.11.23
+        uses: ivuorinen/actions/sync-labels@fb25736f7e7a438979c11764e9fe6a100278b4c5 # v2025.12.30
