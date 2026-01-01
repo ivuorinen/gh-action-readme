@@ -289,7 +289,7 @@ func (cl *ConfigurationLoader) validateTheme(theme string) error {
 	}
 
 	// Check if it's a built-in theme
-	if containsString(appconstants.SupportedThemes, theme) {
+	if containsString(appconstants.GetSupportedThemes(), theme) {
 		return nil
 	}
 
@@ -300,5 +300,5 @@ func (cl *ConfigurationLoader) validateTheme(theme string) error {
 	}
 
 	return fmt.Errorf("unsupported theme '%s', must be one of: %s",
-		theme, strings.Join(appconstants.SupportedThemes, ", "))
+		theme, strings.Join(appconstants.GetSupportedThemes(), ", "))
 }

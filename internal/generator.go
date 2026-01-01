@@ -358,8 +358,7 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
 func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string) error {
-	// Use AsciiDoc template
-	templatePath := resolveTemplatePath("templates/themes/asciidoc/readme.adoc")
+	templatePath := g.resolveTemplatePathForFormat()
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,

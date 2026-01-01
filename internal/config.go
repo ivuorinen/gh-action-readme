@@ -359,7 +359,7 @@ func LoadRepoConfig(repoRoot string) (*AppConfig, error) {
 
 // loadRepoConfigInternal is the shared internal implementation for repo config loading.
 func loadRepoConfigInternal(repoRoot string) (*AppConfig, error) {
-	configPath, found := findFirstExistingConfig(repoRoot, appconstants.ConfigSearchPaths)
+	configPath, found := findFirstExistingConfig(repoRoot, appconstants.GetConfigSearchPaths())
 	if found {
 		return loadConfigFromViper(configPath)
 	}
