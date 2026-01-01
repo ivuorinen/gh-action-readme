@@ -57,7 +57,12 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			name: "action.yaml variant",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteActionFixtureAs(t, tmpDir, "action.yaml", appconstants.TestFixtureJavaScriptSimple)
+				testutil.WriteActionFixtureAs(
+					t,
+					tmpDir,
+					appconstants.TestPathActionYAML,
+					appconstants.TestFixtureJavaScriptSimple,
+				)
 			},
 			recursive:   false,
 			expectedLen: 1,
@@ -67,7 +72,12 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
-				testutil.WriteActionFixtureAs(t, tmpDir, "action.yaml", appconstants.TestFixtureMinimalAction)
+				testutil.WriteActionFixtureAs(
+					t,
+					tmpDir,
+					appconstants.TestPathActionYAML,
+					appconstants.TestFixtureMinimalAction,
+				)
 			},
 			recursive:   false,
 			expectedLen: 2,
@@ -150,7 +160,8 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			for _, file := range files {
 				testutil.AssertFileExists(t, file)
 
-				if !strings.HasSuffix(file, appconstants.TestPathActionYML) && !strings.HasSuffix(file, "action.yaml") {
+				if !strings.HasSuffix(file, appconstants.TestPathActionYML) &&
+					!strings.HasSuffix(file, appconstants.TestPathActionYAML) {
 					t.Errorf("discovered file is not an action file: %s", file)
 				}
 			}

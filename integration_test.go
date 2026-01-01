@@ -186,7 +186,7 @@ func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture("repo-config.yml"))
 
 	// Set XDG config home to our test directory
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, appconstants.TestDirDotConfig))
 }
 
 // setupMultiActionWithTemplates creates multiple actions with custom templates.
@@ -267,7 +267,7 @@ func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 
 	// Set up XDG config home
-	configHome := filepath.Join(tmpDir, ".config")
+	configHome := filepath.Join(tmpDir, appconstants.TestDirDotConfig)
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 
 	// Global configuration (lowest priority)
@@ -335,12 +335,12 @@ verbose: not_a_boolean`
 	// Create configuration with missing required fields
 	incompleteConfig := `unknown_field: value
 invalid_theme: nonexistent`
-	configDir := filepath.Join(tmpDir, ".config", "gh-action-readme")
+	configDir := filepath.Join(tmpDir, appconstants.TestDirDotConfig, "gh-action-readme")
 	_ = os.MkdirAll(configDir, 0750) // #nosec G301 -- test directory permissions
 	testutil.WriteTestFile(t, filepath.Join(configDir, appconstants.TestPathConfigYML), incompleteConfig)
 
 	// Set XDG config home
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, appconstants.TestDirDotConfig))
 }
 
 // setupFileDiscoveryErrorScenario creates a scenario with file discovery issues.
@@ -1388,7 +1388,7 @@ func verifyConfigurationLoading(t *testing.T, tmpDir string) {
 	// Since files may be cleaned up between runs, we'll check if the configuration loading succeeded
 	// by verifying that the setup created the expected configuration files
 	configFiles := []string{
-		filepath.Join(tmpDir, ".config", "gh-action-readme", appconstants.TestPathConfigYML),
+		filepath.Join(tmpDir, appconstants.TestDirDotConfig, "gh-action-readme", appconstants.TestPathConfigYML),
 		filepath.Join(tmpDir, "gh-action-readme.yml"),
 		filepath.Join(tmpDir, ".github", "gh-action-readme.yml"),
 	}
