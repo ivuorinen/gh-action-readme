@@ -3,7 +3,6 @@ package internal
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -241,59 +240,17 @@ func (cl *ConfigurationLoader) loadGlobalConfig(configFile string) (*AppConfig, 
 		return nil, err
 	}
 
-	// Set defaults
-	defaults := DefaultAppConfig()
-	setConfigDefaults(v, defaults)
-
-	// Use specific config file if provided
-	if configFile != "" {
-		v.SetConfigFile(configFile)
-	}
-
-	// Read configuration
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf(appconstants.ErrFailedToReadConfigFile, err)
-		}
-		// Config file not found is not an error - we'll use defaults and env vars
-	}
-
-	// Unmarshal configuration into struct
-	var config AppConfig
-	if err := v.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
-	}
-
-	// Resolve template paths relative to binary if they're not absolute
-	resolveAllTemplatePaths(&config)
-
-	return &config, nil
+	return loadAndUnmarshalConfig(configFile, v)
 }
 
 // loadRepoConfig loads repository-level configuration from hidden config files.
 func (cl *ConfigurationLoader) loadRepoConfig(repoRoot string) (*AppConfig, error) {
-	configPath, found := findFirstExistingConfig(repoRoot, appconstants.ConfigSearchPaths)
-	if found {
-		return cl.loadConfigFromFile(configPath)
-	}
-
-	// No config found, return empty config
-	return &AppConfig{}, nil
+	return loadRepoConfigInternal(repoRoot)
 }
 
 // loadActionConfig loads action-level configuration from config.yaml.
 func (cl *ConfigurationLoader) loadActionConfig(actionDir string) (*AppConfig, error) {
-	configPath := filepath.Join(actionDir, appconstants.ConfigYAML)
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return &AppConfig{}, nil // No action config is fine
-	}
-
-	return cl.loadConfigFromFile(configPath)
-}
-
-// loadConfigFromFile loads configuration from a specific file.
-func (cl *ConfigurationLoader) loadConfigFromFile(configPath string) (*AppConfig, error) {
-	return loadConfigFromViper(configPath)
+	return loadActionConfigInternal(actionDir)
 }
 
 // applyRepoOverrides applies repository-specific overrides from global config.

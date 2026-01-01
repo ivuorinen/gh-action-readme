@@ -354,20 +354,29 @@ func mergeSecurityFields(dst *AppConfig, src *AppConfig, allowTokens bool) {
 
 // LoadRepoConfig loads repository-level configuration from hidden config files.
 func LoadRepoConfig(repoRoot string) (*AppConfig, error) {
+	return loadRepoConfigInternal(repoRoot)
+}
+
+// loadRepoConfigInternal is the shared internal implementation for repo config loading.
+func loadRepoConfigInternal(repoRoot string) (*AppConfig, error) {
 	configPath, found := findFirstExistingConfig(repoRoot, appconstants.ConfigSearchPaths)
 	if found {
 		return loadConfigFromViper(configPath)
 	}
 
-	// No config found, return empty config
 	return &AppConfig{}, nil
 }
 
 // LoadActionConfig loads action-level configuration from config.yaml.
 func LoadActionConfig(actionDir string) (*AppConfig, error) {
+	return loadActionConfigInternal(actionDir)
+}
+
+// loadActionConfigInternal is the shared internal implementation for action config loading.
+func loadActionConfigInternal(actionDir string) (*AppConfig, error) {
 	configPath := filepath.Join(actionDir, appconstants.ConfigYAML)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return &AppConfig{}, nil // No action config is fine
+		return &AppConfig{}, nil
 	}
 
 	return loadConfigFromViper(configPath)
@@ -441,33 +450,7 @@ func InitConfig(configFile string) (*AppConfig, error) {
 		return nil, err
 	}
 
-	// Set defaults
-	defaults := DefaultAppConfig()
-	setConfigDefaults(v, defaults)
-
-	// Use specific config file if provided
-	if configFile != "" {
-		v.SetConfigFile(configFile)
-	}
-
-	// Read configuration
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf(appconstants.ErrFailedToReadConfigFile, err)
-		}
-		// Config file not found is not an error - we'll use defaults and env vars
-	}
-
-	// Unmarshal configuration into struct
-	var config AppConfig
-	if err := v.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
-	}
-
-	// Resolve template paths relative to binary if they're not absolute
-	resolveAllTemplatePaths(&config)
-
-	return &config, nil
+	return loadAndUnmarshalConfig(configFile, v)
 }
 
 // WriteDefaultConfig writes a default configuration file to the XDG config directory.

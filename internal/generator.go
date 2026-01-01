@@ -249,26 +249,51 @@ func (g *Generator) ValidateFiles(paths []string) error {
 	return nil
 }
 
-// generateMarkdown creates a README.md file using the template.
-func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
-	// Use theme-based template if theme is specified, otherwise use explicit template path
-	templatePath := g.Config.Template
+// resolveTemplatePathForFormat determines the correct template path
+// based on the configured theme or custom template path.
+// If a theme is specified, it takes precedence over the template path.
+func (g *Generator) resolveTemplatePathForFormat() string {
 	if g.Config.Theme != "" {
-		templatePath = resolveThemeTemplate(g.Config.Theme)
+		return resolveThemeTemplate(g.Config.Theme)
 	}
 
-	opts := TemplateOptions{
-		TemplatePath: templatePath,
-		Format:       "md",
-	}
+	return g.Config.Template
+}
 
+// renderTemplateForAction builds template data and renders it using the specified options.
+// It finds the repository root for git information, builds comprehensive template data,
+// and renders the template. Returns the rendered content or an error.
+func (g *Generator) renderTemplateForAction(
+	action *ActionYML,
+	outputDir string,
+	actionPath string,
+	opts TemplateOptions,
+) (string, error) {
 	// Find repository root for git information
 	repoRoot, _ := git.FindRepositoryRoot(outputDir)
 
 	// Build comprehensive template data
 	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
 
+	// Render template with data
 	content, err := RenderReadme(templateData, opts)
+	if err != nil {
+		return "", fmt.Errorf("failed to render template: %w", err)
+	}
+
+	return content, nil
+}
+
+// generateMarkdown creates a README.md file using the template.
+func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+	templatePath := g.resolveTemplatePathForFormat()
+
+	opts := TemplateOptions{
+		TemplatePath: templatePath,
+		Format:       "md",
+	}
+
+	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render markdown template: %w", err)
 	}
@@ -286,11 +311,7 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 
 // generateHTML creates an HTML file using the template and optional header/footer.
 func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string) error {
-	// Use theme-based template if theme is specified, otherwise use explicit template path
-	templatePath := g.Config.Template
-	if g.Config.Theme != "" {
-		templatePath = resolveThemeTemplate(g.Config.Theme)
-	}
+	templatePath := g.resolveTemplatePathForFormat()
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
@@ -299,13 +320,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Format:       "html",
 	}
 
-	// Find repository root for git information
-	repoRoot, _ := git.FindRepositoryRoot(outputDir)
-
-	// Build comprehensive template data
-	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
-
-	content, err := RenderReadme(templateData, opts)
+	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render HTML template: %w", err)
 	}
@@ -351,13 +366,7 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 		Format:       "asciidoc",
 	}
 
-	// Find repository root for git information
-	repoRoot, _ := git.FindRepositoryRoot(outputDir)
-
-	// Build comprehensive template data
-	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
-
-	content, err := RenderReadme(templateData, opts)
+	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render AsciiDoc template: %w", err)
 	}

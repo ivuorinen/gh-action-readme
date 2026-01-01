@@ -81,3 +81,36 @@ func loadConfigFromViper(configPath string) (*AppConfig, error) {
 
 	return &config, nil
 }
+
+// loadAndUnmarshalConfig initializes viper with defaults, reads config file,
+// and unmarshals into AppConfig with proper error handling.
+// Returns *AppConfig with resolved template paths.
+func loadAndUnmarshalConfig(configFile string, v *viper.Viper) (*AppConfig, error) {
+	// Set defaults
+	defaults := DefaultAppConfig()
+	setConfigDefaults(v, defaults)
+
+	// Use specific config file if provided
+	if configFile != "" {
+		v.SetConfigFile(configFile)
+	}
+
+	// Read configuration
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return nil, fmt.Errorf(appconstants.ErrFailedToReadConfigFile, err)
+		}
+		// Config file not found is not an error - we'll use defaults and env vars
+	}
+
+	// Unmarshal configuration into struct
+	var config AppConfig
+	if err := v.Unmarshal(&config); err != nil {
+		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
+	}
+
+	// Resolve template paths relative to binary if they're not absolute
+	resolveAllTemplatePaths(&config)
+
+	return &config, nil
+}
