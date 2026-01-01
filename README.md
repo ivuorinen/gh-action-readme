@@ -62,6 +62,32 @@ gh-action-readme gen --output-format json --output api-docs.json
 gh-action-readme gen --recursive --theme professional
 ```
 
+### Run Without Installing
+
+For development or one-time usage, you can run directly with `go run`:
+
+```bash
+# Run from cloned repository
+go run . gen
+
+# Run specific commands
+go run . gen --theme github
+go run . validate
+go run . config show
+
+# Run with arguments
+go run . gen testdata/example-action/ --output custom.md
+```
+
+Or run remotely without cloning:
+
+```bash
+# Run directly from GitHub (requires Go 1.17+)
+go run github.com/ivuorinen/gh-action-readme@latest gen
+go run github.com/ivuorinen/gh-action-readme@latest gen --theme professional
+go run github.com/ivuorinen/gh-action-readme@latest validate
+```
+
 ## 📋 Examples
 
 ### Input: `action.yml`
