@@ -8,6 +8,24 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// Test helper factories for creating context maps
+
+func ctxPath(path string) map[string]string {
+	return map[string]string{"path": path}
+}
+
+func ctxError(err string) map[string]string {
+	return map[string]string{"error": err}
+}
+
+func ctxStatusCode(code string) map[string]string {
+	return map[string]string{"status_code": code}
+}
+
+func ctxEmpty() map[string]string {
+	return map[string]string{}
+}
+
 func TestGetSuggestions(t *testing.T) {
 	t.Parallel()
 
@@ -18,11 +36,9 @@ func TestGetSuggestions(t *testing.T) {
 		contains []string
 	}{
 		{
-			name: "file not found with path",
-			code: appconstants.ErrCodeFileNotFound,
-			context: map[string]string{
-				"path": "/path/to/action.yml",
-			},
+			name:    "file not found with path",
+			code:    appconstants.ErrCodeFileNotFound,
+			context: ctxPath("/path/to/action.yml"),
 			contains: []string{
 				"Check if the file exists: /path/to/action.yml",
 				"Verify the file path is correct",
@@ -30,22 +46,18 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "file not found action file",
-			code: appconstants.ErrCodeFileNotFound,
-			context: map[string]string{
-				"path": "/project/action.yml",
-			},
+			name:    "file not found action file",
+			code:    appconstants.ErrCodeFileNotFound,
+			context: ctxPath("/project/action.yml"),
 			contains: []string{
 				"Common action file names: action.yml, action.yaml",
 				"Check if the file is in a subdirectory",
 			},
 		},
 		{
-			name: "permission denied",
-			code: appconstants.ErrCodePermission,
-			context: map[string]string{
-				"path": "/restricted/file.txt",
-			},
+			name:    "permission denied",
+			code:    appconstants.ErrCodePermission,
+			context: ctxPath("/restricted/file.txt"),
 			contains: []string{
 				"Check file permissions: ls -la /restricted/file.txt",
 				"chmod 644 /restricted/file.txt",
@@ -65,11 +77,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid YAML with tab error",
-			code: appconstants.ErrCodeInvalidYAML,
-			context: map[string]string{
-				"error": "found character that cannot start any token (tab)",
-			},
+			name:    "invalid YAML with tab error",
+			code:    appconstants.ErrCodeInvalidYAML,
+			context: ctxError("found character that cannot start any token (tab)"),
 			contains: []string{
 				"YAML files must use spaces for indentation, not tabs",
 				"Replace all tabs with spaces",
@@ -101,11 +111,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "GitHub API 401 error",
-			code: appconstants.ErrCodeGitHubAPI,
-			context: map[string]string{
-				"status_code": "401",
-			},
+			name:    "GitHub API 401 error",
+			code:    appconstants.ErrCodeGitHubAPI,
+			context: ctxStatusCode("401"),
 			contains: []string{
 				"Authentication failed",
 				"check your GitHub token",
@@ -113,11 +121,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "GitHub API 403 error",
-			code: appconstants.ErrCodeGitHubAPI,
-			context: map[string]string{
-				"status_code": "403",
-			},
+			name:    "GitHub API 403 error",
+			code:    appconstants.ErrCodeGitHubAPI,
+			context: ctxStatusCode("403"),
 			contains: []string{
 				"Access forbidden",
 				"check token permissions",
@@ -125,11 +131,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "GitHub API 404 error",
-			code: appconstants.ErrCodeGitHubAPI,
-			context: map[string]string{
-				"status_code": "404",
-			},
+			name:    "GitHub API 404 error",
+			code:    appconstants.ErrCodeGitHubAPI,
+			context: ctxStatusCode("404"),
 			contains: []string{
 				"Repository or resource not found",
 				"repository is private",
@@ -138,7 +142,7 @@ func TestGetSuggestions(t *testing.T) {
 		{
 			name:    "GitHub rate limit",
 			code:    appconstants.ErrCodeGitHubRateLimit,
-			context: map[string]string{},
+			context: ctxEmpty(),
 			contains: []string{
 				"rate limit exceeded",
 				"GITHUB_TOKEN",
@@ -149,7 +153,7 @@ func TestGetSuggestions(t *testing.T) {
 		{
 			name:    "GitHub auth",
 			code:    appconstants.ErrCodeGitHubAuth,
-			context: map[string]string{},
+			context: ctxEmpty(),
 			contains: []string{
 				"export GITHUB_TOKEN",
 				"gh auth login",
@@ -232,7 +236,7 @@ func TestGetSuggestions(t *testing.T) {
 		{
 			name:    "unknown error code",
 			code:    "UNKNOWN_TEST_CODE",
-			context: map[string]string{},
+			context: ctxEmpty(),
 			contains: []string{
 				"Check the error message",
 				"--verbose flag",

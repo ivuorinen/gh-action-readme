@@ -175,6 +175,14 @@ func resolveTemplatePath(templatePath string) string {
 	return resolvedPath
 }
 
+// resolveAllTemplatePaths resolves all template-related paths in the config.
+func resolveAllTemplatePaths(config *AppConfig) {
+	config.Template = resolveTemplatePath(config.Template)
+	config.Header = resolveTemplatePath(config.Header)
+	config.Footer = resolveTemplatePath(config.Footer)
+	config.Schema = resolveTemplatePath(config.Schema)
+}
+
 // resolveThemeTemplate resolves the template path based on the selected theme.
 func resolveThemeTemplate(theme string) string {
 	var templatePath string
@@ -346,32 +354,9 @@ func mergeSecurityFields(dst *AppConfig, src *AppConfig, allowTokens bool) {
 
 // LoadRepoConfig loads repository-level configuration from hidden config files.
 func LoadRepoConfig(repoRoot string) (*AppConfig, error) {
-	// Hidden config file paths in priority order
-	configPaths := []string{
-		".ghreadme.yaml",        // Primary hidden config
-		".config/ghreadme.yaml", // Secondary hidden config
-		".github/ghreadme.yaml", // GitHub ecosystem standard
-	}
-
-	for _, configName := range configPaths {
-		configPath := filepath.Join(repoRoot, configName)
-		if _, err := os.Stat(configPath); err == nil {
-			// Config file found, load it
-			v := viper.New()
-			v.SetConfigFile(configPath)
-			v.SetConfigType(appconstants.OutputFormatYAML)
-
-			if err := v.ReadInConfig(); err != nil {
-				return nil, fmt.Errorf("failed to read repo config %s: %w", configPath, err)
-			}
-
-			var config AppConfig
-			if err := v.Unmarshal(&config); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal repo config: %w", err)
-			}
-
-			return &config, nil
-		}
+	configPath, found := findFirstExistingConfig(repoRoot, appconstants.ConfigSearchPaths)
+	if found {
+		return loadConfigFromViper(configPath)
 	}
 
 	// No config found, return empty config
@@ -385,20 +370,7 @@ func LoadActionConfig(actionDir string) (*AppConfig, error) {
 		return &AppConfig{}, nil // No action config is fine
 	}
 
-	v := viper.New()
-	v.SetConfigFile(configPath)
-	v.SetConfigType(appconstants.OutputFormatYAML)
-
-	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read action config %s: %w", configPath, err)
-	}
-
-	var config AppConfig
-	if err := v.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal action config: %w", err)
-	}
-
-	return &config, nil
+	return loadConfigFromViper(configPath)
 }
 
 // DetectRepositoryName detects the repository name from git remote URL.
@@ -493,10 +465,7 @@ func InitConfig(configFile string) (*AppConfig, error) {
 	}
 
 	// Resolve template paths relative to binary if they're not absolute
-	config.Template = resolveTemplatePath(config.Template)
-	config.Header = resolveTemplatePath(config.Header)
-	config.Footer = resolveTemplatePath(config.Footer)
-	config.Schema = resolveTemplatePath(config.Schema)
+	resolveAllTemplatePaths(&config)
 
 	return &config, nil
 }

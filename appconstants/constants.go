@@ -107,6 +107,15 @@ const (
 	ThemeDefault = "default"
 )
 
+// SupportedThemes lists all available theme names.
+var SupportedThemes = []string{
+	ThemeDefault,
+	ThemeGitHub,
+	ThemeGitLab,
+	ThemeMinimal,
+	ThemeProfessional,
+}
+
 // Template placeholder constants for Git repository information.
 const (
 	// DefaultOrgPlaceholder is the default organization placeholder.
@@ -226,6 +235,13 @@ const (
 	// ConfigFilePatternGitHub is the GitHub ecosystem config pattern.
 	ConfigFilePatternGitHub = ".github/ghreadme.yaml"
 )
+
+// ConfigSearchPaths defines the order in which config files are searched.
+var ConfigSearchPaths = []string{
+	ConfigFilePatternHidden,
+	ConfigFilePatternConfig,
+	ConfigFilePatternGitHub,
+}
 
 // Output format constants.
 const (

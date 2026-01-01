@@ -265,29 +265,16 @@ func (cl *ConfigurationLoader) loadGlobalConfig(configFile string) (*AppConfig, 
 	}
 
 	// Resolve template paths relative to binary if they're not absolute
-	config.Template = resolveTemplatePath(config.Template)
-	config.Header = resolveTemplatePath(config.Header)
-	config.Footer = resolveTemplatePath(config.Footer)
-	config.Schema = resolveTemplatePath(config.Schema)
+	resolveAllTemplatePaths(&config)
 
 	return &config, nil
 }
 
 // loadRepoConfig loads repository-level configuration from hidden config files.
 func (cl *ConfigurationLoader) loadRepoConfig(repoRoot string) (*AppConfig, error) {
-	// Hidden config file paths in priority order
-	configPaths := []string{
-		".ghreadme.yaml",        // Primary hidden config
-		".config/ghreadme.yaml", // Secondary hidden config
-		".github/ghreadme.yaml", // GitHub ecosystem standard
-	}
-
-	for _, configName := range configPaths {
-		configPath := filepath.Join(repoRoot, configName)
-		if _, err := os.Stat(configPath); err == nil {
-			// Config file found, load it
-			return cl.loadConfigFromFile(configPath)
-		}
+	configPath, found := findFirstExistingConfig(repoRoot, appconstants.ConfigSearchPaths)
+	if found {
+		return cl.loadConfigFromFile(configPath)
 	}
 
 	// No config found, return empty config
@@ -306,20 +293,7 @@ func (cl *ConfigurationLoader) loadActionConfig(actionDir string) (*AppConfig, e
 
 // loadConfigFromFile loads configuration from a specific file.
 func (cl *ConfigurationLoader) loadConfigFromFile(configPath string) (*AppConfig, error) {
-	v := viper.New()
-	v.SetConfigFile(configPath)
-	v.SetConfigType(appconstants.OutputFormatYAML)
-
-	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config %s: %w", configPath, err)
-	}
-
-	var config AppConfig
-	if err := v.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
-	}
-
-	return &config, nil
+	return loadConfigFromViper(configPath)
 }
 
 // applyRepoOverrides applies repository-specific overrides from global config.
@@ -358,8 +332,7 @@ func (cl *ConfigurationLoader) validateTheme(theme string) error {
 	}
 
 	// Check if it's a built-in theme
-	supportedThemes := []string{"default", "github", "gitlab", "minimal", "professional"}
-	if containsString(supportedThemes, theme) {
+	if containsString(appconstants.SupportedThemes, theme) {
 		return nil
 	}
 
@@ -370,5 +343,5 @@ func (cl *ConfigurationLoader) validateTheme(theme string) error {
 	}
 
 	return fmt.Errorf("unsupported theme '%s', must be one of: %s",
-		theme, strings.Join(supportedThemes, ", "))
+		theme, strings.Join(appconstants.SupportedThemes, ", "))
 }

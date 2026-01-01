@@ -63,3 +63,21 @@ func setConfigDefaults(v *viper.Viper, defaults *AppConfig) {
 	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingIcon, defaults.Defaults.Branding.Icon)
 	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingColor, defaults.Defaults.Branding.Color)
 }
+
+// loadConfigFromViper loads an AppConfig from a specified YAML config file using viper.
+func loadConfigFromViper(configPath string) (*AppConfig, error) {
+	v := viper.New()
+	v.SetConfigFile(configPath)
+	v.SetConfigType(appconstants.OutputFormatYAML)
+
+	if err := v.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("failed to read config %s: %w", configPath, err)
+	}
+
+	var config AppConfig
+	if err := v.Unmarshal(&config); err != nil {
+		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
+	}
+
+	return &config, nil
+}
