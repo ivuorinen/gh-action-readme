@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -22,16 +23,21 @@ func initializeViperInstance() (*viper.Viper, error) {
 	v.SetConfigType(appconstants.OutputFormatYAML)
 
 	// Add XDG-compliant configuration directory
-	configDir, err := xdg.ConfigFile(appconstants.AppName)
+	configDir, err := xdg.ConfigFile(appconstants.PathXDGConfig)
 	if err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToGetXDGConfigDir, err)
 	}
 	v.AddConfigPath(filepath.Dir(configDir))
 
 	// Add additional search paths
-	v.AddConfigPath(".")                         // current directory
-	v.AddConfigPath(appconstants.PathHomeConfig) // fallback
-	v.AddConfigPath(appconstants.PathEtcConfig)  // system-wide
+	v.AddConfigPath(".") // current directory
+
+	// Expand home directory for fallback config path
+	if home, err := os.UserHomeDir(); err == nil {
+		v.AddConfigPath(filepath.Join(home, ".config", appconstants.AppName)) // fallback
+	}
+
+	v.AddConfigPath(appconstants.PathEtcConfig) // system-wide
 
 	// Set environment variable prefix
 	v.SetEnvPrefix(appconstants.EnvPrefix)

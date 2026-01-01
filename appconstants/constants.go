@@ -289,7 +289,9 @@ const (
 	DirTestdata = "testdata"
 	// DirYAMLFixtures is the yaml-fixtures directory.
 	DirYAMLFixtures = "yaml-fixtures"
-	// PathHomeConfig is the home config directory path.
+	// PathHomeConfig is the unexpanded home config directory path template.
+	// Note: $HOME must be expanded to actual home directory before use.
+	// Prefer using os.UserHomeDir() + filepath.Join() instead of this constant.
 	PathHomeConfig = "$HOME/.config/gh-action-readme"
 	// PathEtcConfig is the etc config directory path.
 	PathEtcConfig = "/etc/gh-action-readme"
@@ -321,8 +323,6 @@ const (
 const (
 	// ActionTypeComposite is the composite action type.
 	ActionTypeComposite = "composite"
-	// ActionTypePython is the Python action type.
-	ActionTypePython = "Python"
 	// ActionTypeJavaScript is the JavaScript action type.
 	ActionTypeJavaScript = "javascript"
 	// ActionTypeDocker is the Docker action type.

@@ -55,7 +55,7 @@ func NewCache(config *Config) (*Cache, error) {
 	}
 
 	// Get XDG cache directory
-	cacheDir, err := xdg.CacheFile("gh-action-readme")
+	cacheDir, err := xdg.CacheFile(appconstants.AppName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get XDG cache directory: %w", err)
 	}
