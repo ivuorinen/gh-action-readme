@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adrg/xdg"
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -237,31 +236,14 @@ func (cl *ConfigurationLoader) loadEnvironmentStep(config *AppConfig) {
 
 // loadGlobalConfig initializes and loads the global configuration using Viper.
 func (cl *ConfigurationLoader) loadGlobalConfig(configFile string) (*AppConfig, error) {
-	v := viper.New()
-
-	// Set configuration file name and type
-	v.SetConfigName(appconstants.ConfigFileName)
-	v.SetConfigType(appconstants.OutputFormatYAML)
-
-	// Add XDG-compliant configuration directory
-	configDir, err := xdg.ConfigFile(appconstants.AppName)
+	v, err := initializeViperInstance()
 	if err != nil {
-		return nil, fmt.Errorf(appconstants.ErrFailedToGetXDGConfigDir, err)
+		return nil, err
 	}
-	v.AddConfigPath(filepath.Dir(configDir))
-
-	// Add additional search paths
-	v.AddConfigPath(".")                         // current directory
-	v.AddConfigPath(appconstants.PathHomeConfig) // fallback
-	v.AddConfigPath(appconstants.PathEtcConfig)  // system-wide
-
-	// Set environment variable prefix
-	v.SetEnvPrefix(appconstants.EnvPrefix)
-	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
-	v.AutomaticEnv()
 
 	// Set defaults
-	cl.setViperDefaults(v)
+	defaults := DefaultAppConfig()
+	setConfigDefaults(v, defaults)
 
 	// Use specific config file if provided
 	if configFile != "" {
@@ -359,9 +341,7 @@ func (cl *ConfigurationLoader) applyRepoOverrides(config *AppConfig, repoRoot st
 // applyEnvironmentOverrides applies environment variable overrides.
 func (cl *ConfigurationLoader) applyEnvironmentOverrides(config *AppConfig) {
 	// Check environment variables directly with higher priority
-	if token := os.Getenv(appconstants.EnvGitHubToken); token != "" {
-		config.GitHubToken = token
-	} else if token := os.Getenv(appconstants.EnvGitHubTokenStandard); token != "" {
+	if token := loadGitHubTokenFromEnv(); token != "" {
 		config.GitHubToken = token
 	}
 }
@@ -369,29 +349,6 @@ func (cl *ConfigurationLoader) applyEnvironmentOverrides(config *AppConfig) {
 // mergeConfigs merges a source config into a destination config.
 func (cl *ConfigurationLoader) mergeConfigs(dst *AppConfig, src *AppConfig, allowTokens bool) {
 	MergeConfigs(dst, src, allowTokens)
-}
-
-// setViperDefaults sets default values in viper.
-func (cl *ConfigurationLoader) setViperDefaults(v *viper.Viper) {
-	defaults := DefaultAppConfig()
-	v.SetDefault(appconstants.ConfigKeyOrganization, defaults.Organization)
-	v.SetDefault(appconstants.ConfigKeyRepository, defaults.Repository)
-	v.SetDefault(appconstants.ConfigKeyVersion, defaults.Version)
-	v.SetDefault(appconstants.ConfigKeyTheme, defaults.Theme)
-	v.SetDefault(appconstants.ConfigKeyOutputFormat, defaults.OutputFormat)
-	v.SetDefault(appconstants.ConfigKeyOutputDir, defaults.OutputDir)
-	v.SetDefault(appconstants.ConfigKeyTemplate, defaults.Template)
-	v.SetDefault(appconstants.ConfigKeyHeader, defaults.Header)
-	v.SetDefault(appconstants.ConfigKeyFooter, defaults.Footer)
-	v.SetDefault(appconstants.ConfigKeySchema, defaults.Schema)
-	v.SetDefault(appconstants.ConfigKeyAnalyzeDependencies, defaults.AnalyzeDependencies)
-	v.SetDefault(appconstants.ConfigKeyShowSecurityInfo, defaults.ShowSecurityInfo)
-	v.SetDefault(appconstants.ConfigKeyVerbose, defaults.Verbose)
-	v.SetDefault(appconstants.ConfigKeyQuiet, defaults.Quiet)
-	v.SetDefault(appconstants.ConfigKeyDefaultsName, defaults.Defaults.Name)
-	v.SetDefault(appconstants.ConfigKeyDefaultsDescription, defaults.Defaults.Description)
-	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingIcon, defaults.Defaults.Branding.Icon)
-	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingColor, defaults.Defaults.Branding.Color)
 }
 
 // validateTheme validates that a theme exists and is supported.

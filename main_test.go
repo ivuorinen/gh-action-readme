@@ -52,12 +52,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
-				testutil.WriteTestFile(
-					t,
-					actionPath,
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
-				)
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 0,
 		},
@@ -66,12 +61,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
-				testutil.WriteTestFile(
-					t,
-					actionPath,
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
-				)
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 0,
 		},
@@ -86,12 +76,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
-				testutil.WriteTestFile(
-					t,
-					actionPath,
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
-				)
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit:   0,
 			wantStdout: "All validations passed successfully",
@@ -101,12 +86,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
-				testutil.WriteTestFile(
-					t,
-					actionPath,
-					testutil.MustReadFixture(appconstants.TestFixtureInvalidMissingDescription),
-				)
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureInvalidMissingDescription)
 			},
 			wantExit: 1,
 		},
@@ -183,26 +163,7 @@ func TestCLICommands(t *testing.T) {
 
 			// Run the command in the temporary directory
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
-
-			if result.exitCode != tt.wantExit {
-				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
-				t.Logf(appconstants.TestMsgStdout, result.stdout)
-				t.Logf(appconstants.TestMsgStderr, result.stderr)
-			}
-
-			// Check stdout if specified
-			if tt.wantStdout != "" {
-				if !strings.Contains(result.stdout, tt.wantStdout) {
-					t.Errorf("expected stdout to contain %q, got: %s", tt.wantStdout, result.stdout)
-				}
-			}
-
-			// Check stderr if specified
-			if tt.wantStderr != "" {
-				if !strings.Contains(result.stderr, tt.wantStderr) {
-					t.Errorf("expected stderr to contain %q, got: %s", tt.wantStderr, result.stderr)
-				}
-			}
+			assertCommandResult(t, result, tt.wantExit, tt.wantStdout, tt.wantStderr)
 		})
 	}
 }
@@ -262,10 +223,8 @@ func TestCLIFlags(t *testing.T) {
 			}
 
 			if tt.contains != "" {
-				output := result.stdout + result.stderr
-				if !strings.Contains(output, tt.contains) {
-					t.Errorf("expected output to contain %q, got: %s", tt.contains, output)
-				}
+				// For contains check, look in both stdout and stderr
+				assertCommandResult(t, result, tt.wantExit, tt.contains, "")
 			}
 		})
 	}
@@ -306,12 +265,7 @@ func TestCLIRecursiveFlag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
-
-			if result.exitCode != tt.wantExit {
-				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
-				t.Logf(appconstants.TestMsgStdout, result.stdout)
-				t.Logf(appconstants.TestMsgStderr, result.stderr)
-			}
+			assertCommandResult(t, result, tt.wantExit, "", "")
 
 			// For recursive tests, check that appropriate number of files were processed
 			// This is a simple heuristic - could be made more sophisticated
@@ -339,8 +293,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit:  1,
 			wantError: "encountered 1 errors during batch processing",
@@ -363,8 +316,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 1,
 		},
@@ -373,8 +325,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 1,
 		},
@@ -630,5 +581,39 @@ func runTestCommand(binaryPath string, args []string, dir string) cmdResult {
 		stdout:   stdout.String(),
 		stderr:   stderr.String(),
 		exitCode: exitCode,
+	}
+}
+
+// createTestActionFile is a helper that creates a test action file from a fixture.
+// It writes the specified fixture to action.yml in the given temporary directory.
+func createTestActionFile(t *testing.T, tmpDir, fixture string) {
+	t.Helper()
+	actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(fixture))
+}
+
+// assertCommandResult is a helper that asserts the result of a command execution.
+// It checks the exit code, and optionally checks for expected content in stdout and stderr.
+func assertCommandResult(t *testing.T, result cmdResult, wantExit int, wantStdout, wantStderr string) {
+	t.Helper()
+
+	if result.exitCode != wantExit {
+		t.Errorf(appconstants.TestMsgExitCode, wantExit, result.exitCode)
+		t.Logf(appconstants.TestMsgStdout, result.stdout)
+		t.Logf(appconstants.TestMsgStderr, result.stderr)
+	}
+
+	// Check stdout if specified
+	if wantStdout != "" {
+		if !strings.Contains(result.stdout, wantStdout) {
+			t.Errorf("expected stdout to contain %q, got: %s", wantStdout, result.stdout)
+		}
+	}
+
+	// Check stderr if specified
+	if wantStderr != "" {
+		if !strings.Contains(result.stderr, wantStderr) {
+			t.Errorf("expected stderr to contain %q, got: %s", wantStderr, result.stderr)
+		}
 	}
 }

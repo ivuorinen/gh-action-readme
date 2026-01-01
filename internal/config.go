@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/adrg/xdg"
 	"github.com/gofri/go-github-ratelimit/github_ratelimit"
@@ -80,13 +79,8 @@ type GitHubClient struct {
 
 // GetGitHubToken returns the GitHub token from environment variables or config.
 func GetGitHubToken(config *AppConfig) string {
-	// Priority 1: Tool-specific env var
-	if token := os.Getenv(appconstants.EnvGitHubToken); token != "" {
-		return token
-	}
-
-	// Priority 2: Standard GitHub env var
-	if token := os.Getenv(appconstants.EnvGitHubTokenStandard); token != "" {
+	// Priority 1 & 2: Environment variables
+	if token := loadGitHubTokenFromEnv(); token != "" {
 		return token
 	}
 
@@ -291,25 +285,23 @@ func mergeStringFields(dst *AppConfig, src *AppConfig) {
 	}
 }
 
+// mergeStringMap is a generic helper that merges a source map into a destination map.
+func mergeStringMap(dst *map[string]string, src map[string]string) {
+	if len(src) == 0 {
+		return
+	}
+	if *dst == nil {
+		*dst = make(map[string]string)
+	}
+	for k, v := range src {
+		(*dst)[k] = v
+	}
+}
+
 // mergeMapFields merges map fields from src to dst if non-empty.
 func mergeMapFields(dst *AppConfig, src *AppConfig) {
-	if len(src.Permissions) > 0 {
-		if dst.Permissions == nil {
-			dst.Permissions = make(map[string]string)
-		}
-		for k, v := range src.Permissions {
-			dst.Permissions[k] = v
-		}
-	}
-
-	if len(src.Variables) > 0 {
-		if dst.Variables == nil {
-			dst.Variables = make(map[string]string)
-		}
-		for k, v := range src.Variables {
-			dst.Variables[k] = v
-		}
-	}
+	mergeStringMap(&dst.Permissions, src.Permissions)
+	mergeStringMap(&dst.Variables, src.Variables)
 }
 
 // mergeSliceFields merges slice fields from src to dst if non-empty.
@@ -463,9 +455,7 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 
 	// 6. Apply environment variable overrides for GitHub token
 	// Check environment variables directly with higher priority
-	if token := os.Getenv(appconstants.EnvGitHubToken); token != "" {
-		config.GitHubToken = token
-	} else if token := os.Getenv(appconstants.EnvGitHubTokenStandard); token != "" {
+	if token := loadGitHubTokenFromEnv(); token != "" {
 		config.GitHubToken = token
 	}
 
@@ -474,49 +464,14 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 
 // InitConfig initializes the global configuration using Viper with XDG compliance.
 func InitConfig(configFile string) (*AppConfig, error) {
-	v := viper.New()
-
-	// Set configuration file name and type
-	v.SetConfigName(appconstants.ConfigFileName)
-	v.SetConfigType(appconstants.OutputFormatYAML)
-
-	// Add XDG-compliant configuration directory
-	configDir, err := xdg.ConfigFile(appconstants.AppName)
+	v, err := initializeViperInstance()
 	if err != nil {
-		return nil, fmt.Errorf(appconstants.ErrFailedToGetXDGConfigDir, err)
+		return nil, err
 	}
-	v.AddConfigPath(filepath.Dir(configDir))
-
-	// Add additional search paths
-	v.AddConfigPath(".")                         // current directory
-	v.AddConfigPath(appconstants.PathHomeConfig) // fallback
-	v.AddConfigPath(appconstants.PathEtcConfig)  // system-wide
-
-	// Set environment variable prefix
-	v.SetEnvPrefix(appconstants.EnvPrefix)
-	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
-	v.AutomaticEnv()
 
 	// Set defaults
 	defaults := DefaultAppConfig()
-	v.SetDefault(appconstants.ConfigKeyOrganization, defaults.Organization)
-	v.SetDefault(appconstants.ConfigKeyRepository, defaults.Repository)
-	v.SetDefault(appconstants.ConfigKeyVersion, defaults.Version)
-	v.SetDefault(appconstants.ConfigKeyTheme, defaults.Theme)
-	v.SetDefault(appconstants.ConfigKeyOutputFormat, defaults.OutputFormat)
-	v.SetDefault(appconstants.ConfigKeyOutputDir, defaults.OutputDir)
-	v.SetDefault(appconstants.ConfigKeyTemplate, defaults.Template)
-	v.SetDefault(appconstants.ConfigKeyHeader, defaults.Header)
-	v.SetDefault(appconstants.ConfigKeyFooter, defaults.Footer)
-	v.SetDefault(appconstants.ConfigKeySchema, defaults.Schema)
-	v.SetDefault(appconstants.ConfigKeyAnalyzeDependencies, defaults.AnalyzeDependencies)
-	v.SetDefault(appconstants.ConfigKeyShowSecurityInfo, defaults.ShowSecurityInfo)
-	v.SetDefault(appconstants.ConfigKeyVerbose, defaults.Verbose)
-	v.SetDefault(appconstants.ConfigKeyQuiet, defaults.Quiet)
-	v.SetDefault(appconstants.ConfigKeyDefaultsName, defaults.Defaults.Name)
-	v.SetDefault(appconstants.ConfigKeyDefaultsDescription, defaults.Defaults.Description)
-	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingIcon, defaults.Defaults.Branding.Icon)
-	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingColor, defaults.Defaults.Branding.Color)
+	setConfigDefaults(v, defaults)
 
 	// Use specific config file if provided
 	if configFile != "" {

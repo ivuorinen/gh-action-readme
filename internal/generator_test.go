@@ -338,18 +338,11 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				// Create separate directories for each action
-				dir1 := filepath.Join(tmpDir, "action1")
-				dir2 := filepath.Join(tmpDir, "action2")
-				if err := os.MkdirAll(dir1, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir1: %v", err)
-				}
-				if err := os.MkdirAll(dir2, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir2: %v", err)
-				}
+				dirs := createTestDirs(t, tmpDir, "action1", "action2")
 
 				files := []string{
-					filepath.Join(dir1, appconstants.TestPathActionYML),
-					filepath.Join(dir2, appconstants.TestPathActionYML),
+					filepath.Join(dirs[0], appconstants.TestPathActionYML),
+					filepath.Join(dirs[1], appconstants.TestPathActionYML),
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
@@ -364,18 +357,11 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				// Create separate directories for mixed test too
-				dir1 := filepath.Join(tmpDir, "valid-action")
-				dir2 := filepath.Join(tmpDir, "invalid-action")
-				if err := os.MkdirAll(dir1, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir1: %v", err)
-				}
-				if err := os.MkdirAll(dir2, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir2: %v", err)
-				}
+				dirs := createTestDirs(t, tmpDir, "valid-action", "invalid-action")
 
 				files := []string{
-					filepath.Join(dir1, appconstants.TestPathActionYML),
-					filepath.Join(dir2, appconstants.TestPathActionYML),
+					filepath.Join(dirs[0], appconstants.TestPathActionYML),
+					filepath.Join(dirs[1], appconstants.TestPathActionYML),
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 				testutil.WriteTestFile(
@@ -682,4 +668,20 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 			}
 		})
 	}
+}
+
+// createTestDirs is a helper that creates multiple directories within tmpDir for testing.
+// Returns the full paths of all created directories.
+func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
+	t.Helper()
+	dirs := make([]string, len(names))
+	for i, name := range names {
+		dirPath := filepath.Join(tmpDir, name)
+		if err := os.MkdirAll(dirPath, 0750); err != nil { // #nosec G301 -- test directory permissions
+			t.Fatalf("failed to create directory %s: %v", name, err)
+		}
+		dirs[i] = dirPath
+	}
+
+	return dirs
 }
