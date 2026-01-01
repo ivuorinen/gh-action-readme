@@ -10,11 +10,8 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v74/github"
-)
 
-// File constants.
-const (
-	readmeFilename = "README.md"
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // TestExecutor is a function type for executing specific types of tests.
@@ -355,7 +352,7 @@ func executeTest(t *testing.T, testCase TestCase, ctx *TestContext) *TestResult 
 		}
 
 		// Create temporary action file
-		actionPath := filepath.Join(ctx.TempDir, "action.yml")
+		actionPath := filepath.Join(ctx.TempDir, appconstants.ActionFileNameYML)
 		WriteTestFile(t, actionPath, fixture.Content)
 	}
 
@@ -571,23 +568,23 @@ func DetectGeneratedFiles(outputDir string, outputFormat string) []string {
 		if !entry.IsDir() {
 			name := entry.Name()
 			// Skip the action.yml we created for testing
-			if name == "action.yml" {
+			if name == appconstants.ActionFileNameYML {
 				continue
 			}
 
 			// Check if this file matches the expected output format
 			isGenerated := false
 			switch outputFormat {
-			case "md":
-				isGenerated = name == readmeFilename
-			case "html":
+			case appconstants.OutputFormatMarkdown:
+				isGenerated = name == appconstants.ReadmeMarkdown
+			case appconstants.OutputFormatHTML:
 				isGenerated = strings.HasSuffix(name, ".html")
-			case "json":
-				isGenerated = name == "action-docs.json"
-			case "asciidoc":
-				isGenerated = name == "README.adoc"
+			case appconstants.OutputFormatJSON:
+				isGenerated = name == appconstants.ActionDocsJSON
+			case appconstants.OutputFormatASCIIDoc:
+				isGenerated = name == appconstants.ReadmeASCIIDoc
 			default:
-				isGenerated = name == readmeFilename
+				isGenerated = name == appconstants.ReadmeMarkdown
 			}
 
 			if isGenerated {
@@ -603,7 +600,7 @@ func DetectGeneratedFiles(outputDir string, outputFormat string) []string {
 func DefaultTestConfig() *TestConfig {
 	return &TestConfig{
 		Theme:        "default",
-		OutputFormat: "md",
+		OutputFormat: appconstants.OutputFormatMarkdown,
 		OutputDir:    ".",
 		Verbose:      false,
 		Quiet:        false,
@@ -652,7 +649,7 @@ func CreateTemporaryAction(t *testing.T, fixture string) string {
 	// Load the fixture
 	actionFixture, err := LoadActionFixture(fixture)
 	if err != nil {
-		t.Fatalf("failed to load action fixture %s: %v", fixture, err)
+		t.Fatalf(appconstants.ErrFailedToLoadActionFixture, fixture, err)
 	}
 
 	// Create temporary directory
@@ -660,7 +657,7 @@ func CreateTemporaryAction(t *testing.T, fixture string) string {
 	t.Cleanup(cleanup)
 
 	// Write action file
-	actionPath := filepath.Join(tempDir, "action.yml")
+	actionPath := filepath.Join(tempDir, appconstants.ActionFileNameYML)
 	WriteTestFile(t, actionPath, actionFixture.Content)
 
 	return actionPath
@@ -673,7 +670,7 @@ func CreateTemporaryActionDir(t *testing.T, fixture string) string {
 	// Load the fixture
 	actionFixture, err := LoadActionFixture(fixture)
 	if err != nil {
-		t.Fatalf("failed to load action fixture %s: %v", fixture, err)
+		t.Fatalf(appconstants.ErrFailedToLoadActionFixture, fixture, err)
 	}
 
 	// Create temporary directory
@@ -681,7 +678,7 @@ func CreateTemporaryActionDir(t *testing.T, fixture string) string {
 	t.Cleanup(cleanup)
 
 	// Write action file
-	actionPath := filepath.Join(tempDir, "action.yml")
+	actionPath := filepath.Join(tempDir, appconstants.ActionFileNameYML)
 	WriteTestFile(t, actionPath, actionFixture.Content)
 
 	return tempDir
@@ -841,7 +838,12 @@ func TestAllThemes(t *testing.T, testFunc func(*testing.T, string)) {
 func TestAllFormats(t *testing.T, testFunc func(*testing.T, string)) {
 	t.Helper()
 
-	formats := []string{"md", "html", "json", "asciidoc"}
+	formats := []string{
+		appconstants.OutputFormatMarkdown,
+		appconstants.OutputFormatHTML,
+		appconstants.OutputFormatJSON,
+		appconstants.OutputFormatASCIIDoc,
+	}
 
 	for _, format := range formats {
 		format := format // capture loop variable
@@ -888,8 +890,7 @@ func CreateGitHubMockSuite(scenarios []string) *MockSuite {
 func AssertFixtureValid(t *testing.T, fixtureName string) {
 	t.Helper()
 
-	fixture, err := LoadActionFixture(fixtureName)
-	AssertNoError(t, err)
+	fixture := MustLoadActionFixture(t, fixtureName)
 
 	if !fixture.IsValid {
 		t.Errorf("fixture %s should be valid but failed validation", fixtureName)
@@ -974,18 +975,18 @@ func CreateActionTestCases() []ActionTestCase {
 // getExpectedFilename returns the expected filename for a given output format.
 func getExpectedFilename(outputFormat string) string {
 	switch outputFormat {
-	case "md":
-		return "README.md"
-	case "html":
+	case appconstants.OutputFormatMarkdown:
+		return appconstants.ReadmeMarkdown
+	case appconstants.OutputFormatHTML:
 		// HTML files have variable names based on action name, so we'll use a pattern
 		// The DetectGeneratedFiles function will find any .html file
 		return "*.html"
-	case "json":
-		return "action-docs.json"
-	case "asciidoc":
-		return "README.adoc"
+	case appconstants.OutputFormatJSON:
+		return appconstants.ActionDocsJSON
+	case appconstants.OutputFormatASCIIDoc:
+		return appconstants.ReadmeASCIIDoc
 	default:
-		return "README.md"
+		return appconstants.ReadmeMarkdown
 	}
 }
 
@@ -993,7 +994,12 @@ func getExpectedFilename(outputFormat string) string {
 func CreateGeneratorTestCases() []GeneratorTestCase {
 	validFixtures := GetValidFixtures()
 	themes := []string{"default", "github", "minimal", "professional"}
-	formats := []string{"md", "html", "json", "asciidoc"}
+	formats := []string{
+		appconstants.OutputFormatMarkdown,
+		appconstants.OutputFormatHTML,
+		appconstants.OutputFormatJSON,
+		appconstants.OutputFormatASCIIDoc,
+	}
 
 	cases := make([]GeneratorTestCase, 0)
 

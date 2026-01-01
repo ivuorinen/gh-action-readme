@@ -10,11 +10,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-)
 
-const (
-	// DefaultBranch is the default branch name used as fallback.
-	DefaultBranch = "main"
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // RepoInfo contains information about a Git repository.
@@ -29,7 +26,7 @@ type RepoInfo struct {
 // GetRepositoryName returns the full repository name in org/repo format.
 func (r *RepoInfo) GetRepositoryName() string {
 	if r.Organization != "" && r.Repository != "" {
-		return fmt.Sprintf("%s/%s", r.Organization, r.Repository)
+		return fmt.Sprintf(appconstants.URLPatternGitHubRepo, r.Organization, r.Repository)
 	}
 
 	return ""
@@ -44,7 +41,7 @@ func FindRepositoryRoot(startPath string) (string, error) {
 
 	// Walk up the directory tree looking for .git
 	for {
-		gitPath := filepath.Join(absPath, ".git")
+		gitPath := filepath.Join(absPath, appconstants.DirGit)
 		if _, err := os.Stat(gitPath); err == nil {
 			return absPath, nil
 		}
@@ -65,7 +62,7 @@ func DetectRepository(repoRoot string) (*RepoInfo, error) {
 	}
 
 	// Check if this is actually a git repository
-	gitPath := filepath.Join(repoRoot, ".git")
+	gitPath := filepath.Join(repoRoot, appconstants.DirGit)
 	if _, err := os.Stat(gitPath); os.IsNotExist(err) {
 		return &RepoInfo{IsGitRepo: false}, nil
 	}
@@ -100,7 +97,12 @@ func getRemoteURL(repoRoot string) (string, error) {
 
 // getRemoteURLFromGit uses git command to get remote URL.
 func getRemoteURLFromGit(repoRoot string) (string, error) {
-	cmd := exec.Command("git", "remote", "get-url", "origin")
+	cmd := exec.Command(
+		appconstants.GitCommand,
+		"remote",
+		"get-url",
+		"origin",
+	) // #nosec G204 -- git command is a constant
 	cmd.Dir = repoRoot
 
 	output, err := cmd.Output()
@@ -113,7 +115,7 @@ func getRemoteURLFromGit(repoRoot string) (string, error) {
 
 // getRemoteURLFromConfig parses .git/config to extract remote URL.
 func getRemoteURLFromConfig(repoRoot string) (string, error) {
-	configPath := filepath.Join(repoRoot, ".git", "config")
+	configPath := filepath.Join(repoRoot, appconstants.DirGit, appconstants.ConfigFileName)
 	file, err := os.Open(configPath) // #nosec G304 -- git config path constructed from repo root
 	if err != nil {
 		return "", fmt.Errorf("failed to open git config: %w", err)
@@ -143,8 +145,8 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 		}
 
 		// Look for url = in origin section
-		if inOriginSection && strings.HasPrefix(line, "url = ") {
-			return strings.TrimPrefix(line, "url = "), nil
+		if inOriginSection && strings.HasPrefix(line, appconstants.GitConfigURL) {
+			return strings.TrimPrefix(line, appconstants.GitConfigURL), nil
 		}
 	}
 
@@ -159,13 +161,13 @@ func getDefaultBranch(repoRoot string) string {
 	output, err := cmd.Output()
 	if err != nil {
 		// Fallback to common default branches
-		for _, branch := range []string{DefaultBranch, "master"} {
+		for _, branch := range []string{appconstants.GitDefaultBranch, "master"} {
 			if branchExists(repoRoot, branch) {
 				return branch
 			}
 		}
 
-		return DefaultBranch // Default fallback
+		return appconstants.GitDefaultBranch // Default fallback
 	}
 
 	// Extract branch name from refs/remotes/origin/HEAD -> refs/remotes/origin/main
@@ -174,16 +176,16 @@ func getDefaultBranch(repoRoot string) string {
 		return parts[len(parts)-1]
 	}
 
-	return DefaultBranch
+	return appconstants.GitDefaultBranch
 }
 
 // branchExists checks if a branch exists in the repository.
 func branchExists(repoRoot, branch string) bool {
 	cmd := exec.Command(
-		"git",
-		"show-ref",
-		"--verify",
-		"--quiet",
+		appconstants.GitCommand,
+		appconstants.GitShowRef,
+		appconstants.GitVerify,
+		appconstants.GitQuiet,
 		"refs/heads/"+branch,
 	) // #nosec G204 -- branch name validated by git
 	cmd.Dir = repoRoot

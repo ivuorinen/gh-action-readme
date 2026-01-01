@@ -1,37 +1,31 @@
-// Package errors provides enhanced error types with contextual information and suggestions.
-package errors
+// Package apperrors provides enhanced error types with contextual information and suggestions.
+package apperrors
 
 import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
-// ErrorCode represents a category of error for providing specific help.
-type ErrorCode string
-
-// Error code constants for categorizing errors.
-const (
-	ErrCodeFileNotFound       ErrorCode = "FILE_NOT_FOUND"
-	ErrCodePermission         ErrorCode = "PERMISSION_DENIED"
-	ErrCodeInvalidYAML        ErrorCode = "INVALID_YAML"
-	ErrCodeInvalidAction      ErrorCode = "INVALID_ACTION"
-	ErrCodeNoActionFiles      ErrorCode = "NO_ACTION_FILES"
-	ErrCodeGitHubAPI          ErrorCode = "GITHUB_API_ERROR"
-	ErrCodeGitHubRateLimit    ErrorCode = "GITHUB_RATE_LIMIT"
-	ErrCodeGitHubAuth         ErrorCode = "GITHUB_AUTH_ERROR"
-	ErrCodeConfiguration      ErrorCode = "CONFIG_ERROR"
-	ErrCodeValidation         ErrorCode = "VALIDATION_ERROR"
-	ErrCodeTemplateRender     ErrorCode = "TEMPLATE_ERROR"
-	ErrCodeFileWrite          ErrorCode = "FILE_WRITE_ERROR"
-	ErrCodeDependencyAnalysis ErrorCode = "DEPENDENCY_ERROR"
-	ErrCodeCacheAccess        ErrorCode = "CACHE_ERROR"
-	ErrCodeUnknown            ErrorCode = "UNKNOWN_ERROR"
+// Sentinel errors for typed error checking.
+var (
+	// ErrFileNotFound indicates a file was not found.
+	ErrFileNotFound = errors.New("file not found")
+	// ErrPermissionDenied indicates a permission error.
+	ErrPermissionDenied = errors.New("permission denied")
+	// ErrInvalidYAML indicates YAML parsing failed.
+	ErrInvalidYAML = errors.New("invalid YAML")
+	// ErrGitHubAPI indicates a GitHub API error.
+	ErrGitHubAPI = errors.New("GitHub API error")
+	// ErrConfiguration indicates a configuration error.
+	ErrConfiguration = errors.New("configuration error")
 )
 
 // ContextualError provides enhanced error information with actionable suggestions.
 type ContextualError struct {
-	Code        ErrorCode
+	Code        appconstants.ErrorCode
 	Err         error
 	Context     string
 	Suggestions []string
@@ -98,7 +92,7 @@ func (ce *ContextualError) Is(target error) bool {
 }
 
 // New creates a new ContextualError with the given code and message.
-func New(code ErrorCode, message string) *ContextualError {
+func New(code appconstants.ErrorCode, message string) *ContextualError {
 	return &ContextualError{
 		Code: code,
 		Err:  errors.New(message),
@@ -106,22 +100,37 @@ func New(code ErrorCode, message string) *ContextualError {
 }
 
 // Wrap wraps an existing error with contextual information.
-func Wrap(err error, code ErrorCode, context string) *ContextualError {
+func Wrap(err error, code appconstants.ErrorCode, context string) *ContextualError {
 	if err == nil {
 		return nil
 	}
 
-	// If already a ContextualError, preserve existing info
+	// If already a ContextualError, preserve existing info by creating a copy
 	if ce, ok := err.(*ContextualError); ok {
-		// Only update if not already set
-		if ce.Code == ErrCodeUnknown {
-			ce.Code = code
-		}
-		if ce.Context == "" {
-			ce.Context = context
+		// Create a copy to avoid mutating the original
+		errCopy := &ContextualError{
+			Code:        ce.Code,
+			Err:         ce.Err,
+			Context:     ce.Context,
+			Suggestions: ce.Suggestions,
+			HelpURL:     ce.HelpURL,
+			Details:     make(map[string]string),
 		}
 
-		return ce
+		// Copy details map
+		for k, v := range ce.Details {
+			errCopy.Details[k] = v
+		}
+
+		// Only update if not already set
+		if errCopy.Code == appconstants.ErrCodeUnknown {
+			errCopy.Code = code
+		}
+		if errCopy.Context == "" {
+			errCopy.Context = context
+		}
+
+		return errCopy
 	}
 
 	return &ContextualError{
@@ -158,24 +167,24 @@ func (ce *ContextualError) WithHelpURL(url string) *ContextualError {
 }
 
 // GetHelpURL returns a help URL for the given error code.
-func GetHelpURL(code ErrorCode) string {
+func GetHelpURL(code appconstants.ErrorCode) string {
 	baseURL := "https://github.com/ivuorinen/gh-action-readme/blob/main/docs/troubleshooting.md"
 
-	anchors := map[ErrorCode]string{
-		ErrCodeFileNotFound:       "#file-not-found",
-		ErrCodePermission:         "#permission-denied",
-		ErrCodeInvalidYAML:        "#invalid-yaml",
-		ErrCodeInvalidAction:      "#invalid-action-file",
-		ErrCodeNoActionFiles:      "#no-action-files",
-		ErrCodeGitHubAPI:          "#github-api-errors",
-		ErrCodeGitHubRateLimit:    "#rate-limit-exceeded",
-		ErrCodeGitHubAuth:         "#authentication-errors",
-		ErrCodeConfiguration:      "#configuration-errors",
-		ErrCodeValidation:         "#validation-errors",
-		ErrCodeTemplateRender:     "#template-errors",
-		ErrCodeFileWrite:          "#file-write-errors",
-		ErrCodeDependencyAnalysis: "#dependency-analysis",
-		ErrCodeCacheAccess:        "#cache-errors",
+	anchors := map[appconstants.ErrorCode]string{
+		appconstants.ErrCodeFileNotFound:       "#file-not-found",
+		appconstants.ErrCodePermission:         "#permission-denied",
+		appconstants.ErrCodeInvalidYAML:        "#invalid-yaml",
+		appconstants.ErrCodeInvalidAction:      "#invalid-action-file",
+		appconstants.ErrCodeNoActionFiles:      "#no-action-files",
+		appconstants.ErrCodeGitHubAPI:          "#github-api-errors",
+		appconstants.ErrCodeGitHubRateLimit:    "#rate-limit-exceeded",
+		appconstants.ErrCodeGitHubAuth:         "#authentication-errors",
+		appconstants.ErrCodeConfiguration:      "#configuration-errors",
+		appconstants.ErrCodeValidation:         "#validation-errors",
+		appconstants.ErrCodeTemplateRender:     "#template-errors",
+		appconstants.ErrCodeFileWrite:          "#file-write-errors",
+		appconstants.ErrCodeDependencyAnalysis: "#dependency-analysis",
+		appconstants.ErrCodeCacheAccess:        "#cache-errors",
 	}
 
 	if anchor, ok := anchors[code]; ok {

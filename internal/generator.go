@@ -12,18 +12,10 @@ import (
 	"github.com/google/go-github/v74/github"
 	"github.com/schollz/progressbar/v3"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	errCodes "github.com/ivuorinen/gh-action-readme/internal/errors"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
-)
-
-// Output format constants.
-const (
-	OutputFormatHTML     = "html"
-	OutputFormatMD       = "md"
-	OutputFormatJSON     = "json"
-	OutputFormatASCIIDoc = "asciidoc"
 )
 
 // Generator orchestrates the documentation generation process.
@@ -174,13 +166,13 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
 	if err != nil {
 		g.Output.ErrorWithContext(
-			errCodes.ErrCodeFileNotFound,
+			appconstants.ErrCodeFileNotFound,
 			"failed to discover action files for "+context,
 			map[string]string{
-				"directory":     dir,
-				"recursive":     strconv.FormatBool(recursive),
-				"context":       context,
-				ContextKeyError: err.Error(),
+				"directory":                  dir,
+				"recursive":                  strconv.FormatBool(recursive),
+				"context":                    context,
+				appconstants.ContextKeyError: err.Error(),
 			},
 		)
 
@@ -191,7 +183,7 @@ func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool
 	if len(actionFiles) == 0 {
 		contextMsg := "no GitHub Action files found for " + context
 		g.Output.ErrorWithContext(
-			errCodes.ErrCodeNoActionFiles,
+			appconstants.ErrCodeNoActionFiles,
 			contextMsg,
 			map[string]string{
 				"directory":  dir,
@@ -257,32 +249,57 @@ func (g *Generator) ValidateFiles(paths []string) error {
 	return nil
 }
 
-// generateMarkdown creates a README.md file using the template.
-func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
-	// Use theme-based template if theme is specified, otherwise use explicit template path
-	templatePath := g.Config.Template
+// resolveTemplatePathForFormat determines the correct template path
+// based on the configured theme or custom template path.
+// If a theme is specified, it takes precedence over the template path.
+func (g *Generator) resolveTemplatePathForFormat() string {
 	if g.Config.Theme != "" {
-		templatePath = resolveThemeTemplate(g.Config.Theme)
+		return resolveThemeTemplate(g.Config.Theme)
 	}
 
-	opts := TemplateOptions{
-		TemplatePath: templatePath,
-		Format:       "md",
-	}
+	return g.Config.Template
+}
 
+// renderTemplateForAction builds template data and renders it using the specified options.
+// It finds the repository root for git information, builds comprehensive template data,
+// and renders the template. Returns the rendered content or an error.
+func (g *Generator) renderTemplateForAction(
+	action *ActionYML,
+	outputDir string,
+	actionPath string,
+	opts TemplateOptions,
+) (string, error) {
 	// Find repository root for git information
 	repoRoot, _ := git.FindRepositoryRoot(outputDir)
 
 	// Build comprehensive template data
 	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
 
+	// Render template with data
 	content, err := RenderReadme(templateData, opts)
+	if err != nil {
+		return "", fmt.Errorf("failed to render template: %w", err)
+	}
+
+	return content, nil
+}
+
+// generateMarkdown creates a README.md file using the template.
+func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+	templatePath := g.resolveTemplatePathForFormat()
+
+	opts := TemplateOptions{
+		TemplatePath: templatePath,
+		Format:       "md",
+	}
+
+	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render markdown template: %w", err)
 	}
 
-	outputPath := g.resolveOutputPath(outputDir, "README.md")
-	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
+	outputPath := g.resolveOutputPath(outputDir, appconstants.ReadmeMarkdown)
+	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write README.md to %s: %w", outputPath, err)
 	}
@@ -294,11 +311,7 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 
 // generateHTML creates an HTML file using the template and optional header/footer.
 func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string) error {
-	// Use theme-based template if theme is specified, otherwise use explicit template path
-	templatePath := g.Config.Template
-	if g.Config.Theme != "" {
-		templatePath = resolveThemeTemplate(g.Config.Theme)
-	}
+	templatePath := g.resolveTemplatePathForFormat()
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
@@ -307,13 +320,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Format:       "html",
 	}
 
-	// Find repository root for git information
-	repoRoot, _ := git.FindRepositoryRoot(outputDir)
-
-	// Build comprehensive template data
-	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
-
-	content, err := RenderReadme(templateData, opts)
+	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render HTML template: %w", err)
 	}
@@ -339,7 +346,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 	writer := NewJSONWriter(g.Config)
 
-	outputPath := g.resolveOutputPath(outputDir, "action-docs.json")
+	outputPath := g.resolveOutputPath(outputDir, appconstants.ActionDocsJSON)
 	if err := writer.Write(action, outputPath); err != nil {
 		return fmt.Errorf("failed to write JSON to %s: %w", outputPath, err)
 	}
@@ -351,27 +358,20 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
 func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string) error {
-	// Use AsciiDoc template
-	templatePath := resolveTemplatePath("templates/themes/asciidoc/readme.adoc")
+	templatePath := g.resolveTemplatePathForFormat()
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
 		Format:       "asciidoc",
 	}
 
-	// Find repository root for git information
-	repoRoot, _ := git.FindRepositoryRoot(outputDir)
-
-	// Build comprehensive template data
-	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
-
-	content, err := RenderReadme(templateData, opts)
+	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render AsciiDoc template: %w", err)
 	}
 
-	outputPath := g.resolveOutputPath(outputDir, "README.adoc")
-	if err := os.WriteFile(outputPath, []byte(content), FilePermDefault); err != nil {
+	outputPath := g.resolveOutputPath(outputDir, appconstants.ReadmeASCIIDoc)
+	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write AsciiDoc to %s: %w", outputPath, err)
 	}
@@ -431,7 +431,8 @@ func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error
 		// Check for critical validation errors that cannot be fixed with defaults
 		for _, field := range validationResult.MissingFields {
 			// All core required fields should cause validation failure
-			if field == "name" || field == "description" || field == "runs" || field == "runs.using" {
+			if field == appconstants.FieldName || field == appconstants.FieldDescription ||
+				field == appconstants.FieldRuns || field == appconstants.FieldRunsUsing {
 				// Required fields missing - cannot be fixed with defaults, must fail
 				return nil, fmt.Errorf(
 					"action file %s has invalid configuration, missing required field(s): %v",
@@ -478,13 +479,13 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string 
 // generateByFormat generates documentation in the specified format.
 func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
 	switch g.Config.OutputFormat {
-	case "md":
+	case appconstants.OutputFormatMarkdown:
 		return g.generateMarkdown(action, outputDir, actionPath)
-	case OutputFormatHTML:
+	case appconstants.OutputFormatHTML:
 		return g.generateHTML(action, outputDir, actionPath)
-	case OutputFormatJSON:
+	case appconstants.OutputFormatJSON:
 		return g.generateJSON(action, outputDir)
-	case OutputFormatASCIIDoc:
+	case appconstants.OutputFormatASCIIDoc:
 		return g.generateASCIIDoc(action, outputDir, actionPath)
 	default:
 		return fmt.Errorf("unsupported output format: %s", g.Config.OutputFormat)

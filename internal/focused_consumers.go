@@ -4,7 +4,8 @@ package internal
 import (
 	"fmt"
 
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
+	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
 // SimpleLogger demonstrates a component that only needs basic message logging.
@@ -50,7 +51,7 @@ func (fem *FocusedErrorManager) HandleValidationError(file string, missingFields
 	}
 
 	fem.manager.ErrorWithContext(
-		errors.ErrCodeValidation,
+		appconstants.ErrCodeValidation,
 		"Validation failed for "+file,
 		context,
 	)
@@ -138,7 +139,7 @@ func (vc *ValidationComponent) ValidateAndReport(item string, isValid bool, err 
 	}
 
 	if err != nil {
-		if contextualErr, ok := err.(*errors.ContextualError); ok {
+		if contextualErr, ok := err.(*apperrors.ContextualError); ok {
 			vc.errorManager.ErrorWithSuggestions(contextualErr)
 		} else {
 			vc.errorManager.Error("Validation failed for %s: %v", item, err)

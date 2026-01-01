@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // parseCompositeActionFromFile reads and parses a composite action file.
@@ -33,7 +35,7 @@ func (a *Analyzer) parseCompositeAction(actionPath string) (*ActionWithComposite
 	}
 
 	// If this is not a composite action, return empty steps
-	if action.Runs.Using != compositeUsing {
+	if action.Runs.Using != appconstants.ActionTypeComposite {
 		action.Runs.Steps = []CompositeStep{}
 	}
 
@@ -47,5 +49,5 @@ func IsCompositeAction(actionPath string) (bool, error) {
 		return false, err
 	}
 
-	return action.Runs.Using == compositeUsing, nil
+	return action.Runs.Using == appconstants.ActionTypeComposite, nil
 }

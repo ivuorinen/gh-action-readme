@@ -28,9 +28,7 @@ func TestGetCurrentDir(t *testing.T) {
 		}
 
 		// Verify the directory actually exists
-		if _, err := os.Stat(currentDir); os.IsNotExist(err) {
-			t.Errorf("current directory does not exist: %s", currentDir)
-		}
+		testutil.AssertFileExists(t, currentDir)
 	})
 }
 

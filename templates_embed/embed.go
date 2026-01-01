@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // embeddedTemplates contains all template files embedded in the binary
@@ -24,8 +26,8 @@ func GetEmbeddedTemplate(templatePath string) ([]byte, error) {
 	cleanPath := strings.TrimPrefix(filepath.ToSlash(templatePath), "/")
 
 	// If path doesn't start with templates/, prepend it
-	if !strings.HasPrefix(cleanPath, "templates/") {
-		cleanPath = "templates/" + cleanPath
+	if !strings.HasPrefix(cleanPath, appconstants.DirTemplates) {
+		cleanPath = appconstants.DirTemplates + cleanPath
 	}
 
 	return embeddedTemplates.ReadFile(cleanPath)
@@ -39,8 +41,8 @@ func GetEmbeddedTemplateFS() fs.FS {
 // IsEmbeddedTemplateAvailable checks if a template exists in the embedded filesystem.
 func IsEmbeddedTemplateAvailable(templatePath string) bool {
 	cleanPath := strings.TrimPrefix(filepath.ToSlash(templatePath), "/")
-	if !strings.HasPrefix(cleanPath, "templates/") {
-		cleanPath = "templates/" + cleanPath
+	if !strings.HasPrefix(cleanPath, appconstants.DirTemplates) {
+		cleanPath = appconstants.DirTemplates + cleanPath
 	}
 
 	_, err := embeddedTemplates.ReadFile(cleanPath)

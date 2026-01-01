@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
 // IsCommitSHA checks if a version string is a commit SHA.
 func IsCommitSHA(version string) bool {
 	// Check if it's a 40-character hex string (full SHA) or 7+ character hex (short SHA)
-	re := regexp.MustCompile(`^[a-f0-9]{7,40}$`)
+	re := regexp.MustCompile(appconstants.RegexGitSHA)
 
 	return len(version) >= 7 && re.MatchString(version)
 }
@@ -34,10 +35,10 @@ func IsVersionPinned(version string) bool {
 // ValidateGitBranch checks if a branch exists in the given repository.
 func ValidateGitBranch(repoRoot, branch string) bool {
 	cmd := exec.Command(
-		"git",
-		"show-ref",
-		"--verify",
-		"--quiet",
+		appconstants.GitCommand,
+		appconstants.GitShowRef,
+		appconstants.GitVerify,
+		appconstants.GitQuiet,
 		"refs/heads/"+branch,
 	) // #nosec G204 -- branch name validated by git
 	cmd.Dir = repoRoot
@@ -54,7 +55,7 @@ func ValidateActionYMLPath(path string) error {
 
 	// Check if it's an action.yml or action.yaml file
 	filename := filepath.Base(path)
-	if filename != "action.yml" && filename != "action.yaml" {
+	if filename != appconstants.ActionFileNameYML && filename != appconstants.ActionFileNameYAML {
 		return os.ErrInvalid
 	}
 

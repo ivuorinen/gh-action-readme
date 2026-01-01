@@ -109,9 +109,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 
 				// Verify the returned path contains a .git directory or file
 				gitPath := filepath.Join(repoRoot, ".git")
-				if _, err := os.Stat(gitPath); os.IsNotExist(err) {
-					t.Errorf("repository root does not contain .git: %s", repoRoot)
-				}
+				testutil.AssertFileExists(t, gitPath)
 			}
 		})
 	}

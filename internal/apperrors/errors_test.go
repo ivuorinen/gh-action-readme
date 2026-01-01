@@ -1,12 +1,21 @@
-package errors
+package apperrors
 
 import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestContextualError_Error(t *testing.T) {
+const (
+	testOriginalError = "original error"
+	testMessage       = "test message"
+	testContext       = "test context"
+)
+
+func TestContextualErrorError(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -17,7 +26,7 @@ func TestContextualError_Error(t *testing.T) {
 		{
 			name: "basic error",
 			err: &ContextualError{
-				Code: ErrCodeFileNotFound,
+				Code: appconstants.ErrCodeFileNotFound,
 				Err:  errors.New("file not found"),
 			},
 			contains: []string{"file not found", "[FILE_NOT_FOUND]"},
@@ -25,7 +34,7 @@ func TestContextualError_Error(t *testing.T) {
 		{
 			name: "error with context",
 			err: &ContextualError{
-				Code:    ErrCodeInvalidYAML,
+				Code:    appconstants.ErrCodeInvalidYAML,
 				Err:     errors.New("invalid syntax"),
 				Context: "parsing action.yml",
 			},
@@ -34,7 +43,7 @@ func TestContextualError_Error(t *testing.T) {
 		{
 			name: "error with suggestions",
 			err: &ContextualError{
-				Code: ErrCodeNoActionFiles,
+				Code: appconstants.ErrCodeNoActionFiles,
 				Err:  errors.New("no files found"),
 				Suggestions: []string{
 					"Check current directory",
@@ -51,7 +60,7 @@ func TestContextualError_Error(t *testing.T) {
 		{
 			name: "error with details",
 			err: &ContextualError{
-				Code: ErrCodeConfiguration,
+				Code: appconstants.ErrCodeConfiguration,
 				Err:  errors.New("config error"),
 				Details: map[string]string{
 					"config_path": "/path/to/config",
@@ -68,7 +77,7 @@ func TestContextualError_Error(t *testing.T) {
 		{
 			name: "error with help URL",
 			err: &ContextualError{
-				Code:    ErrCodeGitHubAPI,
+				Code:    appconstants.ErrCodeGitHubAPI,
 				Err:     errors.New("API error"),
 				HelpURL: "https://docs.github.com/api",
 			},
@@ -80,7 +89,7 @@ func TestContextualError_Error(t *testing.T) {
 		{
 			name: "complete error",
 			err: &ContextualError{
-				Code:    ErrCodeValidation,
+				Code:    appconstants.ErrCodeValidation,
 				Err:     errors.New("validation failed"),
 				Context: "validating action.yml",
 				Details: map[string]string{"file": "action.yml"},
@@ -108,26 +117,17 @@ func TestContextualError_Error(t *testing.T) {
 			t.Parallel()
 
 			result := tt.err.Error()
-
-			for _, expected := range tt.contains {
-				if !strings.Contains(result, expected) {
-					t.Errorf(
-						"Error() result missing expected content:\nExpected to contain: %q\nActual result:\n%s",
-						expected,
-						result,
-					)
-				}
-			}
+			testutil.AssertSliceContainsAll(t, []string{result}, tt.contains)
 		})
 	}
 }
 
-func TestContextualError_Unwrap(t *testing.T) {
+func TestContextualErrorUnwrap(t *testing.T) {
 	t.Parallel()
 
-	originalErr := errors.New("original error")
+	originalErr := errors.New(testOriginalError)
 	contextualErr := &ContextualError{
-		Code: ErrCodeFileNotFound,
+		Code: appconstants.ErrCodeFileNotFound,
 		Err:  originalErr,
 	}
 
@@ -136,23 +136,23 @@ func TestContextualError_Unwrap(t *testing.T) {
 	}
 }
 
-func TestContextualError_Is(t *testing.T) {
+func TestContextualErrorIs(t *testing.T) {
 	t.Parallel()
 
-	originalErr := errors.New("original error")
+	originalErr := errors.New(testOriginalError)
 	contextualErr := &ContextualError{
-		Code: ErrCodeFileNotFound,
+		Code: appconstants.ErrCodeFileNotFound,
 		Err:  originalErr,
 	}
 
 	// Test Is with same error code
-	sameCodeErr := &ContextualError{Code: ErrCodeFileNotFound}
+	sameCodeErr := &ContextualError{Code: appconstants.ErrCodeFileNotFound}
 	if !contextualErr.Is(sameCodeErr) {
 		t.Error("Is() should return true for same error code")
 	}
 
 	// Test Is with different error code
-	differentCodeErr := &ContextualError{Code: ErrCodeInvalidYAML}
+	differentCodeErr := &ContextualError{Code: appconstants.ErrCodeInvalidYAML}
 	if contextualErr.Is(differentCodeErr) {
 		t.Error("Is() should return false for different error code")
 	}
@@ -166,59 +166,59 @@ func TestContextualError_Is(t *testing.T) {
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	err := New(ErrCodeFileNotFound, "test message")
+	err := New(appconstants.ErrCodeFileNotFound, testMessage)
 
-	if err.Code != ErrCodeFileNotFound {
-		t.Errorf("New() code = %v, want %v", err.Code, ErrCodeFileNotFound)
+	if err.Code != appconstants.ErrCodeFileNotFound {
+		t.Errorf("New() code = %v, want %v", err.Code, appconstants.ErrCodeFileNotFound)
 	}
 
-	if err.Err.Error() != "test message" {
-		t.Errorf("New() message = %v, want %v", err.Err.Error(), "test message")
+	if err.Err.Error() != testMessage {
+		t.Errorf("New() message = %v, want %v", err.Err.Error(), testMessage)
 	}
 }
 
 func TestWrap(t *testing.T) {
 	t.Parallel()
 
-	originalErr := errors.New("original error")
+	originalErr := errors.New(testOriginalError)
 
 	// Test wrapping normal error
-	wrapped := Wrap(originalErr, ErrCodeFileNotFound, "test context")
-	if wrapped.Code != ErrCodeFileNotFound {
-		t.Errorf("Wrap() code = %v, want %v", wrapped.Code, ErrCodeFileNotFound)
+	wrapped := Wrap(originalErr, appconstants.ErrCodeFileNotFound, testContext)
+	if wrapped.Code != appconstants.ErrCodeFileNotFound {
+		t.Errorf("Wrap() code = %v, want %v", wrapped.Code, appconstants.ErrCodeFileNotFound)
 	}
-	if wrapped.Context != "test context" {
-		t.Errorf("Wrap() context = %v, want %v", wrapped.Context, "test context")
+	if wrapped.Context != testContext {
+		t.Errorf("Wrap() context = %v, want %v", wrapped.Context, testContext)
 	}
 	if wrapped.Err != originalErr {
 		t.Errorf("Wrap() err = %v, want %v", wrapped.Err, originalErr)
 	}
 
 	// Test wrapping nil error
-	nilWrapped := Wrap(nil, ErrCodeFileNotFound, "test context")
+	nilWrapped := Wrap(nil, appconstants.ErrCodeFileNotFound, testContext)
 	if nilWrapped != nil {
 		t.Error("Wrap(nil) should return nil")
 	}
 
 	// Test wrapping already contextual error
 	contextualErr := &ContextualError{
-		Code:    ErrCodeUnknown,
+		Code:    appconstants.ErrCodeUnknown,
 		Err:     originalErr,
 		Context: "",
 	}
-	rewrapped := Wrap(contextualErr, ErrCodeFileNotFound, "new context")
-	if rewrapped.Code != ErrCodeFileNotFound {
-		t.Error("Wrap() should update code if it was ErrCodeUnknown")
+	rewrapped := Wrap(contextualErr, appconstants.ErrCodeFileNotFound, "new context")
+	if rewrapped.Code != appconstants.ErrCodeFileNotFound {
+		t.Error("Wrap() should update code if it was appconstants.ErrCodeUnknown")
 	}
 	if rewrapped.Context != "new context" {
 		t.Error("Wrap() should update context if it was empty")
 	}
 }
 
-func TestContextualError_WithMethods(t *testing.T) {
+func TestContextualErrorWithMethods(t *testing.T) {
 	t.Parallel()
 
-	err := New(ErrCodeFileNotFound, "test error")
+	err := New(appconstants.ErrCodeFileNotFound, "test error")
 
 	// Test WithSuggestions
 	err = err.WithSuggestions("suggestion 1", "suggestion 2")
@@ -251,13 +251,13 @@ func TestGetHelpURL(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		code     ErrorCode
+		code     appconstants.ErrorCode
 		contains string
 	}{
-		{ErrCodeFileNotFound, "#file-not-found"},
-		{ErrCodeInvalidYAML, "#invalid-yaml"},
-		{ErrCodeGitHubAPI, "#github-api-errors"},
-		{ErrCodeUnknown, "troubleshooting.md"}, // Should return base URL
+		{appconstants.ErrCodeFileNotFound, "#file-not-found"},
+		{appconstants.ErrCodeInvalidYAML, "#invalid-yaml"},
+		{appconstants.ErrCodeGitHubAPI, "#github-api-errors"},
+		{appconstants.ErrCodeUnknown, "troubleshooting.md"}, // Should return base URL
 	}
 
 	for _, tt := range tests {

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -123,6 +124,10 @@ func TestLoadConfiguration(t *testing.T) {
 			name: "multi-level config hierarchy",
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
 				t.Helper()
+				// Clear environment variables to ensure config file values are used
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+				t.Setenv(appconstants.EnvGitHubToken, "")
+
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
 				_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
@@ -331,13 +336,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 	// Check that config file was created
 	configPath, _ := GetConfigPath()
 	t.Logf("Expected config path: %s", configPath)
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Errorf("config file was not created at: %s", configPath)
-		// List what files were actually created
-		if files, err := os.ReadDir(tmpDir); err == nil {
-			t.Logf("Files in tmpDir: %v", files)
-		}
-	}
+	testutil.AssertFileExists(t, configPath)
 
 	// Verify config file content
 	config, err := InitConfig(configPath)
@@ -543,14 +542,14 @@ func TestGetGitHubToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set up environment
 			if tt.toolEnvToken != "" {
-				t.Setenv(EnvGitHubToken, tt.toolEnvToken)
+				t.Setenv(appconstants.EnvGitHubToken, tt.toolEnvToken)
 			} else {
-				t.Setenv(EnvGitHubToken, "")
+				t.Setenv(appconstants.EnvGitHubToken, "")
 			}
 			if tt.stdEnvToken != "" {
-				t.Setenv(EnvGitHubTokenStandard, tt.stdEnvToken)
+				t.Setenv(appconstants.EnvGitHubTokenStandard, tt.stdEnvToken)
 			} else {
-				t.Setenv(EnvGitHubTokenStandard, "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
 			}
 
 			config := &AppConfig{GitHubToken: tt.configToken}

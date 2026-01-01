@@ -74,7 +74,7 @@ func TestCache_SetAndGet(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	tests := []struct {
 		name     string
@@ -126,7 +126,7 @@ func TestCache_TTL(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// Set value with short TTL
 	shortTTL := 100 * time.Millisecond
@@ -155,7 +155,7 @@ func TestCache_GetOrSet(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// Use unique key to avoid interference from other tests
 	testKey := fmt.Sprintf("test-key-%d", time.Now().UnixNano())
@@ -185,7 +185,7 @@ func TestCache_GetOrSetError(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// Getter that returns error
 	getter := func() (any, error) {
@@ -212,7 +212,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	const numGoroutines = 10
 	const numOperations = 100
@@ -272,7 +272,7 @@ func TestCache_Persistence(t *testing.T) {
 
 	// Create new cache instance (should load from disk)
 	cache2 := createTestCache(t, tmpDir)
-	defer func() { _ = cache2.Close() }()
+	defer testutil.CleanupCache(t, cache2)()
 
 	// Value should still exist
 	value, exists := cache2.Get("persistent-key")
@@ -287,7 +287,7 @@ func TestCache_Clear(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// Add some data
 	_ = cache.Set("key1", "value1")
@@ -317,7 +317,7 @@ func TestCache_Delete(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// Add some data
 	_ = cache.Set("key1", "value1")
@@ -354,7 +354,7 @@ func TestCache_Stats(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// Ensure cache starts clean
 	_ = cache.Clear()
@@ -412,7 +412,7 @@ func TestCache_CleanupExpiredEntries(t *testing.T) {
 
 	cache, err := NewCache(config)
 	testutil.AssertNoError(t, err)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// Add entry that will expire
 	err = cache.Set("expiring-key", "expiring-value")
@@ -465,7 +465,7 @@ func TestCache_ErrorHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := tt.setupFunc(t)
-			defer func() { _ = cache.Close() }()
+			defer testutil.CleanupCache(t, cache)()
 
 			tt.testFunc(t, cache)
 		})
@@ -477,7 +477,7 @@ func TestCache_AsyncSaveErrorHandling(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	// This tests our new saveToDiskAsync error handling
 	// Set a value to trigger async save
@@ -502,7 +502,7 @@ func TestCache_EstimateSize(t *testing.T) {
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer func() { _ = cache.Close() }()
+	defer testutil.CleanupCache(t, cache)()
 
 	tests := []struct {
 		name    string

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -21,9 +22,9 @@ func TestNewConfigurationLoader(t *testing.T) {
 	}
 
 	// Check default sources are enabled
-	expectedSources := []ConfigurationSource{
-		SourceDefaults, SourceGlobal, SourceRepoOverride,
-		SourceRepoConfig, SourceActionConfig, SourceEnvironment,
+	expectedSources := []appconstants.ConfigurationSource{
+		appconstants.SourceDefaults, appconstants.SourceGlobal, appconstants.SourceRepoOverride,
+		appconstants.SourceRepoConfig, appconstants.SourceActionConfig, appconstants.SourceEnvironment,
 	}
 
 	for _, source := range expectedSources {
@@ -33,7 +34,7 @@ func TestNewConfigurationLoader(t *testing.T) {
 	}
 
 	// CLI flags should be disabled by default
-	if loader.sources[SourceCLIFlags] {
+	if loader.sources[appconstants.SourceCLIFlags] {
 		t.Error("expected CLI flags source to be disabled by default")
 	}
 }
@@ -43,34 +44,41 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 	tests := []struct {
 		name     string
 		opts     ConfigurationOptions
-		expected []ConfigurationSource
+		expected []appconstants.ConfigurationSource
 	}{
 		{
 			name: "default options",
 			opts: ConfigurationOptions{},
-			expected: []ConfigurationSource{
-				SourceDefaults, SourceGlobal, SourceRepoOverride,
-				SourceRepoConfig, SourceActionConfig, SourceEnvironment,
+			expected: []appconstants.ConfigurationSource{
+				appconstants.SourceDefaults, appconstants.SourceGlobal, appconstants.SourceRepoOverride,
+				appconstants.SourceRepoConfig, appconstants.SourceActionConfig, appconstants.SourceEnvironment,
 			},
 		},
 		{
 			name: "custom enabled sources",
 			opts: ConfigurationOptions{
-				EnabledSources: []ConfigurationSource{SourceDefaults, SourceGlobal},
+				EnabledSources: []appconstants.ConfigurationSource{
+					appconstants.SourceDefaults,
+					appconstants.SourceGlobal,
+				},
 			},
-			expected: []ConfigurationSource{SourceDefaults, SourceGlobal},
+			expected: []appconstants.ConfigurationSource{appconstants.SourceDefaults, appconstants.SourceGlobal},
 		},
 		{
 			name: "all sources enabled",
 			opts: ConfigurationOptions{
-				EnabledSources: []ConfigurationSource{
-					SourceDefaults, SourceGlobal, SourceRepoOverride,
-					SourceRepoConfig, SourceActionConfig, SourceEnvironment, SourceCLIFlags,
+				EnabledSources: []appconstants.ConfigurationSource{
+					appconstants.SourceDefaults, appconstants.SourceGlobal,
+					appconstants.SourceRepoOverride, appconstants.SourceRepoConfig,
+					appconstants.SourceActionConfig, appconstants.SourceEnvironment,
+					appconstants.SourceCLIFlags,
 				},
 			},
-			expected: []ConfigurationSource{
-				SourceDefaults, SourceGlobal, SourceRepoOverride,
-				SourceRepoConfig, SourceActionConfig, SourceEnvironment, SourceCLIFlags,
+			expected: []appconstants.ConfigurationSource{
+				appconstants.SourceDefaults, appconstants.SourceGlobal,
+				appconstants.SourceRepoOverride, appconstants.SourceRepoConfig,
+				appconstants.SourceActionConfig, appconstants.SourceEnvironment,
+				appconstants.SourceCLIFlags,
 			},
 		},
 	}
@@ -87,9 +95,11 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 			}
 
 			// Check that non-expected sources are disabled
-			allSources := []ConfigurationSource{
-				SourceDefaults, SourceGlobal, SourceRepoOverride,
-				SourceRepoConfig, SourceActionConfig, SourceEnvironment, SourceCLIFlags,
+			allSources := []appconstants.ConfigurationSource{
+				appconstants.SourceDefaults, appconstants.SourceGlobal,
+				appconstants.SourceRepoOverride, appconstants.SourceRepoConfig,
+				appconstants.SourceActionConfig, appconstants.SourceEnvironment,
+				appconstants.SourceCLIFlags,
 			}
 
 			for _, source := range allSources {
@@ -256,7 +266,10 @@ verbose: true
 			if tt.name == "selective source loading" {
 				// Create loader with only defaults and global sources
 				loader = NewConfigurationLoaderWithOptions(ConfigurationOptions{
-					EnabledSources: []ConfigurationSource{SourceDefaults, SourceGlobal},
+					EnabledSources: []appconstants.ConfigurationSource{
+						appconstants.SourceDefaults,
+						appconstants.SourceGlobal,
+					},
 				})
 			} else {
 				loader = NewConfigurationLoader()
@@ -462,15 +475,15 @@ func TestConfigurationLoader_SourceManagement(t *testing.T) {
 	}
 
 	// Test disabling a source
-	loader.DisableSource(SourceGlobal)
-	if loader.sources[SourceGlobal] {
-		t.Error("expected SourceGlobal to be disabled")
+	loader.DisableSource(appconstants.SourceGlobal)
+	if loader.sources[appconstants.SourceGlobal] {
+		t.Error("expected appconstants.SourceGlobal to be disabled")
 	}
 
 	// Test enabling a source
-	loader.EnableSource(SourceCLIFlags)
-	if !loader.sources[SourceCLIFlags] {
-		t.Error("expected SourceCLIFlags to be enabled")
+	loader.EnableSource(appconstants.SourceCLIFlags)
+	if !loader.sources[appconstants.SourceCLIFlags] {
+		t.Error("expected appconstants.SourceCLIFlags to be enabled")
 	}
 
 	// Test updated sources list
@@ -484,17 +497,17 @@ func TestConfigurationLoader_SourceManagement(t *testing.T) {
 func TestConfigurationSource_String(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		source   ConfigurationSource
+		source   appconstants.ConfigurationSource
 		expected string
 	}{
-		{SourceDefaults, "defaults"},
-		{SourceGlobal, "global"},
-		{SourceRepoOverride, "repo-override"},
-		{SourceRepoConfig, "repo-config"},
-		{SourceActionConfig, "action-config"},
-		{SourceEnvironment, "environment"},
-		{SourceCLIFlags, "cli-flags"},
-		{ConfigurationSource(999), "unknown"},
+		{appconstants.SourceDefaults, "defaults"},
+		{appconstants.SourceGlobal, "global"},
+		{appconstants.SourceRepoOverride, "repo-override"},
+		{appconstants.SourceRepoConfig, "repo-config"},
+		{appconstants.SourceActionConfig, "action-config"},
+		{appconstants.SourceEnvironment, "environment"},
+		{appconstants.SourceCLIFlags, "cli-flags"},
+		{appconstants.ConfigurationSource(999), "unknown"},
 	}
 
 	for _, tt := range tests {

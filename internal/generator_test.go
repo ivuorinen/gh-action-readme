@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -47,9 +48,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			name: "single action.yml in root",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
-				testutil.AssertNoError(t, err)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), fixture.Content)
+				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			recursive:   false,
 			expectedLen: 1,
@@ -58,9 +57,12 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			name: "action.yaml variant",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
-				testutil.AssertNoError(t, err)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yaml"), fixture.Content)
+				testutil.WriteActionFixtureAs(
+					t,
+					tmpDir,
+					appconstants.TestPathActionYAML,
+					appconstants.TestFixtureJavaScriptSimple,
+				)
 			},
 			recursive:   false,
 			expectedLen: 1,
@@ -69,12 +71,13 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			name: "both yml and yaml files",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
-				testutil.AssertNoError(t, err)
-				minimalFixture, err := testutil.LoadActionFixture("minimal-action.yml")
-				testutil.AssertNoError(t, err)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), simpleFixture.Content)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yaml"), minimalFixture.Content)
+				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				testutil.WriteActionFixtureAs(
+					t,
+					tmpDir,
+					appconstants.TestPathActionYAML,
+					appconstants.TestFixtureMinimalAction,
+				)
 			},
 			recursive:   false,
 			expectedLen: 2,
@@ -83,14 +86,13 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			name: "recursive discovery",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
-				testutil.AssertNoError(t, err)
-				compositeFixture, err := testutil.LoadActionFixture("actions/composite/basic.yml")
-				testutil.AssertNoError(t, err)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), simpleFixture.Content)
-				subDir := filepath.Join(tmpDir, "subdir")
-				_ = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(subDir, "action.yml"), compositeFixture.Content)
+				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				testutil.CreateActionSubdir(
+					t,
+					tmpDir,
+					appconstants.TestDirSubdir,
+					appconstants.TestFixtureCompositeBasic,
+				)
 			},
 			recursive:   true,
 			expectedLen: 2,
@@ -99,14 +101,13 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			name: "non-recursive skips subdirectories",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				simpleFixture, err := testutil.LoadActionFixture("actions/javascript/simple.yml")
-				testutil.AssertNoError(t, err)
-				compositeFixture, err := testutil.LoadActionFixture("actions/composite/basic.yml")
-				testutil.AssertNoError(t, err)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), simpleFixture.Content)
-				subDir := filepath.Join(tmpDir, "subdir")
-				_ = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(subDir, "action.yml"), compositeFixture.Content)
+				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				testutil.CreateActionSubdir(
+					t,
+					tmpDir,
+					appconstants.TestDirSubdir,
+					appconstants.TestFixtureCompositeBasic,
+				)
 			},
 			recursive:   false,
 			expectedLen: 1,
@@ -157,11 +158,10 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 
 			// Verify all returned files exist and are action files
 			for _, file := range files {
-				if _, err := os.Stat(file); os.IsNotExist(err) {
-					t.Errorf("discovered file does not exist: %s", file)
-				}
+				testutil.AssertFileExists(t, file)
 
-				if !strings.HasSuffix(file, "action.yml") && !strings.HasSuffix(file, "action.yaml") {
+				if !strings.HasSuffix(file, appconstants.TestPathActionYML) &&
+					!strings.HasSuffix(file, appconstants.TestPathActionYAML) {
 					t.Errorf("discovered file is not an action file: %s", file)
 				}
 			}
@@ -180,21 +180,21 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 	}{
 		{
 			name:         "simple action to markdown",
-			actionYML:    testutil.MustReadFixture("actions/javascript/simple.yml"),
+			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
 			outputFormat: "md",
 			expectError:  false,
 			contains:     []string{"# Simple JavaScript Action", "A simple JavaScript action for testing"},
 		},
 		{
 			name:         "composite action to markdown",
-			actionYML:    testutil.MustReadFixture("actions/composite/basic.yml"),
+			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic),
 			outputFormat: "md",
 			expectError:  false,
 			contains:     []string{"# Basic Composite Action", "A simple composite action with basic steps"},
 		},
 		{
 			name:         "action to HTML",
-			actionYML:    testutil.MustReadFixture("actions/javascript/simple.yml"),
+			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
 			outputFormat: "html",
 			expectError:  false,
 			contains: []string{
@@ -204,7 +204,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 		},
 		{
 			name:         "action to JSON",
-			actionYML:    testutil.MustReadFixture("actions/javascript/simple.yml"),
+			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
 			outputFormat: "json",
 			expectError:  false,
 			contains: []string{
@@ -214,14 +214,14 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 		},
 		{
 			name:         "invalid action file",
-			actionYML:    testutil.MustReadFixture("actions/invalid/invalid-using.yml"),
+			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureInvalidInvalidUsing),
 			outputFormat: "md",
 			expectError:  true, // Invalid runtime configuration should cause failure
 			contains:     []string{},
 		},
 		{
 			name:         "unknown output format",
-			actionYML:    testutil.MustReadFixture("actions/javascript/simple.yml"),
+			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
 			outputFormat: "unknown",
 			expectError:  true,
 		},
@@ -237,7 +237,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 			testutil.SetupTestTemplates(t, tmpDir)
 
 			// Write action file
-			actionPath := filepath.Join(tmpDir, "action.yml")
+			actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
 			testutil.WriteTestFile(t, actionPath, tt.actionYML)
 
 			// Create generator with explicit template path
@@ -338,21 +338,14 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				// Create separate directories for each action
-				dir1 := filepath.Join(tmpDir, "action1")
-				dir2 := filepath.Join(tmpDir, "action2")
-				if err := os.MkdirAll(dir1, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir1: %v", err)
-				}
-				if err := os.MkdirAll(dir2, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir2: %v", err)
-				}
+				dirs := createTestDirs(t, tmpDir, "action1", "action2")
 
 				files := []string{
-					filepath.Join(dir1, "action.yml"),
-					filepath.Join(dir2, "action.yml"),
+					filepath.Join(dirs[0], appconstants.TestPathActionYML),
+					filepath.Join(dirs[1], appconstants.TestPathActionYML),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/composite/basic.yml"))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 
 				return files
 			},
@@ -364,21 +357,18 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				// Create separate directories for mixed test too
-				dir1 := filepath.Join(tmpDir, "valid-action")
-				dir2 := filepath.Join(tmpDir, "invalid-action")
-				if err := os.MkdirAll(dir1, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir1: %v", err)
-				}
-				if err := os.MkdirAll(dir2, 0750); err != nil { // #nosec G301 -- test directory permissions
-					t.Fatalf("failed to create dir2: %v", err)
-				}
+				dirs := createTestDirs(t, tmpDir, "valid-action", "invalid-action")
 
 				files := []string{
-					filepath.Join(dir1, "action.yml"),
-					filepath.Join(dir2, "action.yml"),
+					filepath.Join(dirs[0], appconstants.TestPathActionYML),
+					filepath.Join(dirs[1], appconstants.TestPathActionYML),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/invalid/invalid-using.yml"))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(
+					t,
+					files[1],
+					testutil.MustReadFixture(appconstants.TestFixtureInvalidInvalidUsing),
+				)
 
 				return files
 			},
@@ -462,8 +452,8 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 					filepath.Join(tmpDir, "action1.yml"),
 					filepath.Join(tmpDir, "action2.yml"),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("minimal-action.yml"))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(appconstants.TestFixtureMinimalAction))
 
 				return files
 			},
@@ -477,8 +467,12 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 					filepath.Join(tmpDir, "valid.yml"),
 					filepath.Join(tmpDir, "invalid.yml"),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture("actions/javascript/simple.yml"))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture("actions/invalid/missing-description.yml"))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(
+					t,
+					files[1],
+					testutil.MustReadFixture(appconstants.TestFixtureInvalidMissingDescription),
+				)
 
 				return files
 			},
@@ -573,8 +567,8 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 			// Set up test templates for this theme test
 			testutil.SetupTestTemplates(t, tmpDir)
 
-			actionPath := filepath.Join(tmpDir, "action.yml")
-			testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+			actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+			testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 			config := &AppConfig{
 				Theme:        theme,
@@ -617,8 +611,12 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 					Quiet:        true,
 				}
 				generator := NewGenerator(config)
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				testutil.WriteTestFile(
+					t,
+					actionPath,
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+				)
 
 				return generator, actionPath
 			},
@@ -642,8 +640,12 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 					Template:     filepath.Join(tmpDir, "templates", "readme.tmpl"),
 				}
 				generator := NewGenerator(config)
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				testutil.WriteTestFile(
+					t,
+					actionPath,
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+				)
 
 				return generator, actionPath
 			},
@@ -666,4 +668,20 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 			}
 		})
 	}
+}
+
+// createTestDirs is a helper that creates multiple directories within tmpDir for testing.
+// Returns the full paths of all created directories.
+func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
+	t.Helper()
+	dirs := make([]string, len(names))
+	for i, name := range names {
+		dirPath := filepath.Join(tmpDir, name)
+		if err := os.MkdirAll(dirPath, 0750); err != nil { // #nosec G301 -- test directory permissions
+			t.Fatalf("failed to create directory %s: %v", name, err)
+		}
+		dirs[i] = dirPath
+	}
+
+	return dirs
 }

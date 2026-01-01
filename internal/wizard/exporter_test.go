@@ -10,6 +10,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 func TestConfigExporter_ExportConfig(t *testing.T) {
@@ -68,7 +69,7 @@ func testYAMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 			t.Fatalf("ExportConfig() error = %v", err)
 		}
 
-		verifyFileExists(t, outputPath)
+		testutil.AssertFileExists(t, outputPath)
 		verifyYAMLContent(t, outputPath, config)
 	}
 }
@@ -85,7 +86,7 @@ func testJSONExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 			t.Fatalf("ExportConfig() error = %v", err)
 		}
 
-		verifyFileExists(t, outputPath)
+		testutil.AssertFileExists(t, outputPath)
 		verifyJSONContent(t, outputPath, config)
 	}
 }
@@ -102,16 +103,8 @@ func testTOMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 			t.Fatalf("ExportConfig() error = %v", err)
 		}
 
-		verifyFileExists(t, outputPath)
+		testutil.AssertFileExists(t, outputPath)
 		verifyTOMLContent(t, outputPath)
-	}
-}
-
-// verifyFileExists checks that a file exists at the given path.
-func verifyFileExists(t *testing.T, outputPath string) {
-	t.Helper()
-	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
-		t.Fatal("Expected output file to exist")
 	}
 }
 

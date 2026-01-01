@@ -2,27 +2,12 @@
 package internal
 
 import (
+	"errors"
 	"os"
 	"strings"
 
-	"github.com/ivuorinen/gh-action-readme/internal/errors"
-)
-
-// Error detection constants for automatic error code determination.
-const (
-	// File system error patterns.
-	errorPatternFileNotFound = "no such file or directory"
-	errorPatternPermission   = "permission denied"
-
-	// Content format error patterns.
-	errorPatternYAML = "yaml"
-
-	// Service-specific error patterns.
-	errorPatternGitHub = "github"
-	errorPatternConfig = "config"
-
-	// Exit code constants.
-	exitCodeError = 1
+	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
 // ErrorHandler provides centralized error handling and exit management.
@@ -38,17 +23,17 @@ func NewErrorHandler(output *ColoredOutput) *ErrorHandler {
 }
 
 // HandleError handles contextual errors and exits with appropriate code.
-func (eh *ErrorHandler) HandleError(err *errors.ContextualError) {
+func (eh *ErrorHandler) HandleError(err *apperrors.ContextualError) {
 	eh.output.ErrorWithSuggestions(err)
-	os.Exit(exitCodeError)
+	os.Exit(appconstants.ExitCodeError)
 }
 
 // HandleFatalError handles fatal errors with contextual information.
-func (eh *ErrorHandler) HandleFatalError(code errors.ErrorCode, message string, context map[string]string) {
-	suggestions := errors.GetSuggestions(code, context)
-	helpURL := errors.GetHelpURL(code)
+func (eh *ErrorHandler) HandleFatalError(code appconstants.ErrorCode, message string, context map[string]string) {
+	suggestions := apperrors.GetSuggestions(code, context)
+	helpURL := apperrors.GetHelpURL(code)
 
-	contextualErr := errors.New(code, message).
+	contextualErr := apperrors.New(code, message).
 		WithSuggestions(suggestions...).
 		WithHelpURL(helpURL)
 
@@ -61,12 +46,12 @@ func (eh *ErrorHandler) HandleFatalError(code errors.ErrorCode, message string, 
 
 // HandleSimpleError handles simple errors with automatic context detection.
 func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
-	code := errors.ErrCodeUnknown
+	code := appconstants.ErrCodeUnknown
 	context := make(map[string]string)
 
 	// Try to determine appropriate error code based on error content
 	if err != nil {
-		context[ContextKeyError] = err.Error()
+		context[appconstants.ContextKeyError] = err.Error()
 		code = eh.determineErrorCode(err)
 	}
 
@@ -74,22 +59,52 @@ func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
 }
 
 // determineErrorCode attempts to determine appropriate error code from error content.
-func (eh *ErrorHandler) determineErrorCode(err error) errors.ErrorCode {
-	errStr := err.Error()
+func (eh *ErrorHandler) determineErrorCode(err error) appconstants.ErrorCode {
+	// First try typed error checks using errors.Is against sentinel errors
+	if code := eh.checkTypedError(err); code != appconstants.ErrCodeUnknown {
+		return code
+	}
 
+	// Fallback to string checks only if no typed match found
+	return eh.checkStringPatterns(err.Error())
+}
+
+// checkTypedError checks for typed errors using errors.Is.
+func (eh *ErrorHandler) checkTypedError(err error) appconstants.ErrorCode {
+	if errors.Is(err, apperrors.ErrFileNotFound) || errors.Is(err, os.ErrNotExist) {
+		return appconstants.ErrCodeFileNotFound
+	}
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, os.ErrPermission) {
+		return appconstants.ErrCodePermission
+	}
+	if errors.Is(err, apperrors.ErrInvalidYAML) {
+		return appconstants.ErrCodeInvalidYAML
+	}
+	if errors.Is(err, apperrors.ErrGitHubAPI) {
+		return appconstants.ErrCodeGitHubAPI
+	}
+	if errors.Is(err, apperrors.ErrConfiguration) {
+		return appconstants.ErrCodeConfiguration
+	}
+
+	return appconstants.ErrCodeUnknown
+}
+
+// checkStringPatterns checks error message against string patterns.
+func (eh *ErrorHandler) checkStringPatterns(errStr string) appconstants.ErrorCode {
 	switch {
-	case contains(errStr, errorPatternFileNotFound):
-		return errors.ErrCodeFileNotFound
-	case contains(errStr, errorPatternPermission):
-		return errors.ErrCodePermission
-	case contains(errStr, errorPatternYAML):
-		return errors.ErrCodeInvalidYAML
-	case contains(errStr, errorPatternGitHub):
-		return errors.ErrCodeGitHubAPI
-	case contains(errStr, errorPatternConfig):
-		return errors.ErrCodeConfiguration
+	case contains(errStr, appconstants.ErrorPatternFileNotFound):
+		return appconstants.ErrCodeFileNotFound
+	case contains(errStr, appconstants.ErrorPatternPermission):
+		return appconstants.ErrCodePermission
+	case contains(errStr, appconstants.ErrorPatternYAML):
+		return appconstants.ErrCodeInvalidYAML
+	case contains(errStr, appconstants.ErrorPatternGitHub):
+		return appconstants.ErrCodeGitHubAPI
+	case contains(errStr, appconstants.ErrorPatternConfig):
+		return appconstants.ErrCodeConfiguration
 	default:
-		return errors.ErrCodeUnknown
+		return appconstants.ErrCodeUnknown
 	}
 }
 

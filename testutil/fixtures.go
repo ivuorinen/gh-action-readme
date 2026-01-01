@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // fixtureCache provides thread-safe caching of fixture content.
@@ -48,12 +50,12 @@ func mustReadFixture(filename string) string {
 	// Load from disk
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
-		panic("failed to get current file path")
+		panic(appconstants.ErrFailedToGetCurrentFilePath)
 	}
 
 	// Get the project root (go up from testutil/fixtures.go to project root)
 	projectRoot := filepath.Dir(filepath.Dir(currentFile))
-	fixturePath := filepath.Join(projectRoot, "testdata", "yaml-fixtures", filename)
+	fixturePath := filepath.Join(projectRoot, appconstants.DirTestdata, appconstants.DirYAMLFixtures, filename)
 
 	contentBytes, err := os.ReadFile(fixturePath) // #nosec G304 -- test fixture path from project structure
 	if err != nil {
@@ -68,28 +70,20 @@ func mustReadFixture(filename string) string {
 	return content
 }
 
-// Constants for fixture management.
-const (
-	// YmlExtension represents the standard YAML file extension.
-	YmlExtension = ".yml"
-	// YamlExtension represents the alternative YAML file extension.
-	YamlExtension = ".yaml"
-)
-
 // ActionType represents the type of GitHub Action being tested.
 type ActionType string
 
 const (
 	// ActionTypeJavaScript represents JavaScript-based GitHub Actions that run on Node.js.
-	ActionTypeJavaScript ActionType = "javascript"
+	ActionTypeJavaScript ActionType = ActionType(appconstants.ActionTypeJavaScript)
 	// ActionTypeComposite represents composite GitHub Actions that combine multiple steps.
-	ActionTypeComposite ActionType = "composite"
+	ActionTypeComposite ActionType = ActionType(appconstants.ActionTypeComposite)
 	// ActionTypeDocker represents Docker-based GitHub Actions that run in containers.
-	ActionTypeDocker ActionType = "docker"
+	ActionTypeDocker ActionType = ActionType(appconstants.ActionTypeDocker)
 	// ActionTypeInvalid represents invalid or malformed GitHub Actions for testing error scenarios.
-	ActionTypeInvalid ActionType = "invalid"
+	ActionTypeInvalid ActionType = ActionType(appconstants.ActionTypeInvalid)
 	// ActionTypeMinimal represents minimal GitHub Actions with basic configuration.
-	ActionTypeMinimal ActionType = "minimal"
+	ActionTypeMinimal ActionType = ActionType(appconstants.ActionTypeMinimal)
 )
 
 // TestScenario represents a structured test scenario with metadata.
@@ -338,11 +332,11 @@ var PackageJSONContent = func() string {
 	result += "  \"scripts\": {\n"
 	result += "    \"test\": \"jest\",\n"
 	result += "    \"build\": \"webpack\"\n"
-	result += "  },\n"
+	result += appconstants.JSONCloseBrace
 	result += "  \"dependencies\": {\n"
 	result += "    \"@actions/core\": \"^1.10.0\",\n"
 	result += "    \"@actions/github\": \"^5.1.1\"\n"
-	result += "  },\n"
+	result += appconstants.JSONCloseBrace
 	result += "  \"devDependencies\": {\n"
 	result += "    \"jest\": \"^29.0.0\",\n"
 	result += "    \"webpack\": \"^5.0.0\"\n"
@@ -356,12 +350,12 @@ var PackageJSONContent = func() string {
 func NewFixtureManager() *FixtureManager {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
-		panic("failed to get current file path")
+		panic(appconstants.ErrFailedToGetCurrentFilePath)
 	}
 
 	// Get the project root (go up from testutil/fixtures.go to project root)
 	projectRoot := filepath.Dir(filepath.Dir(currentFile))
-	basePath := filepath.Join(projectRoot, "testdata", "yaml-fixtures")
+	basePath := filepath.Join(projectRoot, appconstants.DirTestdata, appconstants.DirYAMLFixtures)
 
 	return &FixtureManager{
 		basePath:  basePath,
@@ -449,8 +443,10 @@ func (fm *FixtureManager) LoadActionFixture(name string) (*ActionFixture, error)
 // LoadConfigFixture loads a configuration fixture.
 func (fm *FixtureManager) LoadConfigFixture(name string) (*ConfigFixture, error) {
 	configPath := filepath.Join(fm.basePath, "configs", name)
-	if !strings.HasSuffix(configPath, YmlExtension) && !strings.HasSuffix(configPath, YamlExtension) {
-		configPath += YmlExtension
+	hasYMLExt := strings.HasSuffix(configPath, appconstants.ActionFileExtYML)
+	hasYAMLExt := strings.HasSuffix(configPath, appconstants.ActionFileExtYAML)
+	if !hasYMLExt && !hasYAMLExt {
+		configPath += appconstants.ActionFileExtYML
 	}
 
 	content, err := os.ReadFile(configPath) // #nosec G304 -- test fixture path from project structure
@@ -537,8 +533,10 @@ func (fm *FixtureManager) resolveFixturePath(name string) string {
 
 // ensureYamlExtension adds YAML extension if not present.
 func (fm *FixtureManager) ensureYamlExtension(path string) string {
-	if !strings.HasSuffix(path, YmlExtension) && !strings.HasSuffix(path, YamlExtension) {
-		path += YmlExtension
+	hasYMLExt := strings.HasSuffix(path, appconstants.ActionFileExtYML)
+	hasYAMLExt := strings.HasSuffix(path, appconstants.ActionFileExtYAML)
+	if !hasYMLExt && !hasYAMLExt {
+		path += appconstants.ActionFileExtYML
 	}
 
 	return path
@@ -626,7 +624,7 @@ func (fm *FixtureManager) determineActionTypeByContent(content string) ActionTyp
 // determineConfigType determines the type of configuration fixture.
 func (fm *FixtureManager) determineConfigType(name string) string {
 	if strings.Contains(name, "global") {
-		return "global"
+		return appconstants.ScopeGlobal
 	}
 	if strings.Contains(name, "repo") {
 		return "repo-specific"
@@ -730,7 +728,9 @@ func (fm *FixtureManager) scenarioMatchesTags(scenario *TestScenario, tags []str
 // createDefaultScenarios creates a default scenarios file.
 func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 	// Ensure the directory exists
-	if err := os.MkdirAll(filepath.Dir(scenarioFile), 0750); err != nil { // #nosec G301 -- test directory permissions
+	scenarioDir := filepath.Dir(scenarioFile)
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(scenarioDir, appconstants.FilePermDir); err != nil {
 		return fmt.Errorf("failed to create scenarios directory: %w", err)
 	}
 

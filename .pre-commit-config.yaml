@@ -25,12 +25,6 @@ repos:
       - id: pretty-format-json
         args: [--autofix, --no-sort-keys]
 
-  # Renovatebot pre-commit hooks
-  - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 42.64.1
-    hooks:
-      - id: renovate-config-validator
-
   # YAML formatting with yamlfmt (replaces yamllint for formatting)
   - repo: https://github.com/google/yamlfmt
     rev: v0.20.0
@@ -71,14 +65,14 @@ repos:
 
   # GitHub Actions linting
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.9
+    rev: v1.7.10
     hooks:
       - id: actionlint
         args: ["-shellcheck="]
 
   # Commit message linting
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: v9.24.0
+    rev: v9.23.0
     hooks:
       - id: commitlint
         stages: [commit-msg]

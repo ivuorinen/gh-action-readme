@@ -2,6 +2,7 @@
 package helpers
 
 import (
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 )
@@ -11,7 +12,7 @@ import (
 func CreateAnalyzer(generator *internal.Generator, output *internal.ColoredOutput) *dependencies.Analyzer {
 	analyzer, err := generator.CreateDependencyAnalyzer()
 	if err != nil {
-		output.Warning("Could not create dependency analyzer: %v", err)
+		output.Warning(appconstants.ErrCouldNotCreateDependencyAnalyzer, err)
 
 		return nil
 	}

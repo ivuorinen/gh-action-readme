@@ -1,26 +1,44 @@
-package errors
+package apperrors
 
 import (
 	"runtime"
-	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
+
+// Test helper factories for creating context maps
+
+func ctxPath(path string) map[string]string {
+	return map[string]string{"path": path}
+}
+
+func ctxError(err string) map[string]string {
+	return map[string]string{"error": err}
+}
+
+func ctxStatusCode(code string) map[string]string {
+	return map[string]string{"status_code": code}
+}
+
+func ctxEmpty() map[string]string {
+	return map[string]string{}
+}
 
 func TestGetSuggestions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		code     ErrorCode
+		code     appconstants.ErrorCode
 		context  map[string]string
 		contains []string
 	}{
 		{
-			name: "file not found with path",
-			code: ErrCodeFileNotFound,
-			context: map[string]string{
-				"path": "/path/to/action.yml",
-			},
+			name:    "file not found with path",
+			code:    appconstants.ErrCodeFileNotFound,
+			context: ctxPath("/path/to/action.yml"),
 			contains: []string{
 				"Check if the file exists: /path/to/action.yml",
 				"Verify the file path is correct",
@@ -28,22 +46,18 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "file not found action file",
-			code: ErrCodeFileNotFound,
-			context: map[string]string{
-				"path": "/project/action.yml",
-			},
+			name:    "file not found action file",
+			code:    appconstants.ErrCodeFileNotFound,
+			context: ctxPath("/project/action.yml"),
 			contains: []string{
 				"Common action file names: action.yml, action.yaml",
 				"Check if the file is in a subdirectory",
 			},
 		},
 		{
-			name: "permission denied",
-			code: ErrCodePermission,
-			context: map[string]string{
-				"path": "/restricted/file.txt",
-			},
+			name:    "permission denied",
+			code:    appconstants.ErrCodePermission,
+			context: ctxPath("/restricted/file.txt"),
 			contains: []string{
 				"Check file permissions: ls -la /restricted/file.txt",
 				"chmod 644 /restricted/file.txt",
@@ -51,7 +65,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "invalid YAML with line number",
-			code: ErrCodeInvalidYAML,
+			code: appconstants.ErrCodeInvalidYAML,
 			context: map[string]string{
 				"line": "25",
 			},
@@ -63,11 +77,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid YAML with tab error",
-			code: ErrCodeInvalidYAML,
-			context: map[string]string{
-				"error": "found character that cannot start any token (tab)",
-			},
+			name:    "invalid YAML with tab error",
+			code:    appconstants.ErrCodeInvalidYAML,
+			context: ctxError("found character that cannot start any token (tab)"),
 			contains: []string{
 				"YAML files must use spaces for indentation, not tabs",
 				"Replace all tabs with spaces",
@@ -75,7 +87,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "invalid action with missing fields",
-			code: ErrCodeInvalidAction,
+			code: appconstants.ErrCodeInvalidAction,
 			context: map[string]string{
 				"missing_fields": "name, description",
 			},
@@ -87,7 +99,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "no action files",
-			code: ErrCodeNoActionFiles,
+			code: appconstants.ErrCodeNoActionFiles,
 			context: map[string]string{
 				"directory": "/project",
 			},
@@ -99,11 +111,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "GitHub API 401 error",
-			code: ErrCodeGitHubAPI,
-			context: map[string]string{
-				"status_code": "401",
-			},
+			name:    "GitHub API 401 error",
+			code:    appconstants.ErrCodeGitHubAPI,
+			context: ctxStatusCode("401"),
 			contains: []string{
 				"Authentication failed",
 				"check your GitHub token",
@@ -111,11 +121,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "GitHub API 403 error",
-			code: ErrCodeGitHubAPI,
-			context: map[string]string{
-				"status_code": "403",
-			},
+			name:    "GitHub API 403 error",
+			code:    appconstants.ErrCodeGitHubAPI,
+			context: ctxStatusCode("403"),
 			contains: []string{
 				"Access forbidden",
 				"check token permissions",
@@ -123,11 +131,9 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "GitHub API 404 error",
-			code: ErrCodeGitHubAPI,
-			context: map[string]string{
-				"status_code": "404",
-			},
+			name:    "GitHub API 404 error",
+			code:    appconstants.ErrCodeGitHubAPI,
+			context: ctxStatusCode("404"),
 			contains: []string{
 				"Repository or resource not found",
 				"repository is private",
@@ -135,8 +141,8 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name:    "GitHub rate limit",
-			code:    ErrCodeGitHubRateLimit,
-			context: map[string]string{},
+			code:    appconstants.ErrCodeGitHubRateLimit,
+			context: ctxEmpty(),
 			contains: []string{
 				"rate limit exceeded",
 				"GITHUB_TOKEN",
@@ -146,8 +152,8 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name:    "GitHub auth",
-			code:    ErrCodeGitHubAuth,
-			context: map[string]string{},
+			code:    appconstants.ErrCodeGitHubAuth,
+			context: ctxEmpty(),
 			contains: []string{
 				"export GITHUB_TOKEN",
 				"gh auth login",
@@ -157,7 +163,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "configuration error with path",
-			code: ErrCodeConfiguration,
+			code: appconstants.ErrCodeConfiguration,
 			context: map[string]string{
 				"config_path": "~/.config/gh-action-readme/config.yaml",
 			},
@@ -169,7 +175,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "validation error with invalid fields",
-			code: ErrCodeValidation,
+			code: appconstants.ErrCodeValidation,
 			context: map[string]string{
 				"invalid_fields": "runs.using, inputs.test",
 			},
@@ -181,7 +187,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "template error with theme",
-			code: ErrCodeTemplateRender,
+			code: appconstants.ErrCodeTemplateRender,
 			context: map[string]string{
 				"theme": "custom",
 			},
@@ -193,7 +199,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "file write error with output path",
-			code: ErrCodeFileWrite,
+			code: appconstants.ErrCodeFileWrite,
 			context: map[string]string{
 				"output_path": "/output/README.md",
 			},
@@ -205,7 +211,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "dependency analysis error",
-			code: ErrCodeDependencyAnalysis,
+			code: appconstants.ErrCodeDependencyAnalysis,
 			context: map[string]string{
 				"action": "my-action",
 			},
@@ -217,7 +223,7 @@ func TestGetSuggestions(t *testing.T) {
 		},
 		{
 			name: "cache access error",
-			code: ErrCodeCacheAccess,
+			code: appconstants.ErrCodeCacheAccess,
 			context: map[string]string{
 				"cache_path": "~/.cache/gh-action-readme",
 			},
@@ -230,7 +236,7 @@ func TestGetSuggestions(t *testing.T) {
 		{
 			name:    "unknown error code",
 			code:    "UNKNOWN_TEST_CODE",
-			context: map[string]string{},
+			context: ctxEmpty(),
 			contains: []string{
 				"Check the error message",
 				"--verbose flag",
@@ -244,72 +250,44 @@ func TestGetSuggestions(t *testing.T) {
 			t.Parallel()
 
 			suggestions := GetSuggestions(tt.code, tt.context)
-
-			if len(suggestions) == 0 {
-				t.Error("GetSuggestions() returned empty slice")
-
-				return
-			}
-
-			allSuggestions := strings.Join(suggestions, " ")
-			for _, expected := range tt.contains {
-				if !strings.Contains(allSuggestions, expected) {
-					t.Errorf(
-						"GetSuggestions() missing expected content:\nExpected to contain: %q\nSuggestions:\n%s",
-						expected,
-						strings.Join(suggestions, "\n"),
-					)
-				}
-			}
+			testutil.AssertSliceContainsAll(t, suggestions, tt.contains)
 		})
 	}
 }
 
-func TestGetPermissionSuggestions_OSSpecific(t *testing.T) {
+func TestGetPermissionSuggestionsOSSpecific(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]string{"path": "/test/file"}
 	suggestions := getPermissionSuggestions(context)
 
-	allSuggestions := strings.Join(suggestions, " ")
-
 	switch runtime.GOOS {
 	case "windows":
-		if !strings.Contains(allSuggestions, "Administrator") {
-			t.Error("Windows-specific suggestions should mention Administrator")
-		}
-		if !strings.Contains(allSuggestions, "Windows file permissions") {
-			t.Error("Windows-specific suggestions should mention Windows file permissions")
-		}
+		testutil.AssertSliceContainsAll(t, suggestions, []string{"Administrator", "Windows file permissions"})
 	default:
-		if !strings.Contains(allSuggestions, "sudo") {
-			t.Error("Unix-specific suggestions should mention sudo")
-		}
-		if !strings.Contains(allSuggestions, "ls -la") {
-			t.Error("Unix-specific suggestions should mention ls -la")
-		}
+		testutil.AssertSliceContainsAll(t, suggestions, []string{"sudo", "ls -la"})
 	}
 }
 
-func TestGetSuggestions_EmptyContext(t *testing.T) {
+func TestGetSuggestionsEmptyContext(t *testing.T) {
 	t.Parallel()
 
 	// Test that all error codes work with empty context
-	errorCodes := []ErrorCode{
-		ErrCodeFileNotFound,
-		ErrCodePermission,
-		ErrCodeInvalidYAML,
-		ErrCodeInvalidAction,
-		ErrCodeNoActionFiles,
-		ErrCodeGitHubAPI,
-		ErrCodeGitHubRateLimit,
-		ErrCodeGitHubAuth,
-		ErrCodeConfiguration,
-		ErrCodeValidation,
-		ErrCodeTemplateRender,
-		ErrCodeFileWrite,
-		ErrCodeDependencyAnalysis,
-		ErrCodeCacheAccess,
+	errorCodes := []appconstants.ErrorCode{
+		appconstants.ErrCodeFileNotFound,
+		appconstants.ErrCodePermission,
+		appconstants.ErrCodeInvalidYAML,
+		appconstants.ErrCodeInvalidAction,
+		appconstants.ErrCodeNoActionFiles,
+		appconstants.ErrCodeGitHubAPI,
+		appconstants.ErrCodeGitHubRateLimit,
+		appconstants.ErrCodeGitHubAuth,
+		appconstants.ErrCodeConfiguration,
+		appconstants.ErrCodeValidation,
+		appconstants.ErrCodeTemplateRender,
+		appconstants.ErrCodeFileWrite,
+		appconstants.ErrCodeDependencyAnalysis,
+		appconstants.ErrCodeCacheAccess,
 	}
 
 	for _, code := range errorCodes {
@@ -324,7 +302,7 @@ func TestGetSuggestions_EmptyContext(t *testing.T) {
 	}
 }
 
-func TestGetFileNotFoundSuggestions_ActionFile(t *testing.T) {
+func TestGetFileNotFoundSuggestionsActionFile(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]string{
@@ -332,19 +310,10 @@ func TestGetFileNotFoundSuggestions_ActionFile(t *testing.T) {
 	}
 
 	suggestions := getFileNotFoundSuggestions(context)
-	allSuggestions := strings.Join(suggestions, " ")
-
-	// Should suggest common action file names when path contains "action"
-	if !strings.Contains(allSuggestions, "action.yml, action.yaml") {
-		t.Error("Should suggest common action file names for action file paths")
-	}
-
-	if !strings.Contains(allSuggestions, "subdirectory") {
-		t.Error("Should suggest checking subdirectories for action files")
-	}
+	testutil.AssertSliceContainsAll(t, suggestions, []string{"action.yml, action.yaml", "subdirectory"})
 }
 
-func TestGetInvalidYAMLSuggestions_TabError(t *testing.T) {
+func TestGetInvalidYAMLSuggestionsTabError(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]string{
@@ -352,15 +321,10 @@ func TestGetInvalidYAMLSuggestions_TabError(t *testing.T) {
 	}
 
 	suggestions := getInvalidYAMLSuggestions(context)
-	allSuggestions := strings.Join(suggestions, " ")
-
-	// Should prioritize tab-specific suggestions when error mentions tabs
-	if !strings.Contains(allSuggestions, "tabs with spaces") {
-		t.Error("Should provide tab-specific suggestions when error mentions tabs")
-	}
+	testutil.AssertSliceContainsAll(t, suggestions, []string{"tabs with spaces"})
 }
 
-func TestGetGitHubAPISuggestions_StatusCodes(t *testing.T) {
+func TestGetGitHubAPISuggestionsStatusCodes(t *testing.T) {
 	t.Parallel()
 
 	statusCodes := map[string]string{
@@ -375,11 +339,7 @@ func TestGetGitHubAPISuggestions_StatusCodes(t *testing.T) {
 
 			context := map[string]string{"status_code": code}
 			suggestions := getGitHubAPISuggestions(context)
-			allSuggestions := strings.Join(suggestions, " ")
-
-			if !strings.Contains(allSuggestions, expectedText) {
-				t.Errorf("Status code %s suggestions should contain %q", code, expectedText)
-			}
+			testutil.AssertSliceContainsAll(t, suggestions, []string{expectedText})
 		})
 	}
 }

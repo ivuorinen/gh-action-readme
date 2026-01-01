@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/wizard"
 	"github.com/ivuorinen/gh-action-readme/testutil"
@@ -51,8 +52,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 0,
 		},
@@ -61,8 +61,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 0,
 		},
@@ -77,8 +76,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit:   0,
 			wantStdout: "All validations passed successfully",
@@ -88,12 +86,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(
-					t,
-					actionPath,
-					testutil.MustReadFixture("actions/invalid/missing-description.yml"),
-				)
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureInvalidMissingDescription)
 			},
 			wantExit: 1,
 		},
@@ -132,8 +125,8 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"deps", "list"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/composite/basic.yml"))
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 			},
 			wantExit: 0,
 		},
@@ -169,44 +162,8 @@ func TestCLICommands(t *testing.T) {
 			}
 
 			// Run the command in the temporary directory
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
-
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-
-			// Check exit code
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				} else {
-					t.Fatalf("unexpected error running command: %v", err)
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
-			}
-
-			// Check stdout if specified
-			if tt.wantStdout != "" {
-				if !strings.Contains(stdout.String(), tt.wantStdout) {
-					t.Errorf("expected stdout to contain %q, got: %s", tt.wantStdout, stdout.String())
-				}
-			}
-
-			// Check stderr if specified
-			if tt.wantStderr != "" {
-				if !strings.Contains(stderr.String(), tt.wantStderr) {
-					t.Errorf("expected stderr to contain %q, got: %s", tt.wantStderr, stderr.String())
-				}
-			}
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
+			assertCommandResult(t, result, tt.wantExit, tt.wantStdout, tt.wantStderr)
 		})
 	}
 }
@@ -257,32 +214,17 @@ func TestCLIFlags(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
+			if result.exitCode != tt.wantExit {
+				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(appconstants.TestMsgStdout, result.stdout)
+				t.Logf(appconstants.TestMsgStderr, result.stderr)
 			}
 
 			if tt.contains != "" {
-				output := stdout.String() + stderr.String()
-				if !strings.Contains(output, tt.contains) {
-					t.Errorf("expected output to contain %q, got: %s", tt.contains, output)
-				}
+				// For contains check, look in both stdout and stderr
+				assertCommandResult(t, result, tt.wantExit, tt.contains, "")
 			}
 		})
 	}
@@ -297,14 +239,8 @@ func TestCLIRecursiveFlag(t *testing.T) {
 	defer cleanup()
 
 	// Create nested directory structure with action files
-	subDir := filepath.Join(tmpDir, "subdir")
-	_ = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
-
-	// Write action files
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-		testutil.MustReadFixture("actions/javascript/simple.yml"))
-	testutil.WriteTestFile(t, filepath.Join(subDir, "action.yml"),
-		testutil.MustReadFixture("actions/composite/basic.yml"))
+	testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+	testutil.CreateActionSubdir(t, tmpDir, appconstants.TestDirSubdir, appconstants.TestFixtureCompositeBasic)
 
 	tests := []struct {
 		name     string
@@ -328,31 +264,12 @@ func TestCLIRecursiveFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
-
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
-			}
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
+			assertCommandResult(t, result, tt.wantExit, "", "")
 
 			// For recursive tests, check that appropriate number of files were processed
 			// This is a simple heuristic - could be made more sophisticated
-			output := stdout.String()
-			if tt.minFiles > 1 && !strings.Contains(output, "subdir") {
+			if tt.minFiles > 1 && !strings.Contains(result.stdout, appconstants.TestDirSubdir) {
 				t.Errorf("expected recursive processing to include subdirectory")
 			}
 		})
@@ -376,8 +293,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-					testutil.MustReadFixture("actions/javascript/simple.yml"))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit:  1,
 			wantError: "encountered 1 errors during batch processing",
@@ -387,7 +303,11 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), "invalid: yaml: content: [")
+				testutil.WriteTestFile(
+					t,
+					filepath.Join(tmpDir, appconstants.TestPathActionYML),
+					"invalid: yaml: content: [",
+				)
 			},
 			wantExit: 1,
 		},
@@ -396,8 +316,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-					testutil.MustReadFixture("actions/javascript/simple.yml"))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 1,
 		},
@@ -406,8 +325,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-					testutil.MustReadFixture("actions/javascript/simple.yml"))
+				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 1,
 		},
@@ -422,29 +340,16 @@ func TestCLIErrorHandling(t *testing.T) {
 				tt.setupFunc(t, tmpDir)
 			}
 
-			cmd := exec.Command(binaryPath, tt.args...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
+			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
-			exitCode := 0
-			if err != nil {
-				if exitError, ok := err.(*exec.ExitError); ok {
-					exitCode = exitError.ExitCode()
-				}
-			}
-
-			if exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, exitCode)
-				t.Logf("stdout: %s", stdout.String())
-				t.Logf("stderr: %s", stderr.String())
+			if result.exitCode != tt.wantExit {
+				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(appconstants.TestMsgStdout, result.stdout)
+				t.Logf(appconstants.TestMsgStderr, result.stderr)
 			}
 
 			if tt.wantError != "" {
-				output := stdout.String() + stderr.String()
+				output := result.stdout + result.stderr
 				if !strings.Contains(strings.ToLower(output), strings.ToLower(tt.wantError)) {
 					t.Errorf("expected error containing %q, got: %s", tt.wantError, output)
 				}
@@ -481,23 +386,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 
 	// Check if config file was created (note: uses .yaml extension, not .yml)
 	expectedConfigPath := filepath.Join(tmpDir, "gh-action-readme", "config.yaml")
-	if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
-		t.Errorf("config file was not created at expected path: %s", expectedConfigPath)
-		// List what was actually created to help debug
-		if entries, err := os.ReadDir(tmpDir); err == nil {
-			t.Logf("Contents of tmpDir %s:", tmpDir)
-			for _, entry := range entries {
-				t.Logf("  %s", entry.Name())
-				if entry.IsDir() {
-					if subEntries, err := os.ReadDir(filepath.Join(tmpDir, entry.Name())); err == nil {
-						for _, sub := range subEntries {
-							t.Logf("    %s", sub.Name())
-						}
-					}
-				}
-			}
-		}
-	}
+	testutil.AssertFileExists(t, expectedConfigPath)
 }
 
 // Unit Tests for Helper Functions
@@ -557,9 +446,9 @@ func TestResolveExportFormat(t *testing.T) {
 		format   string
 		expected wizard.ExportFormat
 	}{
-		{"json format", formatJSON, wizard.FormatJSON},
-		{"toml format", formatTOML, wizard.FormatTOML},
-		{"yaml format", formatYAML, wizard.FormatYAML},
+		{"json format", appconstants.OutputFormatJSON, wizard.FormatJSON},
+		{"toml format", appconstants.OutputFormatTOML, wizard.FormatTOML},
+		{"yaml format", appconstants.OutputFormatYAML, wizard.FormatYAML},
 		{"default format", "unknown", wizard.FormatYAML},
 		{"empty format", "", wizard.FormatYAML},
 	}
@@ -660,5 +549,71 @@ func TestNewSchemaCmd(t *testing.T) {
 
 	if cmd.RunE == nil && cmd.Run == nil {
 		t.Error("expected command to have a Run or RunE function")
+	}
+}
+
+// cmdResult holds the results of a command execution.
+type cmdResult struct {
+	stdout   string
+	stderr   string
+	exitCode int
+}
+
+// runTestCommand executes a command with the given args in the specified directory.
+// It returns the stdout, stderr, and exit code.
+func runTestCommand(binaryPath string, args []string, dir string) cmdResult {
+	cmd := exec.Command(binaryPath, args...) // #nosec G204 -- controlled test input
+	cmd.Dir = dir
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			exitCode = exitError.ExitCode()
+		}
+	}
+
+	return cmdResult{
+		stdout:   stdout.String(),
+		stderr:   stderr.String(),
+		exitCode: exitCode,
+	}
+}
+
+// createTestActionFile is a helper that creates a test action file from a fixture.
+// It writes the specified fixture to action.yml in the given temporary directory.
+func createTestActionFile(t *testing.T, tmpDir, fixture string) {
+	t.Helper()
+	actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(fixture))
+}
+
+// assertCommandResult is a helper that asserts the result of a command execution.
+// It checks the exit code, and optionally checks for expected content in stdout and stderr.
+func assertCommandResult(t *testing.T, result cmdResult, wantExit int, wantStdout, wantStderr string) {
+	t.Helper()
+
+	if result.exitCode != wantExit {
+		t.Errorf(appconstants.TestMsgExitCode, wantExit, result.exitCode)
+		t.Logf(appconstants.TestMsgStdout, result.stdout)
+		t.Logf(appconstants.TestMsgStderr, result.stderr)
+	}
+
+	// Check stdout if specified
+	if wantStdout != "" {
+		if !strings.Contains(result.stdout, wantStdout) {
+			t.Errorf("expected stdout to contain %q, got: %s", wantStdout, result.stdout)
+		}
+	}
+
+	// Check stderr if specified
+	if wantStderr != "" {
+		if !strings.Contains(result.stderr, wantStderr) {
+			t.Errorf("expected stderr to contain %q, got: %s", wantStderr, result.stderr)
+		}
 	}
 }

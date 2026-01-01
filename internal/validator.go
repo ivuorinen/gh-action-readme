@@ -3,6 +3,8 @@ package internal
 import (
 	"fmt"
 	"strings"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // ValidationResult holds the results of action.yml validation.
@@ -18,18 +20,18 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 
 	// Validate required fields with helpful suggestions
 	if action.Name == "" {
-		result.MissingFields = append(result.MissingFields, "name")
+		result.MissingFields = append(result.MissingFields, appconstants.FieldName)
 		result.Suggestions = append(result.Suggestions, "Add 'name: Your Action Name' to describe your action")
 	}
 	if action.Description == "" {
-		result.MissingFields = append(result.MissingFields, "description")
+		result.MissingFields = append(result.MissingFields, appconstants.FieldDescription)
 		result.Suggestions = append(
 			result.Suggestions,
 			"Add 'description: Brief description of what your action does' for better documentation",
 		)
 	}
 	if len(action.Runs) == 0 {
-		result.MissingFields = append(result.MissingFields, "runs")
+		result.MissingFields = append(result.MissingFields, appconstants.FieldRuns)
 		result.Suggestions = append(
 			result.Suggestions,
 			"Add 'runs:' section with 'using: node20' or 'using: docker' and specify the main file",
@@ -38,14 +40,14 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 		// Validate the runs section content
 		if using, ok := action.Runs["using"].(string); ok {
 			if !isValidRuntime(using) {
-				result.MissingFields = append(result.MissingFields, "runs.using")
+				result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
 				result.Suggestions = append(
 					result.Suggestions,
 					fmt.Sprintf("Invalid runtime '%s'. Valid runtimes: node12, node16, node20, docker, composite", using),
 				)
 			}
 		} else {
-			result.MissingFields = append(result.MissingFields, "runs.using")
+			result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
 			result.Suggestions = append(
 				result.Suggestions,
 				"Missing 'using' field in runs section. Specify 'using: node20', 'using: docker', or 'using: composite'",
