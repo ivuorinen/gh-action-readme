@@ -10,6 +10,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 func TestConfigExporter_ExportConfig(t *testing.T) {
@@ -110,9 +111,7 @@ func testTOMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 // verifyFileExists checks that a file exists at the given path.
 func verifyFileExists(t *testing.T, outputPath string) {
 	t.Helper()
-	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
-		t.Fatal("Expected output file to exist")
-	}
+	testutil.AssertFileExists(t, outputPath)
 }
 
 // verifyYAMLContent verifies YAML content is valid and contains expected data.

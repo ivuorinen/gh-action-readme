@@ -61,23 +61,9 @@ func TestMustReadFixture_Panic(t *testing.T) {
 	t.Parallel()
 	t.Run("missing file panics", func(t *testing.T) {
 		t.Parallel()
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("expected panic but got none")
-			} else {
-				errStr, ok := r.(string)
-				if !ok {
-					t.Errorf("expected panic to contain string message, got: %T", r)
-
-					return
-				}
-				if !strings.Contains(errStr, "failed to read fixture") {
-					t.Errorf("expected panic message about fixture reading, got: %v", r)
-				}
-			}
-		}()
-
-		mustReadFixture("nonexistent-file.yml")
+		ExpectPanic(t, func() {
+			mustReadFixture("nonexistent-file.yml")
+		}, "failed to read fixture")
 	})
 }
 

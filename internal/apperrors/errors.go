@@ -9,6 +9,20 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
+// Sentinel errors for typed error checking.
+var (
+	// ErrFileNotFound indicates a file was not found.
+	ErrFileNotFound = errors.New("file not found")
+	// ErrPermissionDenied indicates a permission error.
+	ErrPermissionDenied = errors.New("permission denied")
+	// ErrInvalidYAML indicates YAML parsing failed.
+	ErrInvalidYAML = errors.New("invalid YAML")
+	// ErrGitHubAPI indicates a GitHub API error.
+	ErrGitHubAPI = errors.New("GitHub API error")
+	// ErrConfiguration indicates a configuration error.
+	ErrConfiguration = errors.New("configuration error")
+)
+
 // ContextualError provides enhanced error information with actionable suggestions.
 type ContextualError struct {
 	Code        appconstants.ErrorCode

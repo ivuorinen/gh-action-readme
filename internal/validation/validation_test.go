@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -21,10 +22,8 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "valid action.yml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 
-				return actionPath
+				return testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
 			},
 			expectError: false,
 		},
@@ -32,10 +31,8 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "valid action.yaml file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yaml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("minimal-action.yml"))
 
-				return actionPath
+				return testutil.WriteActionFixtureAs(t, tmpDir, "action.yaml", appconstants.TestFixtureMinimalAction)
 			},
 			expectError: false,
 		},
@@ -50,10 +47,8 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "file with wrong extension",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.txt")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
 
-				return actionPath
+				return testutil.WriteActionFixtureAs(t, tmpDir, "action.txt", appconstants.TestFixtureJavaScriptSimple)
 			},
 			expectError: true,
 		},
@@ -522,9 +517,7 @@ func TestGetBinaryDir(t *testing.T) {
 	}
 
 	// Verify the directory exists
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		t.Errorf("binary directory does not exist: %s", dir)
-	}
+	testutil.AssertFileExists(t, dir)
 }
 
 func TestEnsureAbsolutePath(t *testing.T) {

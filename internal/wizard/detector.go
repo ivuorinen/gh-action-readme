@@ -382,7 +382,7 @@ func (d *ProjectDetector) detectLanguageFromFile(filename string, characteristic
 		characteristics["language"] = "Rust"
 		characteristics["type"] = "Rust Project"
 	case "pyproject.toml", "requirements.txt":
-		characteristics["language"] = appconstants.ActionTypePython
+		characteristics["language"] = appconstants.LangPython
 		characteristics["type"] = "Python Project"
 	case "Gemfile":
 		characteristics["language"] = "Ruby"
@@ -461,7 +461,7 @@ func (d *ProjectDetector) suggestRunsOn(settings *DetectedSettings) {
 	switch settings.Language {
 	case appconstants.LangJavaScriptTypeScript:
 		settings.SuggestedRunsOn = []string{"ubuntu-latest", "windows-latest", "macos-latest"}
-	case appconstants.LangGo, appconstants.ActionTypePython:
+	case appconstants.LangGo, appconstants.LangPython:
 		settings.SuggestedRunsOn = []string{"ubuntu-latest"}
 	}
 }

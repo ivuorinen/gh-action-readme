@@ -148,11 +148,14 @@ func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error
 		updateType := a.compareVersions(currentVersion, latestVersion)
 		if updateType != appconstants.UpdateTypeNone {
 			outdated = append(outdated, OutdatedDependency{
-				Current:          dep,
-				LatestVersion:    latestVersion,
-				LatestSHA:        latestSHA,
-				UpdateType:       updateType,
-				IsSecurityUpdate: updateType == appconstants.UpdateTypeMajor, // Assume major updates might be security
+				Current:       dep,
+				LatestVersion: latestVersion,
+				LatestSHA:     latestSHA,
+				UpdateType:    updateType,
+				// Don't assume major version bumps are security updates
+				// This should only be set if confirmed by security advisory data
+				// Future enhancement: integrate with GitHub Security Advisories API
+				IsSecurityUpdate: false,
 			})
 		}
 	}
@@ -308,7 +311,7 @@ func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependen
 
 	// Add marketplace URL for public actions
 	if !isLocal {
-		dep.MarketplaceURL = appconstants.MarketplaceBaseURL + repo
+		dep.MarketplaceURL = fmt.Sprintf("%s%s/%s", appconstants.MarketplaceBaseURL, owner, repo)
 	}
 
 	// Fetch additional metadata from GitHub API if available
@@ -596,8 +599,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Create backup
 	backupPath := filePath + appconstants.BackupExtension
-	// #nosec G306 -- backup file permissions
-	if err := os.WriteFile(backupPath, content, appconstants.FilePermDefault); err != nil {
+	if err := os.WriteFile(backupPath, content, appconstants.FilePermDefault); err != nil { // #nosec G306
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -619,8 +621,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
-	if err := os.WriteFile(filePath, []byte(updatedContent), appconstants.FilePermDefault); err != nil {
-		// #nosec G306 -- updated file permissions
+	if err := os.WriteFile(filePath, []byte(updatedContent), appconstants.FilePermDefault); err != nil { // #nosec G306
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 

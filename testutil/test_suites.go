@@ -575,7 +575,7 @@ func DetectGeneratedFiles(outputDir string, outputFormat string) []string {
 			// Check if this file matches the expected output format
 			isGenerated := false
 			switch outputFormat {
-			case "md":
+			case appconstants.OutputFormatMarkdown:
 				isGenerated = name == appconstants.ReadmeMarkdown
 			case appconstants.OutputFormatHTML:
 				isGenerated = strings.HasSuffix(name, ".html")
@@ -600,7 +600,7 @@ func DetectGeneratedFiles(outputDir string, outputFormat string) []string {
 func DefaultTestConfig() *TestConfig {
 	return &TestConfig{
 		Theme:        "default",
-		OutputFormat: "md",
+		OutputFormat: appconstants.OutputFormatMarkdown,
 		OutputDir:    ".",
 		Verbose:      false,
 		Quiet:        false,
@@ -839,7 +839,7 @@ func TestAllFormats(t *testing.T, testFunc func(*testing.T, string)) {
 	t.Helper()
 
 	formats := []string{
-		"md",
+		appconstants.OutputFormatMarkdown,
 		appconstants.OutputFormatHTML,
 		appconstants.OutputFormatJSON,
 		appconstants.OutputFormatASCIIDoc,
@@ -890,8 +890,7 @@ func CreateGitHubMockSuite(scenarios []string) *MockSuite {
 func AssertFixtureValid(t *testing.T, fixtureName string) {
 	t.Helper()
 
-	fixture, err := LoadActionFixture(fixtureName)
-	AssertNoError(t, err)
+	fixture := MustLoadActionFixture(t, fixtureName)
 
 	if !fixture.IsValid {
 		t.Errorf("fixture %s should be valid but failed validation", fixtureName)
@@ -976,7 +975,7 @@ func CreateActionTestCases() []ActionTestCase {
 // getExpectedFilename returns the expected filename for a given output format.
 func getExpectedFilename(outputFormat string) string {
 	switch outputFormat {
-	case "md":
+	case appconstants.OutputFormatMarkdown:
 		return appconstants.ReadmeMarkdown
 	case appconstants.OutputFormatHTML:
 		// HTML files have variable names based on action name, so we'll use a pattern
@@ -996,7 +995,7 @@ func CreateGeneratorTestCases() []GeneratorTestCase {
 	validFixtures := GetValidFixtures()
 	themes := []string{"default", "github", "minimal", "professional"}
 	formats := []string{
-		"md",
+		appconstants.OutputFormatMarkdown,
 		appconstants.OutputFormatHTML,
 		appconstants.OutputFormatJSON,
 		appconstants.OutputFormatASCIIDoc,

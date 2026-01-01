@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/go-github/v74/github"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/testutil"
@@ -28,14 +29,14 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 	}{
 		{
 			name:        "simple action - no dependencies",
-			actionYML:   testutil.MustReadFixture("actions/javascript/simple.yml"),
+			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:         "composite action with dependencies",
-			actionYML:    testutil.MustReadFixture("actions/composite/with-dependencies.yml"),
+			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureCompositeWithDeps),
 			expectError:  false,
 			expectDeps:   true,
 			expectedLen:  5, // 3 action dependencies + 2 shell script dependencies
@@ -43,14 +44,14 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 		},
 		{
 			name:        "docker action - no step dependencies",
-			actionYML:   testutil.MustReadFixture("actions/docker/basic.yml"),
+			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureDockerBasic),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:        "invalid action file",
-			actionYML:   testutil.MustReadFixture("actions/invalid/invalid-using.yml"),
+			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureInvalidInvalidUsing),
 			expectError: true,
 		},
 		{
@@ -70,7 +71,7 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			actionPath := filepath.Join(tmpDir, "action.yml")
+			actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
 			testutil.WriteTestFile(t, actionPath, tt.actionYML)
 
 			// Create analyzer with mock GitHub client
@@ -429,9 +430,9 @@ func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
 	defer cleanup()
 
 	// Create a test action file with composite steps
-	actionContent := testutil.MustReadFixture("test-composite-action.yml")
+	actionContent := testutil.MustReadFixture(appconstants.TestFixtureTestCompositeAction)
 
-	actionPath := filepath.Join(tmpDir, "action.yml")
+	actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
 	testutil.WriteTestFile(t, actionPath, actionContent)
 
 	// Create analyzer
@@ -550,8 +551,8 @@ func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
-	actionPath := filepath.Join(tmpDir, "action.yml")
-	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/composite/basic.yml"))
+	actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 
 	deps, err := analyzer.AnalyzeActionFile(actionPath)
 
@@ -586,7 +587,7 @@ func TestNewAnalyzer(t *testing.T) {
 	githubClient := testutil.MockGitHubClient(mockResponses)
 	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
 	testutil.AssertNoError(t, err)
-	defer func() { _ = cacheInstance.Close() }()
+	defer testutil.CleanupCache(t, cacheInstance)()
 
 	repoInfo := git.RepoInfo{
 		Organization: "test-owner",

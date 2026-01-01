@@ -2,6 +2,7 @@
 package internal
 
 import (
+	"errors"
 	"os"
 	"strings"
 
@@ -59,8 +60,38 @@ func (eh *ErrorHandler) HandleSimpleError(message string, err error) {
 
 // determineErrorCode attempts to determine appropriate error code from error content.
 func (eh *ErrorHandler) determineErrorCode(err error) appconstants.ErrorCode {
-	errStr := err.Error()
+	// First try typed error checks using errors.Is against sentinel errors
+	if code := eh.checkTypedError(err); code != appconstants.ErrCodeUnknown {
+		return code
+	}
 
+	// Fallback to string checks only if no typed match found
+	return eh.checkStringPatterns(err.Error())
+}
+
+// checkTypedError checks for typed errors using errors.Is.
+func (eh *ErrorHandler) checkTypedError(err error) appconstants.ErrorCode {
+	if errors.Is(err, apperrors.ErrFileNotFound) || errors.Is(err, os.ErrNotExist) {
+		return appconstants.ErrCodeFileNotFound
+	}
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, os.ErrPermission) {
+		return appconstants.ErrCodePermission
+	}
+	if errors.Is(err, apperrors.ErrInvalidYAML) {
+		return appconstants.ErrCodeInvalidYAML
+	}
+	if errors.Is(err, apperrors.ErrGitHubAPI) {
+		return appconstants.ErrCodeGitHubAPI
+	}
+	if errors.Is(err, apperrors.ErrConfiguration) {
+		return appconstants.ErrCodeConfiguration
+	}
+
+	return appconstants.ErrCodeUnknown
+}
+
+// checkStringPatterns checks error message against string patterns.
+func (eh *ErrorHandler) checkStringPatterns(errStr string) appconstants.ErrorCode {
 	switch {
 	case contains(errStr, appconstants.ErrorPatternFileNotFound):
 		return appconstants.ErrCodeFileNotFound

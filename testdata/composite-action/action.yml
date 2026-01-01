@@ -44,10 +44,22 @@ runs:
         NODE_ENV: test
 
     - name: Build project
-      uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+      shell: bash
       id: build
-      with:
-        node-version: ${{ inputs.node-version }}
+      run: |
+        set -u
+        cd ${{ inputs.working-directory }}
+        npm run build
+        # Capture exit code immediately to avoid fragility with intervening commands
+        build_exit_code=$?
+        # Write result to GITHUB_OUTPUT based on captured exit code
+        # Note: We do not use 'set -e' because we need to handle build failures
+        # gracefully and report them via the output rather than failing the step
+        if [ $build_exit_code -eq 0 ]; then
+          echo "result=success" >> $GITHUB_OUTPUT
+        else
+          echo "result=failure" >> $GITHUB_OUTPUT
+        fi
 
 branding:
   icon: package

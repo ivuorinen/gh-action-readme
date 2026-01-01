@@ -52,8 +52,12 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				testutil.WriteTestFile(
+					t,
+					actionPath,
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+				)
 			},
 			wantExit: 0,
 		},
@@ -62,8 +66,12 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				testutil.WriteTestFile(
+					t,
+					actionPath,
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+				)
 			},
 			wantExit: 0,
 		},
@@ -78,8 +86,12 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/javascript/simple.yml"))
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				testutil.WriteTestFile(
+					t,
+					actionPath,
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+				)
 			},
 			wantExit:   0,
 			wantStdout: "All validations passed successfully",
@@ -89,11 +101,11 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
 				testutil.WriteTestFile(
 					t,
 					actionPath,
-					testutil.MustReadFixture("actions/invalid/missing-description.yml"),
+					testutil.MustReadFixture(appconstants.TestFixtureInvalidMissingDescription),
 				)
 			},
 			wantExit: 1,
@@ -133,8 +145,8 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"deps", "list"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, "action.yml")
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture("actions/composite/basic.yml"))
+				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 			},
 			wantExit: 0,
 		},
@@ -173,9 +185,9 @@ func TestCLICommands(t *testing.T) {
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
 			if result.exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
-				t.Logf("stdout: %s", result.stdout)
-				t.Logf("stderr: %s", result.stderr)
+				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(appconstants.TestMsgStdout, result.stdout)
+				t.Logf(appconstants.TestMsgStderr, result.stderr)
 			}
 
 			// Check stdout if specified
@@ -244,9 +256,9 @@ func TestCLIFlags(t *testing.T) {
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
 			if result.exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
-				t.Logf("stdout: %s", result.stdout)
-				t.Logf("stderr: %s", result.stderr)
+				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(appconstants.TestMsgStdout, result.stdout)
+				t.Logf(appconstants.TestMsgStderr, result.stderr)
 			}
 
 			if tt.contains != "" {
@@ -268,14 +280,8 @@ func TestCLIRecursiveFlag(t *testing.T) {
 	defer cleanup()
 
 	// Create nested directory structure with action files
-	subDir := filepath.Join(tmpDir, "subdir")
-	_ = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
-
-	// Write action files
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-		testutil.MustReadFixture("actions/javascript/simple.yml"))
-	testutil.WriteTestFile(t, filepath.Join(subDir, "action.yml"),
-		testutil.MustReadFixture("actions/composite/basic.yml"))
+	testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+	testutil.CreateActionSubdir(t, tmpDir, appconstants.TestDirSubdir, appconstants.TestFixtureCompositeBasic)
 
 	tests := []struct {
 		name     string
@@ -302,14 +308,14 @@ func TestCLIRecursiveFlag(t *testing.T) {
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
 			if result.exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
-				t.Logf("stdout: %s", result.stdout)
-				t.Logf("stderr: %s", result.stderr)
+				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(appconstants.TestMsgStdout, result.stdout)
+				t.Logf(appconstants.TestMsgStderr, result.stderr)
 			}
 
 			// For recursive tests, check that appropriate number of files were processed
 			// This is a simple heuristic - could be made more sophisticated
-			if tt.minFiles > 1 && !strings.Contains(result.stdout, "subdir") {
+			if tt.minFiles > 1 && !strings.Contains(result.stdout, appconstants.TestDirSubdir) {
 				t.Errorf("expected recursive processing to include subdirectory")
 			}
 		})
@@ -333,8 +339,8 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-					testutil.MustReadFixture("actions/javascript/simple.yml"))
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 			},
 			wantExit:  1,
 			wantError: "encountered 1 errors during batch processing",
@@ -344,7 +350,11 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), "invalid: yaml: content: [")
+				testutil.WriteTestFile(
+					t,
+					filepath.Join(tmpDir, appconstants.TestPathActionYML),
+					"invalid: yaml: content: [",
+				)
 			},
 			wantExit: 1,
 		},
@@ -353,8 +363,8 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-					testutil.MustReadFixture("actions/javascript/simple.yml"))
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 			},
 			wantExit: 1,
 		},
@@ -363,8 +373,8 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"),
-					testutil.MustReadFixture("actions/javascript/simple.yml"))
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 			},
 			wantExit: 1,
 		},
@@ -382,9 +392,9 @@ func TestCLIErrorHandling(t *testing.T) {
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
 			if result.exitCode != tt.wantExit {
-				t.Errorf("expected exit code %d, got %d", tt.wantExit, result.exitCode)
-				t.Logf("stdout: %s", result.stdout)
-				t.Logf("stderr: %s", result.stderr)
+				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(appconstants.TestMsgStdout, result.stdout)
+				t.Logf(appconstants.TestMsgStderr, result.stderr)
 			}
 
 			if tt.wantError != "" {
@@ -425,23 +435,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 
 	// Check if config file was created (note: uses .yaml extension, not .yml)
 	expectedConfigPath := filepath.Join(tmpDir, "gh-action-readme", "config.yaml")
-	if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
-		t.Errorf("config file was not created at expected path: %s", expectedConfigPath)
-		// List what was actually created to help debug
-		if entries, err := os.ReadDir(tmpDir); err == nil {
-			t.Logf("Contents of tmpDir %s:", tmpDir)
-			for _, entry := range entries {
-				t.Logf("  %s", entry.Name())
-				if entry.IsDir() {
-					if subEntries, err := os.ReadDir(filepath.Join(tmpDir, entry.Name())); err == nil {
-						for _, sub := range subEntries {
-							t.Logf("    %s", sub.Name())
-						}
-					}
-				}
-			}
-		}
-	}
+	testutil.AssertFileExists(t, expectedConfigPath)
 }
 
 // Unit Tests for Helper Functions

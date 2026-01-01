@@ -37,3 +37,4 @@ coverage.*
 
 # Other
 /megalinter-reports/
+cr.txt

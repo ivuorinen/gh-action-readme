@@ -125,8 +125,8 @@ func TestLoadConfiguration(t *testing.T) {
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
 				t.Helper()
 				// Clear environment variables to ensure config file values are used
-				t.Setenv("GITHUB_TOKEN", "")
-				t.Setenv("GH_README_GITHUB_TOKEN", "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+				t.Setenv(appconstants.EnvGitHubToken, "")
 
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
@@ -336,13 +336,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 	// Check that config file was created
 	configPath, _ := GetConfigPath()
 	t.Logf("Expected config path: %s", configPath)
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Errorf("config file was not created at: %s", configPath)
-		// List what files were actually created
-		if files, err := os.ReadDir(tmpDir); err == nil {
-			t.Logf("Files in tmpDir: %v", files)
-		}
-	}
+	testutil.AssertFileExists(t, configPath)
 
 	// Verify config file content
 	config, err := InitConfig(configPath)

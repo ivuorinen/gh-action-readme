@@ -107,7 +107,7 @@ func (e *ConfigExporter) exportYAML(config *internal.AppConfig, outputPath strin
 		return fmt.Errorf("failed to encode YAML: %w", err)
 	}
 
-	e.output.Success(appconstants.ErrConfigurationExportedTo, outputPath)
+	e.output.Success(appconstants.MsgConfigurationExportedTo, outputPath)
 
 	return nil
 }
@@ -132,7 +132,7 @@ func (e *ConfigExporter) exportJSON(config *internal.AppConfig, outputPath strin
 		return fmt.Errorf("failed to encode JSON: %w", err)
 	}
 
-	e.output.Success(appconstants.ErrConfigurationExportedTo, outputPath)
+	e.output.Success(appconstants.MsgConfigurationExportedTo, outputPath)
 
 	return nil
 }
@@ -158,7 +158,7 @@ func (e *ConfigExporter) exportTOML(config *internal.AppConfig, outputPath strin
 	// Basic TOML export (simplified version)
 	e.writeTOMLConfig(file, exportConfig)
 
-	e.output.Success(appconstants.ErrConfigurationExportedTo, outputPath)
+	e.output.Success(appconstants.MsgConfigurationExportedTo, outputPath)
 
 	return nil
 }

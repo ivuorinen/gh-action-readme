@@ -93,6 +93,62 @@ func TempDir(t *testing.T) (string, func()) {
 	}
 }
 
+// CleanupCache provides a standard cache cleanup helper for deferred cleanup.
+// It returns a function that closes the cache and fails the test on errors.
+func CleanupCache(tb testing.TB, cache interface{ Close() error }) func() {
+	tb.Helper()
+
+	return func() {
+		tb.Helper()
+		if err := cache.Close(); err != nil {
+			tb.Fatalf("failed to close cache: %v", err)
+		}
+	}
+}
+
+// ExpectPanic asserts that the provided function panics with a message containing the expected substring.
+// This helper reduces panic recovery test boilerplate from 12-15 lines to 3-4 lines.
+func ExpectPanic(t *testing.T, fn func(), expectedSubstring string) {
+	t.Helper()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic but got none")
+		} else {
+			var errStr string
+			switch v := r.(type) {
+			case string:
+				errStr = v
+			case error:
+				errStr = v.Error()
+			default:
+				errStr = fmt.Sprintf("%v", v)
+			}
+			if !strings.Contains(errStr, expectedSubstring) {
+				t.Errorf("expected panic message containing %q, got: %v", expectedSubstring, r)
+			}
+		}
+	}()
+	fn()
+}
+
+// MustLoadActionFixture loads an action fixture and fails the test on error.
+// This helper consolidates the load + assertion pattern.
+func MustLoadActionFixture(t *testing.T, path string) *ActionFixture {
+	t.Helper()
+	fixture, err := LoadActionFixture(path)
+	AssertNoError(t, err)
+
+	return fixture
+}
+
+// LoadAndWriteFixture loads an action fixture and writes it to the specified path.
+// This helper reduces the common 3-line pattern to a single line.
+func LoadAndWriteFixture(t *testing.T, fixturePath, targetPath string) {
+	t.Helper()
+	fixture := MustLoadActionFixture(t, fixturePath)
+	WriteTestFile(t, targetPath, fixture.Content)
+}
+
 // WriteTestFile writes a test file to the given path.
 func WriteTestFile(t *testing.T, path, content string) {
 	t.Helper()
@@ -107,6 +163,83 @@ func WriteTestFile(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), appconstants.FilePermDefault); err != nil {
 		t.Fatalf("failed to write test file %s: %v", path, err)
 	}
+}
+
+// WriteActionFixture writes an action fixture to a standard action.yml file.
+func WriteActionFixture(t *testing.T, dir, fixturePath string) string {
+	t.Helper()
+	actionPath := filepath.Join(dir, appconstants.TestPathActionYML)
+	fixture := MustLoadActionFixture(t, fixturePath)
+	WriteTestFile(t, actionPath, fixture.Content)
+
+	return actionPath
+}
+
+// WriteActionFixtureAs writes an action fixture with a custom filename.
+func WriteActionFixtureAs(t *testing.T, dir, filename, fixturePath string) string {
+	t.Helper()
+	actionPath := filepath.Join(dir, filename)
+	fixture := MustLoadActionFixture(t, fixturePath)
+	WriteTestFile(t, actionPath, fixture.Content)
+
+	return actionPath
+}
+
+// CreateConfigDir creates a standard .config/gh-action-readme directory.
+func CreateConfigDir(t *testing.T, baseDir string) string {
+	t.Helper()
+	configDir := filepath.Join(baseDir, appconstants.TestDirConfigGhActionReadme)
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(configDir, appconstants.FilePermDir); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	return configDir
+}
+
+// WriteConfigFile writes a config file to the standard location.
+func WriteConfigFile(t *testing.T, baseDir, content string) string {
+	t.Helper()
+	configDir := CreateConfigDir(t, baseDir)
+	configPath := filepath.Join(configDir, appconstants.ConfigFileNameFull)
+	WriteTestFile(t, configPath, content)
+
+	return configPath
+}
+
+// CreateActionSubdir creates a subdirectory and writes an action fixture to it.
+func CreateActionSubdir(t *testing.T, baseDir, subdirName, fixturePath string) string {
+	t.Helper()
+	subDir := filepath.Join(baseDir, subdirName)
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(subDir, appconstants.FilePermDir); err != nil {
+		t.Fatalf("failed to create subdir: %v", err)
+	}
+
+	return WriteActionFixture(t, subDir, fixturePath)
+}
+
+// AssertFileExists fails if the file does not exist.
+func AssertFileExists(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Fatalf("expected file to exist: %s", path)
+	}
+}
+
+// AssertFileNotExists fails if the file exists.
+func AssertFileNotExists(t *testing.T, path string) {
+	t.Helper()
+	_, err := os.Stat(path)
+	if err == nil {
+		// File exists
+		t.Fatalf("expected file not to exist: %s", path)
+	}
+	if err != nil && !os.IsNotExist(err) {
+		// Error occurred but it's not a "does not exist" error
+		t.Fatalf("error checking file existence: %v", err)
+	}
+	// err != nil && os.IsNotExist(err) - this is the success case
 }
 
 // MockColoredOutput captures output for testing.
