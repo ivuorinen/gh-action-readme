@@ -69,7 +69,7 @@ func testYAMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 			t.Fatalf("ExportConfig() error = %v", err)
 		}
 
-		verifyFileExists(t, outputPath)
+		testutil.AssertFileExists(t, outputPath)
 		verifyYAMLContent(t, outputPath, config)
 	}
 }
@@ -86,7 +86,7 @@ func testJSONExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 			t.Fatalf("ExportConfig() error = %v", err)
 		}
 
-		verifyFileExists(t, outputPath)
+		testutil.AssertFileExists(t, outputPath)
 		verifyJSONContent(t, outputPath, config)
 	}
 }
@@ -103,15 +103,9 @@ func testTOMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 			t.Fatalf("ExportConfig() error = %v", err)
 		}
 
-		verifyFileExists(t, outputPath)
+		testutil.AssertFileExists(t, outputPath)
 		verifyTOMLContent(t, outputPath)
 	}
-}
-
-// verifyFileExists checks that a file exists at the given path.
-func verifyFileExists(t *testing.T, outputPath string) {
-	t.Helper()
-	testutil.AssertFileExists(t, outputPath)
 }
 
 // verifyYAMLContent verifies YAML content is valid and contains expected data.

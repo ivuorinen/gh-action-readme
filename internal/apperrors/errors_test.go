@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 const (
@@ -116,16 +117,7 @@ func TestContextualErrorError(t *testing.T) {
 			t.Parallel()
 
 			result := tt.err.Error()
-
-			for _, expected := range tt.contains {
-				if !strings.Contains(result, expected) {
-					t.Errorf(
-						"Error() result missing expected content:\nExpected to contain: %q\nActual result:\n%s",
-						expected,
-						result,
-					)
-				}
-			}
+			testutil.AssertSliceContainsAll(t, []string{result}, tt.contains)
 		})
 	}
 }

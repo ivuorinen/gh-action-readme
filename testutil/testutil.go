@@ -511,6 +511,27 @@ func AssertEqual(t *testing.T, expected, actual any) {
 	}
 }
 
+// AssertSliceContainsAll fails if any of expectedSubstrings is not found in any item of the slice.
+// This is useful for checking that suggestions or messages contain expected content.
+func AssertSliceContainsAll(t *testing.T, slice []string, expectedSubstrings []string) {
+	t.Helper()
+
+	if len(slice) == 0 {
+		t.Fatal("slice is empty")
+	}
+
+	allItems := strings.Join(slice, " ")
+	for _, expected := range expectedSubstrings {
+		if !strings.Contains(allItems, expected) {
+			t.Errorf(
+				"expected to find %q in slice, got:\n%s",
+				expected,
+				strings.Join(slice, "\n"),
+			)
+		}
+	}
+}
+
 // NewStringReader creates an io.ReadCloser from a string.
 func NewStringReader(s string) io.ReadCloser {
 	return io.NopCloser(strings.NewReader(s))

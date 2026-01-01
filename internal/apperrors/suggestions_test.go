@@ -2,10 +2,10 @@ package apperrors
 
 import (
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 func TestGetSuggestions(t *testing.T) {
@@ -246,23 +246,7 @@ func TestGetSuggestions(t *testing.T) {
 			t.Parallel()
 
 			suggestions := GetSuggestions(tt.code, tt.context)
-
-			if len(suggestions) == 0 {
-				t.Error("GetSuggestions() returned empty slice")
-
-				return
-			}
-
-			allSuggestions := strings.Join(suggestions, " ")
-			for _, expected := range tt.contains {
-				if !strings.Contains(allSuggestions, expected) {
-					t.Errorf(
-						"GetSuggestions() missing expected content:\nExpected to contain: %q\nSuggestions:\n%s",
-						expected,
-						strings.Join(suggestions, "\n"),
-					)
-				}
-			}
+			testutil.AssertSliceContainsAll(t, suggestions, tt.contains)
 		})
 	}
 }
@@ -273,23 +257,11 @@ func TestGetPermissionSuggestionsOSSpecific(t *testing.T) {
 	context := map[string]string{"path": "/test/file"}
 	suggestions := getPermissionSuggestions(context)
 
-	allSuggestions := strings.Join(suggestions, " ")
-
 	switch runtime.GOOS {
 	case "windows":
-		if !strings.Contains(allSuggestions, "Administrator") {
-			t.Error("Windows-specific suggestions should mention Administrator")
-		}
-		if !strings.Contains(allSuggestions, "Windows file permissions") {
-			t.Error("Windows-specific suggestions should mention Windows file permissions")
-		}
+		testutil.AssertSliceContainsAll(t, suggestions, []string{"Administrator", "Windows file permissions"})
 	default:
-		if !strings.Contains(allSuggestions, "sudo") {
-			t.Error("Unix-specific suggestions should mention sudo")
-		}
-		if !strings.Contains(allSuggestions, "ls -la") {
-			t.Error("Unix-specific suggestions should mention ls -la")
-		}
+		testutil.AssertSliceContainsAll(t, suggestions, []string{"sudo", "ls -la"})
 	}
 }
 
@@ -334,16 +306,7 @@ func TestGetFileNotFoundSuggestionsActionFile(t *testing.T) {
 	}
 
 	suggestions := getFileNotFoundSuggestions(context)
-	allSuggestions := strings.Join(suggestions, " ")
-
-	// Should suggest common action file names when path contains "action"
-	if !strings.Contains(allSuggestions, "action.yml, action.yaml") {
-		t.Error("Should suggest common action file names for action file paths")
-	}
-
-	if !strings.Contains(allSuggestions, "subdirectory") {
-		t.Error("Should suggest checking subdirectories for action files")
-	}
+	testutil.AssertSliceContainsAll(t, suggestions, []string{"action.yml, action.yaml", "subdirectory"})
 }
 
 func TestGetInvalidYAMLSuggestionsTabError(t *testing.T) {
@@ -354,12 +317,7 @@ func TestGetInvalidYAMLSuggestionsTabError(t *testing.T) {
 	}
 
 	suggestions := getInvalidYAMLSuggestions(context)
-	allSuggestions := strings.Join(suggestions, " ")
-
-	// Should prioritize tab-specific suggestions when error mentions tabs
-	if !strings.Contains(allSuggestions, "tabs with spaces") {
-		t.Error("Should provide tab-specific suggestions when error mentions tabs")
-	}
+	testutil.AssertSliceContainsAll(t, suggestions, []string{"tabs with spaces"})
 }
 
 func TestGetGitHubAPISuggestionsStatusCodes(t *testing.T) {
@@ -377,11 +335,7 @@ func TestGetGitHubAPISuggestionsStatusCodes(t *testing.T) {
 
 			context := map[string]string{"status_code": code}
 			suggestions := getGitHubAPISuggestions(context)
-			allSuggestions := strings.Join(suggestions, " ")
-
-			if !strings.Contains(allSuggestions, expectedText) {
-				t.Errorf("Status code %s suggestions should contain %q", code, expectedText)
-			}
+			testutil.AssertSliceContainsAll(t, suggestions, []string{expectedText})
 		})
 	}
 }
