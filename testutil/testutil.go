@@ -595,3 +595,8 @@ func ErrCreateFile(name string) string {
 func ErrCreateDir(name string) string {
 	return fmt.Sprintf("Failed to create %s dir: %s", name, "%v")
 }
+
+// ErrDiscoverActionFiles returns the error format string for DiscoverActionFiles failures.
+func ErrDiscoverActionFiles() string {
+	return "DiscoverActionFiles() error = %v"
+}

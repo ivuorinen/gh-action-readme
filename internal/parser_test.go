@@ -9,6 +9,36 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// createTestDirWithAction creates a directory with an action.yml file and returns both paths.
+func createTestDirWithAction(t *testing.T, baseDir, dirName, yamlContent string) (string, string) {
+	t.Helper()
+	dirPath := filepath.Join(baseDir, dirName)
+	if err := os.Mkdir(dirPath, appconstants.FilePermDir); err != nil { // nolint:gosec
+		t.Fatalf(testutil.ErrCreateDir(dirName), err)
+	}
+	actionPath := filepath.Join(dirPath, appconstants.ActionFileNameYML)
+	if err := os.WriteFile(
+		actionPath, []byte(yamlContent), appconstants.FilePermDefault,
+	); err != nil { // nolint:gosec
+		t.Fatalf(testutil.ErrCreateFile(dirName+"/action.yml"), err)
+	}
+
+	return dirPath, actionPath
+}
+
+// createTestFile creates a file with the given content and returns its path.
+func createTestFile(t *testing.T, baseDir, fileName, content string) string {
+	t.Helper()
+	filePath := filepath.Join(baseDir, fileName)
+	if err := os.WriteFile(
+		filePath, []byte(content), appconstants.FilePermDefault,
+	); err != nil { // nolint:gosec
+		t.Fatalf(testutil.ErrCreateFile(fileName), err)
+	}
+
+	return filePath
+}
+
 // TestShouldIgnoreDirectory tests the directory filtering logic.
 func TestShouldIgnoreDirectory(t *testing.T) {
 	tests := []struct {
@@ -90,9 +120,8 @@ func TestShouldIgnoreDirectory(t *testing.T) {
 	}
 }
 
-// TestDiscoverActionFiles_WithIgnoredDirectories tests file discovery with directory filtering.
-// nolint:gocyclo // Test functions can be complex
-func TestDiscoverActionFiles_WithIgnoredDirectories(t *testing.T) {
+// TestDiscoverActionFilesWithIgnoredDirectories tests file discovery with directory filtering.
+func TestDiscoverActionFilesWithIgnoredDirectories(t *testing.T) {
 	// Create temporary directory structure
 	tmpDir := t.TempDir()
 
@@ -109,60 +138,18 @@ func TestDiscoverActionFiles_WithIgnoredDirectories(t *testing.T) {
 	//     action.yml (should be found)
 
 	// Create root action.yml
-	rootAction := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		rootAction, []byte(appconstants.TestYAMLRoot), appconstants.FilePermDefault,
-	); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateFile("root action.yml"), err)
-	}
+	rootAction := createTestFile(t, tmpDir, appconstants.ActionFileNameYML, appconstants.TestYAMLRoot)
 
-	// Create node_modules with action.yml
-	nodeModulesDir := filepath.Join(tmpDir, appconstants.DirNodeModules)
-	if err := os.Mkdir(nodeModulesDir, appconstants.FilePermDir); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateDir("node_modules"), err)
-	}
-	nodeModulesAction := filepath.Join(nodeModulesDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		nodeModulesAction, []byte(appconstants.TestYAMLNodeModules), appconstants.FilePermDefault,
-	); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateFile("node_modules/action.yml"), err)
-	}
-
-	// Create vendor with action.yml
-	vendorDir := filepath.Join(tmpDir, appconstants.DirVendor)
-	if err := os.Mkdir(vendorDir, appconstants.FilePermDir); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateDir("vendor"), err)
-	}
-	vendorAction := filepath.Join(vendorDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		vendorAction, []byte(appconstants.TestYAMLVendor), appconstants.FilePermDefault,
-	); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateFile("vendor/action.yml"), err)
-	}
-
-	// Create .git with action.yml
-	gitDir := filepath.Join(tmpDir, appconstants.DirGit)
-	if err := os.Mkdir(gitDir, appconstants.FilePermDir); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateDir(".git"), err)
-	}
-	gitAction := filepath.Join(gitDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		gitAction, []byte(appconstants.TestYAMLGit), appconstants.FilePermDefault,
-	); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateFile(".git/action.yml"), err)
-	}
-
-	// Create src with action.yml
-	srcDir := filepath.Join(tmpDir, "src")
-	if err := os.Mkdir(srcDir, appconstants.FilePermDir); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateDir("src"), err)
-	}
-	srcAction := filepath.Join(srcDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		srcAction, []byte(appconstants.TestYAMLSrc), appconstants.FilePermDefault,
-	); err != nil { // nolint:gosec
-		t.Fatalf(testutil.ErrCreateFile("src/action.yml"), err)
-	}
+	// Create directories with action.yml files
+	_, nodeModulesAction := createTestDirWithAction(
+		t,
+		tmpDir,
+		appconstants.DirNodeModules,
+		appconstants.TestYAMLNodeModules,
+	)
+	_, vendorAction := createTestDirWithAction(t, tmpDir, appconstants.DirVendor, appconstants.TestYAMLVendor)
+	_, gitAction := createTestDirWithAction(t, tmpDir, appconstants.DirGit, appconstants.TestYAMLGit)
+	_, srcAction := createTestDirWithAction(t, tmpDir, "src", appconstants.TestYAMLSrc)
 
 	tests := []struct {
 		name        string
@@ -194,7 +181,7 @@ func TestDiscoverActionFiles_WithIgnoredDirectories(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			files, err := DiscoverActionFiles(tmpDir, true, tt.ignoredDirs)
 			if err != nil {
-				t.Fatalf("DiscoverActionFiles() error = %v", err)
+				t.Fatalf(testutil.ErrDiscoverActionFiles(), err)
 			}
 
 			if len(files) != tt.wantCount {
@@ -218,8 +205,8 @@ func TestDiscoverActionFiles_WithIgnoredDirectories(t *testing.T) {
 	}
 }
 
-// TestDiscoverActionFiles_NestedIgnoredDirs tests that subdirectories of ignored dirs are skipped.
-func TestDiscoverActionFiles_NestedIgnoredDirs(t *testing.T) {
+// TestDiscoverActionFilesNestedIgnoredDirs tests that subdirectories of ignored dirs are skipped.
+func TestDiscoverActionFilesNestedIgnoredDirs(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create directory structure:
@@ -243,7 +230,7 @@ func TestDiscoverActionFiles_NestedIgnoredDirs(t *testing.T) {
 
 	files, err := DiscoverActionFiles(tmpDir, true, []string{appconstants.DirNodeModules})
 	if err != nil {
-		t.Fatalf("DiscoverActionFiles() error = %v", err)
+		t.Fatalf(testutil.ErrDiscoverActionFiles(), err)
 	}
 
 	if len(files) != 0 {
@@ -252,8 +239,8 @@ func TestDiscoverActionFiles_NestedIgnoredDirs(t *testing.T) {
 	}
 }
 
-// TestDiscoverActionFiles_NonRecursive tests that non-recursive mode ignores the filter.
-func TestDiscoverActionFiles_NonRecursive(t *testing.T) {
+// TestDiscoverActionFilesNonRecursive tests that non-recursive mode ignores the filter.
+func TestDiscoverActionFilesNonRecursive(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create action.yml in root
@@ -278,7 +265,7 @@ func TestDiscoverActionFiles_NonRecursive(t *testing.T) {
 
 	files, err := DiscoverActionFiles(tmpDir, false, []string{})
 	if err != nil {
-		t.Fatalf("DiscoverActionFiles() error = %v", err)
+		t.Fatalf(testutil.ErrDiscoverActionFiles(), err)
 	}
 
 	if len(files) != 1 {
