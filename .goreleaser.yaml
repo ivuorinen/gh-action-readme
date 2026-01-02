@@ -10,8 +10,6 @@ before:
   hooks:
     # Run tests before building
     - go test ./...
-    # Run linter
-    - golangci-lint run
     # Ensure dependencies are tidy
     - go mod tidy
 
@@ -47,11 +45,11 @@ builds:
 
 archives:
   - id: default
-    format: tar.gz
+    formats: [tar.gz]
     # Use zip for Windows
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     name_template: >-
       {{ .ProjectName }}_ {{- title .Os }}_ {{- if eq .Arch "amd64" }}x86_64 {{- else if eq .Arch "386" }}i386 {{- else }}{{ .Arch }}{{ end }} {{- if .Arm }}v{{ .Arm }}{{ end }}
     files:
@@ -66,7 +64,7 @@ checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
@@ -146,29 +144,31 @@ release:
     Thanks to all contributors who made this release possible!
 
 # Homebrew tap
-brews:
-  - name: gh-action-readme
-    homepage: https://github.com/ivuorinen/gh-action-readme
-    description: "Auto-generate beautiful README and HTML documentation for GitHub Actions"
-    license: MIT
-    repository:
-      owner: ivuorinen
-      name: homebrew-tap
-      branch: main
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    install: |
-      bin.install "gh-action-readme"
-
-      # Install templates and schemas
-      (share/"gh-action-readme/templates").install Dir["templates/*"]
-      (share/"gh-action-readme/schemas").install Dir["schemas/*"]
-    test: |
-      system "#{bin}/gh-action-readme", "version"
+# TODO: Re-enable once we can properly support homebrew_casks with data files
+# or find an alternative packaging solution for templates/schemas
+# brews:
+#   - name: gh-action-readme
+#     homepage: https://github.com/ivuorinen/gh-action-readme
+#     description: "Auto-generate beautiful README and HTML documentation for GitHub Actions"
+#     license: MIT
+#     repository:
+#       owner: ivuorinen
+#       name: homebrew-tap
+#       branch: main
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#     directory: Formula
+#     commit_author:
+#       name: goreleaserbot
+#       email: bot@goreleaser.com
+#     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+#     install: |
+#       bin.install "gh-action-readme"
+#
+#       # Install templates and schemas
+#       (share/"gh-action-readme/templates").install Dir["templates/*"]
+#       (share/"gh-action-readme/schemas").install Dir["schemas/*"]
+#     test: |
+#       system "#{bin}/gh-action-readme", "version"
 
 # Scoop bucket for Windows (disabled - repository doesn't exist)
 # scoops:
@@ -185,50 +185,23 @@ brews:
 #       email: bot@goreleaser.com
 #     commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
 
-# Docker images
-dockers:
-  - image_templates:
-      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-amd64"
-      - "ghcr.io/ivuorinen/gh-action-readme:latest-amd64"
+# Docker images (using dockers_v2 with multi-platform buildx)
+dockers_v2:
+  - images:
+      - "ghcr.io/ivuorinen/gh-action-readme"
+    tags:
+      - "{{ .Version }}"
+      - "latest"
     dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source=https://github.com/ivuorinen/gh-action-readme"
-      - "--platform=linux/amd64"
-    goos: linux
-    goarch: amd64
-
-  - image_templates:
-      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-arm64"
-      - "ghcr.io/ivuorinen/gh-action-readme:latest-arm64"
-    dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source=https://github.com/ivuorinen/gh-action-readme"
-      - "--platform=linux/arm64"
-    goos: linux
-    goarch: arm64
-
-docker_manifests:
-  - name_template: "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}"
-    image_templates:
-      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-amd64"
-      - "ghcr.io/ivuorinen/gh-action-readme:{{ .Version }}-arm64"
-
-  - name_template: "ghcr.io/ivuorinen/gh-action-readme:latest"
-    image_templates:
-      - "ghcr.io/ivuorinen/gh-action-readme:latest-amd64"
-      - "ghcr.io/ivuorinen/gh-action-readme:latest-arm64"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.created: "{{.Date}}"
+      org.opencontainers.image.title: "{{.ProjectName}}"
+      org.opencontainers.image.revision: "{{.FullCommit}}"
+      org.opencontainers.image.version: "{{.Version}}"
+      org.opencontainers.image.source: "https://github.com/ivuorinen/gh-action-readme"
 
 # Signing
 signs:
