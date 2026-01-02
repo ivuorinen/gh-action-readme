@@ -39,6 +39,29 @@ func createTestFile(t *testing.T, baseDir, fileName, content string) string {
 	return filePath
 }
 
+// validateDiscoveredFiles checks if discovered files match expected count and paths.
+func validateDiscoveredFiles(t *testing.T, files []string, wantCount int, wantPaths []string) {
+	t.Helper()
+
+	if len(files) != wantCount {
+		t.Errorf("DiscoverActionFiles() returned %d files, want %d", len(files), wantCount)
+		t.Logf("Got files: %v", files)
+		t.Logf("Want files: %v", wantPaths)
+	}
+
+	// Check that all expected files are present
+	fileMap := make(map[string]bool)
+	for _, f := range files {
+		fileMap[f] = true
+	}
+
+	for _, wantPath := range wantPaths {
+		if !fileMap[wantPath] {
+			t.Errorf("Expected file %s not found in results", wantPath)
+		}
+	}
+}
+
 // TestShouldIgnoreDirectory tests the directory filtering logic.
 func TestShouldIgnoreDirectory(t *testing.T) {
 	tests := []struct {
@@ -184,23 +207,7 @@ func TestDiscoverActionFilesWithIgnoredDirectories(t *testing.T) {
 				t.Fatalf(testutil.ErrDiscoverActionFiles(), err)
 			}
 
-			if len(files) != tt.wantCount {
-				t.Errorf("DiscoverActionFiles() returned %d files, want %d", len(files), tt.wantCount)
-				t.Logf("Got files: %v", files)
-				t.Logf("Want files: %v", tt.wantPaths)
-			}
-
-			// Check that all expected files are present
-			fileMap := make(map[string]bool)
-			for _, f := range files {
-				fileMap[f] = true
-			}
-
-			for _, wantPath := range tt.wantPaths {
-				if !fileMap[wantPath] {
-					t.Errorf("Expected file %s not found in results", wantPath)
-				}
-			}
+			validateDiscoveredFiles(t, files, tt.wantCount, tt.wantPaths)
 		})
 	}
 }
