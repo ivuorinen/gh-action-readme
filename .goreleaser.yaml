@@ -56,9 +56,11 @@ archives:
       - README.md
       - LICENSE*
       - CHANGELOG.md
-      - docs/**/*
-      - templates/**/*
-      - schemas/**/*
+      - docs/*.md
+      - templates/*.tmpl
+      - templates/themes/**/*.tmpl
+      - templates/themes/**/*.adoc
+      - schemas/*.json
 
 checksum:
   name_template: 'checksums.txt'
@@ -196,6 +198,9 @@ dockers_v2:
     platforms:
       - linux/amd64
       - linux/arm64
+    extra_files:
+      - templates
+      - schemas
     labels:
       org.opencontainers.image.created: "{{.Date}}"
       org.opencontainers.image.title: "{{.ProjectName}}"
