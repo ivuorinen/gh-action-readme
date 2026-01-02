@@ -588,10 +588,10 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 
 // ErrCreateFile returns a formatted error message for file creation failures.
 func ErrCreateFile(name string) string {
-	return fmt.Sprintf("Failed to create %s: %%v", name)
+	return fmt.Sprintf("Failed to create %s: %s", name, "%v")
 }
 
 // ErrCreateDir returns a formatted error message for directory creation failures.
 func ErrCreateDir(name string) string {
-	return fmt.Sprintf("Failed to create %s dir: %%v", name)
+	return fmt.Sprintf("Failed to create %s dir: %s", name, "%v")
 }

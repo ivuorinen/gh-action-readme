@@ -342,7 +342,7 @@ const (
 // version control, and temporary files from action file discovery.
 const (
 	// Version Control System directories
-	// DirGit = ".git" (already defined above at line 305).
+	// DirGit = ".git" (already defined above in "Directory and path constants").
 	DirGitHub = ".github"
 	DirGitLab = ".gitlab"
 	DirSVN    = ".svn"
