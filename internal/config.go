@@ -56,8 +56,9 @@ type AppConfig struct {
 	RepoOverrides map[string]AppConfig `mapstructure:"repo_overrides" yaml:"repo_overrides,omitempty"`
 
 	// Behavior
-	Verbose bool `mapstructure:"verbose" yaml:"verbose"`
-	Quiet   bool `mapstructure:"quiet"   yaml:"quiet"`
+	Verbose            bool     `mapstructure:"verbose"             yaml:"verbose"`
+	Quiet              bool     `mapstructure:"quiet"               yaml:"quiet"`
+	IgnoredDirectories []string `mapstructure:"ignored_directories" yaml:"ignored_directories,omitempty"`
 
 	// Default values for action.yml files (legacy)
 	Defaults DefaultValues `mapstructure:"defaults" yaml:"defaults,omitempty"`
@@ -243,8 +244,9 @@ func DefaultAppConfig() *AppConfig {
 		RepoOverrides: map[string]AppConfig{},
 
 		// Behavior
-		Verbose: false,
-		Quiet:   false,
+		Verbose:            false,
+		Quiet:              false,
+		IgnoredDirectories: appconstants.GetDefaultIgnoredDirectories(),
 
 		// Default values for action.yml files (legacy)
 		Defaults: DefaultValues{
@@ -317,6 +319,10 @@ func mergeSliceFields(dst *AppConfig, src *AppConfig) {
 	if len(src.RunsOn) > 0 {
 		dst.RunsOn = make([]string, len(src.RunsOn))
 		copy(dst.RunsOn, src.RunsOn)
+	}
+	if len(src.IgnoredDirectories) > 0 {
+		dst.IgnoredDirectories = make([]string, len(src.IgnoredDirectories))
+		copy(dst.IgnoredDirectories, src.IgnoredDirectories)
 	}
 }
 

@@ -136,7 +136,7 @@ func buildTestBinary(t *testing.T) string {
 // setupCompleteWorkflow creates a realistic project structure for testing.
 func setupCompleteWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "README.md"), "# Old README")
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, ".gitignore"), testutil.GitIgnoreContent)
@@ -146,7 +146,7 @@ func setupCompleteWorkflow(t *testing.T, tmpDir string) {
 // setupMultiActionWorkflow creates a project with multiple actions.
 func setupMultiActionWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 	testutil.CreateActionSubdir(t, tmpDir, "actions/deploy", appconstants.TestFixtureDockerBasic)
@@ -156,14 +156,14 @@ func setupMultiActionWorkflow(t *testing.T, tmpDir string) {
 // setupConfigWorkflow creates a simple action for config testing.
 func setupConfigWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 }
 
 // setupErrorWorkflow creates an invalid action file for error testing.
 func setupErrorWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureInvalidMissingDescription))
 }
 
@@ -171,7 +171,7 @@ func setupErrorWorkflow(t *testing.T, tmpDir string) {
 func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create action file
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 
 	// Create global config
@@ -193,7 +193,7 @@ func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
 func setupMultiActionWithTemplates(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Root action
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 	// Nested actions with different types
@@ -239,7 +239,7 @@ func setupDependencyAnalysisWorkflow(t *testing.T, tmpDir string) {
 			"actions/upload-artifact@v3",
 		},
 	)
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML), compositeAction)
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), compositeAction)
 
 	// Add package.json with npm dependencies
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "package.json"), testutil.PackageJSONContent)
@@ -256,14 +256,14 @@ func setupDependencyAnalysisWorkflow(t *testing.T, tmpDir string) {
 			"aws-actions/configure-aws-credentials@v2",
 		},
 	)
-	testutil.WriteTestFile(t, filepath.Join(nestedDir, appconstants.TestPathActionYML), nestedAction)
+	testutil.WriteTestFile(t, filepath.Join(nestedDir, appconstants.ActionFileNameYML), nestedAction)
 }
 
 // setupConfigurationHierarchyWorkflow creates a comprehensive configuration hierarchy.
 func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create action file
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 
 	// Set up XDG config home
@@ -305,7 +305,7 @@ output_dir: docs`
 func setupTemplateErrorScenario(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create valid action file
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 	// Create a broken template directory structure
@@ -323,7 +323,7 @@ func setupTemplateErrorScenario(t *testing.T, tmpDir string) {
 func setupConfigurationErrorScenario(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create valid action file
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 	// Create invalid configuration files
@@ -362,7 +362,7 @@ func setupFileDiscoveryErrorScenario(t *testing.T, tmpDir string) {
 func setupServiceIntegrationErrorScenario(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Valid action at root
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 	// Invalid action in subdirectory
@@ -753,7 +753,7 @@ type errorScenario struct {
 func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
 	// Create a new GitHub Action project
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureMyNewAction))
 
 	// Validate the action
@@ -791,7 +791,7 @@ func testDocumentationGeneration(t *testing.T, binaryPath, tmpDir string) {
 func testDependencyManagement(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
 	// Update action to be composite with dependencies
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 
 	// List dependencies
@@ -1164,7 +1164,7 @@ func TestStressTestWorkflow(t *testing.T) {
 
 		actionContent := strings.ReplaceAll(testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
 			"Simple Action", "Action "+string(rune('A'+i)))
-		testutil.WriteTestFile(t, filepath.Join(actionDir, appconstants.TestPathActionYML), actionContent)
+		testutil.WriteTestFile(t, filepath.Join(actionDir, appconstants.ActionFileNameYML), actionContent)
 	}
 
 	// Test recursive processing
@@ -1295,7 +1295,7 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 
 	// Create a project with mixed valid and invalid files
 	// Note: validation looks for files named exactly "action.yml" or "action.yaml"
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 	testutil.CreateActionSubdir(t, tmpDir, appconstants.TestDirSubdir,
@@ -1345,7 +1345,7 @@ func TestConfigurationWorkflow(t *testing.T) {
 	configHome := filepath.Join(tmpDir, "config")
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.TestPathActionYML),
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 	var err error
@@ -1418,7 +1418,7 @@ func verifyProgressIndicators(t *testing.T, tmpDir string) {
 	// The actual progress output is captured during the workflow step execution
 	// Here we verify the infrastructure was set up correctly
 
-	actionFile := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+	actionFile := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	if _, err := os.Stat(actionFile); err != nil {
 		t.Error("action file missing, progress tracking test setup failed")
 
@@ -1440,10 +1440,10 @@ func verifyProgressIndicators(t *testing.T, tmpDir string) {
 func verifyFileDiscovery(t *testing.T, tmpDir string) {
 	t.Helper()
 	expectedActions := []string{
-		filepath.Join(tmpDir, appconstants.TestPathActionYML),
-		filepath.Join(tmpDir, "actions", "composite", appconstants.TestPathActionYML),
-		filepath.Join(tmpDir, "actions", "docker", appconstants.TestPathActionYML),
-		filepath.Join(tmpDir, "actions", "minimal", appconstants.TestPathActionYML),
+		filepath.Join(tmpDir, appconstants.ActionFileNameYML),
+		filepath.Join(tmpDir, "actions", "composite", appconstants.ActionFileNameYML),
+		filepath.Join(tmpDir, "actions", "docker", appconstants.ActionFileNameYML),
+		filepath.Join(tmpDir, "actions", "minimal", appconstants.ActionFileNameYML),
 	}
 
 	// Verify action files were set up correctly and exist
@@ -1482,13 +1482,13 @@ func verifyTemplateRendering(t *testing.T, tmpDir string) {
 	actionFiles, _ := filepath.Glob(filepath.Join(tmpDir, "**/action.yml"))
 	if len(actionFiles) == 0 {
 		// Try different pattern
-		actionFiles, _ = filepath.Glob(filepath.Join(tmpDir, appconstants.TestPathActionYML))
+		actionFiles, _ = filepath.Glob(filepath.Join(tmpDir, appconstants.ActionFileNameYML))
 		if len(actionFiles) == 0 {
 			t.Error("no action files found for template rendering verification")
 			t.Logf(
 				"Checked patterns: %s and %s",
 				filepath.Join(tmpDir, "**/action.yml"),
-				filepath.Join(tmpDir, appconstants.TestPathActionYML),
+				filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 			)
 
 			return
@@ -1530,7 +1530,7 @@ func verifyCompleteServiceChain(t *testing.T, tmpDir string) {
 
 	// Verify the complete test environment was set up correctly
 	requiredComponents := []string{
-		filepath.Join(tmpDir, appconstants.TestPathActionYML),
+		filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		filepath.Join(tmpDir, "package.json"),
 		filepath.Join(tmpDir, ".gitignore"),
 	}

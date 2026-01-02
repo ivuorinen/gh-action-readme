@@ -58,46 +58,84 @@ func ParseActionYML(path string) (*ActionYML, error) {
 	return &a, nil
 }
 
+// shouldIgnoreDirectory checks if a directory name matches the ignore list.
+func shouldIgnoreDirectory(dirName string, ignoredDirs []string) bool {
+	for _, ignored := range ignoredDirs {
+		if strings.HasPrefix(ignored, ".") {
+			// Pattern match: ".git" matches ".git", ".github", etc.
+			if strings.HasPrefix(dirName, ignored) {
+				return true
+			}
+		} else {
+			// Exact match for non-hidden dirs
+			if dirName == ignored {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// actionFileWalker encapsulates the logic for walking directories and finding action files.
+type actionFileWalker struct {
+	ignoredDirs []string
+	actionFiles []string
+}
+
+// walkFunc is the callback function for filepath.Walk.
+func (w *actionFileWalker) walkFunc(path string, info os.FileInfo, err error) error {
+	if err != nil {
+		return err
+	}
+
+	if info.IsDir() {
+		if shouldIgnoreDirectory(info.Name(), w.ignoredDirs) {
+			return filepath.SkipDir
+		}
+
+		return nil
+	}
+
+	// Check for action.yml or action.yaml files
+	filename := strings.ToLower(info.Name())
+	if filename == appconstants.ActionFileNameYML || filename == appconstants.ActionFileNameYAML {
+		w.actionFiles = append(w.actionFiles, path)
+	}
+
+	return nil
+}
+
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory.
 // This consolidates the file discovery logic from both generator.go and dependencies/parser.go.
-func DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
-	var actionFiles []string
-
+func DiscoverActionFiles(dir string, recursive bool, ignoredDirs []string) ([]string, error) {
 	// Check if dir exists
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("directory does not exist: %s", dir)
 	}
 
 	if recursive {
-		err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if info.IsDir() {
-				return nil
-			}
-
-			// Check for action.yml or action.yaml files
-			filename := strings.ToLower(info.Name())
-			if filename == appconstants.ActionFileNameYML || filename == appconstants.ActionFileNameYAML {
-				actionFiles = append(actionFiles, path)
-			}
-
-			return nil
-		})
-		if err != nil {
+		walker := &actionFileWalker{ignoredDirs: ignoredDirs}
+		if err := filepath.Walk(dir, walker.walkFunc); err != nil {
 			return nil, fmt.Errorf("failed to walk directory %s: %w", dir, err)
 		}
-	} else {
-		// Check only the specified directory
-		for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
-			path := filepath.Join(dir, filename)
-			if _, err := os.Stat(path); err == nil {
-				actionFiles = append(actionFiles, path)
-			}
+
+		return walker.actionFiles, nil
+	}
+
+	// Check only the specified directory (non-recursive)
+	return discoverActionFilesNonRecursive(dir), nil
+}
+
+// discoverActionFilesNonRecursive finds action files in a single directory.
+func discoverActionFilesNonRecursive(dir string) []string {
+	var actionFiles []string
+	for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
+		path := filepath.Join(dir, filename)
+		if _, err := os.Stat(path); err == nil {
+			actionFiles = append(actionFiles, path)
 		}
 	}
 
-	return actionFiles, nil
+	return actionFiles
 }

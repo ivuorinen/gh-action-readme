@@ -46,8 +46,6 @@ const (
 
 // Test file path constants.
 const (
-	TestPathActionYML       = "action.yml"
-	TestPathActionYAML      = "action.yaml"
 	TestPathConfigYML       = "config.yml"
 	TestPathCustomConfigYML = "custom-config.yml"
 	TestPathNonexistentYML  = "nonexistent.yml"
@@ -67,6 +65,18 @@ const (
 	// Config directories.
 	TestDirConfigGhActionReadme = ".config/gh-action-readme"
 	TestDirDotConfig            = ".config"
-	TestDirDotGitHub            = ".github"
 	TestDirCacheGhActionReadme  = ".cache/gh-action-readme"
+)
+
+// (Test file permission constants removed - use production constants from appconstants/constants.go)
+
+// Test YAML content for parser tests.
+const (
+	TestYAMLRoot        = "name: root"
+	TestYAMLNodeModules = "name: node_modules"
+	TestYAMLVendor      = "name: vendor"
+	TestYAMLGit         = "name: git"
+	TestYAMLSrc         = "name: src"
+	TestYAMLNested      = "name: nested"
+	TestYAMLSub         = "name: sub"
 )

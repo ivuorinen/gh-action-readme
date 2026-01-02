@@ -64,6 +64,7 @@ func setConfigDefaults(v *viper.Viper, defaults *AppConfig) {
 	v.SetDefault(appconstants.ConfigKeyShowSecurityInfo, defaults.ShowSecurityInfo)
 	v.SetDefault(appconstants.ConfigKeyVerbose, defaults.Verbose)
 	v.SetDefault(appconstants.ConfigKeyQuiet, defaults.Quiet)
+	v.SetDefault(appconstants.ConfigKeyIgnoredDirectories, defaults.IgnoredDirectories)
 	v.SetDefault(appconstants.ConfigKeyDefaultsName, defaults.Defaults.Name)
 	v.SetDefault(appconstants.ConfigKeyDefaultsDescription, defaults.Defaults.Description)
 	v.SetDefault(appconstants.ConfigKeyDefaultsBrandingIcon, defaults.Defaults.Branding.Icon)

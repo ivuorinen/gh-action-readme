@@ -60,7 +60,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 				testutil.WriteActionFixtureAs(
 					t,
 					tmpDir,
-					appconstants.TestPathActionYAML,
+					appconstants.ActionFileNameYAML,
 					appconstants.TestFixtureJavaScriptSimple,
 				)
 			},
@@ -75,7 +75,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 				testutil.WriteActionFixtureAs(
 					t,
 					tmpDir,
-					appconstants.TestPathActionYAML,
+					appconstants.ActionFileNameYAML,
 					appconstants.TestFixtureMinimalAction,
 				)
 			},
@@ -145,7 +145,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 				testDir = filepath.Join(tmpDir, "nonexistent")
 			}
 
-			files, err := generator.DiscoverActionFiles(testDir, tt.recursive)
+			files, err := generator.DiscoverActionFiles(testDir, tt.recursive, []string{})
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
@@ -160,8 +160,8 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 			for _, file := range files {
 				testutil.AssertFileExists(t, file)
 
-				if !strings.HasSuffix(file, appconstants.TestPathActionYML) &&
-					!strings.HasSuffix(file, appconstants.TestPathActionYAML) {
+				if !strings.HasSuffix(file, appconstants.ActionFileNameYML) &&
+					!strings.HasSuffix(file, appconstants.ActionFileNameYAML) {
 					t.Errorf("discovered file is not an action file: %s", file)
 				}
 			}
@@ -237,7 +237,7 @@ func TestGenerator_GenerateFromFile(t *testing.T) {
 			testutil.SetupTestTemplates(t, tmpDir)
 
 			// Write action file
-			actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 			testutil.WriteTestFile(t, actionPath, tt.actionYML)
 
 			// Create generator with explicit template path
@@ -341,8 +341,8 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 				dirs := createTestDirs(t, tmpDir, "action1", "action2")
 
 				files := []string{
-					filepath.Join(dirs[0], appconstants.TestPathActionYML),
-					filepath.Join(dirs[1], appconstants.TestPathActionYML),
+					filepath.Join(dirs[0], appconstants.ActionFileNameYML),
+					filepath.Join(dirs[1], appconstants.ActionFileNameYML),
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
@@ -360,8 +360,8 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 				dirs := createTestDirs(t, tmpDir, "valid-action", "invalid-action")
 
 				files := []string{
-					filepath.Join(dirs[0], appconstants.TestPathActionYML),
-					filepath.Join(dirs[1], appconstants.TestPathActionYML),
+					filepath.Join(dirs[0], appconstants.ActionFileNameYML),
+					filepath.Join(dirs[1], appconstants.ActionFileNameYML),
 				}
 				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 				testutil.WriteTestFile(
@@ -567,7 +567,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 			// Set up test templates for this theme test
 			testutil.SetupTestTemplates(t, tmpDir)
 
-			actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 			testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
 
 			config := &AppConfig{
@@ -611,7 +611,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 					Quiet:        true,
 				}
 				generator := NewGenerator(config)
-				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(
 					t,
 					actionPath,
@@ -640,7 +640,7 @@ func TestGenerator_ErrorHandling(t *testing.T) {
 					Template:     filepath.Join(tmpDir, "templates", "readme.tmpl"),
 				}
 				generator := NewGenerator(config)
-				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(
 					t,
 					actionPath,

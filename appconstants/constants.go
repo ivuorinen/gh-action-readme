@@ -87,8 +87,6 @@ const (
 const (
 	// ContextKeyError is used as a key for error information in context maps.
 	ContextKeyError = "error"
-	// ContextKeyTheme is used as a key for theme information.
-	ContextKeyTheme = "theme"
 	// ContextKeyConfig is used as a key for configuration information.
 	ContextKeyConfig = "config"
 )
@@ -182,6 +180,8 @@ const (
 	ConfigKeyVerbose = "verbose"
 	// ConfigKeyQuiet is the configuration key for quiet mode.
 	ConfigKeyQuiet = "quiet"
+	// ConfigKeyIgnoredDirectories is the configuration key for ignored directories during discovery.
+	ConfigKeyIgnoredDirectories = "ignored_directories"
 
 	// GitHub Integration
 	// ConfigKeyGitHubToken is the configuration key for GitHub token.
@@ -261,6 +261,26 @@ func GetConfigSearchPaths() []string {
 	return paths
 }
 
+// defaultIgnoredDirectories lists directories to ignore during file discovery.
+var defaultIgnoredDirectories = []string{
+	DirGit, DirGitHub, DirGitLab, DirSVN, // VCS
+	DirNodeModules, DirBowerComponents, // JavaScript
+	DirVendor,                                       // Go/PHP
+	DirVenvDot, DirVenv, DirEnv, DirTox, DirPycache, // Python
+	DirDist, DirBuild, DirTarget, DirOut, // Build outputs
+	DirIdea, DirVscode, // IDEs
+	DirCache, DirTmpDot, DirTmp, // Cache/temp
+}
+
+// GetDefaultIgnoredDirectories returns a copy of the default ignored directory names.
+// Returns a new slice to prevent external modification of the internal list.
+func GetDefaultIgnoredDirectories() []string {
+	dirs := make([]string, len(defaultIgnoredDirectories))
+	copy(dirs, defaultIgnoredDirectories)
+
+	return dirs
+}
+
 // Output format constants.
 const (
 	// OutputFormatMarkdown is the Markdown output format.
@@ -315,6 +335,46 @@ const (
 	AppName = "gh-action-readme"
 	// EnvPrefix is the environment variable prefix.
 	EnvPrefix = "GH_ACTION_README"
+)
+
+// Directory names commonly ignored during file discovery.
+// These constants are used to exclude build artifacts, dependencies,
+// version control, and temporary files from action file discovery.
+const (
+	// Version Control System directories
+	// DirGit = ".git" (already defined above in "Directory and path constants").
+	DirGitHub = ".github"
+	DirGitLab = ".gitlab"
+	DirSVN    = ".svn"
+
+	// JavaScript/Node.js dependencies.
+	DirNodeModules     = "node_modules"
+	DirBowerComponents = "bower_components"
+
+	// Package manager vendor directories.
+	DirVendor = "vendor"
+
+	// Python virtual environments and cache.
+	DirVenv    = "venv"
+	DirVenvDot = ".venv"
+	DirEnv     = "env"
+	DirTox     = ".tox"
+	DirPycache = "__pycache__"
+
+	// Build output directories.
+	DirDist   = "dist"
+	DirBuild  = "build"
+	DirTarget = "target"
+	DirOut    = "out"
+
+	// IDE configuration directories.
+	DirIdea   = ".idea"
+	DirVscode = ".vscode"
+
+	// Cache and temporary directories.
+	DirCache  = ".cache"
+	DirTmp    = "tmp"
+	DirTmpDot = ".tmp"
 )
 
 // Git constants.
@@ -485,6 +545,8 @@ const (
 	FlagOutput = "output"
 	// FlagRecursive is the recursive flag name.
 	FlagRecursive = "recursive"
+	// FlagIgnoreDirs is the ignore-dirs flag name.
+	FlagIgnoreDirs = "ignore-dirs"
 )
 
 // Field names for validation.

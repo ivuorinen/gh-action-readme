@@ -168,7 +168,7 @@ func WriteTestFile(t *testing.T, path, content string) {
 // WriteActionFixture writes an action fixture to a standard action.yml file.
 func WriteActionFixture(t *testing.T, dir, fixturePath string) string {
 	t.Helper()
-	actionPath := filepath.Join(dir, appconstants.TestPathActionYML)
+	actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
 	fixture := MustLoadActionFixture(t, fixturePath)
 	WriteTestFile(t, actionPath, fixture.Content)
 
@@ -584,4 +584,19 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			ExpectedToken: "",
 		},
 	}
+}
+
+// ErrCreateFile returns a formatted error message for file creation failures.
+func ErrCreateFile(name string) string {
+	return fmt.Sprintf("Failed to create %s: %s", name, "%v")
+}
+
+// ErrCreateDir returns a formatted error message for directory creation failures.
+func ErrCreateDir(name string) string {
+	return fmt.Sprintf("Failed to create %s dir: %s", name, "%v")
+}
+
+// ErrDiscoverActionFiles returns the error format string for DiscoverActionFiles failures.
+func ErrDiscoverActionFiles() string {
+	return "DiscoverActionFiles() error = %v"
 }

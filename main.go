@@ -183,6 +183,11 @@ Examples:
 	cmd.Flags().StringP(appconstants.FlagOutput, "", "", "custom output filename (overrides default naming)")
 	cmd.Flags().StringP(appconstants.ConfigKeyTheme, "t", "", "template theme: github, gitlab, minimal, professional")
 	cmd.Flags().BoolP(appconstants.FlagRecursive, "r", false, "search for action.yml files recursively")
+	cmd.Flags().StringSlice(
+		appconstants.FlagIgnoreDirs,
+		[]string{},
+		"directories to ignore during recursive discovery (comma-separated)",
+	)
 
 	return cmd
 }
@@ -241,9 +246,17 @@ func genHandler(cmd *cobra.Command, args []string) {
 		workingDir = absTargetPath
 		generator := internal.NewGenerator(globalConfig) // Temporary generator for discovery
 		recursive, _ := cmd.Flags().GetBool(appconstants.FlagRecursive)
+
+		// Get ignored directories from CLI flag or use config defaults
+		ignoredDirs, _ := cmd.Flags().GetStringSlice(appconstants.FlagIgnoreDirs)
+		if len(ignoredDirs) == 0 {
+			ignoredDirs = globalConfig.IgnoredDirectories
+		}
+
 		actionFiles, err = generator.DiscoverActionFilesWithValidation(
 			workingDir,
 			recursive,
+			ignoredDirs,
 			"documentation generation",
 		)
 		if err != nil {
@@ -350,6 +363,7 @@ func validateHandler(_ *cobra.Command, _ []string) {
 	actionFiles, err := generator.DiscoverActionFilesWithValidation(
 		currentDir,
 		true,
+		globalConfig.IgnoredDirectories,
 		"validation",
 	) // Recursive for validation
 	if err != nil {
@@ -589,7 +603,12 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 	}
 
 	generator := internal.NewGenerator(globalConfig)
-	actionFiles, err := generator.DiscoverActionFilesWithValidation(currentDir, true, "dependency listing")
+	actionFiles, err := generator.DiscoverActionFilesWithValidation(
+		currentDir,
+		true,
+		globalConfig.IgnoredDirectories,
+		"dependency listing",
+	)
 	if err != nil {
 		// For deps list, we can continue if no files found (show warning instead of error)
 		output.Warning(appconstants.ErrNoActionFilesFound)
@@ -668,7 +687,12 @@ func depsSecurityHandler(_ *cobra.Command, _ []string) {
 	}
 
 	generator := internal.NewGenerator(globalConfig)
-	actionFiles, err := generator.DiscoverActionFilesWithValidation(currentDir, true, "security analysis")
+	actionFiles, err := generator.DiscoverActionFilesWithValidation(
+		currentDir,
+		true,
+		globalConfig.IgnoredDirectories,
+		"security analysis",
+	)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -766,7 +790,12 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 	}
 
 	generator := internal.NewGenerator(globalConfig)
-	actionFiles, err := generator.DiscoverActionFilesWithValidation(currentDir, true, "outdated dependency analysis")
+	actionFiles, err := generator.DiscoverActionFilesWithValidation(
+		currentDir,
+		true,
+		globalConfig.IgnoredDirectories,
+		"outdated dependency analysis",
+	)
 	if err != nil {
 		// For deps outdated, we can continue if no files found (show warning instead of error)
 		output.Warning(appconstants.ErrNoActionFilesFound)
@@ -897,7 +926,7 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) {
 // setupDepsUpgrade handles initial setup and validation for dependency upgrades.
 func setupDepsUpgrade(output *internal.ColoredOutput, currentDir string) (*dependencies.Analyzer, []string) {
 	generator := internal.NewGenerator(globalConfig)
-	actionFiles, err := generator.DiscoverActionFiles(currentDir, true)
+	actionFiles, err := generator.DiscoverActionFiles(currentDir, true, globalConfig.IgnoredDirectories)
 	if err != nil {
 		output.Error("Error discovering action files: %v", err)
 		os.Exit(1)
