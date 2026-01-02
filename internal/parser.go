@@ -58,9 +58,30 @@ func ParseActionYML(path string) (*ActionYML, error) {
 	return &a, nil
 }
 
+// shouldIgnoreDirectory checks if a directory name matches the ignore list.
+func shouldIgnoreDirectory(dirName string, ignoredDirs []string) bool {
+	for _, ignored := range ignoredDirs {
+		if strings.HasPrefix(ignored, ".") {
+			// Pattern match: ".git" matches ".git", ".github", etc.
+			if strings.HasPrefix(dirName, ignored) {
+				return true
+			}
+		} else {
+			// Exact match for non-hidden dirs
+			if dirName == ignored {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory.
 // This consolidates the file discovery logic from both generator.go and dependencies/parser.go.
-func DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
+//
+//nolint:gocyclo // File discovery requires multiple checks
+func DiscoverActionFiles(dir string, recursive bool, ignoredDirs []string) ([]string, error) {
 	var actionFiles []string
 
 	// Check if dir exists
@@ -75,6 +96,11 @@ func DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
 			}
 
 			if info.IsDir() {
+				// Check if directory should be ignored
+				if shouldIgnoreDirectory(info.Name(), ignoredDirs) {
+					return filepath.SkipDir
+				}
+
 				return nil
 			}
 

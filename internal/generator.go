@@ -139,8 +139,8 @@ func (g *Generator) GenerateFromFile(actionPath string) error {
 
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory
 // using the centralized parser function and adds verbose logging.
-func (g *Generator) DiscoverActionFiles(dir string, recursive bool) ([]string, error) {
-	actionFiles, err := DiscoverActionFiles(dir, recursive)
+func (g *Generator) DiscoverActionFiles(dir string, recursive bool, ignoredDirs []string) ([]string, error) {
+	actionFiles, err := DiscoverActionFiles(dir, recursive, ignoredDirs)
 	if err != nil {
 		return nil, err
 	}
@@ -161,9 +161,14 @@ func (g *Generator) DiscoverActionFiles(dir string, recursive bool) ([]string, e
 
 // DiscoverActionFilesWithValidation discovers action files with centralized error handling and validation.
 // This function consolidates the duplicated file discovery logic across the codebase.
-func (g *Generator) DiscoverActionFilesWithValidation(dir string, recursive bool, context string) ([]string, error) {
+func (g *Generator) DiscoverActionFilesWithValidation(
+	dir string,
+	recursive bool,
+	ignoredDirs []string,
+	context string,
+) ([]string, error) {
 	// Discover action files
-	actionFiles, err := g.DiscoverActionFiles(dir, recursive)
+	actionFiles, err := g.DiscoverActionFiles(dir, recursive, ignoredDirs)
 	if err != nil {
 		g.Output.ErrorWithContext(
 			appconstants.ErrCodeFileNotFound,

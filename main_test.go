@@ -125,7 +125,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"deps", "list"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 			},
 			wantExit: 0,
@@ -305,7 +305,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				t.Helper()
 				testutil.WriteTestFile(
 					t,
-					filepath.Join(tmpDir, appconstants.TestPathActionYML),
+					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 					"invalid: yaml: content: [",
 				)
 			},
@@ -588,7 +588,7 @@ func runTestCommand(binaryPath string, args []string, dir string) cmdResult {
 // It writes the specified fixture to action.yml in the given temporary directory.
 func createTestActionFile(t *testing.T, tmpDir, fixture string) {
 	t.Helper()
-	actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(fixture))
 }
 

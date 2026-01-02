@@ -71,7 +71,7 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 			testutil.WriteTestFile(t, actionPath, tt.actionYML)
 
 			// Create analyzer with mock GitHub client
@@ -432,7 +432,7 @@ func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
 	// Create a test action file with composite steps
 	actionContent := testutil.MustReadFixture(appconstants.TestFixtureTestCompositeAction)
 
-	actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	testutil.WriteTestFile(t, actionPath, actionContent)
 
 	// Create analyzer
@@ -551,7 +551,7 @@ func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
-	actionPath := filepath.Join(tmpDir, appconstants.TestPathActionYML)
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
 
 	deps, err := analyzer.AnalyzeActionFile(actionPath)
