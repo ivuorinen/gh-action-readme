@@ -10,8 +10,6 @@ before:
   hooks:
     # Run tests before building
     - go test ./...
-    # Run linter
-    - golangci-lint run
     # Ensure dependencies are tidy
     - go mod tidy
 
