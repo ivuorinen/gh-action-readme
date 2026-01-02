@@ -115,7 +115,15 @@ jobs:
 
       - name: Build the bin
         shell: bash
-        run: make build
+        run: |
+          # Create platform-specific directory structure (matching GoReleaser)
+          mkdir -p linux/amd64
+
+          # Build binary into the platform directory (ubuntu-latest is amd64)
+          GOOS=linux GOARCH=amd64 go build -o linux/amd64/gh-action-readme .
+
+          # Verify binary was created
+          ls -lh linux/amd64/gh-action-readme
 
       - name: Build Docker image
         run: docker build -t gh-action-readme:test .

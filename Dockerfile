@@ -2,6 +2,9 @@
 FROM scratch
 
 # Multi-platform build support
+# See: https://goreleaser.com/customization/dockers_v2/
+# GoReleaser organizes binaries in platform subdirectories (linux/amd64/, linux/arm64/)
+# TARGETPLATFORM arg resolves to the correct platform directory
 ARG TARGETPLATFORM
 
 # Copy the binary from the build context (platform-specific)
