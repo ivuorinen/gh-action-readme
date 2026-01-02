@@ -1,8 +1,11 @@
 # Dockerfile for gh-action-readme
 FROM scratch
 
-# Copy the binary from the build context
-COPY gh-action-readme /usr/local/bin/gh-action-readme
+# Multi-platform build support
+ARG TARGETPLATFORM
+
+# Copy the binary from the build context (platform-specific)
+COPY $TARGETPLATFORM/gh-action-readme /usr/local/bin/gh-action-readme
 
 # Copy templates and schemas
 COPY templates /usr/local/share/gh-action-readme/templates
