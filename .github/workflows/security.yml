@@ -115,10 +115,24 @@ jobs:
 
       - name: Build the bin
         shell: bash
-        run: make build
+        run: |
+          # Auto-detect platform (matching GoReleaser's structure)
+          PLATFORM="$(go env GOOS)/$(go env GOARCH)"
+
+          # Create platform-specific directory structure
+          mkdir -p "$PLATFORM"
+
+          # Build binary into the platform directory
+          go build -o "$PLATFORM/gh-action-readme" .
+
+          # Verify binary was created
+          ls -lh "$PLATFORM/gh-action-readme"
+
+          # Export platform for Docker build step
+          echo "TARGETPLATFORM=$PLATFORM" >> "$GITHUB_ENV"
 
       - name: Build Docker image
-        run: docker build -t gh-action-readme:test .
+        run: docker build --build-arg TARGETPLATFORM=${{ env.TARGETPLATFORM }} -t gh-action-readme:test .
 
       - name: Run Trivy vulnerability scanner on Docker image
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
