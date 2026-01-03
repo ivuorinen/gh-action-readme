@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,47 +37,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// copyDir recursively copies a directory.
-func copyDir(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-
-		dstPath := filepath.Join(dst, relPath)
-
-		if info.IsDir() {
-			return os.MkdirAll(dstPath, info.Mode())
-		}
-
-		// Copy file
-		srcFile, err := os.Open(path) // #nosec G304 -- copying test files
-		if err != nil {
-			return err
-		}
-		defer func() { _ = srcFile.Close() }()
-
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0750); err != nil { // #nosec G301 -- test directory permissions
-			return err
-		}
-
-		dstFile, err := os.Create(dstPath) // #nosec G304 -- creating test files
-		if err != nil {
-			return err
-		}
-		defer func() { _ = dstFile.Close() }()
-
-		_, err = io.Copy(dstFile, srcFile)
-
-		return err
-	})
-}
-
 // getSharedTestBinary returns the path to the shared test binary, building it once if needed.
 func getSharedTestBinary(t *testing.T) string {
 	t.Helper()
@@ -103,14 +61,6 @@ func getSharedTestBinary(t *testing.T) string {
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
-			errSharedBinary = err
-
-			return
-		}
-
-		// Copy templates directory to binary directory (for compatibility with embedded templates fallback)
-		templatesDir := filepath.Join(filepath.Dir(binaryPath), "templates")
-		if err := copyDir("templates", templatesDir); err != nil {
 			errSharedBinary = err
 
 			return

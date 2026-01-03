@@ -1,6 +1,30 @@
-# CLAUDE.md - Development Guide
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 **gh-action-readme** - CLI tool for GitHub Actions documentation generation
+
+## 📝 Template Updates
+
+**Templates are embedded from:** `templates_embed/templates/`
+
+**To modify templates:**
+
+1. Edit template files directly in `templates_embed/templates/`
+2. Rebuild the binary: `go build .`
+3. Templates are automatically embedded via `//go:embed` directive
+
+**Available template locations:**
+
+- Default: `templates_embed/templates/readme.tmpl`
+- GitHub theme: `templates_embed/templates/themes/github/readme.tmpl`
+- GitLab theme: `templates_embed/templates/themes/gitlab/readme.tmpl`
+- Minimal theme: `templates_embed/templates/themes/minimal/readme.tmpl`
+- Professional: `templates_embed/templates/themes/professional/readme.tmpl`
+- AsciiDoc theme: `templates_embed/templates/themes/asciidoc/readme.adoc`
+
+**Template embedding:** Handled by `templates_embed/embed.go` using Go's embed directive.
+The embedded filesystem is used by default, with fallback to filesystem for development.
 
 ## 🚨 CRITICAL: README Protection
 
