@@ -45,6 +45,26 @@ jobs:
 {{- end}}
 {{end}}
 
+{{if .Permissions}}
+## 🔐 Permissions
+
+This action requires the following permissions:
+
+| Permission | Access Level |
+|------------|--------------|
+{{- range $key, $value := .Permissions}}
+| `{{$key}}` | `{{$value}}` |
+{{- end}}
+
+**Usage in workflow:**
+```yaml
+permissions:
+{{- range $key, $value := .Permissions}}
+  {{$key}}: {{$value}}
+{{- end}}
+```
+{{end}}
+
 ## 💡 Examples
 
 <details>

@@ -1,3 +1,6 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+# permissions:
+#   - contents: read  # Required for checking out repository
 ---
 name: Example Action
 description: 'Test Action for gh-action-readme'

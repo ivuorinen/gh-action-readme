@@ -112,6 +112,38 @@ This action provides the following outputs that can be used in subsequent workfl
 ```
 {{end}}
 
+{{if .Permissions}}
+## 🔐 Required Permissions
+
+This action requires specific GitHub permissions to function correctly. Ensure your workflow includes these permissions:
+
+| Permission | Access Level | Description |
+|------------|--------------|-------------|
+{{- range $key, $value := .Permissions}}
+| `{{$key}}` | `{{$value}}` | Required for action operation |
+{{- end}}
+
+### How to Set Permissions
+
+```yaml
+name: My Workflow
+on: [push]
+
+permissions:
+{{- range $key, $value := .Permissions}}
+  {{$key}}: {{$value}}
+{{- end}}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: {{gitUsesString .}}
+```
+
+**Note:** If your workflow doesn't specify permissions, GitHub uses default permissions which may not include all required permissions above.
+{{end}}
+
 ## Examples
 
 ### Basic Usage

@@ -28,6 +28,14 @@
 {{end}}
 {{end}}
 
+{{if .Permissions}}
+## Permissions
+
+{{range $key, $value := .Permissions}}
+- `{{$key}}`: `{{$value}}`
+{{end}}
+{{end}}
+
 ## License
 
 MIT

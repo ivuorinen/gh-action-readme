@@ -33,219 +33,447 @@ The embedded filesystem is used by default, with fallback to filesystem for deve
 **For testing generation commands:**
 
 ```bash
-# New enhanced targeting (recommended)
+# Safe testing approaches
 gh-action-readme gen testdata/example-action/
 gh-action-readme gen testdata/composite-action/action.yml
-
-# Traditional method (still supported)
-cd testdata/
-../gh-action-readme gen [options]
+gh-action-readme gen testdata/ --output /tmp/test-output.md
 ```
 
-## 🏗️ Architecture
+## 🏗️ Architecture Overview
 
-**Core Components:**
+### Template Rendering Pipeline
 
-- `main.go` - CLI with Cobra framework, enhanced gen command
-- `internal/generator.go` - Core generation logic with custom output paths
-- `internal/config.go` - Viper configuration (XDG compliant)
-- `internal/output.go` - Colored terminal output with progress bars
-- `internal/json_writer.go` - JSON format support
-- `internal/errors/` - Contextual error handling with suggestions
-- `internal/wizard/` - Interactive configuration wizard
-- `internal/progress.go` - Progress indicators for batch operations
+1. **Parser** (`internal/parser.go`):
 
-**Templates:**
+- Parses `action.yml` files using `goccy/go-yaml`
+- Extracts permissions from header comments via `parsePermissionsFromComments()`
+- Merges comment and YAML permissions (YAML takes precedence)
+- Returns `*ActionYML` struct with all parsed data
 
-- `templates/readme.tmpl` - Default template
-- `templates/themes/` - Theme-specific templates
-  - `github/` - GitHub-style with badges
-  - `gitlab/` - GitLab CI/CD focused
-  - `minimal/` - Clean, concise
-  - `professional/` - Comprehensive with ToC
-  - `asciidoc/` - AsciiDoc format
+1. **Template Data Builder** (`internal/template.go`):
 
-## 🛠️ Commands & Usage
+- `BuildTemplateData()` creates comprehensive `TemplateData` struct
+- Embeds `*ActionYML` (all action fields accessible via `.Name`, `.Inputs`, `.Permissions`, etc.)
+- Detects git repository info (org, repo, default branch)
+- Extracts action subdirectory for monorepo support
+- Builds `uses:` statement with proper path/version
 
-**Available Commands:**
+1. **Template Functions** (`internal/template.go:templateFuncs()`):
 
-```bash
-gh-action-readme gen [directory_or_file] [flags]  # Generate documentation
-gh-action-readme validate            # Validate action.yml files
-gh-action-readme config {init|show|themes|wizard}  # Configuration management
-gh-action-readme version             # Show version
-gh-action-readme about               # About tool
+- `gitUsesString` - Generates complete `org/repo/path@version` string
+- `actionVersion` - Determines version (config override → default branch → "v1")
+- `gitOrg`, `gitRepo` - Extract git repository information
+- Standard Go template functions: `lower`, `upper`, `replace`, `join`
+
+1. **Renderer** (`internal/template.go:RenderReadme()`):
+
+- Reads template from embedded filesystem via `templates_embed.ReadTemplate()`
+- Executes template with `TemplateData`
+- Supports multiple formats (md, html, json, asciidoc)
+
+### Key Data Structures
+
+**ActionYML** - Parsed action.yml data:
+
+```go
+type ActionYML struct {
+    Name        string
+    Description string
+    Inputs      map[string]ActionInput
+    Outputs     map[string]ActionOutput
+    Runs        map[string]any
+    Branding    *Branding
+    Permissions map[string]string  // From comments or YAML field
+}
 ```
 
-**Key Flags:**
+**TemplateData** - Complete data for rendering:
 
-- `--theme` - Select template theme
-- `--output-format` - Choose format (md, html, json, asciidoc)
-- `--output` - Custom output filename
-- `--recursive` - Process directories recursively
-- `--verbose` - Detailed output
-- `--quiet` - Suppress output
-
-## 🔧 Development Workflow
-
-**Build:** `go build .`
-**Test:** `go test ./internal`
-**Lint:** `golangci-lint run`
-**Dependencies:** `make deps-check` / `make deps-update`
-
-**Testing Generation (SAFE):**
-
-```bash
-# Enhanced targeting (recommended)
-gh-action-readme gen testdata/example-action/ --theme github --output test-output.md
-gh-action-readme gen testdata/composite-action/action.yml --theme professional
-
-# Traditional method (still works)
-cd testdata/example-action/
-../../gh-action-readme gen --theme github
+```go
+type TemplateData struct {
+    *ActionYML           // Embedded - all fields accessible directly
+    Git          git.RepoInfo
+    Config       *AppConfig
+    UsesStatement string  // Pre-built "org/repo/path@version"
+    ActionPath   string   // For subdirectory extraction
+    RepoRoot     string
+    Dependencies []dependencies.Dependency
+}
 ```
 
-## 📊 Feature Matrix
+### Monorepo Action Path Resolution
 
-| Feature | Status | Files |
-| --------- | -------- | ------- |
-| CLI Framework | ✅ | `main.go` |
-| Enhanced Gen Command | ✅ | `main.go:168-180` |
-| File Discovery | ✅ | `generator.go:304-324` |
-| Template Themes | ✅ | `templates/themes/` |
-| Output Formats | ✅ | `generator.go:168-182` |
-| Custom Output Paths | ✅ | `generator.go:157-166` |
-| Validation | ✅ | `internal/validation/` |
-| Configuration | ✅ | `config.go`, `configuration_loader.go` |
-| Interactive Wizard | ✅ | `internal/wizard/` |
-| Progress Indicators | ✅ | `progress.go` |
-| Contextual Errors | ✅ | `internal/errors/` |
-| Colored Output | ✅ | `output.go` |
+The tool automatically detects and handles monorepo actions:
 
-## 🎨 Themes
+```text
+Input:  /repo/actions/csharp-build/action.yml
+Root:   /repo
+Output: org/repo/actions/csharp-build@main
+```
 
-**Available Themes:**
+Implementation in `internal/template.go:extractActionSubdirectory()`:
 
-1. **default** - Original simple template
-2. **github** - Badges, tables, collapsible sections
-3. **gitlab** - GitLab CI/CD examples
-4. **minimal** - Clean, concise documentation
-5. **professional** - Comprehensive with troubleshooting
+- Calculates relative path from repo root to action directory
+- Returns empty string for root-level actions
+- Returns subdirectory path for monorepo actions
+- Used by `buildUsesString()` to construct proper `uses:` statements
 
-## 📄 Output Formats
+### Permissions Parsing
 
-**Supported Formats:**
+Supports three sources (merged with priority):
 
-- **md** - Markdown (default)
-- **html** - HTML with styling
-- **json** - Structured data for APIs
-- **asciidoc** - Technical documentation format
+1. **Header comments** (lowest priority):
 
-## 🧪 Testing Strategy
+```yaml
+# permissions:
+#   - contents: read
+#   - issues: write
+```
 
-**Unit Tests:** `internal/*_test.go` (26.2% coverage)
-**Integration:** Manual CLI testing
-**Templates:** Test with `testdata/example-action/`
+1. **YAML field** (highest priority):
 
-**Test Commands:**
+```yaml
+permissions:
+  contents: write
+```
+
+1. **Merged result**: YAML overrides comment values for duplicate keys, all unique keys included
+
+## 🛠️ Development Commands
+
+### Building and Running
 
 ```bash
-# Core functionality (enhanced)
-gh-action-readme gen testdata/example-action/
-gh-action-readme gen testdata/composite-action/action.yml
+# Build binary
+go build .
 
-# All themes with custom outputs
-for theme in github gitlab minimal professional; do
-  gh-action-readme gen testdata/example-action/ --theme $theme --output "test-${theme}.md"
+# Run without installing
+go run . gen testdata/example-action/
+go run . validate
+go run . config show
+
+# Build and run tests
+make build
+make test
+make test-coverage          # With coverage report
+make test-coverage-html     # HTML coverage + open in browser
+```
+
+### Testing
+
+```bash
+# Run all tests
+go test ./...
+
+# Run specific test package
+go test ./internal
+go test ./internal/wizard
+
+# Run specific test by name
+go test ./internal -run TestParsePermissions
+go test ./internal -v -run "TestParseActionYML_.*Permissions"
+
+# Run tests with race detection
+go test -race ./...
+
+# Test all themes
+for theme in default github gitlab minimal professional; do
+  ./gh-action-readme gen testdata/example-action/ --theme $theme --output /tmp/test-$theme.md
 done
-
-# All formats with custom outputs
-for format in md html json asciidoc; do
-  gh-action-readme gen testdata/example-action/ --output-format $format --output "test.${format}"
-done
-
-# Recursive processing
-gh-action-readme gen testdata/ --recursive --theme professional
 ```
 
-## 🚀 Production Features
+### Linting and Quality
 
-**Configuration:**
+```bash
+# Run all linters via pre-commit
+make lint
 
-- XDG Base Directory compliant
-- Environment variable support
-- Theme persistence
-- Multiple search paths
+# Run golangci-lint directly
+golangci-lint run
+golangci-lint run --timeout=5m
 
-**Error Handling:**
+# Check editor config compliance
+make editorconfig
 
-- Colored error messages
-- Actionable suggestions
-- Context-aware validation
-- Graceful fallbacks
+# Auto-fix editorconfig issues
+make editorconfig-fix
 
-**Performance:**
+# Format code
+make format
+```
 
-- Progress bars for batch operations
-- Thread-safe fixture caching with RWMutex
-- Binary-relative template paths
-- Efficient file discovery
-- Custom output path resolution
-- Race condition protection
-- Minimal dependencies
+### Security Scanning
+
+```bash
+# Run all security checks
+make security
+
+# Individual security tools
+make vulncheck    # Go vulnerability check
+make audit        # Nancy dependency audit
+make trivy        # Container security scanner
+make gitleaks     # Secret detection
+```
+
+### Dependencies
+
+```bash
+# Check for outdated dependencies
+make deps-check
+
+# Update dependencies interactively
+make deps-update
+
+# Update all dependencies to latest
+make deps-update-all
+
+# Install development tools
+make devtools
+```
+
+### Pre-commit Hooks
+
+```bash
+# Install hooks (run once per clone)
+make pre-commit-install
+
+# Update hooks to latest versions
+make pre-commit-update
+
+# Run hooks manually
+pre-commit run --all-files
+```
+
+## ⚙️ Configuration System
+
+### Configuration Hierarchy (highest to lowest priority)
+
+1. **Command-line flags** - Override everything
+2. **Action-specific config** - `.ghreadme.yaml` in action directory
+3. **Repository config** - `.ghreadme.yaml` in repo root
+4. **Global config** - `~/.config/gh-action-readme/config.yaml`
+5. **Environment variables** - `GH_README_GITHUB_TOKEN`, `GITHUB_TOKEN`
+6. **Defaults** - Built-in fallbacks
+
+### Version Resolution for Usage Examples
+
+Priority order for `uses: org/repo@VERSION`:
+
+1. `Config.Version` - Explicit override (e.g., `version: "v2.0.0"`)
+2. `Config.UseDefaultBranch` + `Git.DefaultBranch` - Detected branch (e.g., `@main`)
+3. Fallback - `"v1"`
+
+Implemented in `internal/template.go:getActionVersion()`.
+
+### Permissions Parsing
+
+**Comment Format Support:**
+
+- List format: `# permissions:\n#   - key: value`
+- Object format: `# permissions:\n#   key: value`
+- Mixed format: Both styles in same block
+- Inline comments: `# key: value  # explanation`
+
+**Merge Behavior:**
+
+```go
+// internal/parser.go:ParseActionYML()
+if a.Permissions == nil && commentPermissions != nil {
+    a.Permissions = commentPermissions  // Use comments
+} else if a.Permissions != nil && commentPermissions != nil {
+    // Merge: YAML overrides, add missing from comments
+    for key, value := range commentPermissions {
+        if _, exists := a.Permissions[key]; !exists {
+            a.Permissions[key] = value
+        }
+    }
+}
+```
 
 ## 🔄 Adding New Features
 
-**New Theme:**
+### New Theme
 
-1. Create `templates/themes/THEME_NAME/readme.tmpl`
-2. Add to `resolveThemeTemplate()` in `config.go:67`
-3. Update `configThemesHandler()` in `main.go:284`
+1. Create template file:
 
-**New Output Format:**
+```bash
+touch templates_embed/templates/themes/THEME_NAME/readme.tmpl
+```
 
-1. Add constant to `generator.go:14`
-2. Add case to `GenerateFromFile()` switch `generator.go:67`
-3. Implement `generate[FORMAT]()` method
-4. Update CLI help in `main.go:84`
+1. Add theme constant to `appconstants/constants.go`:
 
-**New Template Functions:**
-Add to `templateFuncs()` in `internal_template.go:19`
+```go
+ThemeTHEMENAME     = "theme-name"
+TemplatePathTHEMENAME = "templates/themes/theme-name/readme.tmpl"
+```
+
+**Note:** The template path constant still uses `templates/` prefix (not
+`templates_embed/templates/`) as this is the logical path used by the code.
+The physical file lives in `templates_embed/templates/` but is referenced as
+`templates/` in the code.
+
+1. Add to theme resolver in `internal/config.go:resolveThemeTemplate()`:
+
+```go
+case appconstants.ThemeTHEMENAME:
+    templatePath = appconstants.TemplatePathTHEMENAME
+```
+
+1. Update `main.go:configThemesHandler()` to list the new theme
+
+2. Rebuild: `go build .`
+
+### New Output Format
+
+1. Add format constant to `appconstants/constants.go`
+
+2. Add case in `internal/generator.go:GenerateFromFile()`:
+
+```go
+case appconstants.OutputFormatNEW:
+    return g.generateNEW(action, outputDir, actionPath)
+```
+
+1. Implement generator method:
+
+```go
+func (g *Generator) generateNEW(action *ActionYML, outputDir, actionPath string) error {
+    opts := TemplateOptions{
+        TemplatePath: g.resolveTemplatePathForFormat(),
+        Format:       "new",
+    }
+    // ... implementation
+}
+```
+
+1. Update CLI help text in `main.go`
+
+### New Template Function
+
+Add to `internal/template.go:templateFuncs()`:
+
+```go
+func templateFuncs() template.FuncMap {
+    return template.FuncMap{
+        "myFunc": myFuncImplementation,
+        // ... existing functions
+    }
+}
+```
+
+### New Parser Field
+
+When adding fields to `ActionYML`:
+
+1. Update struct in `internal/parser.go`
+2. Update `ActionYMLForJSON` in `internal/json_writer.go` (for JSON output)
+3. Add field to JSON struct initialization
+4. Add tests in `internal/parser_test.go`
+5. Update templates if field should be displayed
+
+## 📊 Package Structure
+
+- **`main.go`** - CLI entry point (Cobra commands)
+- **`internal/generator.go`** - Core generation orchestration
+- **`internal/parser.go`** - Action.yml parsing (including permissions from comments)
+- **`internal/template.go`** - Template data building and rendering
+- **`internal/config.go`** - Configuration management (Viper)
+- **`internal/json_writer.go`** - JSON output format
+- **`internal/output.go`** - Colored CLI output
+- **`internal/progress.go`** - Progress bars for batch operations
+- **`internal/git/`** - Git repository detection
+- **`internal/validation/`** - Action.yml validation
+- **`internal/wizard/`** - Interactive configuration wizard
+- **`internal/dependencies/`** - Dependency analysis for actions
+- **`internal/errors/`** - Contextual error handling
+- **`appconstants/`** - Application constants
+- **`testutil/`** - Testing utilities
+- **`templates_embed/`** - Embedded template filesystem
+
+## 🧪 Testing Guidelines
+
+### Test File Locations
+
+- Unit tests: `internal/*_test.go` alongside source files
+- Test fixtures: `testdata/example-action/`, `testdata/composite-action/`
+- Integration tests: Manual CLI testing with testdata
+
+### Running Specific Tests
+
+```bash
+# Parser tests
+go test ./internal -v -run TestParse
+
+# Permissions tests
+go test ./internal -run ".*Permissions"
+
+# Template tests
+go test ./internal -run ".*Template|.*Uses"
+
+# Generator tests
+go test ./internal -run "TestGenerator"
+
+# Wizard tests
+go test ./internal/wizard -v
+```
+
+### Template Testing After Updates
+
+```bash
+# 1. Rebuild with updated templates
+go build .
+
+# 2. Test all themes
+for theme in default github gitlab minimal professional; do
+  ./gh-action-readme gen testdata/example-action/ --theme $theme --output /tmp/test-$theme.md
+  echo "=== $theme theme ==="
+  grep -i "permissions" /tmp/test-$theme.md && echo "✅ Found" || echo "❌ Missing"
+done
+
+# 4. Test JSON output
+./gh-action-readme gen testdata/example-action/ -f json -o /tmp/test.json
+cat /tmp/test.json | python3 -m json.tool | grep -A 3 permissions
+```
 
 ## 📦 Dependency Management
 
-**Check for updates:**
+**Automated Updates:**
+
+- Renovate bot runs weekly (Mondays 4am UTC)
+- Auto-merges minor/patch updates
+- Major updates require manual review
+- Groups `golang.org/x` packages together
+
+**Manual Updates:**
 
 ```bash
-make deps-check          # Show outdated dependencies
+make deps-check          # Show outdated
+make deps-update         # Interactive with go-mod-upgrade
+make deps-update-all     # Update all to latest
 ```
 
-**Update dependencies:**
+## 🔐 Security
 
-```bash
-make deps-update         # Interactive updates with go-mod-upgrade
-make deps-update-all     # Update all to latest versions
+**Pre-commit Hooks:**
+
+- `gitleaks` - Secret detection
+- `golangci-lint` - Static analysis including security checks
+- `editorconfig-checker` - File format validation
+
+**Security Scanning:**
+
+- CodeQL analysis on push/PR
+- Go vulnerability check (govulncheck)
+- Trivy container scanning
+- Nancy dependency audit
+
+**Path Validation:**
+All file reads use validated paths to prevent path traversal:
+
+```go
+// templates_embed/embed.go:ReadTemplate()
+cleanPath := filepath.Clean(templatePath)
+if cleanPath != templatePath || strings.Contains(cleanPath, "..") {
+    return nil, filepath.ErrBadPattern
+}
 ```
-
-**Automated updates:**
-
-- Renovate bot runs weekly on Mondays at 4am UTC
-- Creates PRs for minor/patch updates (auto-merge enabled)
-- Major updates disabled (require manual review)
-- Groups golang.org/x packages together
-- Runs `go mod tidy` after updates
-
----
-
-**Status: ENTERPRISE READY ✅**
-*Enhanced gen command, thread-safety, comprehensive testing, and enterprise features fully implemented.*
-
-**Latest Updates (August 6, 2025):**
-
-- ✅ Enhanced gen command with directory/file targeting
-- ✅ Custom output filename support (`--output` flag)
-- ✅ Thread-safe fixture management with race condition protection
-- ✅ GitHub Actions workflow integration with new capabilities
-- ✅ Complete linting and code quality compliance
-- ✅ Zero known race conditions or threading issues
-- ✅ Dependency management automation with Renovate and go-mod-upgrade
