@@ -775,3 +775,77 @@ func TestConfigurationLoader_ValidateTheme(t *testing.T) {
 		})
 	}
 }
+
+// TestConfigurationLoader_applyRepoOverrides tests the applyRepoOverrides method.
+func TestConfigurationLoader_applyRepoOverrides(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		baseConfig     *AppConfig
+		repoRoot       string
+		expectedTheme  string
+		expectedFormat string
+	}{
+		{
+			name: "no repository detected",
+			baseConfig: &AppConfig{
+				Theme:        "default",
+				OutputFormat: "md",
+			},
+			repoRoot:       "/tmp/nonexistent-repo-path",
+			expectedTheme:  "default",
+			expectedFormat: "md",
+		},
+		{
+			name: "no repo overrides configured",
+			baseConfig: &AppConfig{
+				Theme:         "default",
+				OutputFormat:  "md",
+				RepoOverrides: nil,
+			},
+			repoRoot:       ".",
+			expectedTheme:  "default",
+			expectedFormat: "md",
+		},
+		{
+			name: "empty repo overrides map",
+			baseConfig: &AppConfig{
+				Theme:         "default",
+				OutputFormat:  "md",
+				RepoOverrides: map[string]AppConfig{},
+			},
+			repoRoot:       ".",
+			expectedTheme:  "default",
+			expectedFormat: "md",
+		},
+		{
+			name: "repo override for different repo not applied",
+			baseConfig: &AppConfig{
+				Theme:        "default",
+				OutputFormat: "md",
+				RepoOverrides: map[string]AppConfig{
+					"different/repo": {
+						Theme:        "professional",
+						OutputFormat: "json",
+					},
+				},
+			},
+			repoRoot:       ".",
+			expectedTheme:  "default",
+			expectedFormat: "md",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			loader := NewConfigurationLoader()
+			loader.applyRepoOverrides(tt.baseConfig, tt.repoRoot)
+
+			testutil.AssertEqual(t, tt.expectedTheme, tt.baseConfig.Theme)
+			testutil.AssertEqual(t, tt.expectedFormat, tt.baseConfig.OutputFormat)
+		})
+	}
+}

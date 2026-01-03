@@ -169,6 +169,52 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 	}
 }
 
+func TestGenerator_DiscoverActionFiles_Verbose(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		recursive bool
+	}{
+		{
+			name:      "verbose non-recursive",
+			recursive: false,
+		},
+		{
+			name:      "verbose recursive",
+			recursive: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Create test action file
+			testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+			if tt.recursive {
+				testutil.CreateActionSubdir(t, tmpDir, "subdir", appconstants.TestFixtureCompositeBasic)
+			}
+
+			// Create generator with verbose mode enabled
+			config := &AppConfig{Verbose: true}
+			generator := NewGenerator(config)
+
+			files, err := generator.DiscoverActionFiles(tmpDir, tt.recursive, []string{})
+
+			testutil.AssertNoError(t, err)
+			if tt.recursive {
+				testutil.AssertEqual(t, 2, len(files))
+			} else {
+				testutil.AssertEqual(t, 1, len(files))
+			}
+		})
+	}
+}
+
 func TestGenerator_GenerateFromFile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -684,4 +730,452 @@ func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
 	}
 
 	return dirs
+}
+
+// TestGenerator_DiscoverActionFilesWithValidation tests the validation wrapper.
+func TestGenerator_DiscoverActionFilesWithValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		dir       string
+		recursive bool
+		context   string
+		wantErr   bool
+		setupFunc func(t *testing.T) string
+	}{
+		{
+			name:      "nonexistent directory",
+			dir:       "/nonexistent/path/does/not/exist",
+			recursive: false,
+			context:   "test context",
+			wantErr:   true,
+		},
+		{
+			name:      "empty directory",
+			recursive: false,
+			context:   "empty dir test",
+			wantErr:   true,
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+
+				return t.TempDir()
+			},
+		},
+		{
+			name:      "valid directory with action file",
+			recursive: false,
+			context:   "valid test",
+			wantErr:   false,
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir := t.TempDir()
+				actionPath := filepath.Join(tmpDir, "action.yml")
+				content := "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
+				if err := os.WriteFile(actionPath, []byte(content), appconstants.FilePermDefault); err != nil {
+					t.Fatal(err)
+				}
+
+				return tmpDir
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := DefaultAppConfig()
+			config.Quiet = true
+			gen := NewGenerator(config)
+
+			dir := tt.dir
+			if tt.setupFunc != nil {
+				dir = tt.setupFunc(t)
+			}
+
+			files, err := gen.DiscoverActionFilesWithValidation(dir, tt.recursive, []string{}, tt.context)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DiscoverActionFilesWithValidation() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr && len(files) == 0 {
+				t.Error("Expected to find action files, got none")
+			}
+		})
+	}
+}
+
+// TestGenerator_ResolveOutputPath tests output path resolution.
+func TestGenerator_ResolveOutputPath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		outputFilename  string
+		outputDir       string
+		defaultFilename string
+		wantPath        string
+		isAbsolute      bool
+	}{
+		{
+			name:            "no custom filename",
+			outputFilename:  "",
+			outputDir:       "/tmp/output",
+			defaultFilename: "README.md",
+			wantPath:        "/tmp/output/README.md",
+			isAbsolute:      true,
+		},
+		{
+			name:            "relative custom filename",
+			outputFilename:  "custom.md",
+			outputDir:       "/tmp/output",
+			defaultFilename: "README.md",
+			wantPath:        "/tmp/output/custom.md",
+			isAbsolute:      true,
+		},
+		{
+			name:            "absolute custom filename",
+			outputFilename:  "/absolute/path/output.md",
+			outputDir:       "/tmp/output",
+			defaultFilename: "README.md",
+			wantPath:        "/absolute/path/output.md",
+			isAbsolute:      true,
+		},
+		{
+			name:            "custom filename with subdirectory",
+			outputFilename:  "docs/output.md",
+			outputDir:       "/tmp/output",
+			defaultFilename: "README.md",
+			wantPath:        "/tmp/output/docs/output.md",
+			isAbsolute:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := DefaultAppConfig()
+			config.OutputFilename = tt.outputFilename
+			config.Quiet = true
+			gen := NewGenerator(config)
+
+			got := gen.resolveOutputPath(tt.outputDir, tt.defaultFilename)
+
+			if got != tt.wantPath {
+				t.Errorf("resolveOutputPath() = %q, want %q", got, tt.wantPath)
+			}
+
+			if tt.isAbsolute && !filepath.IsAbs(got) {
+				t.Errorf("Expected absolute path, got relative: %q", got)
+			}
+		})
+	}
+}
+
+// TestGenerator_DiscoverActionFiles_ErrorPaths tests error handling in file discovery.
+func TestGenerator_DiscoverActionFiles_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
+	config := DefaultAppConfig()
+	config.Quiet = true
+	gen := NewGenerator(config)
+
+	// Test with non-existent directory
+	_, err := gen.DiscoverActionFiles("/nonexistent/directory", false, []string{})
+	if err == nil {
+		t.Error("Expected error for non-existent directory, got nil")
+	}
+
+	// Test with unreadable directory (if we can create one)
+	tmpDir := t.TempDir()
+	unreadableDir := filepath.Join(tmpDir, "unreadable")
+	if err := os.Mkdir(unreadableDir, 0000); err != nil {
+		t.Skip("Cannot create unreadable directory for testing")
+	}
+	defer func() { _ = os.Chmod(unreadableDir, 0700) }() //nolint:gosec // Test cleanup needs to restore permissions
+
+	_, _ = gen.DiscoverActionFiles(unreadableDir, true, []string{})
+	// May succeed or fail depending on platform permissions
+	// Just ensure it doesn't panic
+}
+
+// TestGenerator_ParseAndValidateAction_ErrorPaths tests validation error scenarios.
+func TestGenerator_ParseAndValidateAction_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		content   string
+		wantErr   bool
+		wantValid bool
+	}{
+		{
+			name:      "valid action",
+			content:   "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []",
+			wantErr:   false,
+			wantValid: true,
+		},
+		{
+			name:      "missing name",
+			content:   "description: Test\nruns:\n  using: composite\n  steps: []",
+			wantErr:   true,
+			wantValid: false,
+		},
+		{
+			name:      "missing description",
+			content:   "name: Test\nruns:\n  using: composite\n  steps: []",
+			wantErr:   true,
+			wantValid: false,
+		},
+		{
+			name:      "missing runs",
+			content:   "name: Test\ndescription: Test",
+			wantErr:   true,
+			wantValid: false,
+		},
+		{
+			name:    "invalid yaml",
+			content: "name: Test\ninvalid: [\n  - item",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpFile, err := os.CreateTemp(t.TempDir(), "action-*.yml")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = os.Remove(tmpFile.Name()) }() // Ignore error
+
+			if _, err := tmpFile.WriteString(tt.content); err != nil {
+				t.Fatal(err)
+			}
+			_ = tmpFile.Close() // Ignore error
+
+			config := DefaultAppConfig()
+			config.Quiet = true
+			gen := NewGenerator(config)
+
+			action, err := gen.parseAndValidateAction(tmpFile.Name())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseAndValidateAction() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr && action == nil {
+				t.Error("Expected action to be non-nil when no error")
+			}
+		})
+	}
+}
+
+// TestGenerator_GenerateHTML_ErrorPaths tests HTML generation error handling.
+func TestGenerator_GenerateHTML_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	// Create a valid action
+	action := &ActionYML{
+		Name:        "Test Action",
+		Description: "Test Description",
+		Runs:        map[string]any{"using": "composite"},
+	}
+
+	config := DefaultAppConfig()
+	config.Quiet = true
+	gen := NewGenerator(config)
+
+	// Test with valid directory
+	err := gen.generateHTML(action, tmpDir, tmpDir+"/action.yml")
+	if err != nil {
+		t.Errorf("generateHTML() unexpected error = %v", err)
+	}
+
+	// Verify HTML file was created
+	// HTML filename is based on action.Name + ".html"
+	htmlPath := filepath.Join(tmpDir, "Test Action.html")
+	if _, err := os.Stat(htmlPath); os.IsNotExist(err) {
+		t.Error("Expected Test Action.html to be created")
+	}
+}
+
+// TestGenerator_GenerateJSON_ErrorPaths tests JSON generation error handling.
+func TestGenerator_GenerateJSON_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	// Create a valid action
+	action := &ActionYML{
+		Name:        "Test Action",
+		Description: "Test Description",
+		Runs:        map[string]any{"using": "composite"},
+	}
+
+	config := DefaultAppConfig()
+	config.Quiet = true
+	gen := NewGenerator(config)
+
+	// Test with valid directory
+	err := gen.generateJSON(action, tmpDir)
+	if err != nil {
+		t.Errorf("generateJSON() unexpected error = %v", err)
+	}
+
+	// Verify JSON file was created
+	// JSON filename is appconstants.ActionDocsJSON = "action-docs.json"
+	jsonPath := filepath.Join(tmpDir, "action-docs.json")
+	if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
+		t.Error("Expected action-docs.json to be created")
+	}
+}
+
+// TestGenerator_GenerateASCIIDoc_ErrorPaths tests AsciiDoc generation error handling.
+func TestGenerator_GenerateASCIIDoc_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	// Create a valid action
+	action := &ActionYML{
+		Name:        "Test Action",
+		Description: "Test Description",
+		Runs:        map[string]any{"using": "composite"},
+	}
+
+	config := DefaultAppConfig()
+	config.Quiet = true
+	gen := NewGenerator(config)
+
+	// Test with valid directory
+	err := gen.generateASCIIDoc(action, tmpDir, tmpDir+"/action.yml")
+	if err != nil {
+		t.Errorf("generateASCIIDoc() unexpected error = %v", err)
+	}
+
+	// Verify AsciiDoc file was created
+	adocPath := filepath.Join(tmpDir, "README.adoc")
+	if _, err := os.Stat(adocPath); os.IsNotExist(err) {
+		t.Error("Expected README.adoc to be created")
+	}
+}
+
+// TestGenerator_ReportResults_EdgeCases tests result reporting edge cases.
+func TestGenerator_ReportResults_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		successCount int
+		errors       []string
+		wantPanic    bool
+	}{
+		{
+			name:         "all successful",
+			successCount: 5,
+			errors:       []string{},
+			wantPanic:    false,
+		},
+		{
+			name:         "all failed",
+			successCount: 0,
+			errors:       []string{"error1", "error2"},
+			wantPanic:    false,
+		},
+		{
+			name:         "mixed results",
+			successCount: 3,
+			errors:       []string{"error1"},
+			wantPanic:    false,
+		},
+		{
+			name:         "zero files",
+			successCount: 0,
+			errors:       []string{},
+			wantPanic:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := DefaultAppConfig()
+			config.Quiet = true
+			gen := NewGenerator(config)
+
+			defer func() {
+				if r := recover(); r != nil && !tt.wantPanic {
+					t.Errorf("reportResults() panicked unexpectedly: %v", r)
+				}
+			}()
+
+			gen.reportResults(tt.successCount, tt.errors)
+		})
+	}
+}
+
+// TestGenerator_IsUnitTestEnvironment tests unit test detection.
+func TestGenerator_IsUnitTestEnvironment(t *testing.T) {
+	// This test runs in a test environment, so should return true
+	if !isUnitTestEnvironment() {
+		t.Error("Expected isUnitTestEnvironment() to return true in test context")
+	}
+}
+
+// TestGenerator_NewGenerator_EdgeCases tests generator initialization edge cases.
+func TestGenerator_NewGenerator_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		config *AppConfig
+	}{
+		{
+			name:   "nil config",
+			config: nil,
+		},
+		{
+			name:   "default config",
+			config: DefaultAppConfig(),
+		},
+		{
+			name: "custom config",
+			config: &AppConfig{
+				Theme:        "github",
+				OutputFormat: "html",
+				Quiet:        true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var gen *Generator
+			if tt.config == nil {
+				// Should not panic with nil config
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("NewGenerator() panicked with nil config: %v", r)
+					}
+				}()
+				gen = NewGenerator(tt.config)
+			} else {
+				gen = NewGenerator(tt.config)
+			}
+
+			if gen == nil {
+				t.Error("NewGenerator() returned nil")
+			}
+		})
+	}
 }

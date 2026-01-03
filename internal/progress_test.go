@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"io"
 	"testing"
 
 	"github.com/schollz/progressbar/v3"
@@ -144,5 +145,34 @@ func TestProgressBarManager_ProcessWithProgressBar_QuietMode(t *testing.T) {
 
 	if len(processedItems) != len(items) {
 		t.Errorf("expected %d processed items, got %d", len(items), len(processedItems))
+	}
+}
+
+// TestProgressBarManager_FinishProgressBarWithNewline tests finishing with newline.
+func TestProgressBarManager_FinishProgressBarWithNewline(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		bar  *progressbar.ProgressBar
+	}{
+		{
+			name: "with valid progress bar",
+			bar:  progressbar.NewOptions(10, progressbar.OptionSetWriter(io.Discard)),
+		},
+		{
+			name: "with nil progress bar",
+			bar:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			pm := NewProgressBarManager(false)
+			// Should not panic
+			pm.FinishProgressBarWithNewline(tt.bar)
+		})
 	}
 }

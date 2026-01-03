@@ -1,0 +1,263 @@
+package internal
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// TestHTMLWriter_Write tests the HTMLWriter.Write function.
+func TestHTMLWriter_Write(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		header     string
+		footer     string
+		content    string
+		wantString string
+	}{
+		{
+			name:       "no header or footer",
+			header:     "",
+			footer:     "",
+			content:    "<h1>Test Content</h1>",
+			wantString: "<h1>Test Content</h1>",
+		},
+		{
+			name:       "with header only",
+			header:     "<!DOCTYPE html>\n<html>\n",
+			footer:     "",
+			content:    "<body>Content</body>",
+			wantString: "<!DOCTYPE html>\n<html>\n<body>Content</body>",
+		},
+		{
+			name:       "with footer only",
+			header:     "",
+			footer:     "\n</html>",
+			content:    "<body>Content</body>",
+			wantString: "<body>Content</body>\n</html>",
+		},
+		{
+			name:       "with both header and footer",
+			header:     "<!DOCTYPE html>\n<html>\n<body>\n",
+			footer:     "\n</body>\n</html>",
+			content:    "<h1>Main Content</h1>",
+			wantString: "<!DOCTYPE html>\n<html>\n<body>\n<h1>Main Content</h1>\n</body>\n</html>",
+		},
+		{
+			name:       "empty content",
+			header:     "<header>",
+			footer:     "</footer>",
+			content:    "",
+			wantString: "<header></footer>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir := t.TempDir()
+			outputPath := filepath.Join(tmpDir, "test.html")
+
+			writer := &HTMLWriter{
+				Header: tt.header,
+				Footer: tt.footer,
+			}
+
+			err := writer.Write(tt.content, outputPath)
+			if err != nil {
+				t.Errorf("Write() unexpected error = %v", err)
+
+				return
+			}
+
+			// Read the file and verify content
+			content, err := os.ReadFile(outputPath) //nolint:gosec // Testing with safe temp dir
+			if err != nil {
+				t.Fatalf("Failed to read output file: %v", err)
+			}
+
+			got := string(content)
+			if got != tt.wantString {
+				t.Errorf("Write() content = %q, want %q", got, tt.wantString)
+			}
+		})
+	}
+}
+
+// TestHTMLWriter_Write_ErrorPaths tests error handling in HTMLWriter.Write.
+func TestHTMLWriter_Write_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{
+			name:    "invalid path - directory doesn't exist",
+			path:    "/nonexistent/directory/file.html",
+			wantErr: true,
+		},
+		{
+			name:    "invalid path - permission denied (if running as non-root)",
+			path:    "/root/test.html",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			writer := &HTMLWriter{
+				Header: "<header>",
+				Footer: "</footer>",
+			}
+
+			err := writer.Write("<content>", tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestHTMLWriter_Write_LargeContent tests writing large HTML content.
+func TestHTMLWriter_Write_LargeContent(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	outputPath := filepath.Join(tmpDir, "large.html")
+
+	// Create large content (10MB)
+	largeContent := strings.Repeat("<p>Test content line</p>\n", 500000)
+
+	writer := &HTMLWriter{
+		Header: "<!DOCTYPE html>\n",
+		Footer: "\n</html>",
+	}
+
+	err := writer.Write(largeContent, outputPath)
+	if err != nil {
+		t.Errorf("Write() failed for large content: %v", err)
+	}
+
+	// Verify file was created and has correct size
+	info, err := os.Stat(outputPath)
+	if err != nil {
+		t.Fatalf("Failed to stat output file: %v", err)
+	}
+
+	expectedSize := len("<!DOCTYPE html>\n") + len(largeContent) + len("\n</html>")
+	if int(info.Size()) != expectedSize {
+		t.Errorf("File size = %d, want %d", info.Size(), expectedSize)
+	}
+}
+
+// TestHTMLWriter_Write_SpecialCharacters tests writing HTML with special characters.
+func TestHTMLWriter_Write_SpecialCharacters(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	outputPath := filepath.Join(tmpDir, "special.html")
+
+	// Content with HTML entities and special characters
+	content := `<div>&lt;script&gt;alert("test")&lt;/script&gt;</div>
+<p>Special chars: &amp; &quot; &apos; &lt; &gt;</p>
+<p>Unicode: 你好 مرحبا привет 🎉</p>`
+
+	writer := &HTMLWriter{}
+	err := writer.Write(content, outputPath)
+	if err != nil {
+		t.Errorf("Write() failed for special characters: %v", err)
+	}
+
+	// Verify content was written correctly
+	readContent, err := os.ReadFile(outputPath) //nolint:gosec // Testing with safe temp dir
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	if string(readContent) != content {
+		t.Errorf("Content mismatch for special characters")
+	}
+}
+
+// TestHTMLWriter_Write_Overwrite tests overwriting an existing file.
+func TestHTMLWriter_Write_Overwrite(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	outputPath := filepath.Join(tmpDir, "overwrite.html")
+
+	// Write initial content
+	writer := &HTMLWriter{}
+	err := writer.Write("Initial content", outputPath)
+	if err != nil {
+		t.Fatalf("Initial write failed: %v", err)
+	}
+
+	// Overwrite with new content
+	err = writer.Write("New content", outputPath)
+	if err != nil {
+		t.Errorf("Overwrite failed: %v", err)
+	}
+
+	// Verify new content
+	content, err := os.ReadFile(outputPath) //nolint:gosec // Testing with safe temp dir
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	if string(content) != "New content" {
+		t.Errorf("Content = %q, want %q", string(content), "New content")
+	}
+}
+
+// TestHTMLWriter_Write_EmptyPath tests writing to an empty path.
+func TestHTMLWriter_Write_EmptyPath(t *testing.T) {
+	t.Parallel()
+
+	writer := &HTMLWriter{}
+	err := writer.Write("content", "")
+
+	// Empty path should cause an error
+	if err == nil {
+		t.Error("Write() with empty path should return error")
+	}
+}
+
+// TestHTMLWriter_Write_ValidPath tests writing to a valid nested path.
+func TestHTMLWriter_Write_ValidPath(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	// Create nested directory structure
+	nestedDir := filepath.Join(tmpDir, "nested", "directory")
+	err := os.MkdirAll(nestedDir, 0750) // Use secure permissions
+	if err != nil {
+		t.Fatalf("Failed to create nested directory: %v", err)
+	}
+
+	outputPath := filepath.Join(nestedDir, "nested.html")
+
+	writer := &HTMLWriter{
+		Header: "<html>",
+		Footer: "</html>",
+	}
+
+	err = writer.Write("<body>Nested content</body>", outputPath)
+	if err != nil {
+		t.Errorf("Write() to nested path failed: %v", err)
+	}
+
+	// Verify file exists
+	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
+		t.Error("File was not created in nested path")
+	}
+}

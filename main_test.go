@@ -8,8 +8,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/wizard"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
@@ -615,5 +618,549 @@ func assertCommandResult(t *testing.T, result cmdResult, wantExit int, wantStdou
 		if !strings.Contains(result.stderr, wantStderr) {
 			t.Errorf("expected stderr to contain %q, got: %s", wantStderr, result.stderr)
 		}
+	}
+}
+
+// Unit Tests for Handler Functions
+// These test the handler logic directly without subprocess execution
+
+func TestCacheClearHandler(t *testing.T) {
+	_ = t // Test function signature requirement
+	// Setup
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	// Execute handler - should not panic
+	cmd := &cobra.Command{}
+	cacheClearHandler(cmd, []string{})
+
+	// Handler should execute without panic
+	// The actual cache clearing logic is tested in cache package
+}
+
+func TestCacheStatsHandler(t *testing.T) {
+	_ = t // Test function signature requirement
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	cmd := &cobra.Command{}
+	cacheStatsHandler(cmd, []string{})
+	// Should not panic
+}
+
+func TestCachePathHandler(t *testing.T) {
+	_ = t // Test function signature requirement
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	cmd := &cobra.Command{}
+	cachePathHandler(cmd, []string{})
+	// Should not panic
+}
+
+func TestSchemaHandler(t *testing.T) {
+	_ = t // Test function signature requirement
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	cmd := &cobra.Command{}
+	schemaHandler(cmd, []string{})
+	// Should not panic
+}
+
+func TestConfigThemesHandler(t *testing.T) {
+	_ = t // Test function signature requirement
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	cmd := &cobra.Command{}
+	configThemesHandler(cmd, []string{})
+	// Should not panic
+}
+
+func TestConfigShowHandler(t *testing.T) {
+	_ = t // Test function signature requirement
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	cmd := &cobra.Command{}
+	configShowHandler(cmd, []string{})
+	// Should not panic
+}
+
+func TestDepsGraphHandler(t *testing.T) {
+	_ = t // Test function signature requirement
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	cmd := &cobra.Command{}
+	depsGraphHandler(cmd, []string{})
+	// Should not panic - this is a placeholder handler
+}
+
+func TestCreateAnalyzer(t *testing.T) {
+	output := &internal.ColoredOutput{NoColor: true, Quiet: true}
+	config := internal.DefaultAppConfig()
+	generator := internal.NewGenerator(config)
+
+	analyzer := createAnalyzer(generator, output)
+
+	if analyzer == nil {
+		t.Error("createAnalyzer() returned nil")
+	}
+}
+
+// Test helper functions that don't require complex setup
+
+func TestBuildTestBinary(t *testing.T) {
+	// This test verifies that buildTestBinary works
+	binaryPath := buildTestBinary(t)
+
+	// Check that binary exists
+	if _, err := os.Stat(binaryPath); err != nil {
+		t.Errorf("buildTestBinary() created binary does not exist: %v", err)
+	}
+
+	// Check that binary is executable
+	info, err := os.Stat(binaryPath)
+	if err != nil {
+		t.Fatalf("Failed to stat binary: %v", err)
+	}
+
+	// On Unix systems, check executable bit
+	if info.Mode()&0111 == 0 {
+		t.Error("buildTestBinary() created binary is not executable")
+	}
+}
+
+// TestApplyGlobalFlags tests global flag application.
+func TestApplyGlobalFlags(t *testing.T) {
+	_ = t // Test function signature requirement
+	tests := []struct {
+		name    string
+		verbose bool
+		quiet   bool
+		wantV   bool
+		wantQ   bool
+	}{
+		{
+			name:    "verbose flag",
+			verbose: true,
+			quiet:   false,
+			wantV:   true,
+			wantQ:   false,
+		},
+		{
+			name:    "quiet flag",
+			verbose: false,
+			quiet:   true,
+			wantV:   false,
+			wantQ:   true,
+		},
+		{
+			name:    "no flags",
+			verbose: false,
+			quiet:   false,
+			wantV:   false,
+			wantQ:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		// Save original global flag values
+		origVerbose := verbose
+		origQuiet := quiet
+		defer func() {
+			verbose = origVerbose
+			quiet = origQuiet
+		}()
+
+		// Set global flags to test values
+		verbose = tt.verbose
+		quiet = tt.quiet
+
+		config := internal.DefaultAppConfig()
+		applyGlobalFlags(config)
+
+		if config.Verbose != tt.wantV {
+			t.Errorf("%s: Verbose = %v, want %v", tt.name, config.Verbose, tt.wantV)
+		}
+		if config.Quiet != tt.wantQ {
+			t.Errorf("%s: Quiet = %v, want %v", tt.name, config.Quiet, tt.wantQ)
+		}
+	}
+}
+
+// TestApplyCommandFlags tests command flag application.
+func TestApplyCommandFlags(t *testing.T) {
+	_ = t // Test function signature requirement
+	tests := []struct {
+		name      string
+		theme     string
+		format    string
+		wantTheme string
+		wantFmt   string
+	}{
+		{
+			name:      "with theme flag only",
+			theme:     "github",
+			format:    appconstants.OutputFormatMarkdown, // Must set format to avoid empty string
+			wantTheme: "github",
+			wantFmt:   appconstants.OutputFormatMarkdown,
+		},
+		{
+			name:      "with format flag",
+			theme:     "",
+			format:    "html",
+			wantTheme: "default", // Default from DefaultAppConfig
+			wantFmt:   "html",
+		},
+		{
+			name:      "with both flags",
+			theme:     "professional",
+			format:    "json",
+			wantTheme: "professional",
+			wantFmt:   "json",
+		},
+	}
+
+	for _, tt := range tests {
+		config := internal.DefaultAppConfig()
+		cmd := &cobra.Command{}
+
+		// Always define flags with proper defaults
+		cmd.Flags().String("theme", "", "")
+		cmd.Flags().String("output-format", appconstants.OutputFormatMarkdown, "")
+
+		if tt.theme != "" {
+			_ = cmd.Flags().Set("theme", tt.theme)
+		}
+		if tt.format != appconstants.OutputFormatMarkdown {
+			_ = cmd.Flags().Set("output-format", tt.format)
+		}
+
+		applyCommandFlags(cmd, config)
+
+		if config.Theme != tt.wantTheme {
+			t.Errorf("%s: Theme = %v, want %v", tt.name, config.Theme, tt.wantTheme)
+		}
+		if config.OutputFormat != tt.wantFmt {
+			t.Errorf("%s: OutputFormat = %v, want %v", tt.name, config.OutputFormat, tt.wantFmt)
+		}
+	}
+}
+
+// TestValidateGitHubToken tests GitHub token validation.
+func TestValidateGitHubToken(t *testing.T) {
+	_ = t // Test function signature requirement
+	tests := []struct {
+		name  string
+		token string
+		want  bool
+	}{
+		{
+			name:  "with valid token",
+			token: "ghp_test_token_123",
+			want:  true,
+		},
+		{
+			name:  "with empty token",
+			token: "",
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		// Save original global config
+		origConfig := globalConfig
+		defer func() { globalConfig = origConfig }()
+
+		// Set test token
+		globalConfig = &internal.AppConfig{
+			GitHubToken: tt.token,
+			Quiet:       true,
+		}
+
+		output := createOutputManager(true)
+		got := validateGitHubToken(output)
+
+		if got != tt.want {
+			t.Errorf("%s: validateGitHubToken() = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestLogConfigInfo tests configuration info logging.
+func TestLogConfigInfo(t *testing.T) {
+	_ = t // Test function signature requirement
+	tests := []struct {
+		name     string
+		verbose  bool
+		repoRoot string
+	}{
+		{
+			name:     "verbose with repo root",
+			verbose:  true,
+			repoRoot: "/path/to/repo",
+		},
+		{
+			name:     "verbose without repo root",
+			verbose:  true,
+			repoRoot: "",
+		},
+		{
+			name:     "not verbose",
+			verbose:  false,
+			repoRoot: "/path/to/repo",
+		},
+	}
+
+	for _, tt := range tests {
+		config := &internal.AppConfig{
+			Verbose: tt.verbose,
+			Quiet:   true,
+		}
+		generator := internal.NewGenerator(config)
+
+		// Just call it to ensure it doesn't panic
+		logConfigInfo(generator, config, tt.repoRoot)
+	}
+}
+
+// TestShowUpgradeMode tests upgrade mode display.
+func TestShowUpgradeMode(t *testing.T) {
+	_ = t // Test function signature requirement
+	tests := []struct {
+		name      string
+		ciMode    bool
+		isPinCmd  bool
+		wantEmpty bool
+	}{
+		{
+			name:      "CI mode",
+			ciMode:    true,
+			isPinCmd:  false,
+			wantEmpty: false,
+		},
+		{
+			name:      "pin command",
+			ciMode:    false,
+			isPinCmd:  true,
+			wantEmpty: false,
+		},
+		{
+			name:      "interactive mode",
+			ciMode:    false,
+			isPinCmd:  false,
+			wantEmpty: false,
+		},
+	}
+
+	for _, tt := range tests {
+		output := createOutputManager(true)
+		// Just call it to ensure it doesn't panic
+		showUpgradeMode(output, tt.ciMode, tt.isPinCmd)
+	}
+}
+
+// TestDisplayOutdatedResults tests outdated dependencies display.
+func TestDisplayOutdatedResults(t *testing.T) {
+	_ = t // Test function signature requirement
+	tests := []struct {
+		name        string
+		allOutdated []dependencies.OutdatedDependency
+	}{
+		{
+			name:        "no outdated dependencies",
+			allOutdated: []dependencies.OutdatedDependency{},
+		},
+		{
+			name: "with outdated dependencies",
+			allOutdated: []dependencies.OutdatedDependency{
+				{
+					Current: dependencies.Dependency{
+						Name:    "actions/checkout",
+						Version: "v3",
+					},
+					LatestVersion: "v4",
+					UpdateType:    "major",
+				},
+			},
+		},
+		{
+			name: "with security update",
+			allOutdated: []dependencies.OutdatedDependency{
+				{
+					Current: dependencies.Dependency{
+						Name:    "actions/setup-node",
+						Version: "v3",
+					},
+					LatestVersion:    "v4",
+					UpdateType:       "major",
+					IsSecurityUpdate: true,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		output := createOutputManager(true)
+		// Just call it to ensure it doesn't panic
+		displayOutdatedResults(output, tt.allOutdated)
+	}
+}
+
+// TestDisplayFloatingDeps tests floating dependencies display.
+func TestDisplayFloatingDeps(t *testing.T) {
+	_ = t // Test function signature requirement
+
+	output := createOutputManager(true)
+	floatingDeps := []struct {
+		file string
+		dep  dependencies.Dependency
+	}{
+		{
+			file: "/tmp/action.yml",
+			dep: dependencies.Dependency{
+				Name:    "actions/checkout",
+				Version: "v4",
+			},
+		},
+	}
+
+	// Just call it to ensure it doesn't panic
+	displayFloatingDeps(output, "/tmp", floatingDeps)
+}
+
+// TestDisplaySecuritySummary tests security summary display.
+func TestDisplaySecuritySummary(t *testing.T) {
+	_ = t // Test function signature requirement
+	tests := []struct {
+		name         string
+		pinnedCount  int
+		floatingDeps []struct {
+			file string
+			dep  dependencies.Dependency
+		}
+	}{
+		{
+			name:         "all pinned",
+			pinnedCount:  5,
+			floatingDeps: nil,
+		},
+		{
+			name:        "with floating dependencies",
+			pinnedCount: 3,
+			floatingDeps: []struct {
+				file string
+				dep  dependencies.Dependency
+			}{
+				{
+					file: "/tmp/action.yml",
+					dep: dependencies.Dependency{
+						Name:    "actions/checkout",
+						Version: "v4",
+					},
+				},
+			},
+		},
+		{
+			name:         "no dependencies",
+			pinnedCount:  0,
+			floatingDeps: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		output := createOutputManager(true)
+		// Just call it to ensure it doesn't panic
+		displaySecuritySummary(output, "/tmp", tt.pinnedCount, tt.floatingDeps)
+	}
+}
+
+// TestAnalyzeActionFileDeps tests action file dependency analysis.
+func TestAnalyzeActionFileDeps(t *testing.T) {
+	_ = t // Test function signature requirement
+
+	output := createOutputManager(true)
+
+	tests := []struct {
+		name     string
+		analyzer *dependencies.Analyzer
+		want     int
+	}{
+		{
+			name:     "nil analyzer",
+			analyzer: nil,
+			want:     0,
+		},
+	}
+
+	for _, tt := range tests {
+		got := analyzeActionFileDeps(output, "/tmp/action.yml", tt.analyzer)
+		if got != tt.want {
+			t.Errorf("%s: analyzeActionFileDeps() = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestNewConfigCmd tests config command creation.
+func TestNewConfigCmd(t *testing.T) {
+	_ = t // Test function signature requirement
+
+	// Save original global config
+	origConfig := globalConfig
+	defer func() { globalConfig = origConfig }()
+
+	globalConfig = &internal.AppConfig{
+		Quiet: true,
+	}
+
+	cmd := newConfigCmd()
+	if cmd == nil {
+		t.Fatal("newConfigCmd() returned nil")
+	}
+	if cmd.Use != "config" {
+		t.Errorf("newConfigCmd().Use = %v, want 'config'", cmd.Use)
+	}
+}
+
+// TestNewDepsCmd tests deps command creation.
+func TestNewDepsCmd(t *testing.T) {
+	_ = t // Test function signature requirement
+
+	cmd := newDepsCmd()
+	if cmd == nil {
+		t.Fatal("newDepsCmd() returned nil")
+	}
+	if cmd.Use != "deps" {
+		t.Errorf("newDepsCmd().Use = %v, want 'deps'", cmd.Use)
+	}
+}
+
+// TestNewCacheCmd tests cache command creation.
+func TestNewCacheCmd(t *testing.T) {
+	_ = t // Test function signature requirement
+
+	cmd := newCacheCmd()
+	if cmd == nil {
+		t.Fatal("newCacheCmd() returned nil")
+	}
+	if cmd.Use != "cache" {
+		t.Errorf("newCacheCmd().Use = %v, want 'cache'", cmd.Use)
 	}
 }

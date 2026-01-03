@@ -344,3 +344,96 @@ func TestRepoInfo_GetRepositoryName(t *testing.T) {
 		})
 	}
 }
+
+// TestRepoInfo_GenerateUsesStatement tests the GenerateUsesStatement method.
+func TestRepoInfo_GenerateUsesStatement(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		repoInfo   *RepoInfo
+		actionName string
+		version    string
+		expected   string
+	}{
+		{
+			name: "repository-level action",
+			repoInfo: &RepoInfo{
+				Organization: "actions",
+				Repository:   "checkout",
+			},
+			actionName: "",
+			version:    "v3",
+			expected:   "actions/checkout@v3",
+		},
+		{
+			name: "repository-level action with same name",
+			repoInfo: &RepoInfo{
+				Organization: "actions",
+				Repository:   "checkout",
+			},
+			actionName: "checkout",
+			version:    "v3",
+			expected:   "actions/checkout@v3",
+		},
+		{
+			name: "subdirectory action",
+			repoInfo: &RepoInfo{
+				Organization: "actions",
+				Repository:   "toolkit",
+			},
+			actionName: "cache",
+			version:    "v2",
+			expected:   "actions/toolkit/cache@v2",
+		},
+		{
+			name: "without organization",
+			repoInfo: &RepoInfo{
+				Organization: "",
+				Repository:   "",
+			},
+			actionName: "my-action",
+			version:    "v1",
+			expected:   "your-org/my-action@v1",
+		},
+		{
+			name: "without organization and action name",
+			repoInfo: &RepoInfo{
+				Organization: "",
+				Repository:   "",
+			},
+			actionName: "",
+			version:    "v1",
+			expected:   "your-org/your-action@v1",
+		},
+		{
+			name: "with SHA version",
+			repoInfo: &RepoInfo{
+				Organization: "actions",
+				Repository:   "checkout",
+			},
+			actionName: "",
+			version:    "abc123def456",
+			expected:   "actions/checkout@abc123def456",
+		},
+		{
+			name: "with main branch",
+			repoInfo: &RepoInfo{
+				Organization: "actions",
+				Repository:   "setup-node",
+			},
+			actionName: "",
+			version:    "main",
+			expected:   "actions/setup-node@main",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := tt.repoInfo.GenerateUsesStatement(tt.actionName, tt.version)
+			testutil.AssertEqual(t, tt.expected, result)
+		})
+	}
+}

@@ -729,3 +729,194 @@ func TestMergeSliceFields(t *testing.T) {
 		})
 	}
 }
+
+// TestMergeBooleanFields tests merging boolean configuration fields.
+func TestMergeBooleanFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		dst  *AppConfig
+		src  *AppConfig
+		want *AppConfig
+	}{
+		{
+			name: "merge all true values",
+			dst: &AppConfig{
+				AnalyzeDependencies: false,
+				ShowSecurityInfo:    false,
+				Verbose:             false,
+				Quiet:               false,
+				UseDefaultBranch:    false,
+			},
+			src: &AppConfig{
+				AnalyzeDependencies: true,
+				ShowSecurityInfo:    true,
+				Verbose:             true,
+				Quiet:               true,
+				UseDefaultBranch:    true,
+			},
+			want: &AppConfig{
+				AnalyzeDependencies: true,
+				ShowSecurityInfo:    true,
+				Verbose:             true,
+				Quiet:               true,
+				UseDefaultBranch:    true,
+			},
+		},
+		{
+			name: "merge only some true values",
+			dst: &AppConfig{
+				AnalyzeDependencies: false,
+				ShowSecurityInfo:    true,
+				Verbose:             false,
+				Quiet:               true,
+				UseDefaultBranch:    false,
+			},
+			src: &AppConfig{
+				AnalyzeDependencies: true,
+				ShowSecurityInfo:    false,
+				Verbose:             true,
+				Quiet:               false,
+				UseDefaultBranch:    false,
+			},
+			want: &AppConfig{
+				AnalyzeDependencies: true,
+				ShowSecurityInfo:    true,
+				Verbose:             true,
+				Quiet:               true,
+				UseDefaultBranch:    false,
+			},
+		},
+		{
+			name: "merge with all source false",
+			dst: &AppConfig{
+				AnalyzeDependencies: true,
+				ShowSecurityInfo:    true,
+				Verbose:             true,
+				Quiet:               true,
+				UseDefaultBranch:    true,
+			},
+			src: &AppConfig{
+				AnalyzeDependencies: false,
+				ShowSecurityInfo:    false,
+				Verbose:             false,
+				Quiet:               false,
+				UseDefaultBranch:    false,
+			},
+			want: &AppConfig{
+				AnalyzeDependencies: true,
+				ShowSecurityInfo:    true,
+				Verbose:             true,
+				Quiet:               true,
+				UseDefaultBranch:    true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mergeBooleanFields(tt.dst, tt.src)
+
+			if tt.dst.AnalyzeDependencies != tt.want.AnalyzeDependencies {
+				t.Errorf("AnalyzeDependencies = %v, want %v",
+					tt.dst.AnalyzeDependencies, tt.want.AnalyzeDependencies)
+			}
+			if tt.dst.ShowSecurityInfo != tt.want.ShowSecurityInfo {
+				t.Errorf("ShowSecurityInfo = %v, want %v",
+					tt.dst.ShowSecurityInfo, tt.want.ShowSecurityInfo)
+			}
+			if tt.dst.Verbose != tt.want.Verbose {
+				t.Errorf("Verbose = %v, want %v", tt.dst.Verbose, tt.want.Verbose)
+			}
+			if tt.dst.Quiet != tt.want.Quiet {
+				t.Errorf("Quiet = %v, want %v", tt.dst.Quiet, tt.want.Quiet)
+			}
+			if tt.dst.UseDefaultBranch != tt.want.UseDefaultBranch {
+				t.Errorf("UseDefaultBranch = %v, want %v",
+					tt.dst.UseDefaultBranch, tt.want.UseDefaultBranch)
+			}
+		})
+	}
+}
+
+// TestMergeSecurityFields tests merging security-sensitive configuration fields.
+func TestMergeSecurityFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		dst         *AppConfig
+		src         *AppConfig
+		allowTokens bool
+		want        *AppConfig
+	}{
+		{
+			name: "allow tokens - merge token",
+			dst: &AppConfig{
+				GitHubToken: "",
+			},
+			src: &AppConfig{
+				GitHubToken: "ghp_test_token",
+			},
+			allowTokens: true,
+			want: &AppConfig{
+				GitHubToken: "ghp_test_token",
+			},
+		},
+		{
+			name: "disallow tokens - do not merge token",
+			dst: &AppConfig{
+				GitHubToken: "",
+			},
+			src: &AppConfig{
+				GitHubToken: "ghp_test_token",
+			},
+			allowTokens: false,
+			want: &AppConfig{
+				GitHubToken: "",
+			},
+		},
+		{
+			name: "allow tokens - do not overwrite with empty",
+			dst: &AppConfig{
+				GitHubToken: "ghp_existing_token",
+			},
+			src: &AppConfig{
+				GitHubToken: "",
+			},
+			allowTokens: true,
+			want: &AppConfig{
+				GitHubToken: "ghp_existing_token",
+			},
+		},
+		{
+			name: "allow tokens - overwrite existing token",
+			dst: &AppConfig{
+				GitHubToken: "ghp_old_token",
+			},
+			src: &AppConfig{
+				GitHubToken: "ghp_new_token",
+			},
+			allowTokens: true,
+			want: &AppConfig{
+				GitHubToken: "ghp_new_token",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mergeSecurityFields(tt.dst, tt.src, tt.allowTokens)
+
+			if tt.dst.GitHubToken != tt.want.GitHubToken {
+				t.Errorf("GitHubToken = %q, want %q",
+					tt.dst.GitHubToken, tt.want.GitHubToken)
+			}
+		})
+	}
+}

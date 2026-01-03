@@ -258,3 +258,181 @@ func TestProjectDetector_suggestConfiguration(t *testing.T) {
 		})
 	}
 }
+
+// TestProjectDetector_suggestRunsOn tests the runner suggestion logic.
+func TestProjectDetector_suggestRunsOn(t *testing.T) {
+	t.Parallel()
+	output := internal.NewColoredOutput(true)
+	detector := &ProjectDetector{
+		output: output,
+	}
+
+	tests := []struct {
+		name     string
+		settings *DetectedSettings
+		expected []string
+	}{
+		{
+			name: "javascript/typescript project",
+			settings: &DetectedSettings{
+				Language:        "JavaScript/TypeScript",
+				SuggestedRunsOn: []string{"ubuntu-latest"},
+			},
+			expected: []string{"ubuntu-latest", "windows-latest", "macos-latest"},
+		},
+		{
+			name: "go project",
+			settings: &DetectedSettings{
+				Language:        "Go",
+				SuggestedRunsOn: []string{"ubuntu-latest"},
+			},
+			expected: []string{"ubuntu-latest"},
+		},
+		{
+			name: "python project",
+			settings: &DetectedSettings{
+				Language:        "Python",
+				SuggestedRunsOn: []string{"ubuntu-latest"},
+			},
+			expected: []string{"ubuntu-latest"},
+		},
+		{
+			name: "already has multiple runners",
+			settings: &DetectedSettings{
+				Language:        "JavaScript/TypeScript",
+				SuggestedRunsOn: []string{"ubuntu-latest", "custom-runner"},
+			},
+			expected: []string{"ubuntu-latest", "custom-runner"},
+		},
+		{
+			name: "unknown language",
+			settings: &DetectedSettings{
+				Language:        "Rust",
+				SuggestedRunsOn: []string{"ubuntu-latest"},
+			},
+			expected: []string{"ubuntu-latest"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			detector.suggestRunsOn(tt.settings)
+
+			if len(tt.settings.SuggestedRunsOn) != len(tt.expected) {
+				t.Errorf("Expected %d runners, got %d", len(tt.expected), len(tt.settings.SuggestedRunsOn))
+
+				return
+			}
+
+			for i, expectedRunner := range tt.expected {
+				if tt.settings.SuggestedRunsOn[i] != expectedRunner {
+					t.Errorf("Expected runner at index %d to be %s, got %s",
+						i, expectedRunner, tt.settings.SuggestedRunsOn[i])
+				}
+			}
+		})
+	}
+}
+
+// assertPermissionsMatch is a helper to validate permissions in tests.
+func assertPermissionsMatch(t *testing.T, expected, actual map[string]string) {
+	t.Helper()
+
+	if expected == nil && actual != nil {
+		t.Errorf("Expected nil permissions, got %v", actual)
+
+		return
+	}
+
+	if expected != nil && actual == nil {
+		t.Errorf("Expected permissions %v, got nil", expected)
+
+		return
+	}
+
+	if expected == nil {
+		return
+	}
+
+	if len(actual) != len(expected) {
+		t.Errorf("Expected %d permissions, got %d", len(expected), len(actual))
+
+		return
+	}
+
+	for key, expectedValue := range expected {
+		if actualValue, ok := actual[key]; !ok {
+			t.Errorf("Expected permission %s not found", key)
+		} else if actualValue != expectedValue {
+			t.Errorf("Expected permission %s=%s, got %s=%s",
+				key, expectedValue, key, actualValue)
+		}
+	}
+}
+
+// TestProjectDetector_suggestPermissions tests the permissions suggestion logic.
+func TestProjectDetector_suggestPermissions(t *testing.T) {
+	t.Parallel()
+	output := internal.NewColoredOutput(true)
+	detector := &ProjectDetector{
+		output: output,
+	}
+
+	tests := []struct {
+		name     string
+		settings *DetectedSettings
+		expected map[string]string
+	}{
+		{
+			name: "github action without permissions",
+			settings: &DetectedSettings{
+				IsGitHubAction:       true,
+				SuggestedPermissions: nil,
+			},
+			expected: map[string]string{
+				"contents": "read",
+			},
+		},
+		{
+			name: "github action with existing permissions",
+			settings: &DetectedSettings{
+				IsGitHubAction: true,
+				SuggestedPermissions: map[string]string{
+					"contents": "write",
+					"issues":   "read",
+				},
+			},
+			expected: map[string]string{
+				"contents": "write",
+				"issues":   "read",
+			},
+		},
+		{
+			name: "not a github action",
+			settings: &DetectedSettings{
+				IsGitHubAction:       false,
+				SuggestedPermissions: nil,
+			},
+			expected: nil,
+		},
+		{
+			name: "github action with empty permissions map",
+			settings: &DetectedSettings{
+				IsGitHubAction:       true,
+				SuggestedPermissions: map[string]string{},
+			},
+			expected: map[string]string{
+				"contents": "read",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			detector.suggestPermissions(tt.settings)
+			assertPermissionsMatch(t, tt.expected, tt.settings.SuggestedPermissions)
+		})
+	}
+}

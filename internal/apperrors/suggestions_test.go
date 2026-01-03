@@ -343,3 +343,197 @@ func TestGetGitHubAPISuggestionsStatusCodes(t *testing.T) {
 		})
 	}
 }
+
+// TestGetValidationSuggestions tests the getValidationSuggestions function.
+func TestGetValidationSuggestions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		context          map[string]string
+		expectedContains []string
+	}{
+		{
+			name:    "basic validation suggestions",
+			context: map[string]string{},
+			expectedContains: []string{
+				"Review validation errors",
+				"Check required fields",
+				"Use 'gh-action-readme schema' to see valid structure",
+			},
+		},
+		{
+			name: "with invalid_fields context",
+			context: map[string]string{
+				"invalid_fields": "runs.using, description",
+			},
+			expectedContains: []string{
+				"Invalid fields: runs.using, description",
+				"Check spelling and nesting",
+			},
+		},
+		{
+			name: "with validation_type required",
+			context: map[string]string{
+				"validation_type": "required",
+			},
+			expectedContains: []string{
+				"Add missing required fields",
+				"name, description, runs",
+			},
+		},
+		{
+			name: "with validation_type type",
+			context: map[string]string{
+				"validation_type": "type",
+			},
+			expectedContains: []string{
+				"Ensure field values match expected types",
+				"Strings should be quoted",
+			},
+		},
+		{
+			name: "with both invalid_fields and validation_type",
+			context: map[string]string{
+				"invalid_fields":  "name",
+				"validation_type": "required",
+			},
+			expectedContains: []string{
+				"Invalid fields: name",
+				"Add missing required fields",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			suggestions := getValidationSuggestions(tt.context)
+			testutil.AssertSliceContainsAll(t, suggestions, tt.expectedContains)
+		})
+	}
+}
+
+// TestGetConfigurationSuggestions tests the getConfigurationSuggestions function.
+func TestGetConfigurationSuggestions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		context          map[string]string
+		expectedContains []string
+	}{
+		{
+			name:    "basic configuration suggestions",
+			context: map[string]string{},
+			expectedContains: []string{
+				"Check configuration file syntax",
+				"Ensure configuration file exists",
+				"Use 'gh-action-readme config init'",
+			},
+		},
+		{
+			name: "with config_path context",
+			context: map[string]string{
+				"config_path": "/path/to/config.yaml",
+			},
+			expectedContains: []string{
+				"Config path: /path/to/config.yaml",
+				"Check if file exists: ls -la /path/to/config.yaml",
+			},
+		},
+		{
+			name: "with permission error in context",
+			context: map[string]string{
+				"error": "permission denied",
+			},
+			expectedContains: []string{
+				"Check file permissions for config file",
+				"Ensure parent directory is writable",
+			},
+		},
+		{
+			name: "with both config_path and permission error",
+			context: map[string]string{
+				"config_path": "/restricted/config.yaml",
+				"error":       "permission denied while reading",
+			},
+			expectedContains: []string{
+				"Config path: /restricted/config.yaml",
+				"Check file permissions for config file",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			suggestions := getConfigurationSuggestions(tt.context)
+			testutil.AssertSliceContainsAll(t, suggestions, tt.expectedContains)
+		})
+	}
+}
+
+// TestGetTemplateSuggestions tests the getTemplateSuggestions function.
+func TestGetTemplateSuggestions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		context          map[string]string
+		expectedContains []string
+	}{
+		{
+			name:    "basic template suggestions",
+			context: map[string]string{},
+			expectedContains: []string{
+				"Check template syntax",
+				"Ensure all template variables are defined",
+				"Verify custom template path is correct",
+			},
+		},
+		{
+			name: "with template_path context",
+			context: map[string]string{
+				"template_path": "/path/to/custom-template.tmpl",
+			},
+			expectedContains: []string{
+				"Template path: /path/to/custom-template.tmpl",
+				"Ensure template file exists and is readable",
+			},
+		},
+		{
+			name: "with theme context",
+			context: map[string]string{
+				"theme": "custom-theme",
+			},
+			expectedContains: []string{
+				"Current theme: custom-theme",
+				"Try using a different theme: --theme github",
+				"Available themes: default, github, gitlab, minimal, professional",
+			},
+		},
+		{
+			name: "with both template_path and theme",
+			context: map[string]string{
+				"template_path": "/custom/template.tmpl",
+				"theme":         "github",
+			},
+			expectedContains: []string{
+				"Template path: /custom/template.tmpl",
+				"Current theme: github",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			suggestions := getTemplateSuggestions(tt.context)
+			testutil.AssertSliceContainsAll(t, suggestions, tt.expectedContains)
+		})
+	}
+}

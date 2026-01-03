@@ -2,6 +2,7 @@ package dependencies
 
 import (
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -650,6 +651,126 @@ func TestNewAnalyzer(t *testing.T) {
 			}
 			if analyzer.RepoInfo != tt.repoInfo {
 				t.Error("repo info not set correctly")
+			}
+		})
+	}
+}
+
+// TestNoOpCache tests the no-op cache implementation.
+func TestNoOpCache(t *testing.T) {
+	t.Parallel()
+
+	noc := NewNoOpCache()
+	if noc == nil {
+		t.Fatal("NewNoOpCache() returned nil")
+	}
+
+	// Test Get - should always return false
+	val, ok := noc.Get("test-key")
+	if ok {
+		t.Error("NoOpCache.Get() should return false")
+	}
+	if val != nil {
+		t.Error("NoOpCache.Get() should return nil value")
+	}
+
+	// Test Set - should not error
+	err := noc.Set("test-key", "test-value")
+	if err != nil {
+		t.Errorf("NoOpCache.Set() returned error: %v", err)
+	}
+
+	// Test SetWithTTL - should not error
+	err = noc.SetWithTTL("test-key", "test-value", time.Hour)
+	if err != nil {
+		t.Errorf("NoOpCache.SetWithTTL() returned error: %v", err)
+	}
+}
+
+// TestCacheAdapter_Set tests the cache adapter Set method.
+func TestCacheAdapter_Set(t *testing.T) {
+	t.Parallel()
+
+	c, _ := cache.NewCache(cache.DefaultConfig())
+	adapter := NewCacheAdapter(c)
+
+	// Test Set
+	err := adapter.Set("test-key", "test-value")
+	if err != nil {
+		t.Errorf("CacheAdapter.Set() returned error: %v", err)
+	}
+
+	// Verify value was set
+	val, ok := adapter.Get("test-key")
+	if !ok {
+		t.Error("CacheAdapter.Get() should return true after Set")
+	}
+	if val != "test-value" {
+		t.Errorf("CacheAdapter.Get() = %v, want 'test-value'", val)
+	}
+}
+
+// TestIsCompositeAction tests composite action detection.
+func TestIsCompositeAction(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		fixture string
+		want    bool
+		wantErr bool
+	}{
+		{
+			name:    "composite action",
+			fixture: "../../testdata/analyzer/composite-action.yml",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    "docker action",
+			fixture: "../../testdata/analyzer/docker-action.yml",
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name:    "javascript action",
+			fixture: "../../testdata/analyzer/javascript-action.yml",
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name:    "invalid yaml",
+			fixture: "../../testdata/analyzer/invalid.yml",
+			want:    false,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Read fixture content
+			yamlContent, err := os.ReadFile(tt.fixture)
+			if err != nil {
+				t.Fatalf("Failed to read fixture %s: %v", tt.fixture, err)
+			}
+
+			// Create temp file with action YAML
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+			testutil.WriteTestFile(t, actionPath, string(yamlContent))
+
+			got, err := IsCompositeAction(actionPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IsCompositeAction() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+			if got != tt.want {
+				t.Errorf("IsCompositeAction() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -1,0 +1,5 @@
+name: Test Action
+runs:
+  using: composite
+  steps:
+    - run: echo "test"
