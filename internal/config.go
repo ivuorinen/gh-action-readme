@@ -25,9 +25,10 @@ type AppConfig struct {
 	GitHubToken string `mapstructure:"github_token" yaml:"github_token,omitempty"` // Only in global config
 
 	// Repository Information (auto-detected, overridable)
-	Organization string `mapstructure:"organization" yaml:"organization,omitempty"`
-	Repository   string `mapstructure:"repository"   yaml:"repository,omitempty"`
-	Version      string `mapstructure:"version"      yaml:"version,omitempty"`
+	Organization     string `mapstructure:"organization"       yaml:"organization,omitempty"`
+	Repository       string `mapstructure:"repository"         yaml:"repository,omitempty"`
+	Version          string `mapstructure:"version"            yaml:"version,omitempty"`
+	UseDefaultBranch bool   `mapstructure:"use_default_branch" yaml:"use_default_branch"`
 
 	// Template Settings
 	Theme          string `mapstructure:"theme"           yaml:"theme"`
@@ -214,9 +215,10 @@ func resolveThemeTemplate(theme string) string {
 func DefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		// Repository Information (will be auto-detected)
-		Organization: "",
-		Repository:   "",
-		Version:      "",
+		Organization:     "",
+		Repository:       "",
+		Version:          "",
+		UseDefaultBranch: true, // Use detected default branch (main/master) in usage examples
 
 		// Template Settings
 		Theme:        "default", // default, github, gitlab, minimal, professional
@@ -339,6 +341,9 @@ func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
 	}
 	if src.Quiet {
 		dst.Quiet = src.Quiet
+	}
+	if src.UseDefaultBranch {
+		dst.UseDefaultBranch = src.UseDefaultBranch
 	}
 }
 

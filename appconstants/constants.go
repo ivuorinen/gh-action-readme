@@ -150,6 +150,8 @@ const (
 	ConfigKeyRepository = "repository"
 	// ConfigKeyVersion is the version config key.
 	ConfigKeyVersion = "version"
+	// ConfigKeyUseDefaultBranch is the configuration key for use default branch behavior.
+	ConfigKeyUseDefaultBranch = "use_default_branch"
 
 	// Template Configuration
 	// ConfigKeyTheme is the configuration key for theme.

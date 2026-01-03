@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -36,6 +37,10 @@ type TemplateData struct {
 
 	// Computed Values
 	UsesStatement string `json:"uses_statement"`
+
+	// Path information for subdirectory extraction
+	ActionPath string `json:"action_path,omitempty"`
+	RepoRoot   string `json:"repo_root,omitempty"`
 
 	// Dependencies (populated by dependency analysis)
 	Dependencies []dependencies.Dependency `json:"dependencies,omitempty"`
@@ -122,41 +127,98 @@ func formatVersion(version string) string {
 	return version
 }
 
-// buildUsesString constructs the uses string with optional action name.
+// buildUsesString constructs the uses string with optional subdirectory path.
 func buildUsesString(td *TemplateData, org, repo, version string) string {
 	// Use the validation package's FormatUsesStatement for consistency
 	if org == "" || repo == "" {
 		return appconstants.DefaultUsesPlaceholder
 	}
 
-	// For actions within subdirectories, include the action name
-	if td.Name != "" && repo != "" {
-		actionName := validation.SanitizeActionName(td.Name)
-		if actionName != "" && actionName != repo {
-			// Check if this looks like a subdirectory action
-			return validation.FormatUsesStatement(org, repo+"/"+actionName, version)
-		}
+	// For monorepo actions in subdirectories, extract the actual directory path
+	subdir := extractActionSubdirectory(td.ActionPath, td.RepoRoot)
+
+	if subdir != "" {
+		// Action is in a subdirectory: org/repo/subdir@version
+		return validation.FormatUsesStatement(org, repo+"/"+subdir, version)
 	}
 
+	// Action is at repo root: org/repo@version
 	return validation.FormatUsesStatement(org, repo, version)
 }
 
-// getActionVersion returns the action version from template data.
-func getActionVersion(data any) string {
-	if td, ok := data.(*TemplateData); ok {
-		if td.Config.Version != "" {
-			return td.Config.Version
-		}
+// extractActionSubdirectory extracts the subdirectory path for an action relative to repo root.
+// For monorepo actions (e.g., org/repo/subdir/action.yml), returns "subdir".
+// For repo-root actions (e.g., org/repo/action.yml), returns empty string.
+// Returns empty string if paths cannot be determined.
+func extractActionSubdirectory(actionPath, repoRoot string) string {
+	// Validate inputs
+	if actionPath == "" || repoRoot == "" {
+		return ""
 	}
 
+	// Get absolute paths for reliable comparison
+	absActionPath, err := filepath.Abs(actionPath)
+	if err != nil {
+		return ""
+	}
+
+	absRepoRoot, err := filepath.Abs(repoRoot)
+	if err != nil {
+		return ""
+	}
+
+	// Get the directory containing action.yml
+	actionDir := filepath.Dir(absActionPath)
+
+	// Calculate relative path from repo root to action directory
+	relPath, err := filepath.Rel(absRepoRoot, actionDir)
+	if err != nil {
+		return ""
+	}
+
+	// If relative path is "." or empty, action is at repo root
+	if relPath == "." || relPath == "" {
+		return ""
+	}
+
+	// If relative path starts with "..", action is outside repo (shouldn't happen)
+	if strings.HasPrefix(relPath, "..") {
+		return ""
+	}
+
+	// Return the subdirectory path (e.g., "actions/csharp-build")
+	return relPath
+}
+
+// getActionVersion returns the action version from template data.
+// Priority: 1) Config.Version (explicit override), 2) Default branch (if enabled), 3) "v1" (fallback).
+func getActionVersion(data any) string {
+	td, ok := data.(*TemplateData)
+	if !ok {
+		return "v1"
+	}
+
+	// Priority 1: Explicit version override
+	if td.Config.Version != "" {
+		return td.Config.Version
+	}
+
+	// Priority 2: Use default branch if enabled and available
+	if td.Config.UseDefaultBranch && td.Git.DefaultBranch != "" {
+		return td.Git.DefaultBranch
+	}
+
+	// Priority 3: Fallback
 	return "v1"
 }
 
 // BuildTemplateData constructs comprehensive template data from action and configuration.
 func BuildTemplateData(action *ActionYML, config *AppConfig, repoRoot, actionPath string) *TemplateData {
 	data := &TemplateData{
-		ActionYML: action,
-		Config:    config,
+		ActionYML:  action,
+		Config:     config,
+		ActionPath: actionPath,
+		RepoRoot:   repoRoot,
 	}
 
 	// Populate Git information

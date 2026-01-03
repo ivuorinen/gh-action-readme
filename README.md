@@ -164,7 +164,7 @@ gh-action-readme config init
 gh-action-readme gen --recursive --theme github --output-dir docs/
 
 # Custom themes
-cp -r templates/themes/github templates/themes/custom
+cp -r templates_embed/templates/themes/github templates_embed/templates/themes/custom
 gh-action-readme gen --theme custom
 ```
 
