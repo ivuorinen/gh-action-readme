@@ -12,6 +12,24 @@ import (
 
 const testPermissionWrite = "write"
 
+// parseActionFromContent creates a temporary action.yml file with the given content and parses it.
+func parseActionFromContent(t *testing.T, content string) (*ActionYML, error) {
+	t.Helper()
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
+	_ = tmpFile.Close()
+
+	return ParseActionYML(tmpFile.Name())
+}
+
 // createTestDirWithAction creates a directory with an action.yml file and returns both paths.
 func createTestDirWithAction(t *testing.T, baseDir, dirName, yamlContent string) (string, string) {
 	t.Helper()
@@ -417,18 +435,7 @@ func TestParseActionYMLWithCommentPermissions(t *testing.T) {
 		appconstants.TestCompositeUsing +
 		appconstants.TestStepsEmpty
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
-	_ = tmpFile.Close()
-
-	action, err := ParseActionYML(tmpFile.Name())
+	action, err := parseActionFromContent(t, content)
 	if err != nil {
 		t.Fatalf(appconstants.TestErrorFormat, err)
 	}
@@ -457,18 +464,7 @@ func TestParseActionYMLYAMLPermissionsOverrideComments(t *testing.T) {
 		appconstants.TestCompositeUsing +
 		appconstants.TestStepsEmpty
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
-	_ = tmpFile.Close()
-
-	action, err := ParseActionYML(tmpFile.Name())
+	action, err := parseActionFromContent(t, content)
 	if err != nil {
 		t.Fatalf(appconstants.TestErrorFormat, err)
 	}
@@ -503,18 +499,7 @@ func TestParseActionYMLOnlyYAMLPermissions(t *testing.T) {
 		appconstants.TestCompositeUsing +
 		appconstants.TestStepsEmpty
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
-	_ = tmpFile.Close()
-
-	action, err := ParseActionYML(tmpFile.Name())
+	action, err := parseActionFromContent(t, content)
 	if err != nil {
 		t.Fatalf(appconstants.TestErrorFormat, err)
 	}
@@ -542,18 +527,7 @@ func TestParseActionYMLNoPermissions(t *testing.T) {
 		appconstants.TestCompositeUsing +
 		appconstants.TestStepsEmpty
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
-	_ = tmpFile.Close()
-
-	action, err := ParseActionYML(tmpFile.Name())
+	action, err := parseActionFromContent(t, content)
 	if err != nil {
 		t.Fatalf(appconstants.TestErrorFormat, err)
 	}
@@ -572,18 +546,7 @@ func TestParseActionYMLMalformedYAML(t *testing.T) {
 		"invalid-yaml: [\n" + // Unclosed bracket
 		"  - item"
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
-	_ = tmpFile.Close()
-
-	_, err = ParseActionYML(tmpFile.Name())
+	_, err := parseActionFromContent(t, content)
 	if err == nil {
 		t.Error("Expected error for malformed YAML, got nil")
 	}
@@ -917,18 +880,7 @@ func TestParseActionYMLOnlyComments(t *testing.T) {
 		appconstants.TestPermissionsHeader +
 		appconstants.TestContentsRead
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
-	_ = tmpFile.Close()
-
-	_, err = ParseActionYML(tmpFile.Name())
+	_, err := parseActionFromContent(t, content)
 	// File with only comments should return EOF error from YAML parser
 	// (comments are parsed separately, but YAML decoder still needs valid YAML)
 	if err == nil {
