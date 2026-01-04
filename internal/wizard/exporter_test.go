@@ -13,7 +13,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestConfigExporter_ExportConfig(t *testing.T) {
+func TestConfigExporterExportConfig(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true) // quiet mode for testing
 	exporter := NewConfigExporter(output)
@@ -167,7 +167,7 @@ func verifyTOMLContent(t *testing.T, outputPath string) {
 	}
 }
 
-func TestConfigExporter_sanitizeConfig(t *testing.T) {
+func TestConfigExportersanitizeConfig(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
@@ -201,7 +201,7 @@ func TestConfigExporter_sanitizeConfig(t *testing.T) {
 	}
 }
 
-func TestConfigExporter_GetSupportedFormats(t *testing.T) {
+func TestConfigExporterGetSupportedFormats(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
@@ -226,7 +226,7 @@ func TestConfigExporter_GetSupportedFormats(t *testing.T) {
 	}
 }
 
-func TestConfigExporter_GetDefaultOutputPath(t *testing.T) {
+func TestConfigExporterGetDefaultOutputPath(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)

@@ -282,7 +282,7 @@ func verifyRepoRoot(t *testing.T, repoRoot, tmpDir string) {
 }
 
 // Test error handling in GetGitRepoRootAndInfo.
-func TestGetGitRepoRootAndInfo_ErrorHandling(t *testing.T) {
+func TestGetGitRepoRootAndInfoErrorHandling(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nonexistent directory", func(t *testing.T) {

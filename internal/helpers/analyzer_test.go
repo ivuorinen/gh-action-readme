@@ -108,7 +108,7 @@ func TestCreateAnalyzerOrExit(t *testing.T) {
 	// In a real-world scenario, we might refactor to return errors instead
 }
 
-func TestCreateAnalyzer_Integration(t *testing.T) {
+func TestCreateAnalyzerIntegration(t *testing.T) {
 	t.Parallel()
 
 	// Test integration with actual generator functionality

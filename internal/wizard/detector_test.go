@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 )
 
-func TestProjectDetector_analyzeProjectFiles(t *testing.T) {
+func TestProjectDetectoranalyzeProjectFiles(t *testing.T) {
 	t.Parallel()
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
@@ -64,7 +65,7 @@ func TestProjectDetector_analyzeProjectFiles(t *testing.T) {
 	}
 }
 
-func TestProjectDetector_detectVersionFromPackageJSON(t *testing.T) {
+func TestProjectDetectordetectVersionFromPackageJSON(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 
@@ -92,7 +93,7 @@ func TestProjectDetector_detectVersionFromPackageJSON(t *testing.T) {
 	}
 }
 
-func TestProjectDetector_detectVersionFromFiles(t *testing.T) {
+func TestProjectDetectordetectVersionFromFiles(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 
@@ -115,7 +116,7 @@ func TestProjectDetector_detectVersionFromFiles(t *testing.T) {
 	}
 }
 
-func TestProjectDetector_findActionFiles(t *testing.T) {
+func TestProjectDetectorfindActionFiles(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 
@@ -171,7 +172,7 @@ func TestProjectDetector_findActionFiles(t *testing.T) {
 	}
 }
 
-func TestProjectDetector_isActionFile(t *testing.T) {
+func TestProjectDetectorisActionFile(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -201,7 +202,7 @@ func TestProjectDetector_isActionFile(t *testing.T) {
 	}
 }
 
-func TestProjectDetector_suggestConfiguration(t *testing.T) {
+func TestProjectDetectorsuggestConfiguration(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -259,8 +260,8 @@ func TestProjectDetector_suggestConfiguration(t *testing.T) {
 	}
 }
 
-// TestProjectDetector_suggestRunsOn tests the runner suggestion logic.
-func TestProjectDetector_suggestRunsOn(t *testing.T) {
+// TestProjectDetectorsuggestRunsOn tests the runner suggestion logic.
+func TestProjectDetectorsuggestRunsOn(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -276,41 +277,45 @@ func TestProjectDetector_suggestRunsOn(t *testing.T) {
 			name: "javascript/typescript project",
 			settings: &DetectedSettings{
 				Language:        "JavaScript/TypeScript",
-				SuggestedRunsOn: []string{"ubuntu-latest"},
+				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
 			},
-			expected: []string{"ubuntu-latest", "windows-latest", "macos-latest"},
+			expected: []string{
+				appconstants.RunnerUbuntuLatest,
+				appconstants.RunnerWindowsLatest,
+				appconstants.RunnerMacosLatest,
+			},
 		},
 		{
 			name: "go project",
 			settings: &DetectedSettings{
 				Language:        "Go",
-				SuggestedRunsOn: []string{"ubuntu-latest"},
+				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
 			},
-			expected: []string{"ubuntu-latest"},
+			expected: []string{appconstants.RunnerUbuntuLatest},
 		},
 		{
 			name: "python project",
 			settings: &DetectedSettings{
 				Language:        "Python",
-				SuggestedRunsOn: []string{"ubuntu-latest"},
+				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
 			},
-			expected: []string{"ubuntu-latest"},
+			expected: []string{appconstants.RunnerUbuntuLatest},
 		},
 		{
 			name: "already has multiple runners",
 			settings: &DetectedSettings{
 				Language:        "JavaScript/TypeScript",
-				SuggestedRunsOn: []string{"ubuntu-latest", "custom-runner"},
+				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest, "custom-runner"},
 			},
-			expected: []string{"ubuntu-latest", "custom-runner"},
+			expected: []string{appconstants.RunnerUbuntuLatest, "custom-runner"},
 		},
 		{
 			name: "unknown language",
 			settings: &DetectedSettings{
 				Language:        "Rust",
-				SuggestedRunsOn: []string{"ubuntu-latest"},
+				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
 			},
-			expected: []string{"ubuntu-latest"},
+			expected: []string{appconstants.RunnerUbuntuLatest},
 		},
 	}
 
@@ -371,8 +376,8 @@ func assertPermissionsMatch(t *testing.T, expected, actual map[string]string) {
 	}
 }
 
-// TestProjectDetector_suggestPermissions tests the permissions suggestion logic.
-func TestProjectDetector_suggestPermissions(t *testing.T) {
+// TestProjectDetectorsuggestPermissions tests the permissions suggestion logic.
+func TestProjectDetectorsuggestPermissions(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{

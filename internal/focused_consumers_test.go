@@ -117,8 +117,26 @@ func TestNewCompositeOutputWriter(t *testing.T) {
 	}
 }
 
-// TestCompositeOutputWriter_ProcessWithOutput tests processing with output.
-func TestCompositeOutputWriter_ProcessWithOutput(t *testing.T) {
+// countMessageTypes counts the presence of specific message types in a slice of messages.
+func countMessageTypes(messages []string, types ...string) map[string]bool {
+	results := make(map[string]bool)
+	for _, msgType := range types {
+		results[msgType] = false
+	}
+
+	for _, msg := range messages {
+		for _, msgType := range types {
+			if msg == msgType {
+				results[msgType] = true
+			}
+		}
+	}
+
+	return results
+}
+
+// TestCompositeOutputWriterProcessWithOutput tests processing with output.
+func TestCompositeOutputWriterProcessWithOutput(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -173,29 +191,16 @@ func TestCompositeOutputWriter_ProcessWithOutput(t *testing.T) {
 					len(writer.messages), tt.wantMessages)
 			}
 
-			hasInfo := false
-			hasProgress := false
-			hasSuccess := false
+			msgTypes := countMessageTypes(writer.messages, "INFO", "PROGRESS", "SUCCESS")
 
-			for _, msg := range writer.messages {
-				switch msg {
-				case "INFO":
-					hasInfo = true
-				case "PROGRESS":
-					hasProgress = true
-				case "SUCCESS":
-					hasSuccess = true
-				}
+			if msgTypes["INFO"] != tt.wantInfo {
+				t.Errorf("ProcessWithOutput() hasInfo = %v, want %v", msgTypes["INFO"], tt.wantInfo)
 			}
-
-			if hasInfo != tt.wantInfo {
-				t.Errorf("ProcessWithOutput() hasInfo = %v, want %v", hasInfo, tt.wantInfo)
+			if msgTypes["PROGRESS"] != tt.wantProgress {
+				t.Errorf("ProcessWithOutput() hasProgress = %v, want %v", msgTypes["PROGRESS"], tt.wantProgress)
 			}
-			if hasProgress != tt.wantProgress {
-				t.Errorf("ProcessWithOutput() hasProgress = %v, want %v", hasProgress, tt.wantProgress)
-			}
-			if hasSuccess != tt.wantSuccess {
-				t.Errorf("ProcessWithOutput() hasSuccess = %v, want %v", hasSuccess, tt.wantSuccess)
+			if msgTypes["SUCCESS"] != tt.wantSuccess {
+				t.Errorf("ProcessWithOutput() hasSuccess = %v, want %v", msgTypes["SUCCESS"], tt.wantSuccess)
 			}
 		})
 	}
@@ -223,8 +228,8 @@ func TestNewValidationComponent(t *testing.T) {
 	}
 }
 
-// TestValidationComponent_ValidateAndReport tests validation reporting.
-func TestValidationComponent_ValidateAndReport(t *testing.T) {
+// TestValidationComponentValidateAndReport tests validation reporting.
+func TestValidationComponentValidateAndReport(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -238,7 +243,7 @@ func TestValidationComponent_ValidateAndReport(t *testing.T) {
 	}{
 		{
 			name:              "valid item",
-			item:              "test-item",
+			item:              appconstants.TestItemName,
 			isValid:           true,
 			err:               nil,
 			wantLoggerCalls:   1,
@@ -247,7 +252,7 @@ func TestValidationComponent_ValidateAndReport(t *testing.T) {
 		},
 		{
 			name:              "invalid with contextual error",
-			item:              "test-item",
+			item:              appconstants.TestItemName,
 			isValid:           false,
 			err:               apperrors.New(appconstants.ErrCodeValidation, "validation failed"),
 			wantLoggerCalls:   0,
@@ -256,7 +261,7 @@ func TestValidationComponent_ValidateAndReport(t *testing.T) {
 		},
 		{
 			name:              "invalid with regular error",
-			item:              "test-item",
+			item:              appconstants.TestItemName,
 			isValid:           false,
 			err:               errors.New("regular error"),
 			wantLoggerCalls:   0,
@@ -265,7 +270,7 @@ func TestValidationComponent_ValidateAndReport(t *testing.T) {
 		},
 		{
 			name:              "invalid without error",
-			item:              "test-item",
+			item:              appconstants.TestItemName,
 			isValid:           false,
 			err:               nil,
 			wantLoggerCalls:   0,

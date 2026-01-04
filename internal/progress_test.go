@@ -7,7 +7,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-func TestProgressBarManager_CreateProgressBar(t *testing.T) {
+func TestProgressBarManagerCreateProgressBar(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -65,7 +65,7 @@ func TestProgressBarManager_CreateProgressBar(t *testing.T) {
 	}
 }
 
-func TestProgressBarManager_CreateProgressBarForFiles(t *testing.T) {
+func TestProgressBarManagerCreateProgressBarForFiles(t *testing.T) {
 	t.Parallel()
 	pm := NewProgressBarManager(false)
 	files := []string{"file1.yml", "file2.yml", "file3.yml"}
@@ -77,7 +77,7 @@ func TestProgressBarManager_CreateProgressBarForFiles(t *testing.T) {
 	}
 }
 
-func TestProgressBarManager_FinishProgressBar(t *testing.T) {
+func TestProgressBarManagerFinishProgressBar(t *testing.T) {
 	t.Parallel()
 	// Use quiet mode to avoid cluttering test output
 	pm := NewProgressBarManager(true)
@@ -90,7 +90,7 @@ func TestProgressBarManager_FinishProgressBar(t *testing.T) {
 	pm.FinishProgressBar(bar) // Should handle nil gracefully
 }
 
-func TestProgressBarManager_UpdateProgressBar(t *testing.T) {
+func TestProgressBarManagerUpdateProgressBar(t *testing.T) {
 	t.Parallel()
 	// Use quiet mode to avoid cluttering test output
 	pm := NewProgressBarManager(true)
@@ -103,7 +103,7 @@ func TestProgressBarManager_UpdateProgressBar(t *testing.T) {
 	pm.UpdateProgressBar(bar) // Should handle nil gracefully
 }
 
-func TestProgressBarManager_ProcessWithProgressBar(t *testing.T) {
+func TestProgressBarManagerProcessWithProgressBar(t *testing.T) {
 	t.Parallel()
 	// Use NullProgressManager to avoid cluttering test output
 	pm := NewNullProgressManager()
@@ -127,7 +127,7 @@ func TestProgressBarManager_ProcessWithProgressBar(t *testing.T) {
 	}
 }
 
-func TestProgressBarManager_ProcessWithProgressBar_QuietMode(t *testing.T) {
+func TestProgressBarManagerProcessWithProgressBarQuietMode(t *testing.T) {
 	t.Parallel()
 	pm := NewProgressBarManager(true) // quiet mode
 	items := []string{"item1", "item2"}
@@ -148,8 +148,8 @@ func TestProgressBarManager_ProcessWithProgressBar_QuietMode(t *testing.T) {
 	}
 }
 
-// TestProgressBarManager_FinishProgressBarWithNewline tests finishing with newline.
-func TestProgressBarManager_FinishProgressBarWithNewline(t *testing.T) {
+// TestProgressBarManagerFinishProgressBarWithNewline tests finishing with newline.
+func TestProgressBarManagerFinishProgressBarWithNewline(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

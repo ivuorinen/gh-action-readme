@@ -730,6 +730,29 @@ func TestMergeSliceFields(t *testing.T) {
 	}
 }
 
+// assertBooleanConfigFields is a helper that checks all boolean fields in AppConfig.
+func assertBooleanConfigFields(t *testing.T, got, want *AppConfig) {
+	t.Helper()
+
+	fields := []struct {
+		name    string
+		gotVal  bool
+		wantVal bool
+	}{
+		{"AnalyzeDependencies", got.AnalyzeDependencies, want.AnalyzeDependencies},
+		{"ShowSecurityInfo", got.ShowSecurityInfo, want.ShowSecurityInfo},
+		{"Verbose", got.Verbose, want.Verbose},
+		{"Quiet", got.Quiet, want.Quiet},
+		{"UseDefaultBranch", got.UseDefaultBranch, want.UseDefaultBranch},
+	}
+
+	for _, field := range fields {
+		if field.gotVal != field.wantVal {
+			t.Errorf("%s = %v, want %v", field.name, field.gotVal, field.wantVal)
+		}
+	}
+}
+
 // TestMergeBooleanFields tests merging boolean configuration fields.
 func TestMergeBooleanFields(t *testing.T) {
 	t.Parallel()
@@ -820,24 +843,7 @@ func TestMergeBooleanFields(t *testing.T) {
 
 			mergeBooleanFields(tt.dst, tt.src)
 
-			if tt.dst.AnalyzeDependencies != tt.want.AnalyzeDependencies {
-				t.Errorf("AnalyzeDependencies = %v, want %v",
-					tt.dst.AnalyzeDependencies, tt.want.AnalyzeDependencies)
-			}
-			if tt.dst.ShowSecurityInfo != tt.want.ShowSecurityInfo {
-				t.Errorf("ShowSecurityInfo = %v, want %v",
-					tt.dst.ShowSecurityInfo, tt.want.ShowSecurityInfo)
-			}
-			if tt.dst.Verbose != tt.want.Verbose {
-				t.Errorf("Verbose = %v, want %v", tt.dst.Verbose, tt.want.Verbose)
-			}
-			if tt.dst.Quiet != tt.want.Quiet {
-				t.Errorf("Quiet = %v, want %v", tt.dst.Quiet, tt.want.Quiet)
-			}
-			if tt.dst.UseDefaultBranch != tt.want.UseDefaultBranch {
-				t.Errorf("UseDefaultBranch = %v, want %v",
-					tt.dst.UseDefaultBranch, tt.want.UseDefaultBranch)
-			}
+			assertBooleanConfigFields(t, tt.dst, tt.want)
 		})
 	}
 }

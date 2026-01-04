@@ -285,7 +285,7 @@ func TestGetGitUsesString(t *testing.T) {
 		},
 		{
 			name: "action with use_default_branch disabled",
-			data: newTemplateData("Test Action", "", false, "main", "org", "test",
+			data: newTemplateData(appconstants.TestActionName, "", false, "main", "org", "test",
 				appconstants.TestRepoActionPath, "/repo"),
 			want: "org/test@v1",
 		},
@@ -382,7 +382,7 @@ func TestBuildTemplateData(t *testing.T) {
 		{
 			name: "basic action with config overrides",
 			action: &ActionYML{
-				Name:        "Test Action",
+				Name:        appconstants.TestActionName,
 				Description: "Test description",
 			},
 			config: &AppConfig{

@@ -298,7 +298,7 @@ func TestParseGitHubURL(t *testing.T) {
 	}
 }
 
-func TestRepoInfo_GetRepositoryName(t *testing.T) {
+func TestRepoInfoGetRepositoryName(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -345,8 +345,8 @@ func TestRepoInfo_GetRepositoryName(t *testing.T) {
 	}
 }
 
-// TestRepoInfo_GenerateUsesStatement tests the GenerateUsesStatement method.
-func TestRepoInfo_GenerateUsesStatement(t *testing.T) {
+// TestRepoInfoGenerateUsesStatement tests the GenerateUsesStatement method.
+func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

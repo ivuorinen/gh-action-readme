@@ -6,7 +6,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal"
 )
 
-func TestConfigValidator_ValidateConfig(t *testing.T) {
+func TestConfigValidatorValidateConfig(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true) // quiet mode for testing
 	validator := NewConfigValidator(output)
@@ -93,7 +93,7 @@ func TestConfigValidator_ValidateConfig(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_ValidateField(t *testing.T) {
+func TestConfigValidatorValidateField(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
@@ -128,7 +128,7 @@ func TestConfigValidator_ValidateField(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_isValidGitHubName(t *testing.T) {
+func TestConfigValidatorisValidGitHubName(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
@@ -160,7 +160,7 @@ func TestConfigValidator_isValidGitHubName(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_isValidSemanticVersion(t *testing.T) {
+func TestConfigValidatorisValidSemanticVersion(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
@@ -191,7 +191,7 @@ func TestConfigValidator_isValidSemanticVersion(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_isValidGitHubToken(t *testing.T) {
+func TestConfigValidatorisValidGitHubToken(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
@@ -222,7 +222,7 @@ func TestConfigValidator_isValidGitHubToken(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_isValidVariableName(t *testing.T) {
+func TestConfigValidatorisValidVariableName(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)

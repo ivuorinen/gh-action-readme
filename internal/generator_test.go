@@ -10,7 +10,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestGenerator_NewGenerator(t *testing.T) {
+func TestGeneratorNewGenerator(t *testing.T) {
 	t.Parallel()
 	config := &AppConfig{
 		Theme:        "default",
@@ -35,7 +35,7 @@ func TestGenerator_NewGenerator(t *testing.T) {
 	}
 }
 
-func TestGenerator_DiscoverActionFiles(t *testing.T) {
+func TestGeneratorDiscoverActionFiles(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -169,7 +169,7 @@ func TestGenerator_DiscoverActionFiles(t *testing.T) {
 	}
 }
 
-func TestGenerator_DiscoverActionFiles_Verbose(t *testing.T) {
+func TestGeneratorDiscoverActionFilesVerbose(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -215,7 +215,7 @@ func TestGenerator_DiscoverActionFiles_Verbose(t *testing.T) {
 	}
 }
 
-func TestGenerator_GenerateFromFile(t *testing.T) {
+func TestGeneratorGenerateFromFile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
@@ -371,7 +371,7 @@ func logREADMELocations(t *testing.T, dir string) {
 	})
 }
 
-func TestGenerator_ProcessBatch(t *testing.T) {
+func TestGeneratorProcessBatch(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -483,7 +483,7 @@ func TestGenerator_ProcessBatch(t *testing.T) {
 	}
 }
 
-func TestGenerator_ValidateFiles(t *testing.T) {
+func TestGeneratorValidateFiles(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -554,7 +554,7 @@ func TestGenerator_ValidateFiles(t *testing.T) {
 	}
 }
 
-func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
+func TestGeneratorCreateDependencyAnalyzer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -599,7 +599,7 @@ func TestGenerator_CreateDependencyAnalyzer(t *testing.T) {
 	}
 }
 
-func TestGenerator_WithDifferentThemes(t *testing.T) {
+func TestGeneratorWithDifferentThemes(t *testing.T) {
 	t.Parallel()
 	themes := []string{"default", "github", "gitlab", "minimal", "professional"}
 
@@ -639,7 +639,7 @@ func TestGenerator_WithDifferentThemes(t *testing.T) {
 	}
 }
 
-func TestGenerator_ErrorHandling(t *testing.T) {
+func TestGeneratorErrorHandling(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name      string
@@ -732,8 +732,8 @@ func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
 	return dirs
 }
 
-// TestGenerator_DiscoverActionFilesWithValidation tests the validation wrapper.
-func TestGenerator_DiscoverActionFilesWithValidation(t *testing.T) {
+// TestGeneratorDiscoverActionFilesWithValidation tests the validation wrapper.
+func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -807,8 +807,8 @@ func TestGenerator_DiscoverActionFilesWithValidation(t *testing.T) {
 	}
 }
 
-// TestGenerator_ResolveOutputPath tests output path resolution.
-func TestGenerator_ResolveOutputPath(t *testing.T) {
+// TestGeneratorResolveOutputPath tests output path resolution.
+func TestGeneratorResolveOutputPath(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -822,7 +822,7 @@ func TestGenerator_ResolveOutputPath(t *testing.T) {
 		{
 			name:            "no custom filename",
 			outputFilename:  "",
-			outputDir:       "/tmp/output",
+			outputDir:       appconstants.TestOutputDir,
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/README.md",
 			isAbsolute:      true,
@@ -830,7 +830,7 @@ func TestGenerator_ResolveOutputPath(t *testing.T) {
 		{
 			name:            "relative custom filename",
 			outputFilename:  "custom.md",
-			outputDir:       "/tmp/output",
+			outputDir:       appconstants.TestOutputDir,
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/custom.md",
 			isAbsolute:      true,
@@ -838,7 +838,7 @@ func TestGenerator_ResolveOutputPath(t *testing.T) {
 		{
 			name:            "absolute custom filename",
 			outputFilename:  "/absolute/path/output.md",
-			outputDir:       "/tmp/output",
+			outputDir:       appconstants.TestOutputDir,
 			defaultFilename: "README.md",
 			wantPath:        "/absolute/path/output.md",
 			isAbsolute:      true,
@@ -846,7 +846,7 @@ func TestGenerator_ResolveOutputPath(t *testing.T) {
 		{
 			name:            "custom filename with subdirectory",
 			outputFilename:  "docs/output.md",
-			outputDir:       "/tmp/output",
+			outputDir:       appconstants.TestOutputDir,
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/docs/output.md",
 			isAbsolute:      true,
@@ -875,8 +875,8 @@ func TestGenerator_ResolveOutputPath(t *testing.T) {
 	}
 }
 
-// TestGenerator_DiscoverActionFiles_ErrorPaths tests error handling in file discovery.
-func TestGenerator_DiscoverActionFiles_ErrorPaths(t *testing.T) {
+// TestGeneratorDiscoverActionFilesErrorPaths tests error handling in file discovery.
+func TestGeneratorDiscoverActionFilesErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	config := DefaultAppConfig()
@@ -902,8 +902,8 @@ func TestGenerator_DiscoverActionFiles_ErrorPaths(t *testing.T) {
 	// Just ensure it doesn't panic
 }
 
-// TestGenerator_ParseAndValidateAction_ErrorPaths tests validation error scenarios.
-func TestGenerator_ParseAndValidateAction_ErrorPaths(t *testing.T) {
+// TestGeneratorParseAndValidateActionErrorPaths tests validation error scenarios.
+func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -975,16 +975,16 @@ func TestGenerator_ParseAndValidateAction_ErrorPaths(t *testing.T) {
 	}
 }
 
-// TestGenerator_GenerateHTML_ErrorPaths tests HTML generation error handling.
-func TestGenerator_GenerateHTML_ErrorPaths(t *testing.T) {
+// TestGeneratorGenerateHTMLErrorPaths tests HTML generation error handling.
+func TestGeneratorGenerateHTMLErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 
 	// Create a valid action
 	action := &ActionYML{
-		Name:        "Test Action",
-		Description: "Test Description",
+		Name:        appconstants.TestActionName,
+		Description: appconstants.TestActionDesc,
 		Runs:        map[string]any{"using": "composite"},
 	}
 
@@ -1006,16 +1006,16 @@ func TestGenerator_GenerateHTML_ErrorPaths(t *testing.T) {
 	}
 }
 
-// TestGenerator_GenerateJSON_ErrorPaths tests JSON generation error handling.
-func TestGenerator_GenerateJSON_ErrorPaths(t *testing.T) {
+// TestGeneratorGenerateJSONErrorPaths tests JSON generation error handling.
+func TestGeneratorGenerateJSONErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 
 	// Create a valid action
 	action := &ActionYML{
-		Name:        "Test Action",
-		Description: "Test Description",
+		Name:        appconstants.TestActionName,
+		Description: appconstants.TestActionDesc,
 		Runs:        map[string]any{"using": "composite"},
 	}
 
@@ -1037,16 +1037,16 @@ func TestGenerator_GenerateJSON_ErrorPaths(t *testing.T) {
 	}
 }
 
-// TestGenerator_GenerateASCIIDoc_ErrorPaths tests AsciiDoc generation error handling.
-func TestGenerator_GenerateASCIIDoc_ErrorPaths(t *testing.T) {
+// TestGeneratorGenerateASCIIDocErrorPaths tests AsciiDoc generation error handling.
+func TestGeneratorGenerateASCIIDocErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 
 	// Create a valid action
 	action := &ActionYML{
-		Name:        "Test Action",
-		Description: "Test Description",
+		Name:        appconstants.TestActionName,
+		Description: appconstants.TestActionDesc,
 		Runs:        map[string]any{"using": "composite"},
 	}
 
@@ -1067,8 +1067,8 @@ func TestGenerator_GenerateASCIIDoc_ErrorPaths(t *testing.T) {
 	}
 }
 
-// TestGenerator_ReportResults_EdgeCases tests result reporting edge cases.
-func TestGenerator_ReportResults_EdgeCases(t *testing.T) {
+// TestGeneratorReportResultsEdgeCases tests result reporting edge cases.
+func TestGeneratorReportResultsEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -1122,16 +1122,16 @@ func TestGenerator_ReportResults_EdgeCases(t *testing.T) {
 	}
 }
 
-// TestGenerator_IsUnitTestEnvironment tests unit test detection.
-func TestGenerator_IsUnitTestEnvironment(t *testing.T) {
+// TestGeneratorIsUnitTestEnvironment tests unit test detection.
+func TestGeneratorIsUnitTestEnvironment(t *testing.T) {
 	// This test runs in a test environment, so should return true
 	if !isUnitTestEnvironment() {
 		t.Error("Expected isUnitTestEnvironment() to return true in test context")
 	}
 }
 
-// TestGenerator_NewGenerator_EdgeCases tests generator initialization edge cases.
-func TestGenerator_NewGenerator_EdgeCases(t *testing.T) {
+// TestGeneratorNewGeneratorEdgeCases tests generator initialization edge cases.
+func TestGeneratorNewGeneratorEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

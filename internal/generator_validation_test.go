@@ -91,6 +91,40 @@ func (c *capturedOutput) IsQuiet() bool {
 	return false
 }
 
+// allMessages consolidates all message slices into a single slice.
+func (c *capturedOutput) allMessages() []string {
+	total := len(c.infoMessages) + len(c.errorMessages) + len(c.warningMessages) + len(c.printfMessages)
+	messages := make([]string, 0, total)
+	messages = append(messages, c.infoMessages...)
+	messages = append(messages, c.errorMessages...)
+	messages = append(messages, c.warningMessages...)
+	messages = append(messages, c.printfMessages...)
+
+	return messages
+}
+
+// containsAnyMessage checks if any message in the consolidated list contains the needle.
+func (c *capturedOutput) containsAnyMessage(needle string) bool {
+	for _, msg := range c.allMessages() {
+		if strings.Contains(msg, needle) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// containsErrorMessage checks if any error message contains the needle.
+func (c *capturedOutput) containsErrorMessage(needle string) bool {
+	for _, msg := range c.errorMessages {
+		if strings.Contains(msg, needle) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // TestCountValidationStats tests the validation statistics counting function.
 func TestCountValidationStats(t *testing.T) {
 	tests := []struct {
@@ -102,8 +136,8 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "all valid files",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml"}},
-				{MissingFields: []string{"file: action2.yml"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1}},
+				{MissingFields: []string{appconstants.ValidationTestFile2}},
 			},
 			wantValidFiles:  2,
 			wantTotalIssues: 0,
@@ -111,8 +145,8 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "all invalid files",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml", "name", "description"}},
-				{MissingFields: []string{"file: action2.yml", "runs"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1, "name", "description"}},
+				{MissingFields: []string{appconstants.ValidationTestFile2, "runs"}},
 			},
 			wantValidFiles:  0,
 			wantTotalIssues: 3, // 2 issues in first file + 1 in second
@@ -120,10 +154,10 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "mixed valid and invalid",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml"}},                        // Valid
-				{MissingFields: []string{"file: action2.yml", "name", "description"}}, // 2 issues
-				{MissingFields: []string{"file: action3.yml"}},                        // Valid
-				{MissingFields: []string{"file: action4.yml", "runs"}},                // 1 issue
+				{MissingFields: []string{appconstants.ValidationTestFile1}},                        // Valid
+				{MissingFields: []string{appconstants.ValidationTestFile2, "name", "description"}}, // 2 issues
+				{MissingFields: []string{"file: action3.yml"}},                                     // Valid
+				{MissingFields: []string{"file: action4.yml", "runs"}},                             // 1 issue
 			},
 			wantValidFiles:  2,
 			wantTotalIssues: 3,
@@ -137,7 +171,7 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "single valid file",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action.yml"}},
+				{MissingFields: []string{appconstants.ValidationTestFile3}},
 			},
 			wantValidFiles:  1,
 			wantTotalIssues: 0,
@@ -145,7 +179,7 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "single invalid file with multiple issues",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action.yml", "name", "description", "runs"}},
+				{MissingFields: []string{appconstants.ValidationTestFile3, "name", "description", "runs"}},
 			},
 			wantValidFiles:  0,
 			wantTotalIssues: 3,
@@ -164,6 +198,38 @@ func TestCountValidationStats(t *testing.T) {
 				t.Errorf("countValidationStats() totalIssues = %d, want %d", gotIssues, tt.wantTotalIssues)
 			}
 		})
+	}
+}
+
+// messageCountExpectations defines expected message counts for validation tests.
+type messageCountExpectations struct {
+	bold    int
+	success int
+	warning int
+	error   int
+	info    int
+}
+
+// assertMessageCounts checks that message counts match expectations.
+func assertMessageCounts(t *testing.T, output *capturedOutput, want messageCountExpectations) {
+	t.Helper()
+
+	checks := []struct {
+		name     string
+		got      int
+		expected int
+	}{
+		{"bold messages", len(output.boldMessages), want.bold},
+		{"success messages", len(output.successMessages), want.success},
+		{"warning messages", len(output.warningMessages), want.warning},
+		{"error messages", len(output.errorMessages), want.error},
+		{"info messages", len(output.infoMessages), want.info},
+	}
+
+	for _, check := range checks {
+		if check.got != check.expected {
+			t.Errorf("showValidationSummary() %s = %d, want %d", check.name, check.got, check.expected)
+		}
 	}
 }
 
@@ -256,33 +322,13 @@ func TestShowValidationSummary(t *testing.T) {
 
 			gen.showValidationSummary(tt.totalFiles, tt.validFiles, tt.totalIssues, tt.resultCount, tt.errorCount)
 
-			if len(output.boldMessages) != tt.wantBold {
-				t.Errorf("showValidationSummary() bold messages = %d, want %d", len(output.boldMessages), tt.wantBold)
-			}
-			if len(output.successMessages) != tt.wantSuccess {
-				t.Errorf(
-					"showValidationSummary() success messages = %d, want %d",
-					len(output.successMessages),
-					tt.wantSuccess,
-				)
-			}
-			if len(output.warningMessages) != tt.wantWarning {
-				t.Errorf(
-					"showValidationSummary() warning messages = %d, want %d",
-					len(output.warningMessages),
-					tt.wantWarning,
-				)
-			}
-			if len(output.errorMessages) != tt.wantError {
-				t.Errorf(
-					"showValidationSummary() error messages = %d, want %d",
-					len(output.errorMessages),
-					tt.wantError,
-				)
-			}
-			if len(output.infoMessages) != tt.wantInfo {
-				t.Errorf("showValidationSummary() info messages = %d, want %d", len(output.infoMessages), tt.wantInfo)
-			}
+			assertMessageCounts(t, output, messageCountExpectations{
+				bold:    tt.wantBold,
+				success: tt.wantSuccess,
+				warning: tt.wantWarning,
+				error:   tt.wantError,
+				info:    tt.wantInfo,
+			})
 		})
 	}
 }
@@ -337,22 +383,12 @@ func TestShowParseErrors(t *testing.T) {
 				t.Errorf("showParseErrors() error messages = %d, want %d", len(output.errorMessages), tt.wantError)
 			}
 
-			if tt.wantContains != "" {
-				found := false
-				for _, msg := range output.errorMessages {
-					if strings.Contains(msg, tt.wantContains) {
-						found = true
-
-						break
-					}
-				}
-				if !found {
-					t.Errorf(
-						"showParseErrors() error messages should contain %q, got %v",
-						tt.wantContains,
-						output.errorMessages,
-					)
-				}
+			if tt.wantContains != "" && !output.containsErrorMessage(tt.wantContains) {
+				t.Errorf(
+					"showParseErrors() error messages should contain %q, got %v",
+					tt.wantContains,
+					output.errorMessages,
+				)
 			}
 		})
 	}
@@ -371,7 +407,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with missing fields only",
 			result: ValidationResult{
-				MissingFields: []string{"file: action.yml", "name", "description"},
+				MissingFields: []string{appconstants.ValidationTestFile3, "name", "description"},
 			},
 			wantInfo:     1, // File name only (no suggestions)
 			wantError:    2, // 2 missing fields
@@ -381,7 +417,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with warnings only",
 			result: ValidationResult{
-				MissingFields: []string{"file: action.yml"},
+				MissingFields: []string{appconstants.ValidationTestFile3},
 				Warnings:      []string{"author field is recommended", "icon field is recommended"},
 			},
 			wantInfo:     1, // File name
@@ -392,7 +428,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with missing fields and warnings",
 			result: ValidationResult{
-				MissingFields: []string{"file: action.yml", "name"},
+				MissingFields: []string{appconstants.ValidationTestFile3, "name"},
 				Warnings:      []string{"author field is recommended"},
 			},
 			wantInfo:     1,
@@ -403,7 +439,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with suggestions",
 			result: ValidationResult{
-				MissingFields: []string{"file: action.yml", "name"},
+				MissingFields: []string{appconstants.ValidationTestFile3, "name"},
 				Suggestions:   []string{"Add a descriptive name field", "See documentation for examples"},
 			},
 			wantInfo:     2, // File name + Suggestions header
@@ -414,7 +450,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "valid file (no issues)",
 			result: ValidationResult{
-				MissingFields: []string{"file: action.yml"},
+				MissingFields: []string{appconstants.ValidationTestFile3},
 			},
 			wantInfo:     1, // Just file name
 			wantError:    0,
@@ -441,37 +477,9 @@ func TestShowFileIssues(t *testing.T) {
 			}
 
 			// Check if expected content appears somewhere in the output
-			if tt.wantContains != "" {
-				allMessages := make(
-					[]string,
-					0,
-					len(
-						output.infoMessages,
-					)+len(
-						output.errorMessages,
-					)+len(
-						output.warningMessages,
-					)+len(
-						output.printfMessages,
-					),
-				)
-				allMessages = append(allMessages, output.infoMessages...)
-				allMessages = append(allMessages, output.errorMessages...)
-				allMessages = append(allMessages, output.warningMessages...)
-				allMessages = append(allMessages, output.printfMessages...)
-
-				found := false
-				for _, msg := range allMessages {
-					if strings.Contains(msg, tt.wantContains) {
-						found = true
-
-						break
-					}
-				}
-				if !found {
-					t.Errorf("showFileIssues() output should contain %q, got info=%v, error=%v, warning=%v",
-						tt.wantContains, output.infoMessages, output.errorMessages, output.warningMessages)
-				}
+			if tt.wantContains != "" && !output.containsAnyMessage(tt.wantContains) {
+				t.Errorf("showFileIssues() output should contain %q, got info=%v, error=%v, warning=%v",
+					tt.wantContains, output.infoMessages, output.errorMessages, output.warningMessages)
 			}
 		})
 	}
@@ -499,8 +507,8 @@ func TestShowDetailedIssues(t *testing.T) {
 		{
 			name: "no issues, verbose mode",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml"}},
-				{MissingFields: []string{"file: action2.yml"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1}},
+				{MissingFields: []string{appconstants.ValidationTestFile2}},
 			},
 			totalIssues: 0,
 			verbose:     true,
@@ -509,8 +517,8 @@ func TestShowDetailedIssues(t *testing.T) {
 		{
 			name: "some issues",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml", "name"}},
-				{MissingFields: []string{"file: action2.yml"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1, "name"}},
+				{MissingFields: []string{appconstants.ValidationTestFile2}},
 			},
 			totalIssues: 1,
 			verbose:     false,
@@ -519,7 +527,7 @@ func TestShowDetailedIssues(t *testing.T) {
 		{
 			name: "files with warnings",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml"}, Warnings: []string{"author recommended"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1}, Warnings: []string{"author recommended"}},
 			},
 			totalIssues: 0,
 			verbose:     false,
@@ -557,8 +565,8 @@ func TestReportValidationResults(t *testing.T) {
 		{
 			name: "all valid, no errors",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml"}},
-				{MissingFields: []string{"file: action2.yml"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1}},
+				{MissingFields: []string{appconstants.ValidationTestFile2}},
 			},
 			errors:      []string{},
 			wantBold:    1,
@@ -568,8 +576,8 @@ func TestReportValidationResults(t *testing.T) {
 		{
 			name: "some invalid files",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml", "name"}},
-				{MissingFields: []string{"file: action2.yml"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1, "name"}},
+				{MissingFields: []string{appconstants.ValidationTestFile2}},
 			},
 			errors:      []string{},
 			wantBold:    2, // Summary + Details
@@ -587,7 +595,7 @@ func TestReportValidationResults(t *testing.T) {
 		{
 			name: "mixed validation issues and parse errors",
 			results: []ValidationResult{
-				{MissingFields: []string{"file: action1.yml", "name", "description"}},
+				{MissingFields: []string{appconstants.ValidationTestFile1, "name", "description"}},
 			},
 			errors:      []string{"Failed to parse action2.yml"},
 			wantBold:    3, // Summary + Details + Parse Errors
@@ -614,21 +622,25 @@ func TestReportValidationResults(t *testing.T) {
 
 			gen.reportValidationResults(tt.results, tt.errors)
 
-			if len(output.boldMessages) < tt.wantBold {
+			gotBoldCount := len(output.boldMessages)
+			gotSuccessCount := len(output.successMessages)
+			gotErrorCount := len(output.errorMessages)
+
+			if gotBoldCount < tt.wantBold {
 				t.Errorf(
 					"reportValidationResults() bold messages = %d, want at least %d",
-					len(output.boldMessages),
+					gotBoldCount,
 					tt.wantBold,
 				)
 			}
-			if tt.wantSuccess && len(output.successMessages) == 0 {
+			if tt.wantSuccess && gotSuccessCount == 0 {
 				t.Error("reportValidationResults() expected success messages, got none")
 			}
-			if tt.wantError && len(output.errorMessages) == 0 {
+			if tt.wantError && gotErrorCount == 0 {
 				t.Error("reportValidationResults() expected error messages, got none")
 			}
-			if !tt.wantError && len(output.errorMessages) > 0 {
-				t.Errorf("reportValidationResults() expected no error messages, got %d", len(output.errorMessages))
+			if !tt.wantError && gotErrorCount > 0 {
+				t.Errorf("reportValidationResults() expected no error messages, got %d", gotErrorCount)
 			}
 		})
 	}

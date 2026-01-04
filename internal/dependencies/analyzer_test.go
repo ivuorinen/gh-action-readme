@@ -17,7 +17,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
+func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -122,7 +122,7 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_ParseUsesStatement(t *testing.T) {
+func TestAnalyzerParseUsesStatement(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -183,7 +183,7 @@ func TestAnalyzer_ParseUsesStatement(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_VersionChecking(t *testing.T) {
+func TestAnalyzerVersionChecking(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -254,7 +254,7 @@ func TestAnalyzer_VersionChecking(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_GetLatestVersion(t *testing.T) {
+func TestAnalyzerGetLatestVersion(t *testing.T) {
 	t.Parallel()
 
 	// Create mock GitHub client with test responses
@@ -312,7 +312,7 @@ func TestAnalyzer_GetLatestVersion(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_CheckOutdated(t *testing.T) {
+func TestAnalyzerCheckOutdated(t *testing.T) {
 	t.Parallel()
 
 	// Create mock GitHub client
@@ -371,7 +371,7 @@ func TestAnalyzer_CheckOutdated(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_CompareVersions(t *testing.T) {
+func TestAnalyzerCompareVersions(t *testing.T) {
 	t.Parallel()
 
 	analyzer := &Analyzer{}
@@ -424,7 +424,7 @@ func TestAnalyzer_CompareVersions(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
+func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	t.Parallel()
 
 	tmpDir, cleanup := testutil.TempDir(t)
@@ -474,7 +474,7 @@ func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
 	testutil.AssertEqual(t, "major", update.UpdateType)
 }
 
-func TestAnalyzer_WithCache(t *testing.T) {
+func TestAnalyzerWithCache(t *testing.T) {
 	t.Parallel()
 
 	// Test that caching works properly
@@ -500,7 +500,7 @@ func TestAnalyzer_WithCache(t *testing.T) {
 	testutil.AssertEqual(t, sha1, sha2)
 }
 
-func TestAnalyzer_RateLimitHandling(t *testing.T) {
+func TestAnalyzerRateLimitHandling(t *testing.T) {
 	t.Parallel()
 
 	// Create mock client that returns rate limit error
@@ -540,7 +540,7 @@ func TestAnalyzer_RateLimitHandling(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
+func TestAnalyzerWithoutGitHubClient(t *testing.T) {
 	t.Parallel()
 
 	// Test graceful degradation when GitHub client is not available
@@ -666,7 +666,7 @@ func TestNoOpCache(t *testing.T) {
 	}
 
 	// Test Get - should always return false
-	val, ok := noc.Get("test-key")
+	val, ok := noc.Get(appconstants.CacheTestKey)
 	if ok {
 		t.Error("NoOpCache.Get() should return false")
 	}
@@ -675,38 +675,38 @@ func TestNoOpCache(t *testing.T) {
 	}
 
 	// Test Set - should not error
-	err := noc.Set("test-key", "test-value")
+	err := noc.Set(appconstants.CacheTestKey, appconstants.CacheTestValue)
 	if err != nil {
 		t.Errorf("NoOpCache.Set() returned error: %v", err)
 	}
 
 	// Test SetWithTTL - should not error
-	err = noc.SetWithTTL("test-key", "test-value", time.Hour)
+	err = noc.SetWithTTL(appconstants.CacheTestKey, appconstants.CacheTestValue, time.Hour)
 	if err != nil {
 		t.Errorf("NoOpCache.SetWithTTL() returned error: %v", err)
 	}
 }
 
-// TestCacheAdapter_Set tests the cache adapter Set method.
-func TestCacheAdapter_Set(t *testing.T) {
+// TestCacheAdapterSet tests the cache adapter Set method.
+func TestCacheAdapterSet(t *testing.T) {
 	t.Parallel()
 
 	c, _ := cache.NewCache(cache.DefaultConfig())
 	adapter := NewCacheAdapter(c)
 
 	// Test Set
-	err := adapter.Set("test-key", "test-value")
+	err := adapter.Set(appconstants.CacheTestKey, appconstants.CacheTestValue)
 	if err != nil {
 		t.Errorf("CacheAdapter.Set() returned error: %v", err)
 	}
 
 	// Verify value was set
-	val, ok := adapter.Get("test-key")
+	val, ok := adapter.Get(appconstants.CacheTestKey)
 	if !ok {
 		t.Error("CacheAdapter.Get() should return true after Set")
 	}
-	if val != "test-value" {
-		t.Errorf("CacheAdapter.Get() = %v, want 'test-value'", val)
+	if val != appconstants.CacheTestValue {
+		t.Errorf("CacheAdapter.Get() = %v, want %q", val, appconstants.CacheTestValue)
 	}
 }
 

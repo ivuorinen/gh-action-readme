@@ -25,7 +25,7 @@ func TestNewErrorHandler(t *testing.T) {
 
 // TestDetermineErrorCode tests error code determination.
 //
-//nolint:dupl // Intentional duplication with TestCheckTypedError - testing different functions
+
 func TestDetermineErrorCode(t *testing.T) {
 	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
 
@@ -88,7 +88,7 @@ func TestDetermineErrorCode(t *testing.T) {
 
 // TestCheckTypedError tests typed error checking.
 //
-//nolint:dupl // Intentional duplication with TestDetermineErrorCode - testing different functions
+
 func TestCheckTypedError(t *testing.T) {
 	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
 
@@ -134,7 +134,7 @@ func TestCheckTypedError(t *testing.T) {
 		},
 		{
 			name:     "unknown error",
-			err:      errors.New("unknown error"),
+			err:      errors.New(appconstants.UnknownErrorMsg),
 			wantCode: appconstants.ErrCodeUnknown,
 		},
 	}
@@ -215,7 +215,7 @@ func TestContains(t *testing.T) {
 	}{
 		{
 			name:   "exact match",
-			s:      "hello world",
+			s:      appconstants.HelloWorldStr,
 			substr: "hello",
 			want:   true,
 		},
@@ -227,13 +227,13 @@ func TestContains(t *testing.T) {
 		},
 		{
 			name:   "no match",
-			s:      "hello world",
+			s:      appconstants.HelloWorldStr,
 			substr: "goodbye",
 			want:   false,
 		},
 		{
 			name:   "empty substring",
-			s:      "hello world",
+			s:      appconstants.HelloWorldStr,
 			substr: "",
 			want:   true,
 		},

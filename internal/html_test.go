@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestHTMLWriter_Write tests the HTMLWriter.Write function.
-func TestHTMLWriter_Write(t *testing.T) {
+// TestHTMLWriterWrite tests the HTMLWriter.Write function.
+func TestHTMLWriterWrite(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -88,8 +88,8 @@ func TestHTMLWriter_Write(t *testing.T) {
 	}
 }
 
-// TestHTMLWriter_Write_ErrorPaths tests error handling in HTMLWriter.Write.
-func TestHTMLWriter_Write_ErrorPaths(t *testing.T) {
+// TestHTMLWriterWriteErrorPaths tests error handling in HTMLWriter.Write.
+func TestHTMLWriterWriteErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -126,8 +126,8 @@ func TestHTMLWriter_Write_ErrorPaths(t *testing.T) {
 	}
 }
 
-// TestHTMLWriter_Write_LargeContent tests writing large HTML content.
-func TestHTMLWriter_Write_LargeContent(t *testing.T) {
+// TestHTMLWriterWriteLargeContent tests writing large HTML content.
+func TestHTMLWriterWriteLargeContent(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
@@ -158,8 +158,8 @@ func TestHTMLWriter_Write_LargeContent(t *testing.T) {
 	}
 }
 
-// TestHTMLWriter_Write_SpecialCharacters tests writing HTML with special characters.
-func TestHTMLWriter_Write_SpecialCharacters(t *testing.T) {
+// TestHTMLWriterWriteSpecialCharacters tests writing HTML with special characters.
+func TestHTMLWriterWriteSpecialCharacters(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
@@ -187,8 +187,8 @@ func TestHTMLWriter_Write_SpecialCharacters(t *testing.T) {
 	}
 }
 
-// TestHTMLWriter_Write_Overwrite tests overwriting an existing file.
-func TestHTMLWriter_Write_Overwrite(t *testing.T) {
+// TestHTMLWriterWriteOverwrite tests overwriting an existing file.
+func TestHTMLWriterWriteOverwrite(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
@@ -218,8 +218,8 @@ func TestHTMLWriter_Write_Overwrite(t *testing.T) {
 	}
 }
 
-// TestHTMLWriter_Write_EmptyPath tests writing to an empty path.
-func TestHTMLWriter_Write_EmptyPath(t *testing.T) {
+// TestHTMLWriterWriteEmptyPath tests writing to an empty path.
+func TestHTMLWriterWriteEmptyPath(t *testing.T) {
 	t.Parallel()
 
 	writer := &HTMLWriter{}
@@ -231,8 +231,8 @@ func TestHTMLWriter_Write_EmptyPath(t *testing.T) {
 	}
 }
 
-// TestHTMLWriter_Write_ValidPath tests writing to a valid nested path.
-func TestHTMLWriter_Write_ValidPath(t *testing.T) {
+// TestHTMLWriterWriteValidPath tests writing to a valid nested path.
+func TestHTMLWriterWriteValidPath(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()

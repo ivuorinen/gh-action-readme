@@ -100,3 +100,41 @@ const (
 	TestRepoBuildActionPath = "/repo/build/action.yml"
 	TestVersionV123         = "@v1.2.3"
 )
+
+// Cache test constants for reducing string duplication.
+const (
+	CacheTestKey   = "test-key"
+	CacheTestValue = "test-value"
+)
+
+// Error handler test constants for reducing string duplication.
+const (
+	UnknownErrorMsg = "unknown error"
+	HelloWorldStr   = "hello world"
+)
+
+// Validation component test constants for reducing string duplication.
+const (
+	TestItemName = "test-item"
+)
+
+// Generator test constants for reducing string duplication.
+const (
+	TestOutputDir  = "/tmp/output"
+	TestActionName = "Test Action"
+	TestActionDesc = "Test Description"
+)
+
+// Validation test file identifiers for reducing string duplication.
+const (
+	ValidationTestFile1 = "file: action1.yml"
+	ValidationTestFile2 = "file: action2.yml"
+	ValidationTestFile3 = "file: action.yml"
+)
+
+// GitHub Actions runner names for reducing string duplication.
+const (
+	RunnerUbuntuLatest  = "ubuntu-latest"
+	RunnerWindowsLatest = "windows-latest"
+	RunnerMacosLatest   = "macos-latest"
+)

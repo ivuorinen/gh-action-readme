@@ -135,8 +135,8 @@ func TestGetDefaultIgnoredDirectories(t *testing.T) {
 	}
 }
 
-// TestConfigurationSource_String tests the String method for ConfigurationSource.
-func TestConfigurationSource_String(t *testing.T) {
+// TestConfigurationSourceString tests the String method for ConfigurationSource.
+func TestConfigurationSourceString(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

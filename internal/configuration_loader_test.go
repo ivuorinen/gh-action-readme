@@ -120,7 +120,7 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
+func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tempDir string) (configFile, repoRoot, actionDir string)
@@ -292,7 +292,7 @@ verbose: true
 	}
 }
 
-func TestConfigurationLoader_LoadGlobalConfig(t *testing.T) {
+func TestConfigurationLoaderLoadGlobalConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tempDir string) string
@@ -368,7 +368,7 @@ verbose: true
 	}
 }
 
-func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
+func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -464,7 +464,7 @@ func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_SourceManagement(t *testing.T) {
+func TestConfigurationLoaderSourceManagement(t *testing.T) {
 	t.Parallel()
 	loader := NewConfigurationLoader()
 
@@ -494,7 +494,7 @@ func TestConfigurationLoader_SourceManagement(t *testing.T) {
 	}
 }
 
-func TestConfigurationSource_String(t *testing.T) {
+func TestConfigurationSourceString(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		source   appconstants.ConfigurationSource
@@ -518,7 +518,7 @@ func TestConfigurationSource_String(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
+func TestConfigurationLoaderEnvironmentOverrides(t *testing.T) {
 	tests := testutil.GetGitHubTokenHierarchyTests()
 
 	for _, tt := range tests {
@@ -538,7 +538,7 @@ func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_RepoOverrides(t *testing.T) {
+func TestConfigurationLoaderRepoOverrides(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -572,8 +572,8 @@ func TestConfigurationLoader_RepoOverrides(t *testing.T) {
 	testutil.AssertEqual(t, "md", config.OutputFormat)
 }
 
-// TestConfigurationLoader_ApplyRepoOverrides tests repo-specific overrides.
-func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
+// TestConfigurationLoaderApplyRepoOverrides tests repo-specific overrides.
+func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name           string
@@ -617,8 +617,8 @@ func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 	}
 }
 
-// TestConfigurationLoader_LoadActionConfig tests action-specific configuration loading.
-func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
+// TestConfigurationLoaderLoadActionConfig tests action-specific configuration loading.
+func TestConfigurationLoaderLoadActionConfig(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
@@ -716,8 +716,8 @@ verbose: true
 	}
 }
 
-// TestConfigurationLoader_ValidateTheme tests theme validation edge cases.
-func TestConfigurationLoader_ValidateTheme(t *testing.T) {
+// TestConfigurationLoaderValidateTheme tests theme validation edge cases.
+func TestConfigurationLoaderValidateTheme(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -776,8 +776,8 @@ func TestConfigurationLoader_ValidateTheme(t *testing.T) {
 	}
 }
 
-// TestConfigurationLoader_applyRepoOverrides tests the applyRepoOverrides method.
-func TestConfigurationLoader_applyRepoOverrides(t *testing.T) {
+// TestConfigurationLoaderapplyRepoOverrides tests the applyRepoOverrides method.
+func TestConfigurationLoaderapplyRepoOverrides(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

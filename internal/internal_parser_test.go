@@ -6,7 +6,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestParseActionYML_Valid(t *testing.T) {
+func TestParseActionYMLValid(t *testing.T) {
 	t.Parallel()
 	// Create temporary action file using fixture
 	actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
@@ -25,7 +25,7 @@ func TestParseActionYML_Valid(t *testing.T) {
 	}
 }
 
-func TestParseActionYML_MissingFile(t *testing.T) {
+func TestParseActionYMLMissingFile(t *testing.T) {
 	t.Parallel()
 	_, err := ParseActionYML("notfound/action.yml")
 	if err == nil {

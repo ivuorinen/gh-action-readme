@@ -57,7 +57,7 @@ func TestMustReadFixture(t *testing.T) {
 	}
 }
 
-func TestMustReadFixture_Panic(t *testing.T) {
+func TestMustReadFixturePanic(t *testing.T) {
 	t.Parallel()
 	t.Run("missing file panics", func(t *testing.T) {
 		t.Parallel()

@@ -192,7 +192,7 @@ func formatInt(i int) string {
 }
 
 // Test that demonstrates improved testability with focused interfaces.
-func TestFocusedInterfaces_SimpleLogger(t *testing.T) {
+func TestFocusedInterfacesSimpleLogger(t *testing.T) {
 	t.Parallel()
 	mockLogger := &MockMessageLogger{}
 	simpleLogger := NewSimpleLogger(mockLogger)
@@ -221,7 +221,7 @@ func TestFocusedInterfaces_SimpleLogger(t *testing.T) {
 	}
 }
 
-func TestFocusedInterfaces_SimpleLogger_WithFailure(t *testing.T) {
+func TestFocusedInterfacesSimpleLoggerWithFailure(t *testing.T) {
 	t.Parallel()
 	mockLogger := &MockMessageLogger{}
 	simpleLogger := NewSimpleLogger(mockLogger)
@@ -241,7 +241,7 @@ func TestFocusedInterfaces_SimpleLogger_WithFailure(t *testing.T) {
 	}
 }
 
-func TestFocusedInterfaces_ErrorManager(t *testing.T) {
+func TestFocusedInterfacesErrorManager(t *testing.T) {
 	t.Parallel()
 	mockReporter := &MockErrorReporter{}
 	mockFormatter := &MockErrorFormatter{}
@@ -264,7 +264,7 @@ func TestFocusedInterfaces_ErrorManager(t *testing.T) {
 	}
 }
 
-func TestFocusedInterfaces_TaskProgress(t *testing.T) {
+func TestFocusedInterfacesTaskProgress(t *testing.T) {
 	t.Parallel()
 	mockReporter := &MockProgressReporter{}
 	taskProgress := NewTaskProgress(mockReporter)
@@ -282,7 +282,7 @@ func TestFocusedInterfaces_TaskProgress(t *testing.T) {
 	}
 }
 
-func TestFocusedInterfaces_ConfigAwareComponent(t *testing.T) {
+func TestFocusedInterfacesConfigAwareComponent(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name       string
@@ -316,7 +316,7 @@ func TestFocusedInterfaces_ConfigAwareComponent(t *testing.T) {
 	}
 }
 
-func TestFocusedInterfaces_CompositeOutputWriter(t *testing.T) {
+func TestFocusedInterfacesCompositeOutputWriter(t *testing.T) {
 	t.Parallel()
 	// Create a composite mock that implements OutputWriter
 	mockLogger := &MockMessageLogger{}
@@ -349,7 +349,7 @@ func TestFocusedInterfaces_CompositeOutputWriter(t *testing.T) {
 	}
 }
 
-func TestFocusedInterfaces_GeneratorWithDependencyInjection(t *testing.T) {
+func TestFocusedInterfacesGeneratorWithDependencyInjection(t *testing.T) {
 	t.Parallel()
 	// Create focused mocks
 	mockOutput := &mockCompleteOutput{

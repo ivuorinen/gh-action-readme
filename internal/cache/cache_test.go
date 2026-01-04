@@ -69,7 +69,7 @@ func TestNewCache(t *testing.T) {
 	}
 }
 
-func TestCache_SetAndGet(t *testing.T) {
+func TestCacheSetAndGet(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -121,7 +121,7 @@ func TestCache_SetAndGet(t *testing.T) {
 	}
 }
 
-func TestCache_TTL(t *testing.T) {
+func TestCacheTTL(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -150,7 +150,7 @@ func TestCache_TTL(t *testing.T) {
 	}
 }
 
-func TestCache_GetOrSet(t *testing.T) {
+func TestCacheGetOrSet(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -180,7 +180,7 @@ func TestCache_GetOrSet(t *testing.T) {
 	testutil.AssertEqual(t, 1, callCount)                // Getter not called again
 }
 
-func TestCache_GetOrSetError(t *testing.T) {
+func TestCacheGetOrSetError(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -207,7 +207,7 @@ func TestCache_GetOrSetError(t *testing.T) {
 	}
 }
 
-func TestCache_ConcurrentAccess(t *testing.T) {
+func TestCacheConcurrentAccess(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -257,7 +257,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 }
 
-func TestCache_Persistence(t *testing.T) {
+func TestCachePersistence(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -282,7 +282,7 @@ func TestCache_Persistence(t *testing.T) {
 	testutil.AssertEqual(t, "persistent-value", value)
 }
 
-func TestCache_Clear(t *testing.T) {
+func TestCacheClear(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -312,7 +312,7 @@ func TestCache_Clear(t *testing.T) {
 	}
 }
 
-func TestCache_Delete(t *testing.T) {
+func TestCacheDelete(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -349,7 +349,7 @@ func TestCache_Delete(t *testing.T) {
 	cache.Delete("nonexistent")
 }
 
-func TestCache_Stats(t *testing.T) {
+func TestCacheStats(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -397,7 +397,7 @@ func TestCache_Stats(t *testing.T) {
 	}
 }
 
-func TestCache_CleanupExpiredEntries(t *testing.T) {
+func TestCacheCleanupExpiredEntries(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -434,7 +434,7 @@ func TestCache_CleanupExpiredEntries(t *testing.T) {
 	}
 }
 
-func TestCache_ErrorHandling(t *testing.T) {
+func TestCacheErrorHandling(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T) *Cache
@@ -472,7 +472,7 @@ func TestCache_ErrorHandling(t *testing.T) {
 	}
 }
 
-func TestCache_AsyncSaveErrorHandling(t *testing.T) {
+func TestCacheAsyncSaveErrorHandling(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -497,7 +497,7 @@ func TestCache_AsyncSaveErrorHandling(t *testing.T) {
 	testutil.AssertEqual(t, "test-value", value)
 }
 
-func TestCache_EstimateSize(t *testing.T) {
+func TestCacheEstimateSize(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
