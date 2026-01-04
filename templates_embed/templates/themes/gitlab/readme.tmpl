@@ -60,7 +60,7 @@ steps:
 {{end}}
 {{end}}
 
-{{if .Permissions}}
+{{if and .Permissions (gt (len .Permissions) 0)}}
 ### Required Permissions
 
 {{range $key, $value := .Permissions}}

@@ -481,7 +481,7 @@ func TestBuildTemplateData(t *testing.T) {
 				AnalyzeDependencies: true,
 			},
 			repoRoot:   ".",
-			actionPath: "../../testdata/analyzer/composite-action.yml",
+			actionPath: "../testdata/composite-action/action.yml",
 			wantOrg:    "deporg",
 			wantRepo:   "deprepo",
 		},

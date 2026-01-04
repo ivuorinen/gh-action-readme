@@ -27,7 +27,7 @@
 {{end}}
 {{end}}
 
-{{if .Permissions}}
+{{if and .Permissions (gt (len .Permissions) 0)}}
 ## Permissions
 
 This action requires the following permissions:

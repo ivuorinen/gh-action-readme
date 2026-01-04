@@ -28,7 +28,7 @@
 {{end}}
 {{end}}
 
-{{if .Permissions}}
+{{if and .Permissions (gt (len .Permissions) 0)}}
 ## Permissions
 
 {{range $key, $value := .Permissions}}

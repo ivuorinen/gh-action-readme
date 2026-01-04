@@ -89,7 +89,7 @@ const (
 	TestDescriptionLine   = "description: Test\n"
 	TestRunsLine          = "runs:\n"
 	TestCompositeUsing    = "  using: composite\n"
-	TestStepsEmpty        = "  steps: []"
+	TestStepsEmpty        = "  steps: []\n"
 	TestErrorFormat       = "ParseActionYML() error = %v"
 	TestContentsRead      = "#   contents: read\n"
 )
