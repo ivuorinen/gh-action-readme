@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
@@ -25,7 +26,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		},
 		{
 			name:       "single level subdirectory",
-			actionPath: "/repo/build/action.yml",
+			actionPath: appconstants.TestRepoBuildActionPath,
 			repoRoot:   "/repo",
 			want:       "build",
 		},
@@ -37,7 +38,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		},
 		{
 			name:       "root action",
-			actionPath: "/repo/action.yml",
+			actionPath: appconstants.TestRepoActionPath,
 			repoRoot:   "/repo",
 			want:       "",
 		},
@@ -49,7 +50,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		},
 		{
 			name:       "empty repo root",
-			actionPath: "/repo/action.yml",
+			actionPath: appconstants.TestRepoActionPath,
 			repoRoot:   "",
 			want:       "",
 		},
@@ -104,7 +105,7 @@ func TestBuildUsesString(t *testing.T) {
 		{
 			name: "root action",
 			td: &TemplateData{
-				ActionPath: "/repo/action.yml",
+				ActionPath: appconstants.TestRepoActionPath,
 				RepoRoot:   "/repo",
 			},
 			org:     "ivuorinen",
@@ -115,7 +116,7 @@ func TestBuildUsesString(t *testing.T) {
 		{
 			name: "empty org",
 			td: &TemplateData{
-				ActionPath: "/repo/build/action.yml",
+				ActionPath: appconstants.TestRepoBuildActionPath,
 				RepoRoot:   "/repo",
 			},
 			org:     "",
@@ -126,7 +127,7 @@ func TestBuildUsesString(t *testing.T) {
 		{
 			name: "empty repo",
 			td: &TemplateData{
-				ActionPath: "/repo/build/action.yml",
+				ActionPath: appconstants.TestRepoBuildActionPath,
 				RepoRoot:   "/repo",
 			},
 			org:     "ivuorinen",
@@ -306,7 +307,7 @@ func TestGetGitUsesString(t *testing.T) {
 					Repository:    "actions",
 					DefaultBranch: "main",
 				},
-				ActionPath: "/repo/build/action.yml",
+				ActionPath: appconstants.TestRepoBuildActionPath,
 				RepoRoot:   "/repo",
 			},
 			want: "org/actions/build@v1.0.0",
@@ -326,7 +327,7 @@ func TestGetGitUsesString(t *testing.T) {
 					Repository:    "my-action",
 					DefaultBranch: "develop",
 				},
-				ActionPath: "/repo/action.yml",
+				ActionPath: appconstants.TestRepoActionPath,
 				RepoRoot:   "/repo",
 			},
 			want: "user/my-action@develop",
@@ -346,7 +347,7 @@ func TestGetGitUsesString(t *testing.T) {
 					Repository:    "test",
 					DefaultBranch: "main",
 				},
-				ActionPath: "/repo/action.yml",
+				ActionPath: appconstants.TestRepoActionPath,
 				RepoRoot:   "/repo",
 			},
 			want: "org/test@v1",
@@ -392,12 +393,12 @@ func TestFormatVersion(t *testing.T) {
 		{
 			name:    "version without @",
 			version: "v1.2.3",
-			want:    "@v1.2.3",
+			want:    appconstants.TestVersionV123,
 		},
 		{
 			name:    "version with @",
-			version: "@v1.2.3",
-			want:    "@v1.2.3",
+			version: appconstants.TestVersionV123,
+			want:    appconstants.TestVersionV123,
 		},
 		{
 			name:    "main branch",
