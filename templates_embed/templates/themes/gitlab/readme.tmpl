@@ -60,6 +60,24 @@ steps:
 {{end}}
 {{end}}
 
+{{if and .Permissions (gt (len .Permissions) 0)}}
+### Required Permissions
+
+{{range $key, $value := .Permissions}}
+#### `{{$key}}`
+- **Access Level**: `{{$value}}`
+
+{{end}}
+
+**GitHub Actions Workflow:**
+```yaml
+permissions:
+{{- range $key, $value := .Permissions}}
+  {{$key}}: {{$value}}
+{{- end}}
+```
+{{end}}
+
 ## Usage Examples
 
 ### Basic Example

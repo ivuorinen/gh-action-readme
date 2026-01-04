@@ -27,6 +27,24 @@
 {{end}}
 {{end}}
 
+{{if and .Permissions (gt (len .Permissions) 0)}}
+## Permissions
+
+This action requires the following permissions:
+
+{{range $key, $value := .Permissions}}
+- **`{{$key}}`**: `{{$value}}`
+{{end}}
+
+**Usage in workflow:**
+```yaml
+permissions:
+{{- range $key, $value := .Permissions}}
+  {{$key}}: {{$value}}
+{{- end}}
+```
+{{end}}
+
 ## Example
 
 See the [action.yml](./action.yml) for a full reference.

@@ -40,6 +40,7 @@ type ActionYMLForJSON struct {
 	Outputs     map[string]ActionOutputForJSON `json:"outputs,omitempty"`
 	Runs        map[string]any                 `json:"runs"`
 	Branding    *BrandingForJSON               `json:"branding,omitempty"`
+	Permissions map[string]string              `json:"permissions,omitempty"`
 }
 
 // ActionInputForJSON represents an input parameter in JSON format.
@@ -218,6 +219,7 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 			Outputs:     outputs,
 			Runs:        action.Runs,
 			Branding:    branding,
+			Permissions: action.Permissions,
 		},
 		Documentation: DocumentationInfo{
 			Title:       action.Name,

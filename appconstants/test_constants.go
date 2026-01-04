@@ -80,3 +80,23 @@ const (
 	TestYAMLNested      = "name: nested"
 	TestYAMLSub         = "name: sub"
 )
+
+// Test YAML template strings for parser tests.
+const (
+	TestActionFilePattern = "action-*.yml"
+	TestPermissionsHeader = "# permissions:\n"
+	TestActionNameLine    = "name: Test Action\n"
+	TestDescriptionLine   = "description: Test\n"
+	TestRunsLine          = "runs:\n"
+	TestCompositeUsing    = "  using: composite\n"
+	TestStepsEmpty        = "  steps: []\n"
+	TestErrorFormat       = "ParseActionYML() error = %v"
+	TestContentsRead      = "#   contents: read\n"
+)
+
+// Test path constants for template tests.
+const (
+	TestRepoActionPath      = "/repo/action.yml"
+	TestRepoBuildActionPath = "/repo/build/action.yml"
+	TestVersionV123         = "@v1.2.3"
+)

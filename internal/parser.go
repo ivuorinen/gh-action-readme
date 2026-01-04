@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ type ActionYML struct {
 	Outputs     map[string]ActionOutput `yaml:"outputs"`
 	Runs        map[string]any          `yaml:"runs"`
 	Branding    *Branding               `yaml:"branding,omitempty"`
+	Permissions map[string]string       `yaml:"permissions,omitempty"`
 	// Add more fields as the schema evolves
 }
 
@@ -42,6 +44,14 @@ type Branding struct {
 
 // ParseActionYML reads and parses action.yml from given path.
 func ParseActionYML(path string) (*ActionYML, error) {
+	// Parse permissions from header comments FIRST
+	commentPermissions, err := parsePermissionsFromComments(path)
+	if err != nil {
+		// Don't fail if comment parsing fails, just log and continue
+		commentPermissions = nil
+	}
+
+	// Standard YAML parsing
 	f, err := os.Open(path) // #nosec G304 -- path from function parameter
 	if err != nil {
 		return nil, err
@@ -55,7 +65,137 @@ func ParseActionYML(path string) (*ActionYML, error) {
 		return nil, err
 	}
 
+	// Merge permissions: YAML permissions override comment permissions
+	mergePermissions(&a, commentPermissions)
+
 	return &a, nil
+}
+
+// mergePermissions combines comment and YAML permissions.
+// YAML permissions take precedence when both exist.
+func mergePermissions(action *ActionYML, commentPerms map[string]string) {
+	if action.Permissions == nil && commentPerms != nil && len(commentPerms) > 0 {
+		action.Permissions = commentPerms
+	} else if action.Permissions != nil && commentPerms != nil && len(commentPerms) > 0 {
+		// Merge: YAML takes precedence, add missing from comments
+		for key, value := range commentPerms {
+			if _, exists := action.Permissions[key]; !exists {
+				action.Permissions[key] = value
+			}
+		}
+	}
+}
+
+// parsePermissionsFromComments extracts permissions from header comments.
+// Looks for lines like:
+//
+//	# permissions:
+//	#   - contents: read  # Required for checking out repository
+//	#   contents: read    # Alternative format without dash
+func parsePermissionsFromComments(path string) (map[string]string, error) {
+	file, err := os.Open(path) // #nosec G304 -- path from function parameter
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = file.Close() // Ignore close error in defer
+	}()
+
+	permissions := make(map[string]string)
+	scanner := bufio.NewScanner(file)
+
+	inPermissionsBlock := false
+	var expectedItemIndent int
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		trimmed := strings.TrimSpace(line)
+
+		// Stop parsing at first non-comment line
+		if !strings.HasPrefix(trimmed, "#") {
+			break
+		}
+
+		// Remove leading # and spaces
+		content := strings.TrimPrefix(trimmed, "#")
+		content = strings.TrimSpace(content)
+
+		// Check for permissions block start
+		if content == "permissions:" {
+			inPermissionsBlock = true
+			// Calculate expected indent for permission items (after the # and any spaces)
+			// We expect items to be indented relative to the content
+			expectedItemIndent = -1 // Will be set on first item
+
+			continue
+		}
+
+		// Parse permission entries
+		if inPermissionsBlock && content != "" {
+			shouldBreak := processPermissionEntry(line, content, &expectedItemIndent, permissions)
+			if shouldBreak {
+				break
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return permissions, nil
+}
+
+// parsePermissionLine extracts key-value from a permission line.
+// Supports formats:
+//   - "- contents: read  # comment"
+//   - "contents: read  # comment"
+func parsePermissionLine(content string) (key, value string, ok bool) {
+	// Remove leading dash if present
+	content = strings.TrimPrefix(content, "-")
+	content = strings.TrimSpace(content)
+
+	// Remove inline comments
+	if idx := strings.Index(content, "#"); idx > 0 {
+		content = strings.TrimSpace(content[:idx])
+	}
+
+	// Parse key: value
+	parts := strings.SplitN(content, ":", 2)
+	if len(parts) == 2 {
+		key = strings.TrimSpace(parts[0])
+		value = strings.TrimSpace(parts[1])
+		if key != "" && value != "" {
+			return key, value, true
+		}
+	}
+
+	return "", "", false
+}
+
+// processPermissionEntry processes a single line in the permissions block.
+// Returns true if parsing should break (dedented out of block), false to continue.
+func processPermissionEntry(line, content string, expectedItemIndent *int, permissions map[string]string) bool {
+	// Get the indent of the content (after removing #)
+	lineAfterHash := strings.TrimPrefix(line, "#")
+	contentIndent := len(lineAfterHash) - len(strings.TrimLeft(lineAfterHash, " "))
+
+	// Set expected indent on first item
+	if *expectedItemIndent == -1 {
+		*expectedItemIndent = contentIndent
+	}
+
+	// If dedented relative to expected item indent, we've left the permissions block
+	if contentIndent < *expectedItemIndent {
+		return true
+	}
+
+	// Parse permission line and add to map if valid
+	if key, value, ok := parsePermissionLine(content); ok {
+		permissions[key] = value
+	}
+
+	return false
 }
 
 // shouldIgnoreDirectory checks if a directory name matches the ignore list.
