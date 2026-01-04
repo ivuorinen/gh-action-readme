@@ -8,6 +8,39 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
+// newTemplateData creates a TemplateData with common test values.
+// Pass nil for any field to use defaults or zero values.
+func newTemplateData(
+	actionName string,
+	version string,
+	useDefaultBranch bool,
+	defaultBranch string,
+	org string,
+	repo string,
+	actionPath string,
+	repoRoot string,
+) *TemplateData {
+	var actionYML *ActionYML
+	if actionName != "" {
+		actionYML = &ActionYML{Name: actionName}
+	}
+
+	return &TemplateData{
+		ActionYML: actionYML,
+		Config: &AppConfig{
+			Version:          version,
+			UseDefaultBranch: useDefaultBranch,
+		},
+		Git: git.RepoInfo{
+			Organization:  org,
+			Repository:    repo,
+			DefaultBranch: defaultBranch,
+		},
+		ActionPath: actionPath,
+		RepoRoot:   repoRoot,
+	}
+}
+
 // TestExtractActionSubdirectory tests the extractActionSubdirectory function.
 func TestExtractActionSubdirectory(t *testing.T) {
 	t.Parallel()
@@ -176,67 +209,27 @@ func TestGetActionVersion(t *testing.T) {
 	}{
 		{
 			name: "config version override",
-			data: &TemplateData{
-				Config: &AppConfig{
-					Version:          "v2.0.0",
-					UseDefaultBranch: true,
-				},
-				Git: git.RepoInfo{
-					DefaultBranch: "main",
-				},
-			},
+			data: newTemplateData("", "v2.0.0", true, "main", "", "", "", ""),
 			want: "v2.0.0",
 		},
 		{
 			name: "use default branch when enabled",
-			data: &TemplateData{
-				Config: &AppConfig{
-					Version:          "",
-					UseDefaultBranch: true,
-				},
-				Git: git.RepoInfo{
-					DefaultBranch: "main",
-				},
-			},
+			data: newTemplateData("", "", true, "main", "", "", "", ""),
 			want: "main",
 		},
 		{
 			name: "use default branch master",
-			data: &TemplateData{
-				Config: &AppConfig{
-					Version:          "",
-					UseDefaultBranch: true,
-				},
-				Git: git.RepoInfo{
-					DefaultBranch: "master",
-				},
-			},
+			data: newTemplateData("", "", true, "master", "", "", "", ""),
 			want: "master",
 		},
 		{
 			name: "fallback to v1 when default branch disabled",
-			data: &TemplateData{
-				Config: &AppConfig{
-					Version:          "",
-					UseDefaultBranch: false,
-				},
-				Git: git.RepoInfo{
-					DefaultBranch: "main",
-				},
-			},
+			data: newTemplateData("", "", false, "main", "", "", "", ""),
 			want: "v1",
 		},
 		{
 			name: "fallback to v1 when default branch not detected",
-			data: &TemplateData{
-				Config: &AppConfig{
-					Version:          "",
-					UseDefaultBranch: true,
-				},
-				Git: git.RepoInfo{
-					DefaultBranch: "",
-				},
-			},
+			data: newTemplateData("", "", true, "", "", "", "", ""),
 			want: "v1",
 		},
 		{
@@ -274,82 +267,26 @@ func TestGetGitUsesString(t *testing.T) {
 	}{
 		{
 			name: "monorepo action with default branch",
-			data: &TemplateData{
-				ActionYML: &ActionYML{
-					Name: "C# Build",
-				},
-				Config: &AppConfig{
-					Version:          "",
-					UseDefaultBranch: true,
-				},
-				Git: git.RepoInfo{
-					Organization:  "ivuorinen",
-					Repository:    "actions",
-					DefaultBranch: "main",
-				},
-				ActionPath: "/repo/csharp-build/action.yml",
-				RepoRoot:   "/repo",
-			},
+			data: newTemplateData("C# Build", "", true, "main", "ivuorinen", "actions",
+				"/repo/csharp-build/action.yml", "/repo"),
 			want: "ivuorinen/actions/csharp-build@main",
 		},
 		{
 			name: "monorepo action with explicit version",
-			data: &TemplateData{
-				ActionYML: &ActionYML{
-					Name: "Build Action",
-				},
-				Config: &AppConfig{
-					Version:          "v1.0.0",
-					UseDefaultBranch: true,
-				},
-				Git: git.RepoInfo{
-					Organization:  "org",
-					Repository:    "actions",
-					DefaultBranch: "main",
-				},
-				ActionPath: appconstants.TestRepoBuildActionPath,
-				RepoRoot:   "/repo",
-			},
+			data: newTemplateData("Build Action", "v1.0.0", true, "main", "org", "actions",
+				appconstants.TestRepoBuildActionPath, "/repo"),
 			want: "org/actions/build@v1.0.0",
 		},
 		{
 			name: "root level action with default branch",
-			data: &TemplateData{
-				ActionYML: &ActionYML{
-					Name: "My Action",
-				},
-				Config: &AppConfig{
-					Version:          "",
-					UseDefaultBranch: true,
-				},
-				Git: git.RepoInfo{
-					Organization:  "user",
-					Repository:    "my-action",
-					DefaultBranch: "develop",
-				},
-				ActionPath: appconstants.TestRepoActionPath,
-				RepoRoot:   "/repo",
-			},
+			data: newTemplateData("My Action", "", true, "develop", "user", "my-action",
+				appconstants.TestRepoActionPath, "/repo"),
 			want: "user/my-action@develop",
 		},
 		{
 			name: "action with use_default_branch disabled",
-			data: &TemplateData{
-				ActionYML: &ActionYML{
-					Name: "Test Action",
-				},
-				Config: &AppConfig{
-					Version:          "",
-					UseDefaultBranch: false,
-				},
-				Git: git.RepoInfo{
-					Organization:  "org",
-					Repository:    "test",
-					DefaultBranch: "main",
-				},
-				ActionPath: appconstants.TestRepoActionPath,
-				RepoRoot:   "/repo",
-			},
+			data: newTemplateData("Test Action", "", false, "main", "org", "test",
+				appconstants.TestRepoActionPath, "/repo"),
 			want: "org/test@v1",
 		},
 	}

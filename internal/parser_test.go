@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -837,9 +838,9 @@ func TestDiscoverActionFilesWalkErrors(t *testing.T) {
 		t.Error("Expected error for nonexistent directory, got nil")
 	}
 
-	// Test that error message is descriptive
-	if err != nil && !filepath.IsAbs("/nonexistent/path/that/does/not/exist") {
-		t.Errorf("Expected absolute path in error, got: %v", err)
+	// Test that error message mentions the path
+	if err != nil && !strings.Contains(err.Error(), "/nonexistent/path/that/does/not/exist") {
+		t.Errorf("Expected error to mention path, got: %v", err)
 	}
 }
 
