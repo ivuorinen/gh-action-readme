@@ -2,7 +2,6 @@ package dependencies
 
 import (
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -30,14 +29,14 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 	}{
 		{
 			name:        "simple action - no dependencies",
-			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:         "composite action with dependencies",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureCompositeWithDeps),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureCompositeWithDeps),
 			expectError:  false,
 			expectDeps:   true,
 			expectedLen:  5, // 3 action dependencies + 2 shell script dependencies
@@ -45,14 +44,14 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 		},
 		{
 			name:        "docker action - no step dependencies",
-			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureDockerBasic),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureDockerBasic),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:        "invalid action file",
-			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureInvalidInvalidUsing),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 			expectError: true,
 		},
 		{
@@ -431,7 +430,7 @@ func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	defer cleanup()
 
 	// Create a test action file with composite steps
-	actionContent := testutil.MustReadFixture(appconstants.TestFixtureTestCompositeAction)
+	actionContent := testutil.MustReadFixture(testutil.TestFixtureTestCompositeAction)
 
 	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	testutil.WriteTestFile(t, actionPath, actionContent)
@@ -553,7 +552,7 @@ func TestAnalyzerWithoutGitHubClient(t *testing.T) {
 	defer cleanup()
 
 	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	deps, err := analyzer.AnalyzeActionFile(actionPath)
 
@@ -666,7 +665,7 @@ func TestNoOpCache(t *testing.T) {
 	}
 
 	// Test Get - should always return false
-	val, ok := noc.Get(appconstants.CacheTestKey)
+	val, ok := noc.Get(testutil.CacheTestKey)
 	if ok {
 		t.Error("NoOpCache.Get() should return false")
 	}
@@ -675,13 +674,13 @@ func TestNoOpCache(t *testing.T) {
 	}
 
 	// Test Set - should not error
-	err := noc.Set(appconstants.CacheTestKey, appconstants.CacheTestValue)
+	err := noc.Set(testutil.CacheTestKey, testutil.CacheTestValue)
 	if err != nil {
 		t.Errorf("NoOpCache.Set() returned error: %v", err)
 	}
 
 	// Test SetWithTTL - should not error
-	err = noc.SetWithTTL(appconstants.CacheTestKey, appconstants.CacheTestValue, time.Hour)
+	err = noc.SetWithTTL(testutil.CacheTestKey, testutil.CacheTestValue, time.Hour)
 	if err != nil {
 		t.Errorf("NoOpCache.SetWithTTL() returned error: %v", err)
 	}
@@ -691,22 +690,27 @@ func TestNoOpCache(t *testing.T) {
 func TestCacheAdapterSet(t *testing.T) {
 	t.Parallel()
 
-	c, _ := cache.NewCache(cache.DefaultConfig())
+	c, err := cache.NewCache(cache.DefaultConfig())
+	if err != nil {
+		t.Fatalf("failed to create cache: %v", err)
+	}
+	defer testutil.CleanupCache(t, c)()
+
 	adapter := NewCacheAdapter(c)
 
 	// Test Set
-	err := adapter.Set(appconstants.CacheTestKey, appconstants.CacheTestValue)
+	err = adapter.Set(testutil.CacheTestKey, testutil.CacheTestValue)
 	if err != nil {
 		t.Errorf("CacheAdapter.Set() returned error: %v", err)
 	}
 
 	// Verify value was set
-	val, ok := adapter.Get(appconstants.CacheTestKey)
+	val, ok := adapter.Get(testutil.CacheTestKey)
 	if !ok {
 		t.Error("CacheAdapter.Get() should return true after Set")
 	}
-	if val != appconstants.CacheTestValue {
-		t.Errorf("CacheAdapter.Get() = %v, want %q", val, appconstants.CacheTestValue)
+	if val != testutil.CacheTestValue {
+		t.Errorf("CacheAdapter.Get() = %v, want %q", val, testutil.CacheTestValue)
 	}
 }
 
@@ -722,25 +726,25 @@ func TestIsCompositeAction(t *testing.T) {
 	}{
 		{
 			name:    "composite action",
-			fixture: "../../testdata/analyzer/composite-action.yml",
+			fixture: "composite-action.yml",
 			want:    true,
 			wantErr: false,
 		},
 		{
 			name:    "docker action",
-			fixture: "../../testdata/analyzer/docker-action.yml",
+			fixture: "docker-action.yml",
 			want:    false,
 			wantErr: false,
 		},
 		{
 			name:    "javascript action",
-			fixture: "../../testdata/analyzer/javascript-action.yml",
+			fixture: "javascript-action.yml",
 			want:    false,
 			wantErr: false,
 		},
 		{
 			name:    "invalid yaml",
-			fixture: "../../testdata/analyzer/invalid.yml",
+			fixture: "invalid.yml",
 			want:    false,
 			wantErr: true,
 		},
@@ -750,18 +754,15 @@ func TestIsCompositeAction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Read fixture content
-			yamlContent, err := os.ReadFile(tt.fixture)
-			if err != nil {
-				t.Fatalf("Failed to read fixture %s: %v", tt.fixture, err)
-			}
+			// Read fixture content using safe helper
+			yamlContent := testutil.MustReadAnalyzerFixture(tt.fixture)
 
 			// Create temp file with action YAML
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
 			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, string(yamlContent))
+			testutil.WriteTestFile(t, actionPath, yamlContent)
 
 			got, err := IsCompositeAction(actionPath)
 			if (err != nil) != tt.wantErr {

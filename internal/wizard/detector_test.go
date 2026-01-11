@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 func TestProjectDetectoranalyzeProjectFiles(t *testing.T) {
@@ -277,45 +277,45 @@ func TestProjectDetectorsuggestRunsOn(t *testing.T) {
 			name: "javascript/typescript project",
 			settings: &DetectedSettings{
 				Language:        "JavaScript/TypeScript",
-				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
+				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest},
 			},
 			expected: []string{
-				appconstants.RunnerUbuntuLatest,
-				appconstants.RunnerWindowsLatest,
-				appconstants.RunnerMacosLatest,
+				testutil.RunnerUbuntuLatest,
+				testutil.RunnerWindowsLatest,
+				testutil.RunnerMacosLatest,
 			},
 		},
 		{
 			name: "go project",
 			settings: &DetectedSettings{
 				Language:        "Go",
-				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
+				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest},
 			},
-			expected: []string{appconstants.RunnerUbuntuLatest},
+			expected: []string{testutil.RunnerUbuntuLatest},
 		},
 		{
 			name: "python project",
 			settings: &DetectedSettings{
 				Language:        "Python",
-				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
+				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest},
 			},
-			expected: []string{appconstants.RunnerUbuntuLatest},
+			expected: []string{testutil.RunnerUbuntuLatest},
 		},
 		{
 			name: "already has multiple runners",
 			settings: &DetectedSettings{
 				Language:        "JavaScript/TypeScript",
-				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest, "custom-runner"},
+				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest, "custom-runner"},
 			},
-			expected: []string{appconstants.RunnerUbuntuLatest, "custom-runner"},
+			expected: []string{testutil.RunnerUbuntuLatest, "custom-runner"},
 		},
 		{
 			name: "unknown language",
 			settings: &DetectedSettings{
 				Language:        "Rust",
-				SuggestedRunsOn: []string{appconstants.RunnerUbuntuLatest},
+				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest},
 			},
-			expected: []string{appconstants.RunnerUbuntuLatest},
+			expected: []string{testutil.RunnerUbuntuLatest},
 		},
 	}
 

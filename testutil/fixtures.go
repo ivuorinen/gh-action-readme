@@ -70,6 +70,28 @@ func mustReadFixture(filename string) string {
 	return content
 }
 
+// MustReadAnalyzerFixture reads a fixture file from testdata/analyzer.
+// This is for analyzer-specific test fixtures that aren't in yaml-fixtures.
+// Panics on error to simplify test code.
+func MustReadAnalyzerFixture(filename string) string {
+	// Get project root using runtime.Caller
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		panic(appconstants.ErrFailedToGetCurrentFilePath)
+	}
+
+	// Get the project root (go up from testutil/fixtures.go to project root)
+	projectRoot := filepath.Dir(filepath.Dir(currentFile))
+	fixturePath := filepath.Join(projectRoot, appconstants.DirTestdata, "analyzer", filename)
+
+	contentBytes, err := os.ReadFile(fixturePath) // #nosec G304 -- test fixture path from project structure
+	if err != nil {
+		panic("failed to read analyzer fixture " + filename + ": " + err.Error())
+	}
+
+	return string(contentBytes)
+}
+
 // ActionType represents the type of GitHub Action being tested.
 type ActionType string
 

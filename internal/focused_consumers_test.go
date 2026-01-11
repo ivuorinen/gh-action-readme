@@ -7,6 +7,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // trackingOutputWriter is a test implementation of OutputWriter that tracks calls.
@@ -243,7 +244,7 @@ func TestValidationComponentValidateAndReport(t *testing.T) {
 	}{
 		{
 			name:              "valid item",
-			item:              appconstants.TestItemName,
+			item:              testutil.TestItemName,
 			isValid:           true,
 			err:               nil,
 			wantLoggerCalls:   1,
@@ -252,7 +253,7 @@ func TestValidationComponentValidateAndReport(t *testing.T) {
 		},
 		{
 			name:              "invalid with contextual error",
-			item:              appconstants.TestItemName,
+			item:              testutil.TestItemName,
 			isValid:           false,
 			err:               apperrors.New(appconstants.ErrCodeValidation, "validation failed"),
 			wantLoggerCalls:   0,
@@ -261,7 +262,7 @@ func TestValidationComponentValidateAndReport(t *testing.T) {
 		},
 		{
 			name:              "invalid with regular error",
-			item:              appconstants.TestItemName,
+			item:              testutil.TestItemName,
 			isValid:           false,
 			err:               errors.New("regular error"),
 			wantLoggerCalls:   0,
@@ -270,7 +271,7 @@ func TestValidationComponentValidateAndReport(t *testing.T) {
 		},
 		{
 			name:              "invalid without error",
-			item:              appconstants.TestItemName,
+			item:              testutil.TestItemName,
 			isValid:           false,
 			err:               nil,
 			wantLoggerCalls:   0,

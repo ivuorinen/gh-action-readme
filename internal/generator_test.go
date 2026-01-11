@@ -48,7 +48,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			name: "single action.yml in root",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			recursive:   false,
 			expectedLen: 1,
@@ -61,7 +61,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 					t,
 					tmpDir,
 					appconstants.ActionFileNameYAML,
-					appconstants.TestFixtureJavaScriptSimple,
+					testutil.TestFixtureJavaScriptSimple,
 				)
 			},
 			recursive:   false,
@@ -71,12 +71,12 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			name: "both yml and yaml files",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 				testutil.WriteActionFixtureAs(
 					t,
 					tmpDir,
 					appconstants.ActionFileNameYAML,
-					appconstants.TestFixtureMinimalAction,
+					testutil.TestFixtureMinimalAction,
 				)
 			},
 			recursive:   false,
@@ -86,12 +86,12 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			name: "recursive discovery",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 				testutil.CreateActionSubdir(
 					t,
 					tmpDir,
-					appconstants.TestDirSubdir,
-					appconstants.TestFixtureCompositeBasic,
+					testutil.TestDirSubdir,
+					testutil.TestFixtureCompositeBasic,
 				)
 			},
 			recursive:   true,
@@ -101,12 +101,12 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			name: "non-recursive skips subdirectories",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 				testutil.CreateActionSubdir(
 					t,
 					tmpDir,
-					appconstants.TestDirSubdir,
-					appconstants.TestFixtureCompositeBasic,
+					testutil.TestDirSubdir,
+					testutil.TestFixtureCompositeBasic,
 				)
 			},
 			recursive:   false,
@@ -194,9 +194,9 @@ func TestGeneratorDiscoverActionFilesVerbose(t *testing.T) {
 			defer cleanup()
 
 			// Create test action file
-			testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+			testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			if tt.recursive {
-				testutil.CreateActionSubdir(t, tmpDir, "subdir", appconstants.TestFixtureCompositeBasic)
+				testutil.CreateActionSubdir(t, tmpDir, "subdir", testutil.TestFixtureCompositeBasic)
 			}
 
 			// Create generator with verbose mode enabled
@@ -226,21 +226,21 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 	}{
 		{
 			name:         "simple action to markdown",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			outputFormat: "md",
 			expectError:  false,
 			contains:     []string{"# Simple JavaScript Action", "A simple JavaScript action for testing"},
 		},
 		{
 			name:         "composite action to markdown",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureCompositeBasic),
 			outputFormat: "md",
 			expectError:  false,
 			contains:     []string{"# Basic Composite Action", "A simple composite action with basic steps"},
 		},
 		{
 			name:         "action to HTML",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			outputFormat: "html",
 			expectError:  false,
 			contains: []string{
@@ -250,7 +250,7 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 		},
 		{
 			name:         "action to JSON",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			outputFormat: "json",
 			expectError:  false,
 			contains: []string{
@@ -260,14 +260,14 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 		},
 		{
 			name:         "invalid action file",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureInvalidInvalidUsing),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 			outputFormat: "md",
 			expectError:  true, // Invalid runtime configuration should cause failure
 			contains:     []string{},
 		},
 		{
 			name:         "unknown output format",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			outputFormat: "unknown",
 			expectError:  true,
 		},
@@ -390,8 +390,8 @@ func TestGeneratorProcessBatch(t *testing.T) {
 					filepath.Join(dirs[0], appconstants.ActionFileNameYML),
 					filepath.Join(dirs[1], appconstants.ActionFileNameYML),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 				return files
 			},
@@ -409,11 +409,11 @@ func TestGeneratorProcessBatch(t *testing.T) {
 					filepath.Join(dirs[0], appconstants.ActionFileNameYML),
 					filepath.Join(dirs[1], appconstants.ActionFileNameYML),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 				testutil.WriteTestFile(
 					t,
 					files[1],
-					testutil.MustReadFixture(appconstants.TestFixtureInvalidInvalidUsing),
+					testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 				)
 
 				return files
@@ -498,8 +498,8 @@ func TestGeneratorValidateFiles(t *testing.T) {
 					filepath.Join(tmpDir, "action1.yml"),
 					filepath.Join(tmpDir, "action2.yml"),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(appconstants.TestFixtureMinimalAction))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(testutil.TestFixtureMinimalAction))
 
 				return files
 			},
@@ -513,11 +513,11 @@ func TestGeneratorValidateFiles(t *testing.T) {
 					filepath.Join(tmpDir, "valid.yml"),
 					filepath.Join(tmpDir, "invalid.yml"),
 				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 				testutil.WriteTestFile(
 					t,
 					files[1],
-					testutil.MustReadFixture(appconstants.TestFixtureInvalidMissingDescription),
+					testutil.MustReadFixture(testutil.TestFixtureInvalidMissingDescription),
 				)
 
 				return files
@@ -614,7 +614,7 @@ func TestGeneratorWithDifferentThemes(t *testing.T) {
 			testutil.SetupTestTemplates(t, tmpDir)
 
 			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+			testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 			config := &AppConfig{
 				Theme:        theme,
@@ -661,7 +661,7 @@ func TestGeneratorErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					actionPath,
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+					testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 				)
 
 				return generator, actionPath
@@ -690,7 +690,7 @@ func TestGeneratorErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					actionPath,
-					testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+					testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 				)
 
 				return generator, actionPath
@@ -770,7 +770,10 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir := t.TempDir()
-				actionPath := filepath.Join(tmpDir, "action.yml")
+				actionPath := filepath.Clean(filepath.Join(tmpDir, "action.yml"))
+				if actionPath != filepath.Join(tmpDir, "action.yml") || strings.Contains(actionPath, "..") {
+					t.Fatalf("invalid path: %q", actionPath)
+				}
 				content := "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
 				if err := os.WriteFile(actionPath, []byte(content), appconstants.FilePermDefault); err != nil {
 					t.Fatal(err)
@@ -778,6 +781,25 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 
 				return tmpDir
 			},
+		},
+		{
+			name:      "path with parent traversal - .. component",
+			dir:       "../outside",
+			recursive: false,
+			context:   "path traversal test",
+			wantErr:   true,
+		},
+		{
+			name: "path with .. in middle",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir := t.TempDir()
+				// Return path with .. that would escape
+				return filepath.Join(tmpDir, "..", "escape")
+			},
+			recursive: false,
+			context:   "path traversal test",
+			wantErr:   true,
 		},
 	}
 
@@ -822,7 +844,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "no custom filename",
 			outputFilename:  "",
-			outputDir:       appconstants.TestOutputDir,
+			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/README.md",
 			isAbsolute:      true,
@@ -830,7 +852,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "relative custom filename",
 			outputFilename:  "custom.md",
-			outputDir:       appconstants.TestOutputDir,
+			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/custom.md",
 			isAbsolute:      true,
@@ -838,7 +860,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "absolute custom filename",
 			outputFilename:  "/absolute/path/output.md",
-			outputDir:       appconstants.TestOutputDir,
+			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/absolute/path/output.md",
 			isAbsolute:      true,
@@ -846,9 +868,33 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "custom filename with subdirectory",
 			outputFilename:  "docs/output.md",
-			outputDir:       appconstants.TestOutputDir,
+			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/docs/output.md",
+			isAbsolute:      true,
+		},
+		{
+			name:            "path traversal attempt with ../",
+			outputFilename:  "../escape.md",
+			outputDir:       "/tmp/output",
+			defaultFilename: "README.md",
+			wantPath:        "/tmp/escape.md",
+			isAbsolute:      true,
+		},
+		{
+			name:            "path traversal with ../ in middle",
+			outputFilename:  "sub/../escape.md",
+			outputDir:       "/tmp/output",
+			defaultFilename: "README.md",
+			wantPath:        "/tmp/output/escape.md",
+			isAbsolute:      true,
+		},
+		{
+			name:            "outputDir with .. component",
+			outputFilename:  "file.md",
+			outputDir:       "/tmp/output/../escape",
+			defaultFilename: "README.md",
+			wantPath:        "/tmp/escape/file.md",
 			isAbsolute:      true,
 		},
 	}
@@ -870,6 +916,11 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 
 			if tt.isAbsolute && !filepath.IsAbs(got) {
 				t.Errorf("Expected absolute path, got relative: %q", got)
+			}
+
+			// Verify no .. components remain in resolved path
+			if strings.Contains(got, "..") {
+				t.Errorf("Resolved path contains .. components: %q", got)
 			}
 		})
 	}
@@ -983,8 +1034,8 @@ func TestGeneratorGenerateHTMLErrorPaths(t *testing.T) {
 
 	// Create a valid action
 	action := &ActionYML{
-		Name:        appconstants.TestActionName,
-		Description: appconstants.TestActionDesc,
+		Name:        testutil.TestActionName,
+		Description: testutil.TestActionDesc,
 		Runs:        map[string]any{"using": "composite"},
 	}
 
@@ -1014,8 +1065,8 @@ func TestGeneratorGenerateJSONErrorPaths(t *testing.T) {
 
 	// Create a valid action
 	action := &ActionYML{
-		Name:        appconstants.TestActionName,
-		Description: appconstants.TestActionDesc,
+		Name:        testutil.TestActionName,
+		Description: testutil.TestActionDesc,
 		Runs:        map[string]any{"using": "composite"},
 	}
 
@@ -1045,8 +1096,8 @@ func TestGeneratorGenerateASCIIDocErrorPaths(t *testing.T) {
 
 	// Create a valid action
 	action := &ActionYML{
-		Name:        appconstants.TestActionName,
-		Description: appconstants.TestActionDesc,
+		Name:        testutil.TestActionName,
+		Description: testutil.TestActionDesc,
 		Runs:        map[string]any{"using": "composite"},
 	}
 

@@ -87,7 +87,7 @@ func buildTestBinary(t *testing.T) string {
 func setupCompleteWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "README.md"), "# Old README")
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, ".gitignore"), testutil.GitIgnoreContent)
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "package.json"), testutil.PackageJSONContent)
@@ -97,24 +97,24 @@ func setupCompleteWorkflow(t *testing.T, tmpDir string) {
 func setupMultiActionWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
-	testutil.CreateActionSubdir(t, tmpDir, "actions/deploy", appconstants.TestFixtureDockerBasic)
-	testutil.CreateActionSubdir(t, tmpDir, "actions/test", appconstants.TestFixtureCompositeBasic)
+	testutil.CreateActionSubdir(t, tmpDir, "actions/deploy", testutil.TestFixtureDockerBasic)
+	testutil.CreateActionSubdir(t, tmpDir, "actions/test", testutil.TestFixtureCompositeBasic)
 }
 
 // setupConfigWorkflow creates a simple action for config testing.
 func setupConfigWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 }
 
 // setupErrorWorkflow creates an invalid action file for error testing.
 func setupErrorWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureInvalidMissingDescription))
+		testutil.MustReadFixture(testutil.TestFixtureInvalidMissingDescription))
 }
 
 // setupConfigurationHierarchy creates a complex configuration hierarchy for testing.
@@ -122,7 +122,7 @@ func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	// Create global config
 	testutil.WriteConfigFile(t, tmpDir, testutil.MustReadFixture("configs/global/default.yml"))
@@ -136,7 +136,7 @@ func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture("repo-config.yml"))
 
 	// Set XDG config home to our test directory
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, appconstants.TestDirDotConfig))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, testutil.TestDirDotConfig))
 }
 
 // setupMultiActionWithTemplates creates multiple actions with custom templates.
@@ -144,12 +144,12 @@ func setupMultiActionWithTemplates(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Root action
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 	// Nested actions with different types
-	testutil.CreateActionSubdir(t, tmpDir, "actions/composite", appconstants.TestFixtureCompositeBasic)
-	testutil.CreateActionSubdir(t, tmpDir, "actions/docker", appconstants.TestFixtureDockerBasic)
-	testutil.CreateActionSubdir(t, tmpDir, "actions/minimal", appconstants.TestFixtureMinimalAction)
+	testutil.CreateActionSubdir(t, tmpDir, "actions/composite", testutil.TestFixtureCompositeBasic)
+	testutil.CreateActionSubdir(t, tmpDir, "actions/docker", testutil.TestFixtureDockerBasic)
+	testutil.CreateActionSubdir(t, tmpDir, "actions/minimal", testutil.TestFixtureMinimalAction)
 
 	// Setup templates
 	testutil.SetupTestTemplates(t, tmpDir)
@@ -214,10 +214,10 @@ func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	// Set up XDG config home
-	configHome := filepath.Join(tmpDir, appconstants.TestDirDotConfig)
+	configHome := filepath.Join(tmpDir, testutil.TestDirDotConfig)
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 
 	// Global configuration (lowest priority)
@@ -227,7 +227,7 @@ func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 output_format: md
 verbose: false
 github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz`
-	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, appconstants.TestPathConfigYML), globalConfig)
+	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, testutil.TestPathConfigYML), globalConfig)
 
 	// Repository configuration (medium priority)
 	repoConfig := `theme: github
@@ -256,7 +256,7 @@ func setupTemplateErrorScenario(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create valid action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 	// Create a broken template directory structure
 	templatesDir := filepath.Join(tmpDir, "templates")
@@ -274,7 +274,7 @@ func setupConfigurationErrorScenario(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create valid action file
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 	// Create invalid configuration files
 	invalidConfig := `theme: [invalid yaml structure
@@ -285,12 +285,12 @@ verbose: not_a_boolean`
 	// Create configuration with missing required fields
 	incompleteConfig := `unknown_field: value
 invalid_theme: nonexistent`
-	configDir := filepath.Join(tmpDir, appconstants.TestDirDotConfig, "gh-action-readme")
+	configDir := filepath.Join(tmpDir, testutil.TestDirDotConfig, "gh-action-readme")
 	_ = os.MkdirAll(configDir, 0750) // #nosec G301 -- test directory permissions
-	testutil.WriteTestFile(t, filepath.Join(configDir, appconstants.TestPathConfigYML), incompleteConfig)
+	testutil.WriteTestFile(t, filepath.Join(configDir, testutil.TestPathConfigYML), incompleteConfig)
 
 	// Set XDG config home
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, appconstants.TestDirDotConfig))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, testutil.TestDirDotConfig))
 }
 
 // setupFileDiscoveryErrorScenario creates a scenario with file discovery issues.
@@ -303,9 +303,9 @@ func setupFileDiscoveryErrorScenario(t *testing.T, tmpDir string) {
 	// Create files with similar names but not action files
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.txt"), "not an action")
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "workflow.yml"),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "actions", "action.bak"),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 }
 
 // setupServiceIntegrationErrorScenario creates a mixed scenario with various issues.
@@ -313,13 +313,13 @@ func setupServiceIntegrationErrorScenario(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Valid action at root
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 	// Invalid action in subdirectory
-	testutil.CreateActionSubdir(t, tmpDir, "actions/broken", appconstants.TestFixtureInvalidMissingDescription)
+	testutil.CreateActionSubdir(t, tmpDir, "actions/broken", testutil.TestFixtureInvalidMissingDescription)
 
 	// Valid action in another subdirectory
-	testutil.CreateActionSubdir(t, tmpDir, "actions/valid", appconstants.TestFixtureCompositeBasic)
+	testutil.CreateActionSubdir(t, tmpDir, "actions/valid", testutil.TestFixtureCompositeBasic)
 
 	// Broken configuration
 	brokenConfig := `theme: nonexistent_theme
@@ -704,7 +704,7 @@ func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
 	// Create a new GitHub Action project
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureMyNewAction))
+		testutil.MustReadFixture(testutil.TestFixtureMyNewAction))
 
 	// Validate the action
 	cmd := exec.Command(binaryPath, "validate") // #nosec G204 -- controlled test input
@@ -742,7 +742,7 @@ func testDependencyManagement(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
 	// Update action to be composite with dependencies
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	// List dependencies
 	cmd := exec.Command(binaryPath, "deps", "list")
@@ -1112,7 +1112,7 @@ func TestStressTestWorkflow(t *testing.T) {
 		actionDir := filepath.Join(tmpDir, "action"+string(rune('A'+i)))
 		_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
 
-		actionContent := strings.ReplaceAll(testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+		actionContent := strings.ReplaceAll(testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			"Simple Action", "Action "+string(rune('A'+i)))
 		testutil.WriteTestFile(t, filepath.Join(actionDir, appconstants.ActionFileNameYML), actionContent)
 	}
@@ -1246,10 +1246,10 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 	// Create a project with mixed valid and invalid files
 	// Note: validation looks for files named exactly "action.yml" or "action.yaml"
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
-	testutil.CreateActionSubdir(t, tmpDir, appconstants.TestDirSubdir,
-		appconstants.TestFixtureInvalidMissingDescription)
+	testutil.CreateActionSubdir(t, tmpDir, testutil.TestDirSubdir,
+		testutil.TestFixtureInvalidMissingDescription)
 
 	// Test that validation reports issues but doesn't crash
 	cmd := exec.Command(binaryPath, "validate") // #nosec G204 -- controlled test input
@@ -1296,7 +1296,7 @@ func TestConfigurationWorkflow(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple))
+		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 	var err error
 
@@ -1338,7 +1338,7 @@ func verifyConfigurationLoading(t *testing.T, tmpDir string) {
 	// Since files may be cleaned up between runs, we'll check if the configuration loading succeeded
 	// by verifying that the setup created the expected configuration files
 	configFiles := []string{
-		filepath.Join(tmpDir, appconstants.TestDirDotConfig, "gh-action-readme", appconstants.TestPathConfigYML),
+		filepath.Join(tmpDir, testutil.TestDirDotConfig, "gh-action-readme", testutil.TestPathConfigYML),
 		filepath.Join(tmpDir, "gh-action-readme.yml"),
 		filepath.Join(tmpDir, ".github", "gh-action-readme.yml"),
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // capturedOutput captures output for testing validation reporting functions.
@@ -136,8 +137,8 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "all valid files",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1}},
-				{MissingFields: []string{appconstants.ValidationTestFile2}},
+				{MissingFields: []string{testutil.ValidationTestFile1}},
+				{MissingFields: []string{testutil.ValidationTestFile2}},
 			},
 			wantValidFiles:  2,
 			wantTotalIssues: 0,
@@ -145,8 +146,8 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "all invalid files",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1, "name", "description"}},
-				{MissingFields: []string{appconstants.ValidationTestFile2, "runs"}},
+				{MissingFields: []string{testutil.ValidationTestFile1, "name", "description"}},
+				{MissingFields: []string{testutil.ValidationTestFile2, "runs"}},
 			},
 			wantValidFiles:  0,
 			wantTotalIssues: 3, // 2 issues in first file + 1 in second
@@ -154,10 +155,10 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "mixed valid and invalid",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1}},                        // Valid
-				{MissingFields: []string{appconstants.ValidationTestFile2, "name", "description"}}, // 2 issues
-				{MissingFields: []string{"file: action3.yml"}},                                     // Valid
-				{MissingFields: []string{"file: action4.yml", "runs"}},                             // 1 issue
+				{MissingFields: []string{testutil.ValidationTestFile1}},                        // Valid
+				{MissingFields: []string{testutil.ValidationTestFile2, "name", "description"}}, // 2 issues
+				{MissingFields: []string{"file: action3.yml"}},                                 // Valid
+				{MissingFields: []string{"file: action4.yml", "runs"}},                         // 1 issue
 			},
 			wantValidFiles:  2,
 			wantTotalIssues: 3,
@@ -171,7 +172,7 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "single valid file",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile3}},
+				{MissingFields: []string{testutil.ValidationTestFile3}},
 			},
 			wantValidFiles:  1,
 			wantTotalIssues: 0,
@@ -179,7 +180,7 @@ func TestCountValidationStats(t *testing.T) {
 		{
 			name: "single invalid file with multiple issues",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile3, "name", "description", "runs"}},
+				{MissingFields: []string{testutil.ValidationTestFile3, "name", "description", "runs"}},
 			},
 			wantValidFiles:  0,
 			wantTotalIssues: 3,
@@ -407,7 +408,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with missing fields only",
 			result: ValidationResult{
-				MissingFields: []string{appconstants.ValidationTestFile3, "name", "description"},
+				MissingFields: []string{testutil.ValidationTestFile3, "name", "description"},
 			},
 			wantInfo:     1, // File name only (no suggestions)
 			wantError:    2, // 2 missing fields
@@ -417,7 +418,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with warnings only",
 			result: ValidationResult{
-				MissingFields: []string{appconstants.ValidationTestFile3},
+				MissingFields: []string{testutil.ValidationTestFile3},
 				Warnings:      []string{"author field is recommended", "icon field is recommended"},
 			},
 			wantInfo:     1, // File name
@@ -428,7 +429,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with missing fields and warnings",
 			result: ValidationResult{
-				MissingFields: []string{appconstants.ValidationTestFile3, "name"},
+				MissingFields: []string{testutil.ValidationTestFile3, "name"},
 				Warnings:      []string{"author field is recommended"},
 			},
 			wantInfo:     1,
@@ -439,7 +440,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "file with suggestions",
 			result: ValidationResult{
-				MissingFields: []string{appconstants.ValidationTestFile3, "name"},
+				MissingFields: []string{testutil.ValidationTestFile3, "name"},
 				Suggestions:   []string{"Add a descriptive name field", "See documentation for examples"},
 			},
 			wantInfo:     2, // File name + Suggestions header
@@ -450,7 +451,7 @@ func TestShowFileIssues(t *testing.T) {
 		{
 			name: "valid file (no issues)",
 			result: ValidationResult{
-				MissingFields: []string{appconstants.ValidationTestFile3},
+				MissingFields: []string{testutil.ValidationTestFile3},
 			},
 			wantInfo:     1, // Just file name
 			wantError:    0,
@@ -507,8 +508,8 @@ func TestShowDetailedIssues(t *testing.T) {
 		{
 			name: "no issues, verbose mode",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1}},
-				{MissingFields: []string{appconstants.ValidationTestFile2}},
+				{MissingFields: []string{testutil.ValidationTestFile1}},
+				{MissingFields: []string{testutil.ValidationTestFile2}},
 			},
 			totalIssues: 0,
 			verbose:     true,
@@ -517,8 +518,8 @@ func TestShowDetailedIssues(t *testing.T) {
 		{
 			name: "some issues",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1, "name"}},
-				{MissingFields: []string{appconstants.ValidationTestFile2}},
+				{MissingFields: []string{testutil.ValidationTestFile1, "name"}},
+				{MissingFields: []string{testutil.ValidationTestFile2}},
 			},
 			totalIssues: 1,
 			verbose:     false,
@@ -527,7 +528,7 @@ func TestShowDetailedIssues(t *testing.T) {
 		{
 			name: "files with warnings",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1}, Warnings: []string{"author recommended"}},
+				{MissingFields: []string{testutil.ValidationTestFile1}, Warnings: []string{"author recommended"}},
 			},
 			totalIssues: 0,
 			verbose:     false,
@@ -565,8 +566,8 @@ func TestReportValidationResults(t *testing.T) {
 		{
 			name: "all valid, no errors",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1}},
-				{MissingFields: []string{appconstants.ValidationTestFile2}},
+				{MissingFields: []string{testutil.ValidationTestFile1}},
+				{MissingFields: []string{testutil.ValidationTestFile2}},
 			},
 			errors:      []string{},
 			wantBold:    1,
@@ -576,8 +577,8 @@ func TestReportValidationResults(t *testing.T) {
 		{
 			name: "some invalid files",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1, "name"}},
-				{MissingFields: []string{appconstants.ValidationTestFile2}},
+				{MissingFields: []string{testutil.ValidationTestFile1, "name"}},
+				{MissingFields: []string{testutil.ValidationTestFile2}},
 			},
 			errors:      []string{},
 			wantBold:    2, // Summary + Details
@@ -595,7 +596,7 @@ func TestReportValidationResults(t *testing.T) {
 		{
 			name: "mixed validation issues and parse errors",
 			results: []ValidationResult{
-				{MissingFields: []string{appconstants.ValidationTestFile1, "name", "description"}},
+				{MissingFields: []string{testutil.ValidationTestFile1, "name", "description"}},
 			},
 			errors:      []string{"Failed to parse action2.yml"},
 			wantBold:    3, // Summary + Details + Parse Errors

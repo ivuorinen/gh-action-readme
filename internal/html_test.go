@@ -3,9 +3,25 @@ package internal
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
+
+// mustSafePath validates that a path is safe (no "..", matches cleaned version).
+// Fails the test if path is unsafe.
+func mustSafePath(t *testing.T, p string) string {
+	t.Helper()
+	cleaned := filepath.Clean(p)
+	if cleaned != p {
+		t.Fatalf("path %q does not match cleaned path %q", p, cleaned)
+	}
+	if strings.Contains(cleaned, "..") {
+		t.Fatalf("path %q contains unsafe .. component", p)
+	}
+
+	return cleaned
+}
 
 // TestHTMLWriterWrite tests the HTMLWriter.Write function.
 func TestHTMLWriterWrite(t *testing.T) {
@@ -75,7 +91,7 @@ func TestHTMLWriterWrite(t *testing.T) {
 			}
 
 			// Read the file and verify content
-			content, err := os.ReadFile(outputPath) //nolint:gosec // Testing with safe temp dir
+			content, err := os.ReadFile(mustSafePath(t, outputPath))
 			if err != nil {
 				t.Fatalf("Failed to read output file: %v", err)
 			}
@@ -93,19 +109,54 @@ func TestHTMLWriterWriteErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		path    string
-		wantErr bool
+		name       string
+		setupPath  func(t *testing.T) string
+		skipReason string
+		wantErr    bool
 	}{
 		{
-			name:    "invalid path - directory doesn't exist",
-			path:    "/nonexistent/directory/file.html",
+			name: "invalid path - directory doesn't exist",
+			setupPath: func(t *testing.T) string {
+				t.Helper()
+				tmpDir := t.TempDir()
+
+				return filepath.Join(tmpDir, "nonexistent", "file.html")
+			},
 			wantErr: true,
 		},
 		{
-			name:    "invalid path - permission denied (if running as non-root)",
-			path:    "/root/test.html",
-			wantErr: true,
+			name: "permission denied - unwritable directory",
+			setupPath: func(t *testing.T) string {
+				t.Helper()
+				// Skip on Windows (chmod behavior differs)
+				if runtime.GOOS == "windows" {
+					return ""
+				}
+				// Skip if running as root (can write anywhere)
+				if os.Geteuid() == 0 {
+					return ""
+				}
+
+				tmpDir := t.TempDir()
+				restrictedDir := filepath.Join(tmpDir, "restricted")
+				if err := os.Mkdir(restrictedDir, 0700); err != nil {
+					t.Fatalf("failed to create restricted dir: %v", err)
+				}
+
+				// Make directory unwritable
+				if err := os.Chmod(restrictedDir, 0000); err != nil {
+					t.Fatalf("failed to chmod: %v", err)
+				}
+
+				// Restore permissions in cleanup
+				t.Cleanup(func() {
+					_ = os.Chmod(restrictedDir, 0700) // #nosec G302 -- directory needs exec bit for cleanup
+				})
+
+				return filepath.Join(restrictedDir, "file.html")
+			},
+			skipReason: "skipped on Windows or when running as root",
+			wantErr:    true,
 		},
 	}
 
@@ -113,12 +164,17 @@ func TestHTMLWriterWriteErrorPaths(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			path := tt.setupPath(t)
+			if path == "" {
+				t.Skip(tt.skipReason)
+			}
+
 			writer := &HTMLWriter{
 				Header: "<header>",
 				Footer: "</footer>",
 			}
 
-			err := writer.Write("<content>", tt.path)
+			err := writer.Write("<content>", path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -177,7 +233,7 @@ func TestHTMLWriterWriteSpecialCharacters(t *testing.T) {
 	}
 
 	// Verify content was written correctly
-	readContent, err := os.ReadFile(outputPath) //nolint:gosec // Testing with safe temp dir
+	readContent, err := os.ReadFile(mustSafePath(t, outputPath))
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}

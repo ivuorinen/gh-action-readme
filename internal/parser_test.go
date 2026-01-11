@@ -17,7 +17,7 @@ const testPermissionWrite = "write"
 func parseActionFromContent(t *testing.T, content string) (*ActionYML, error) {
 	t.Helper()
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
+	tmpFile, err := os.CreateTemp(t.TempDir(), testutil.TestActionFilePattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,18 +183,18 @@ func TestDiscoverActionFilesWithIgnoredDirectories(t *testing.T) {
 	//     action.yml (should be found)
 
 	// Create root action.yml
-	rootAction := createTestFile(t, tmpDir, appconstants.ActionFileNameYML, appconstants.TestYAMLRoot)
+	rootAction := createTestFile(t, tmpDir, appconstants.ActionFileNameYML, testutil.TestYAMLRoot)
 
 	// Create directories with action.yml files
 	_, nodeModulesAction := createTestDirWithAction(
 		t,
 		tmpDir,
 		appconstants.DirNodeModules,
-		appconstants.TestYAMLNodeModules,
+		testutil.TestYAMLNodeModules,
 	)
-	_, vendorAction := createTestDirWithAction(t, tmpDir, appconstants.DirVendor, appconstants.TestYAMLVendor)
-	_, gitAction := createTestDirWithAction(t, tmpDir, appconstants.DirGit, appconstants.TestYAMLGit)
-	_, srcAction := createTestDirWithAction(t, tmpDir, "src", appconstants.TestYAMLSrc)
+	_, vendorAction := createTestDirWithAction(t, tmpDir, appconstants.DirVendor, testutil.TestYAMLVendor)
+	_, gitAction := createTestDirWithAction(t, tmpDir, appconstants.DirGit, testutil.TestYAMLGit)
+	_, srcAction := createTestDirWithAction(t, tmpDir, "src", testutil.TestYAMLSrc)
 
 	tests := []struct {
 		name        string
@@ -252,7 +252,7 @@ func TestDiscoverActionFilesNestedIgnoredDirs(t *testing.T) {
 
 	nestedAction := filepath.Join(nodeModulesDir, appconstants.ActionFileNameYML)
 	if err := os.WriteFile(
-		nestedAction, []byte(appconstants.TestYAMLNested), appconstants.FilePermDefault,
+		nestedAction, []byte(testutil.TestYAMLNested), appconstants.FilePermDefault,
 	); err != nil {
 		t.Fatalf(testutil.ErrCreateFile("nested action.yml"), err)
 	}
@@ -275,7 +275,7 @@ func TestDiscoverActionFilesNonRecursive(t *testing.T) {
 	// Create action.yml in root
 	rootAction := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	if err := os.WriteFile(
-		rootAction, []byte(appconstants.TestYAMLRoot), appconstants.FilePermDefault,
+		rootAction, []byte(testutil.TestYAMLRoot), appconstants.FilePermDefault,
 	); err != nil {
 		t.Fatalf(testutil.ErrCreateFile("action.yml"), err)
 	}
@@ -287,7 +287,7 @@ func TestDiscoverActionFilesNonRecursive(t *testing.T) {
 	}
 	subAction := filepath.Join(subDir, appconstants.ActionFileNameYML)
 	if err := os.WriteFile(
-		subAction, []byte(appconstants.TestYAMLSub), appconstants.FilePermDefault,
+		subAction, []byte(testutil.TestYAMLSub), appconstants.FilePermDefault,
 	); err != nil {
 		t.Fatalf(testutil.ErrCreateFile("sub/action.yml"), err)
 	}
@@ -398,7 +398,7 @@ name: Test Action`,
 			t.Parallel()
 
 			// Create temp file
-			tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
+			tmpFile, err := os.CreateTemp(t.TempDir(), testutil.TestActionFilePattern)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -428,17 +428,17 @@ name: Test Action`,
 func TestParseActionYMLWithCommentPermissions(t *testing.T) {
 	t.Parallel()
 
-	content := appconstants.TestPermissionsHeader +
+	content := testutil.TestPermissionsHeader +
 		"#   - contents: read\n" +
-		appconstants.TestActionNameLine +
-		appconstants.TestDescriptionLine +
-		appconstants.TestRunsLine +
-		appconstants.TestCompositeUsing +
-		appconstants.TestStepsEmpty
+		testutil.TestActionNameLine +
+		testutil.TestDescriptionLine +
+		testutil.TestRunsLine +
+		testutil.TestCompositeUsing +
+		testutil.TestStepsEmpty
 
 	action, err := parseActionFromContent(t, content)
 	if err != nil {
-		t.Fatalf(appconstants.TestErrorFormat, err)
+		t.Fatalf(testutil.TestErrorFormat, err)
 	}
 
 	if action.Permissions == nil {
@@ -454,20 +454,20 @@ func TestParseActionYMLWithCommentPermissions(t *testing.T) {
 func TestParseActionYMLYAMLPermissionsOverrideComments(t *testing.T) {
 	t.Parallel()
 
-	content := appconstants.TestPermissionsHeader +
+	content := testutil.TestPermissionsHeader +
 		"#   - contents: read\n" +
 		"#   - issues: write\n" +
-		appconstants.TestActionNameLine +
-		appconstants.TestDescriptionLine +
+		testutil.TestActionNameLine +
+		testutil.TestDescriptionLine +
 		"permissions:\n" +
 		"  contents: write  # YAML override\n" +
-		appconstants.TestRunsLine +
-		appconstants.TestCompositeUsing +
-		appconstants.TestStepsEmpty
+		testutil.TestRunsLine +
+		testutil.TestCompositeUsing +
+		testutil.TestStepsEmpty
 
 	action, err := parseActionFromContent(t, content)
 	if err != nil {
-		t.Fatalf(appconstants.TestErrorFormat, err)
+		t.Fatalf(testutil.TestErrorFormat, err)
 	}
 
 	// YAML should override comment
@@ -491,18 +491,18 @@ func TestParseActionYMLYAMLPermissionsOverrideComments(t *testing.T) {
 func TestParseActionYMLOnlyYAMLPermissions(t *testing.T) {
 	t.Parallel()
 
-	content := appconstants.TestActionNameLine +
-		appconstants.TestDescriptionLine +
+	content := testutil.TestActionNameLine +
+		testutil.TestDescriptionLine +
 		"permissions:\n" +
 		"  contents: read\n" +
 		"  issues: write\n" +
-		appconstants.TestRunsLine +
-		appconstants.TestCompositeUsing +
-		appconstants.TestStepsEmpty
+		testutil.TestRunsLine +
+		testutil.TestCompositeUsing +
+		testutil.TestStepsEmpty
 
 	action, err := parseActionFromContent(t, content)
 	if err != nil {
-		t.Fatalf(appconstants.TestErrorFormat, err)
+		t.Fatalf(testutil.TestErrorFormat, err)
 	}
 
 	if action.Permissions == nil {
@@ -522,15 +522,15 @@ func TestParseActionYMLOnlyYAMLPermissions(t *testing.T) {
 func TestParseActionYMLNoPermissions(t *testing.T) {
 	t.Parallel()
 
-	content := appconstants.TestActionNameLine +
-		appconstants.TestDescriptionLine +
-		appconstants.TestRunsLine +
-		appconstants.TestCompositeUsing +
-		appconstants.TestStepsEmpty
+	content := testutil.TestActionNameLine +
+		testutil.TestDescriptionLine +
+		testutil.TestRunsLine +
+		testutil.TestCompositeUsing +
+		testutil.TestStepsEmpty
 
 	action, err := parseActionFromContent(t, content)
 	if err != nil {
-		t.Fatalf(appconstants.TestErrorFormat, err)
+		t.Fatalf(testutil.TestErrorFormat, err)
 	}
 
 	if action.Permissions != nil {
@@ -542,8 +542,8 @@ func TestParseActionYMLNoPermissions(t *testing.T) {
 func TestParseActionYMLMalformedYAML(t *testing.T) {
 	t.Parallel()
 
-	content := appconstants.TestActionNameLine +
-		appconstants.TestDescriptionLine +
+	content := testutil.TestActionNameLine +
+		testutil.TestDescriptionLine +
 		"invalid-yaml: [\n" + // Unclosed bracket
 		"  - item"
 
@@ -557,7 +557,7 @@ func TestParseActionYMLMalformedYAML(t *testing.T) {
 func TestParseActionYMLEmptyFile(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), appconstants.TestActionFilePattern)
+	tmpFile, err := os.CreateTemp(t.TempDir(), testutil.TestActionFilePattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -656,7 +656,7 @@ func TestProcessPermissionEntryIndentationEdgeCases(t *testing.T) {
 	}{
 		{
 			name:               "first item sets indent",
-			line:               appconstants.TestContentsRead,
+			line:               testutil.TestContentsRead,
 			content:            "contents: read",
 			initialIndent:      -1,
 			wantBreak:          false,
@@ -721,8 +721,8 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 	}{
 		{
 			name: "duplicate permissions",
-			content: appconstants.TestPermissionsHeader +
-				appconstants.TestContentsRead +
+			content: testutil.TestPermissionsHeader +
+				testutil.TestContentsRead +
 				"#   contents: write\n",
 			wantPerms:   map[string]string{"contents": "write"},
 			wantErr:     false,
@@ -730,8 +730,8 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 		},
 		{
 			name: "mixed valid and invalid lines",
-			content: appconstants.TestPermissionsHeader +
-				appconstants.TestContentsRead +
+			content: testutil.TestPermissionsHeader +
+				testutil.TestContentsRead +
 				"#   invalid-line-no-value\n" +
 				"#   issues: write\n",
 			wantPerms:   map[string]string{"contents": "read", "issues": "write"},
@@ -740,9 +740,9 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 		},
 		{
 			name: "permissions block ends at non-comment",
-			content: appconstants.TestPermissionsHeader +
-				appconstants.TestContentsRead +
-				appconstants.TestActionNameLine +
+			content: testutil.TestPermissionsHeader +
+				testutil.TestContentsRead +
+				testutil.TestActionNameLine +
 				"#   issues: write\n",
 			wantPerms:   map[string]string{"contents": "read"},
 			wantErr:     false,
@@ -750,8 +750,8 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 		},
 		{
 			name: "only permissions header",
-			content: appconstants.TestPermissionsHeader +
-				appconstants.TestActionNameLine,
+			content: testutil.TestPermissionsHeader +
+				testutil.TestActionNameLine,
 			wantPerms:   map[string]string{},
 			wantErr:     false,
 			description: "empty permissions block",
@@ -878,8 +878,8 @@ func TestParseActionYMLOnlyComments(t *testing.T) {
 
 	content := "# This is a comment\n" +
 		"# Another comment\n" +
-		appconstants.TestPermissionsHeader +
-		appconstants.TestContentsRead
+		testutil.TestPermissionsHeader +
+		testutil.TestContentsRead
 
 	_, err := parseActionFromContent(t, content)
 	// File with only comments should return EOF error from YAML parser

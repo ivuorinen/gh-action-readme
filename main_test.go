@@ -55,7 +55,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 0,
 		},
@@ -64,7 +64,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 0,
 		},
@@ -79,7 +79,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			wantExit:   0,
 			wantStdout: "All validations passed successfully",
@@ -89,7 +89,7 @@ func TestCLICommands(t *testing.T) {
 			args: []string{"validate"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				createTestActionFile(t, tmpDir, appconstants.TestFixtureInvalidMissingDescription)
+				createTestActionFile(t, tmpDir, testutil.TestFixtureInvalidMissingDescription)
 			},
 			wantExit: 1,
 		},
@@ -129,7 +129,7 @@ func TestCLICommands(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+				testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 			},
 			wantExit: 0,
 		},
@@ -220,9 +220,9 @@ func TestCLIFlags(t *testing.T) {
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
 			if result.exitCode != tt.wantExit {
-				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
-				t.Logf(appconstants.TestMsgStdout, result.stdout)
-				t.Logf(appconstants.TestMsgStderr, result.stderr)
+				t.Errorf(testutil.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(testutil.TestMsgStdout, result.stdout)
+				t.Logf(testutil.TestMsgStderr, result.stderr)
 			}
 
 			if tt.contains != "" {
@@ -242,8 +242,8 @@ func TestCLIRecursiveFlag(t *testing.T) {
 	defer cleanup()
 
 	// Create nested directory structure with action files
-	testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
-	testutil.CreateActionSubdir(t, tmpDir, appconstants.TestDirSubdir, appconstants.TestFixtureCompositeBasic)
+	testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+	testutil.CreateActionSubdir(t, tmpDir, testutil.TestDirSubdir, testutil.TestFixtureCompositeBasic)
 
 	tests := []struct {
 		name     string
@@ -272,7 +272,7 @@ func TestCLIRecursiveFlag(t *testing.T) {
 
 			// For recursive tests, check that appropriate number of files were processed
 			// This is a simple heuristic - could be made more sophisticated
-			if tt.minFiles > 1 && !strings.Contains(result.stdout, appconstants.TestDirSubdir) {
+			if tt.minFiles > 1 && !strings.Contains(result.stdout, testutil.TestDirSubdir) {
 				t.Errorf("expected recursive processing to include subdirectory")
 			}
 		})
@@ -296,7 +296,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			wantExit:  1,
 			wantError: "encountered 1 errors during batch processing",
@@ -319,7 +319,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 1,
 		},
@@ -328,7 +328,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				createTestActionFile(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 1,
 		},
@@ -346,9 +346,9 @@ func TestCLIErrorHandling(t *testing.T) {
 			result := runTestCommand(binaryPath, tt.args, tmpDir)
 
 			if result.exitCode != tt.wantExit {
-				t.Errorf(appconstants.TestMsgExitCode, tt.wantExit, result.exitCode)
-				t.Logf(appconstants.TestMsgStdout, result.stdout)
-				t.Logf(appconstants.TestMsgStderr, result.stderr)
+				t.Errorf(testutil.TestMsgExitCode, tt.wantExit, result.exitCode)
+				t.Logf(testutil.TestMsgStdout, result.stdout)
+				t.Logf(testutil.TestMsgStderr, result.stderr)
 			}
 
 			if tt.wantError != "" {
@@ -601,9 +601,9 @@ func assertCommandResult(t *testing.T, result cmdResult, wantExit int, wantStdou
 	t.Helper()
 
 	if result.exitCode != wantExit {
-		t.Errorf(appconstants.TestMsgExitCode, wantExit, result.exitCode)
-		t.Logf(appconstants.TestMsgStdout, result.stdout)
-		t.Logf(appconstants.TestMsgStderr, result.stderr)
+		t.Errorf(testutil.TestMsgExitCode, wantExit, result.exitCode)
+		t.Logf(testutil.TestMsgStdout, result.stdout)
+		t.Logf(testutil.TestMsgStderr, result.stderr)
 	}
 
 	// Check stdout if specified
@@ -730,13 +730,19 @@ func TestBuildTestBinary(t *testing.T) {
 	// This test verifies that buildTestBinary works
 	binaryPath := buildTestBinary(t)
 
+	// Clean and validate the path
+	cleanedPath := filepath.Clean(binaryPath)
+	if strings.Contains(cleanedPath, "..") {
+		t.Fatalf("binary path contains .. components: %q", cleanedPath)
+	}
+
 	// Check that binary exists
-	if _, err := os.Stat(binaryPath); err != nil {
+	if _, err := os.Stat(cleanedPath); err != nil {
 		t.Errorf("buildTestBinary() created binary does not exist: %v", err)
 	}
 
 	// Check that binary is executable
-	info, err := os.Stat(binaryPath)
+	info, err := os.Stat(cleanedPath)
 	if err != nil {
 		t.Fatalf("Failed to stat binary: %v", err)
 	}

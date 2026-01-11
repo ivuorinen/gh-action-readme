@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -23,7 +22,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 
-				return testutil.WriteActionFixture(t, tmpDir, appconstants.TestFixtureJavaScriptSimple)
+				return testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			expectError: false,
 		},
@@ -32,7 +31,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 
-				return testutil.WriteActionFixtureAs(t, tmpDir, "action.yaml", appconstants.TestFixtureMinimalAction)
+				return testutil.WriteActionFixtureAs(t, tmpDir, "action.yaml", testutil.TestFixtureMinimalAction)
 			},
 			expectError: false,
 		},
@@ -48,7 +47,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 
-				return testutil.WriteActionFixtureAs(t, tmpDir, "action.txt", appconstants.TestFixtureJavaScriptSimple)
+				return testutil.WriteActionFixtureAs(t, tmpDir, "action.txt", testutil.TestFixtureJavaScriptSimple)
 			},
 			expectError: true,
 		},

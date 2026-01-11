@@ -188,7 +188,7 @@ func WriteActionFixtureAs(t *testing.T, dir, filename, fixturePath string) strin
 // CreateConfigDir creates a standard .config/gh-action-readme directory.
 func CreateConfigDir(t *testing.T, baseDir string) string {
 	t.Helper()
-	configDir := filepath.Join(baseDir, appconstants.TestDirConfigGhActionReadme)
+	configDir := filepath.Join(baseDir, TestDirConfigGhActionReadme)
 	// #nosec G301 -- test directory permissions
 	if err := os.MkdirAll(configDir, appconstants.FilePermDir); err != nil {
 		t.Fatalf("failed to create config dir: %v", err)

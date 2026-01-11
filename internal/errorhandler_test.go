@@ -7,6 +7,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // TestNewErrorHandler tests error handler creation.
@@ -134,7 +135,7 @@ func TestCheckTypedError(t *testing.T) {
 		},
 		{
 			name:     "unknown error",
-			err:      errors.New(appconstants.UnknownErrorMsg),
+			err:      errors.New(testutil.UnknownErrorMsg),
 			wantCode: appconstants.ErrCodeUnknown,
 		},
 	}
@@ -215,7 +216,7 @@ func TestContains(t *testing.T) {
 	}{
 		{
 			name:   "exact match",
-			s:      appconstants.HelloWorldStr,
+			s:      testutil.HelloWorldStr,
 			substr: "hello",
 			want:   true,
 		},
@@ -227,13 +228,13 @@ func TestContains(t *testing.T) {
 		},
 		{
 			name:   "no match",
-			s:      appconstants.HelloWorldStr,
+			s:      testutil.HelloWorldStr,
 			substr: "goodbye",
 			want:   false,
 		},
 		{
 			name:   "empty substring",
-			s:      appconstants.HelloWorldStr,
+			s:      testutil.HelloWorldStr,
 			substr: "",
 			want:   true,
 		},
@@ -267,58 +268,15 @@ func TestContains(t *testing.T) {
 	}
 }
 
-// TestHandleSimpleError tests simple error handling logic (without os.Exit).
-func TestHandleSimpleError(t *testing.T) {
-	// Note: We cannot test os.Exit calls directly, but we can test the logic
-	// that runs before os.Exit. This test verifies the error code determination.
+// NOTE: HandleSimpleError testing is covered by TestDetermineErrorCode
+// since HandleSimpleError calls determineErrorCode and then os.Exit().
+// Testing os.Exit() directly is not practical in unit tests.
 
-	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
-
-	// Test error code determination for various errors
-	tests := []struct {
-		name     string
-		err      error
-		wantCode appconstants.ErrorCode
-	}{
-		{
-			name:     "file not found error",
-			err:      os.ErrNotExist,
-			wantCode: appconstants.ErrCodeFileNotFound,
-		},
-		{
-			name:     "permission error",
-			err:      os.ErrPermission,
-			wantCode: appconstants.ErrCodePermission,
-		},
-		{
-			name:     "nil error defaults to unknown",
-			err:      nil,
-			wantCode: appconstants.ErrCodeUnknown,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// We can only test the error code determination
-			// The actual HandleSimpleError would call os.Exit
-			var code appconstants.ErrorCode
-			if tt.err != nil {
-				code = handler.determineErrorCode(tt.err)
-			} else {
-				code = appconstants.ErrCodeUnknown
-			}
-
-			if code != tt.wantCode {
-				t.Errorf("error code = %v, want %v", code, tt.wantCode)
-			}
-		})
-	}
-}
-
-// TestHandleFatalError tests fatal error handling setup.
-func TestHandleFatalError(t *testing.T) {
-	// Note: Similar to HandleSimpleError, we test the logic before os.Exit
-	// The actual function calls os.Exit which we cannot test directly
+// TestFatalErrorComponents tests the components used in fatal error handling.
+// NOTE: We cannot test HandleFatalError directly as it calls os.Exit().
+// This test verifies that error construction components work correctly.
+func TestFatalErrorComponents(t *testing.T) {
+	// Test the logic that HandleFatalError uses before calling os.Exit
 
 	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
 
