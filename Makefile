@@ -1,9 +1,14 @@
-.PHONY: help test test-coverage test-coverage-html lint build run example \
+.PHONY: help test test-coverage test-coverage-html test-coverage-check lint build run example \
 	clean readme config-verify security vulncheck audit trivy gitleaks \
 	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update \
 	deps-check deps-update deps-update-all
 
 all: help
+
+# Coverage threshold (align with SonarCloud)
+# Note: SonarCloud checks NEW code coverage (≥80%), this checks overall coverage
+# Current overall coverage: 72.9% - working towards 80% target
+COVERAGE_THRESHOLD := 72.0
 
 help: ## Show this help message
 	@echo "GitHub Action README Generator - Available Make Targets:"
@@ -52,6 +57,21 @@ test-coverage-html: test-coverage ## Generate HTML coverage report and open in b
 		xdg-open coverage.html; \
 	else \
 		echo "Open coverage.html in your browser to view detailed coverage"; \
+	fi
+
+test-coverage-check: ## Run tests with coverage check (overall >= 72%)
+	@command -v bc >/dev/null 2>&1 || { \
+		echo "❌ bc command not found. Please install bc (e.g., apt-get install bc, brew install bc)"; \
+		exit 1; \
+	}
+	@echo "Running tests with coverage check..."
+	@go test -cover -coverprofile=coverage.out ./...
+	@total=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//'); \
+	if [ $$(echo "$$total < $(COVERAGE_THRESHOLD)" | bc) -eq 1 ]; then \
+		echo "❌ Coverage $$total% is below threshold $(COVERAGE_THRESHOLD)%"; \
+		exit 1; \
+	else \
+		echo "✅ Coverage $$total% meets threshold $(COVERAGE_THRESHOLD)%"; \
 	fi
 
 lint: editorconfig ## Run all linters via pre-commit

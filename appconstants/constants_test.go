@@ -1,6 +1,8 @@
 package appconstants
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -67,6 +69,17 @@ func TestGetConfigSearchPaths(t *testing.T) {
 	for _, path := range paths {
 		if path == "" {
 			t.Error("GetConfigSearchPaths() contains empty string")
+		}
+
+		// Validate path doesn't contain traversal components
+		if strings.Contains(path, "..") {
+			t.Errorf("GetConfigSearchPaths() path %q contains unsafe .. component", path)
+		}
+
+		// Validate path is already cleaned
+		cleanPath := filepath.Clean(path)
+		if path != cleanPath {
+			t.Errorf("GetConfigSearchPaths() path %q is not cleaned (should be %q)", path, cleanPath)
 		}
 	}
 

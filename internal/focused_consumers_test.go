@@ -2,7 +2,6 @@ package internal
 
 import (
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -10,103 +9,42 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-// trackingOutputWriter is a test implementation of OutputWriter that tracks calls.
-type trackingOutputWriter struct {
-	messages []string
-	isQuiet  bool
+// compositeOutputWriterForTest wraps testutil mocks to satisfy OutputWriter interface.
+type compositeOutputWriterForTest struct {
+	*testutil.MessageLoggerMock
+	*testutil.ProgressReporterMock
+	*testutil.OutputConfigMock
 }
 
-func (m *trackingOutputWriter) Info(_ string, _ ...any) {
-	m.messages = append(m.messages, "INFO")
+// errorManagerForTest wraps testutil mocks to satisfy ErrorManager interface.
+type errorManagerForTest struct {
+	*testutil.ErrorReporterMock
+	*testutil.ErrorFormatterMock
 }
 
-func (m *trackingOutputWriter) Success(_ string, _ ...any) {
-	m.messages = append(m.messages, "SUCCESS")
+// FormatContextualError implements ErrorManager interface.
+func (e *errorManagerForTest) FormatContextualError(err *apperrors.ContextualError) string {
+	if err != nil {
+		return e.ErrorFormatterMock.FormatContextualError(err)
+	}
+
+	return ""
 }
 
-func (m *trackingOutputWriter) Warning(_ string, _ ...any) {
-	m.messages = append(m.messages, "WARNING")
-}
-
-func (m *trackingOutputWriter) Bold(_ string, _ ...any) {
-	m.messages = append(m.messages, "BOLD")
-}
-
-func (m *trackingOutputWriter) Printf(_ string, _ ...any) {
-	m.messages = append(m.messages, "PRINTF")
-}
-
-func (m *trackingOutputWriter) Fprintf(_ *os.File, _ string, _ ...any) {
-	m.messages = append(m.messages, "FPRINTF")
-}
-
-func (m *trackingOutputWriter) Progress(_ string, _ ...any) {
-	m.messages = append(m.messages, "PROGRESS")
-}
-
-func (m *trackingOutputWriter) IsQuiet() bool {
-	return m.isQuiet
-}
-
-// trackingErrorManager is a test implementation of ErrorManager that tracks calls.
-type trackingErrorManager struct {
-	errorCalls []string
-}
-
-func (m *trackingErrorManager) Error(_ string, _ ...any) {
-	m.errorCalls = append(m.errorCalls, "Error")
-}
-
-func (m *trackingErrorManager) ErrorWithSuggestions(_ *apperrors.ContextualError) {
-	m.errorCalls = append(m.errorCalls, "ErrorWithSuggestions")
-}
-
-func (m *trackingErrorManager) ErrorWithContext(_ appconstants.ErrorCode, _ string, _ map[string]string) {
-	m.errorCalls = append(m.errorCalls, "ErrorWithContext")
-}
-
-func (m *trackingErrorManager) ErrorWithSimpleFix(_, _ string) {
-	m.errorCalls = append(m.errorCalls, "ErrorWithSimpleFix")
-}
-
-func (m *trackingErrorManager) FormatContextualError(_ *apperrors.ContextualError) string {
-	return "formatted error"
-}
-
-// trackingMessageLogger is a test implementation of MessageLogger that tracks calls.
-type trackingMessageLogger struct {
-	messages []string
-}
-
-func (m *trackingMessageLogger) Info(_ string, _ ...any) {
-	m.messages = append(m.messages, "INFO")
-}
-
-func (m *trackingMessageLogger) Success(_ string, _ ...any) {
-	m.messages = append(m.messages, "SUCCESS")
-}
-
-func (m *trackingMessageLogger) Warning(_ string, _ ...any) {
-	m.messages = append(m.messages, "WARNING")
-}
-
-func (m *trackingMessageLogger) Bold(_ string, _ ...any) {
-	m.messages = append(m.messages, "BOLD")
-}
-
-func (m *trackingMessageLogger) Printf(_ string, _ ...any) {
-	m.messages = append(m.messages, "PRINTF")
-}
-
-func (m *trackingMessageLogger) Fprintf(_ *os.File, _ string, _ ...any) {
-	m.messages = append(m.messages, "FPRINTF")
+// ErrorWithSuggestions implements ErrorManager interface.
+func (e *errorManagerForTest) ErrorWithSuggestions(err *apperrors.ContextualError) {
+	e.ErrorReporterMock.ErrorWithSuggestions(err)
 }
 
 // TestNewCompositeOutputWriter tests the composite output writer constructor.
 func TestNewCompositeOutputWriter(t *testing.T) {
 	t.Parallel()
 
-	writer := &trackingOutputWriter{}
+	writer := &compositeOutputWriterForTest{
+		MessageLoggerMock:    &testutil.MessageLoggerMock{},
+		ProgressReporterMock: &testutil.ProgressReporterMock{},
+		OutputConfigMock:     &testutil.OutputConfigMock{},
+	}
 	cow := NewCompositeOutputWriter(writer)
 
 	if cow == nil {
@@ -116,24 +54,6 @@ func TestNewCompositeOutputWriter(t *testing.T) {
 	if cow.writer != writer {
 		t.Error("NewCompositeOutputWriter() did not set writer correctly")
 	}
-}
-
-// countMessageTypes counts the presence of specific message types in a slice of messages.
-func countMessageTypes(messages []string, types ...string) map[string]bool {
-	results := make(map[string]bool)
-	for _, msgType := range types {
-		results[msgType] = false
-	}
-
-	for _, msg := range messages {
-		for _, msgType := range types {
-			if msg == msgType {
-				results[msgType] = true
-			}
-		}
-	}
-
-	return results
 }
 
 // TestCompositeOutputWriterProcessWithOutput tests processing with output.
@@ -182,26 +102,35 @@ func TestCompositeOutputWriterProcessWithOutput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			writer := &trackingOutputWriter{isQuiet: tt.isQuiet}
+			logger := &testutil.MessageLoggerMock{}
+			progress := &testutil.ProgressReporterMock{}
+			writer := &compositeOutputWriterForTest{
+				MessageLoggerMock:    logger,
+				ProgressReporterMock: progress,
+				OutputConfigMock:     &testutil.OutputConfigMock{QuietMode: tt.isQuiet},
+			}
 			cow := NewCompositeOutputWriter(writer)
 
 			cow.ProcessWithOutput(tt.items)
 
-			if len(writer.messages) != tt.wantMessages {
+			totalMessages := len(logger.InfoCalls) + len(progress.ProgressCalls) + len(logger.SuccessCalls)
+			if totalMessages != tt.wantMessages {
 				t.Errorf("ProcessWithOutput() produced %d messages, want %d",
-					len(writer.messages), tt.wantMessages)
+					totalMessages, tt.wantMessages)
 			}
 
-			msgTypes := countMessageTypes(writer.messages, "INFO", "PROGRESS", "SUCCESS")
+			hasInfo := len(logger.InfoCalls) > 0
+			hasProgress := len(progress.ProgressCalls) > 0
+			hasSuccess := len(logger.SuccessCalls) > 0
 
-			if msgTypes["INFO"] != tt.wantInfo {
-				t.Errorf("ProcessWithOutput() hasInfo = %v, want %v", msgTypes["INFO"], tt.wantInfo)
+			if hasInfo != tt.wantInfo {
+				t.Errorf("ProcessWithOutput() hasInfo = %v, want %v", hasInfo, tt.wantInfo)
 			}
-			if msgTypes["PROGRESS"] != tt.wantProgress {
-				t.Errorf("ProcessWithOutput() hasProgress = %v, want %v", msgTypes["PROGRESS"], tt.wantProgress)
+			if hasProgress != tt.wantProgress {
+				t.Errorf("ProcessWithOutput() hasProgress = %v, want %v", hasProgress, tt.wantProgress)
 			}
-			if msgTypes["SUCCESS"] != tt.wantSuccess {
-				t.Errorf("ProcessWithOutput() hasSuccess = %v, want %v", msgTypes["SUCCESS"], tt.wantSuccess)
+			if hasSuccess != tt.wantSuccess {
+				t.Errorf("ProcessWithOutput() hasSuccess = %v, want %v", hasSuccess, tt.wantSuccess)
 			}
 		})
 	}
@@ -211,8 +140,11 @@ func TestCompositeOutputWriterProcessWithOutput(t *testing.T) {
 func TestNewValidationComponent(t *testing.T) {
 	t.Parallel()
 
-	errorManager := &trackingErrorManager{}
-	logger := &trackingMessageLogger{}
+	errorManager := &errorManagerForTest{
+		ErrorReporterMock:  &testutil.ErrorReporterMock{},
+		ErrorFormatterMock: &testutil.ErrorFormatterMock{},
+	}
+	logger := &testutil.MessageLoggerMock{}
 
 	vc := NewValidationComponent(errorManager, logger)
 
@@ -226,6 +158,22 @@ func TestNewValidationComponent(t *testing.T) {
 
 	if vc.logger != logger {
 		t.Error("NewValidationComponent() did not set logger correctly")
+	}
+}
+
+// getErrorCallType returns the type of error call that was made.
+func getErrorCallType(reporter *testutil.ErrorReporterMock) string {
+	switch {
+	case len(reporter.ErrorWithSuggestionsCalls) > 0:
+		return "ErrorWithSuggestions"
+	case len(reporter.ErrorCalls) > 0:
+		return "Error"
+	case len(reporter.ErrorWithSimpleFixCalls) > 0:
+		return "ErrorWithSimpleFix"
+	case len(reporter.ErrorWithContextCalls) > 0:
+		return "ErrorWithContext"
+	default:
+		return ""
 	}
 }
 
@@ -284,26 +232,51 @@ func TestValidationComponentValidateAndReport(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			errorManager := &trackingErrorManager{}
-			logger := &trackingMessageLogger{}
+			errorReporter := &testutil.ErrorReporterMock{}
+			errorManager := &errorManagerForTest{
+				ErrorReporterMock:  errorReporter,
+				ErrorFormatterMock: &testutil.ErrorFormatterMock{},
+			}
+			logger := &testutil.MessageLoggerMock{}
 			vc := NewValidationComponent(errorManager, logger)
 
 			vc.ValidateAndReport(tt.item, tt.isValid, tt.err)
 
-			if len(logger.messages) != tt.wantLoggerCalls {
+			totalLoggerCalls := len(
+				logger.InfoCalls,
+			) + len(
+				logger.SuccessCalls,
+			) + len(
+				logger.WarningCalls,
+			) + len(
+				logger.BoldCalls,
+			) + len(
+				logger.PrintfCalls,
+			)
+			if totalLoggerCalls != tt.wantLoggerCalls {
 				t.Errorf("ValidateAndReport() logger calls = %d, want %d",
-					len(logger.messages), tt.wantLoggerCalls)
+					totalLoggerCalls, tt.wantLoggerCalls)
 			}
 
-			if len(errorManager.errorCalls) != tt.wantErrorCalls {
+			totalErrorCalls := len(
+				errorReporter.ErrorCalls,
+			) + len(
+				errorReporter.ErrorWithSuggestionsCalls,
+			) + len(
+				errorReporter.ErrorWithContextCalls,
+			) + len(
+				errorReporter.ErrorWithSimpleFixCalls,
+			)
+			if totalErrorCalls != tt.wantErrorCalls {
 				t.Errorf("ValidateAndReport() error calls = %d, want %d",
-					len(errorManager.errorCalls), tt.wantErrorCalls)
+					totalErrorCalls, tt.wantErrorCalls)
 			}
 
-			if tt.wantErrorCallType != "" && len(errorManager.errorCalls) > 0 {
-				if errorManager.errorCalls[0] != tt.wantErrorCallType {
+			if tt.wantErrorCallType != "" {
+				actualCallType := getErrorCallType(errorReporter)
+				if actualCallType != tt.wantErrorCallType {
 					t.Errorf("ValidateAndReport() error call type = %s, want %s",
-						errorManager.errorCalls[0], tt.wantErrorCallType)
+						actualCallType, tt.wantErrorCallType)
 				}
 			}
 		})

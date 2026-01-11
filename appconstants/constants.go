@@ -636,11 +636,21 @@ const (
 	// ErrFailedToAccessCache is the failed to access cache error.
 	ErrFailedToAccessCache = "Failed to access cache: %v"
 	// ErrNoActionFilesFound is the no action files found error.
-	ErrNoActionFilesFound = "No action files found"
+	ErrNoActionFilesFound = "no action files found"
 	// ErrFailedToGetCurrentFilePath is the failed to get current file path error.
 	ErrFailedToGetCurrentFilePath = "failed to get current file path"
 	// ErrFailedToLoadActionFixture is the failed to load action fixture error.
 	ErrFailedToLoadActionFixture = "failed to load action fixture %s: %v"
+	// ErrFailedToApplyUpdatesWrapped is the failed to apply updates error with wrapping.
+	ErrFailedToApplyUpdatesWrapped = "failed to apply updates: %w"
+	// ErrFailedToDiscoverActionFiles is the failed to discover action files error with wrapping.
+	ErrFailedToDiscoverActionFiles = "failed to discover action files: %w"
+	// ErrPathTraversal is the path traversal attempt error.
+	ErrPathTraversal = "path traversal detected: output path '%s' attempts to escape output directory '%s'"
+	// ErrInvalidOutputPath is the invalid output path error.
+	ErrInvalidOutputPath = "invalid output path: %w"
+	// ErrFailedToResolveOutputPath is the failed to resolve output path error with wrapping.
+	ErrFailedToResolveOutputPath = "failed to resolve output path: %w"
 )
 
 // Common message templates.

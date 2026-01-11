@@ -357,11 +357,25 @@ func (w *ConfigWizard) promptYesNo(prompt string, defaultValue bool) bool {
 
 // findActionFiles discovers action files in the given directory.
 func (w *ConfigWizard) findActionFiles(dir string) []string {
+	// Check for path traversal attempts in the raw input before cleaning
+	for _, component := range strings.Split(filepath.ToSlash(dir), "/") {
+		if component == ".." {
+			return []string{} // Return empty for invalid paths
+		}
+	}
+
+	// Validate and clean the input path
+	cleanDir := filepath.Clean(dir)
+	// Verify Clean didn't change the path (indicates normalization/traversal)
+	if cleanDir != dir {
+		return []string{} // Return empty for paths with traversal
+	}
+
 	var actionFiles []string
 
-	// Check for action.yml and action.yaml
+	// Check for action.yml and action.yaml using validated path
 	for _, filename := range []string{"action.yml", "action.yaml"} {
-		actionPath := filepath.Join(dir, filename)
+		actionPath := filepath.Join(cleanDir, filename)
 		if _, err := os.Stat(actionPath); err == nil {
 			actionFiles = append(actionFiles, actionPath)
 		}

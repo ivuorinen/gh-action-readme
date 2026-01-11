@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -120,7 +121,7 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
+func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tempDir string) (configFile, repoRoot, actionDir string)
@@ -292,7 +293,7 @@ verbose: true
 	}
 }
 
-func TestConfigurationLoaderLoadGlobalConfig(t *testing.T) {
+func TestConfigurationLoader_LoadGlobalConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T, tempDir string) string
@@ -368,7 +369,7 @@ verbose: true
 	}
 }
 
-func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
+func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -464,7 +465,7 @@ func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoaderSourceManagement(t *testing.T) {
+func TestConfigurationLoader_SourceManagement(t *testing.T) {
 	t.Parallel()
 	loader := NewConfigurationLoader()
 
@@ -518,7 +519,7 @@ func TestConfigurationSourceString(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoaderEnvironmentOverrides(t *testing.T) {
+func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
 	tests := testutil.GetGitHubTokenHierarchyTests()
 
 	for _, tt := range tests {
@@ -538,7 +539,7 @@ func TestConfigurationLoaderEnvironmentOverrides(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoaderRepoOverrides(t *testing.T) {
+func TestConfigurationLoader_RepoOverrides(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -573,7 +574,7 @@ func TestConfigurationLoaderRepoOverrides(t *testing.T) {
 }
 
 // TestConfigurationLoaderApplyRepoOverrides tests repo-specific overrides.
-func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
+func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name           string
@@ -581,6 +582,15 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 		expectedTheme  string
 		expectedFormat string
 	}{
+		{
+			name: "no repository detected",
+			config: &AppConfig{
+				Theme:        "default",
+				OutputFormat: "md",
+			},
+			expectedTheme:  "default",
+			expectedFormat: "md",
+		},
 		{
 			name: "no repo overrides configured",
 			config: &AppConfig{
@@ -597,6 +607,21 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 				Theme:         "default",
 				OutputFormat:  "md",
 				RepoOverrides: map[string]AppConfig{},
+			},
+			expectedTheme:  "default",
+			expectedFormat: "md",
+		},
+		{
+			name: "repo override for different repo not applied",
+			config: &AppConfig{
+				Theme:        "default",
+				OutputFormat: "md",
+				RepoOverrides: map[string]AppConfig{
+					"different/repo": {
+						Theme:        "professional",
+						OutputFormat: "json",
+					},
+				},
 			},
 			expectedTheme:  "default",
 			expectedFormat: "md",
@@ -618,7 +643,7 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 }
 
 // TestConfigurationLoaderLoadActionConfig tests action-specific configuration loading.
-func TestConfigurationLoaderLoadActionConfig(t *testing.T) {
+func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
@@ -717,7 +742,7 @@ verbose: true
 }
 
 // TestConfigurationLoaderValidateTheme tests theme validation edge cases.
-func TestConfigurationLoaderValidateTheme(t *testing.T) {
+func TestConfigurationLoader_ValidateTheme(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -776,64 +801,76 @@ func TestConfigurationLoaderValidateTheme(t *testing.T) {
 	}
 }
 
-// TestConfigurationLoaderapplyRepoOverrides tests the applyRepoOverrides method.
-func TestConfigurationLoaderapplyRepoOverrides(t *testing.T) {
+// TestConfigurationLoaderApplyRepoOverridesWithRepoRoot tests applyRepoOverrides with explicit repo root paths.
+func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name           string
-		baseConfig     *AppConfig
-		repoRoot       string
+		gitRemoteURL   string // For .git/config
+		repoOverrides  map[string]AppConfig
 		expectedTheme  string
 		expectedFormat string
+		setupGitDir    bool // Whether to create .git directory
 	}{
 		{
-			name: "no repository detected",
-			baseConfig: &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
-			},
-			repoRoot:       "/tmp/nonexistent-repo-path",
-			expectedTheme:  "default",
-			expectedFormat: "md",
-		},
-		{
-			name: "no repo overrides configured",
-			baseConfig: &AppConfig{
-				Theme:         "default",
-				OutputFormat:  "md",
-				RepoOverrides: nil,
-			},
-			repoRoot:       ".",
-			expectedTheme:  "default",
-			expectedFormat: "md",
-		},
-		{
-			name: "empty repo overrides map",
-			baseConfig: &AppConfig{
-				Theme:         "default",
-				OutputFormat:  "md",
-				RepoOverrides: map[string]AppConfig{},
-			},
-			repoRoot:       ".",
-			expectedTheme:  "default",
-			expectedFormat: "md",
-		},
-		{
-			name: "repo override for different repo not applied",
-			baseConfig: &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
-				RepoOverrides: map[string]AppConfig{
-					"different/repo": {
-						Theme:        "professional",
-						OutputFormat: "json",
-					},
+			name:         "applies override for matching repository (HTTPS)",
+			gitRemoteURL: "https://github.com/test-org/test-repo.git",
+			repoOverrides: map[string]AppConfig{
+				"test-org/test-repo": {
+					Theme:        "github",
+					OutputFormat: "html",
 				},
 			},
-			repoRoot:       ".",
+			expectedTheme:  "github",
+			expectedFormat: "html",
+			setupGitDir:    true,
+		},
+		{
+			name:         "applies override for matching repository (SSH)",
+			gitRemoteURL: "git@github.com:test-org/test-repo.git",
+			repoOverrides: map[string]AppConfig{
+				"test-org/test-repo": {
+					Theme:        "minimal",
+					OutputFormat: "json",
+				},
+			},
+			expectedTheme:  "minimal",
+			expectedFormat: "json",
+			setupGitDir:    true,
+		},
+		{
+			name:         "no override applied for non-matching repository",
+			gitRemoteURL: "https://github.com/other-org/other-repo.git",
+			repoOverrides: map[string]AppConfig{
+				"test-org/test-repo": {
+					Theme:        "github",
+					OutputFormat: "html",
+				},
+			},
 			expectedTheme:  "default",
 			expectedFormat: "md",
+			setupGitDir:    true,
+		},
+		{
+			name: "no override when repository cannot be detected (no .git)",
+			repoOverrides: map[string]AppConfig{
+				"test-org/test-repo": {
+					Theme:        "github",
+					OutputFormat: "html",
+				},
+			},
+			expectedTheme:  "default",
+			expectedFormat: "md",
+			setupGitDir:    false,
+		},
+		{
+			name:           "no override when repoOverrides is nil",
+			gitRemoteURL:   "https://github.com/test-org/test-repo.git",
+			repoOverrides:  nil,
+			expectedTheme:  "default",
+			expectedFormat: "md",
+			setupGitDir:    true,
 		},
 	}
 
@@ -841,11 +878,41 @@ func TestConfigurationLoaderapplyRepoOverrides(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			loader := NewConfigurationLoader()
-			loader.applyRepoOverrides(tt.baseConfig, tt.repoRoot)
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
 
-			testutil.AssertEqual(t, tt.expectedTheme, tt.baseConfig.Theme)
-			testutil.AssertEqual(t, tt.expectedFormat, tt.baseConfig.OutputFormat)
+			// Create .git/config with remote URL if requested
+			if tt.setupGitDir {
+				gitDir := filepath.Join(tmpDir, ".git")
+				err := os.MkdirAll(gitDir, 0750)
+				testutil.AssertNoError(t, err)
+
+				gitConfig := fmt.Sprintf(`[core]
+	repositoryformatversion = 0
+[remote "origin"]
+	url = %s
+	fetch = +refs/heads/*:refs/remotes/origin/*
+`, tt.gitRemoteURL)
+
+				gitConfigPath := filepath.Join(gitDir, "config")
+				err = os.WriteFile(gitConfigPath, []byte(gitConfig), 0600)
+				testutil.AssertNoError(t, err)
+			}
+
+			// Create config with defaults and repo overrides
+			config := &AppConfig{
+				Theme:         "default",
+				OutputFormat:  "md",
+				RepoOverrides: tt.repoOverrides,
+			}
+
+			// Apply repo overrides
+			loader := NewConfigurationLoader()
+			loader.applyRepoOverrides(config, tmpDir)
+
+			// Verify expected values
+			testutil.AssertEqual(t, tt.expectedTheme, config.Theme)
+			testutil.AssertEqual(t, tt.expectedFormat, config.OutputFormat)
 		})
 	}
 }

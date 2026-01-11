@@ -511,6 +511,12 @@ func TestAnalyzeDependencies(t *testing.T) {
 			config:     &AppConfig{},
 			expectNil:  false, // Should gracefully handle errors and return empty slice
 		},
+		{
+			name:       "path traversal attempt",
+			actionPath: "../../etc/passwd",
+			config:     &AppConfig{},
+			expectNil:  false, // Returns empty slice for invalid paths
+		},
 	}
 
 	for _, tt := range tests {
@@ -519,16 +525,15 @@ func TestAnalyzeDependencies(t *testing.T) {
 
 			// Create temp file with fixture content for valid fixtures
 			var actionPath string
-			if tt.actionPath != "../../testdata/analyzer/nonexistent.yml" {
+			if strings.HasPrefix(tt.actionPath, "../../testdata/analyzer/") &&
+				tt.actionPath != "../../testdata/analyzer/nonexistent.yml" {
 				// Extract just the filename from the path
 				filename := filepath.Base(tt.actionPath)
 				yamlContent := testutil.MustReadAnalyzerFixture(filename)
 
 				tmpDir := t.TempDir()
-				actionPath = filepath.Clean(filepath.Join(tmpDir, appconstants.ActionFileNameYML))
-				if strings.Contains(actionPath, "..") {
-					t.Fatalf("invalid path contains ..: %q", actionPath)
-				}
+				actionPath = filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				actionPath = testutil.ValidateTestPath(t, actionPath, tmpDir)
 				if err := os.WriteFile(actionPath, []byte(yamlContent), appconstants.FilePermDefault); err != nil {
 					t.Fatalf("failed to write temp file: %v", err)
 				}

@@ -464,6 +464,16 @@ func TestGetConfigurationSuggestions(t *testing.T) {
 				"Check file permissions for config file",
 			},
 		},
+		{
+			name: "with path traversal attempt",
+			context: map[string]string{
+				"config_path": "../../../etc/passwd",
+			},
+			expectedContains: []string{
+				"Check configuration file syntax",
+				"Ensure configuration file exists",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -524,6 +534,16 @@ func TestGetTemplateSuggestions(t *testing.T) {
 			expectedContains: []string{
 				"Template path: /custom/template.tmpl",
 				"Current theme: github",
+			},
+		},
+		{
+			name: "with path traversal attempt",
+			context: map[string]string{
+				"template_path": "../../../../../../etc/passwd",
+			},
+			expectedContains: []string{
+				"Check template syntax",
+				"Ensure all template variables are defined",
 			},
 		},
 	}

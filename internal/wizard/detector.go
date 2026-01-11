@@ -223,19 +223,48 @@ func (d *ProjectDetector) findActionFiles(dir string, recursive bool) ([]string,
 }
 
 // findActionFilesRecursive discovers action files recursively using filepath.Walk.
+//
+//nolint:gocyclo // Complexity from security validation (path traversal, symlink checks) per CodeRabbit review
 func (d *ProjectDetector) findActionFilesRecursive(dir string) ([]string, error) {
+	// Validate directory path for explicit traversal attempts
+	cleanDir := filepath.Clean(dir)
+	// Check for ".." as a path component, not substring (avoids false positives with ".." in test names)
+	for _, component := range strings.Split(filepath.ToSlash(cleanDir), "/") {
+		if component == ".." {
+			return nil, fmt.Errorf("invalid directory path: traversal detected in %q", dir)
+		}
+	}
+	// Also check if Clean changed the path significantly (not just trailing slashes)
+	if cleanDir != dir && cleanDir != strings.TrimRight(dir, "/\\") {
+		return nil, fmt.Errorf("invalid directory path: path normalization detected traversal in %q", dir)
+	}
+
 	var actionFiles []string
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return filepath.SkipDir // Skip errors by skipping this directory
 		}
 
-		if info.IsDir() {
+		// Check for symlinks (both files and directories)
+		if entry.Type()&os.ModeSymlink != 0 {
+			if entry.IsDir() {
+				return filepath.SkipDir // Skip symlinked directories
+			}
+
+			return nil // Skip symlinked files
+		}
+
+		if entry.IsDir() {
+			info, err := entry.Info()
+			if err != nil {
+				return filepath.SkipDir
+			}
+
 			return d.handleDirectory(info)
 		}
 
-		if d.isActionFile(info.Name()) {
+		if d.isActionFile(entry.Name()) {
 			actionFiles = append(actionFiles, path)
 		}
 

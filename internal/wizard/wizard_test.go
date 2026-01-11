@@ -2,6 +2,7 @@ package wizard
 
 import (
 	"bufio"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -211,6 +212,8 @@ func TestPromptSensitive(t *testing.T) {
 }
 
 // TestConfigureBasicSettings tests basic settings configuration.
+//
+//nolint:dupl // Similar test structure to TestConfigureTemplateSettings by design
 func TestConfigureBasicSettings(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -431,15 +434,660 @@ func TestGetAvailableThemes(t *testing.T) {
 
 // TestFindActionFiles tests action file discovery.
 func TestFindActionFiles(t *testing.T) {
-	// This test would require filesystem setup
-	// For now, testing the logic with a non-existent directory
 	wizard := testWizard("")
 
-	// Test with non-existent directory
-	files := wizard.findActionFiles("/nonexistent/path")
-	if len(files) != 0 {
-		t.Errorf("findActionFiles() for non-existent dir = %d files, want 0", len(files))
+	t.Run("non-existent directory", func(t *testing.T) {
+		files := wizard.findActionFiles("/nonexistent/path")
+		if len(files) != 0 {
+			t.Errorf("findActionFiles() for non-existent dir = %d files, want 0", len(files))
+		}
+	})
+
+	t.Run("testdata example-action directory", func(t *testing.T) {
+		// Get absolute path to avoid traversal issues
+		absPath, err := filepath.Abs("../../testdata/example-action")
+		if err != nil {
+			t.Fatalf("Failed to get absolute path: %v", err)
+		}
+		files := wizard.findActionFiles(absPath)
+		if len(files) == 0 {
+			t.Error("findActionFiles() should find action files in testdata/example-action")
+		}
+	})
+
+	t.Run("testdata composite-action directory", func(t *testing.T) {
+		// Get absolute path to avoid traversal issues
+		absPath, err := filepath.Abs("../../testdata/composite-action")
+		if err != nil {
+			t.Fatalf("Failed to get absolute path: %v", err)
+		}
+		files := wizard.findActionFiles(absPath)
+		if len(files) == 0 {
+			t.Error("findActionFiles() should find action files in testdata/composite-action")
+		}
+	})
+}
+
+// TestNewConfigWizard tests wizard initialization.
+func TestNewConfigWizard(t *testing.T) {
+	output := &internal.ColoredOutput{NoColor: true, Quiet: true}
+	wizard := NewConfigWizard(output)
+
+	if wizard == nil {
+		t.Fatal("NewConfigWizard() returned nil")
 	}
+
+	if wizard.output != output {
+		t.Error("NewConfigWizard() did not set output correctly")
+	}
+
+	if wizard.scanner == nil {
+		t.Error("NewConfigWizard() did not initialize scanner")
+	}
+
+	if wizard.config == nil {
+		t.Error("NewConfigWizard() did not initialize config")
+	}
+
+	// Verify default config values
+	if wizard.config.Theme == "" {
+		t.Error("NewConfigWizard() config has empty theme")
+	}
+
+	if wizard.config.OutputFormat == "" {
+		t.Error("NewConfigWizard() config has empty output format")
+	}
+}
+
+// TestConfigureOutputDirectory tests output directory configuration.
+func TestConfigureOutputDirectory(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		initial string
+		want    string
+	}{
+		{
+			name:    "custom directory",
+			input:   "/custom/output\n",
+			initial: ".",
+			want:    "/custom/output",
+		},
+		{
+			name:    "use default directory",
+			input:   "\n",
+			initial: "./docs",
+			want:    "./docs",
+		},
+		{
+			name:    "relative path",
+			input:   "./output\n",
+			initial: ".",
+			want:    "./output",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wizard := testWizard(tt.input)
+			wizard.config.OutputDir = tt.initial
+			wizard.configureOutputDirectory()
+
+			if wizard.config.OutputDir != tt.want {
+				t.Errorf("OutputDir = %q, want %q", wizard.config.OutputDir, tt.want)
+			}
+		})
+	}
+}
+
+// TestConfigureTemplateSettings tests template settings configuration.
+//
+//nolint:dupl // Similar test structure to TestConfigureBasicSettings by design
+func TestConfigureTemplateSettings(t *testing.T) {
+	tests := []struct {
+		name       string
+		inputs     string
+		wantTheme  string
+		wantFormat string
+		wantDir    string
+	}{
+		{
+			name:       "all defaults",
+			inputs:     "\n\n\n",
+			wantTheme:  "default",
+			wantFormat: "md",
+			wantDir:    ".",
+		},
+		{
+			name:       "custom theme and format",
+			inputs:     "2\n3\n./output\n",
+			wantTheme:  "github",
+			wantFormat: "json",
+			wantDir:    "./output",
+		},
+		{
+			name:       "professional theme html format",
+			inputs:     "5\n2\n./docs\n",
+			wantTheme:  "professional",
+			wantFormat: "html",
+			wantDir:    "./docs",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wizard := testWizard(tt.inputs)
+			wizard.configureTemplateSettings()
+
+			if wizard.config.Theme != tt.wantTheme {
+				t.Errorf("Theme = %q, want %q", wizard.config.Theme, tt.wantTheme)
+			}
+			if wizard.config.OutputFormat != tt.wantFormat {
+				t.Errorf("OutputFormat = %q, want %q", wizard.config.OutputFormat, tt.wantFormat)
+			}
+			if wizard.config.OutputDir != tt.wantDir {
+				t.Errorf("OutputDir = %q, want %q", wizard.config.OutputDir, tt.wantDir)
+			}
+		})
+	}
+}
+
+// TestConfigureGitHubIntegration tests GitHub integration configuration.
+func TestConfigureGitHubIntegration(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputs         string
+		existingToken  string
+		wantTokenSet   bool
+		wantTokenValue string
+	}{
+		{
+			name:           "skip token setup",
+			inputs:         "n\n",
+			existingToken:  "",
+			wantTokenSet:   false,
+			wantTokenValue: "",
+		},
+		{
+			name:           "provide valid personal token",
+			inputs:         "y\nghp_1234567890abcdefghijklmnopqrstuvwxyz\n",
+			existingToken:  "",
+			wantTokenSet:   true,
+			wantTokenValue: "ghp_1234567890abcdefghijklmnopqrstuvwxyz",
+		},
+		{
+			name:           "provide valid PAT token",
+			inputs:         "y\ngithub_pat_1234567890abcdefghijklmnopqrstuvwxyz\n",
+			existingToken:  "",
+			wantTokenSet:   true,
+			wantTokenValue: "github_pat_1234567890abcdefghijklmnopqrstuvwxyz",
+		},
+		{
+			name:           "provide unusual token format",
+			inputs:         "y\ntoken_unusual_format\n",
+			existingToken:  "",
+			wantTokenSet:   true,
+			wantTokenValue: "token_unusual_format",
+		},
+		{
+			name:           "empty token after yes",
+			inputs:         "y\n\n",
+			existingToken:  "",
+			wantTokenSet:   false,
+			wantTokenValue: "",
+		},
+		{
+			name:           "existing token skips setup",
+			inputs:         "",
+			existingToken:  "ghp_existing_token",
+			wantTokenSet:   true,
+			wantTokenValue: "ghp_existing_token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wizard := testWizard(tt.inputs)
+			if tt.existingToken != "" {
+				wizard.config.GitHubToken = tt.existingToken
+			}
+
+			wizard.configureGitHubIntegration()
+
+			tokenSet := wizard.config.GitHubToken != ""
+			if tokenSet != tt.wantTokenSet {
+				t.Errorf("Token set = %v, want %v", tokenSet, tt.wantTokenSet)
+			}
+
+			if tt.wantTokenSet && wizard.config.GitHubToken != tt.wantTokenValue {
+				t.Errorf("GitHubToken = %q, want %q", wizard.config.GitHubToken, tt.wantTokenValue)
+			}
+		})
+	}
+}
+
+// TestShowSummaryAndConfirm tests summary display and confirmation.
+func TestShowSummaryAndConfirm(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		config  *internal.AppConfig
+		wantErr bool
+	}{
+		{
+			name:  "user confirms with yes",
+			input: "y\n",
+			config: &internal.AppConfig{
+				Organization: "testorg",
+				Repository:   "testrepo",
+				Theme:        "default",
+				OutputFormat: "md",
+				OutputDir:    ".",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "user confirms with Y",
+			input: "Y\n",
+			config: &internal.AppConfig{
+				Organization: "testorg",
+				Repository:   "testrepo",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "user cancels with n",
+			input: "n\n",
+			config: &internal.AppConfig{
+				Organization: "testorg",
+				Repository:   "testrepo",
+			},
+			wantErr: true,
+		},
+		{
+			name:  "user cancels with no",
+			input: "no\n",
+			config: &internal.AppConfig{
+				Organization: "testorg",
+				Repository:   "testrepo",
+			},
+			wantErr: true,
+		},
+		{
+			name:  "user accepts default (yes)",
+			input: "\n",
+			config: &internal.AppConfig{
+				Organization: "testorg",
+				Repository:   "testrepo",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "config with version",
+			input: "y\n",
+			config: &internal.AppConfig{
+				Organization: "testorg",
+				Repository:   "testrepo",
+				Version:      "v1.0.0",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "config with features enabled",
+			input: "y\n",
+			config: &internal.AppConfig{
+				Organization:        "testorg",
+				Repository:          "testrepo",
+				AnalyzeDependencies: true,
+				ShowSecurityInfo:    true,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wizard := testWizard(tt.input)
+			wizard.config = tt.config
+
+			err := wizard.showSummaryAndConfirm()
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("showSummaryAndConfirm() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr && err != nil {
+				// Verify error message contains "canceled"
+				if !strings.Contains(err.Error(), "canceled") {
+					t.Errorf("showSummaryAndConfirm() error = %v, expected 'canceled' in error message", err)
+				}
+			}
+		})
+	}
+}
+
+// TestRun tests the complete wizard workflow.
+//
+//nolint:gocyclo,thelper // Complex test with multiple scenarios; verify funcs are not helpers
+func TestRun(t *testing.T) {
+	const defaultTheme = "default"
+
+	tests := []struct {
+		name    string
+		inputs  string
+		wantErr bool
+		verify  func(*testing.T, *internal.AppConfig)
+	}{
+		{
+			name: "complete wizard flow with all custom values",
+			inputs: "myorg\nmyrepo\nv1.0.0\n" + // Basic settings
+				"2\n" + // GitHub theme
+				"2\n" + // HTML format
+				"./docs\n" + // Output dir
+				"y\ny\n" + // Features: enable both
+				"n\n" + // GitHub: skip token
+				"y\n", // Confirm
+			wantErr: false,
+			verify: func(t *testing.T, cfg *internal.AppConfig) {
+				if cfg.Organization != "myorg" {
+					t.Errorf("Organization = %q, want 'myorg'", cfg.Organization)
+				}
+				if cfg.Repository != "myrepo" {
+					t.Errorf("Repository = %q, want 'myrepo'", cfg.Repository)
+				}
+				if cfg.Version != "v1.0.0" {
+					t.Errorf("Version = %q, want 'v1.0.0'", cfg.Version)
+				}
+				if cfg.Theme != "github" {
+					t.Errorf("Theme = %q, want 'github'", cfg.Theme)
+				}
+				if cfg.OutputFormat != "html" {
+					t.Errorf("OutputFormat = %q, want 'html'", cfg.OutputFormat)
+				}
+				if cfg.OutputDir != "./docs" {
+					t.Errorf("OutputDir = %q, want './docs'", cfg.OutputDir)
+				}
+				if !cfg.AnalyzeDependencies {
+					t.Error("AnalyzeDependencies should be true")
+				}
+				if !cfg.ShowSecurityInfo {
+					t.Error("ShowSecurityInfo should be true")
+				}
+			},
+		},
+		{
+			name: "wizard with defaults and confirmation",
+			inputs: "\n\n\n" + // Basic: all defaults
+				"\n\n\n" + // Template: all defaults
+				"\n\n" + // Features: all defaults
+				"n\n" + // GitHub: skip
+				"y\n", // Confirm
+			wantErr: false,
+			verify: func(t *testing.T, cfg *internal.AppConfig) {
+				if cfg.Theme != defaultTheme {
+					t.Errorf("Theme = %q, want %q", cfg.Theme, defaultTheme)
+				}
+				if cfg.OutputFormat != "md" {
+					t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
+				}
+			},
+		},
+		{
+			name: "wizard with GitHub token",
+			inputs: "\n\n\n" + // Basic: all defaults
+				"\n\n\n" + // Template: all defaults
+				"\n\n" + // Features: all defaults
+				"y\nghp_testtoken123456\n" + // GitHub: set token
+				"y\n", // Confirm
+			wantErr: false,
+			verify: func(t *testing.T, cfg *internal.AppConfig) {
+				if cfg.GitHubToken != "ghp_testtoken123456" {
+					t.Errorf("GitHubToken = %q, want 'ghp_testtoken123456'", cfg.GitHubToken)
+				}
+			},
+		},
+		{
+			name: "user cancels at confirmation",
+			inputs: "testorg\ntestrepo\n\n" + // Basic settings
+				"\n\n\n" + // Template: all defaults
+				"\n\n" + // Features: all defaults
+				"n\n" + // GitHub: skip
+				"n\n", // Cancel at confirmation
+			wantErr: true,
+			verify:  nil,
+		},
+		{
+			name: "minimal theme with json output",
+			inputs: "org\nrepo\n\n" + // Basic
+				"4\n3\n./output\n" + // Minimal theme, JSON format
+				"n\nn\n" + // Features: disable both
+				"n\n" + // GitHub: skip
+				"y\n", // Confirm
+			wantErr: false,
+			verify: func(t *testing.T, cfg *internal.AppConfig) {
+				if cfg.Theme != "minimal" {
+					t.Errorf("Theme = %q, want 'minimal'", cfg.Theme)
+				}
+				if cfg.OutputFormat != "json" {
+					t.Errorf("OutputFormat = %q, want 'json'", cfg.OutputFormat)
+				}
+				if cfg.OutputDir != "./output" {
+					t.Errorf("OutputDir = %q, want './output'", cfg.OutputDir)
+				}
+				if cfg.AnalyzeDependencies {
+					t.Error("AnalyzeDependencies should be false")
+				}
+				if cfg.ShowSecurityInfo {
+					t.Error("ShowSecurityInfo should be false")
+				}
+			},
+		},
+		{
+			name: "gitlab theme with asciidoc format",
+			inputs: "gitlab-org\nmy-project\nv2.5.0\n" + // Basic
+				"3\n4\n./docs\n" + // GitLab theme, AsciiDoc format
+				"yes\nno\n" + // Features: deps yes, security no
+				"n\n" + // GitHub: skip
+				"yes\n", // Confirm with 'yes'
+			wantErr: false,
+			verify: func(t *testing.T, cfg *internal.AppConfig) {
+				if cfg.Theme != "gitlab" {
+					t.Errorf("Theme = %q, want 'gitlab'", cfg.Theme)
+				}
+				if cfg.OutputFormat != "asciidoc" {
+					t.Errorf("OutputFormat = %q, want 'asciidoc'", cfg.OutputFormat)
+				}
+				if !cfg.AnalyzeDependencies {
+					t.Error("AnalyzeDependencies should be true")
+				}
+				if cfg.ShowSecurityInfo {
+					t.Error("ShowSecurityInfo should be false")
+				}
+			},
+		},
+		{
+			name: "professional theme with all features",
+			inputs: "my-org\nawesome-action\n\n" + // Basic (no version)
+				"5\n1\n.\n" + // Professional theme, markdown, current dir
+				"y\ny\n" + // Features: both enabled
+				"y\ngithub_pat_testtoken\n" + // GitHub: set PAT token
+				"y\n", // Confirm
+			wantErr: false,
+			verify: func(t *testing.T, cfg *internal.AppConfig) {
+				if cfg.Theme != "professional" {
+					t.Errorf("Theme = %q, want 'professional'", cfg.Theme)
+				}
+				if cfg.OutputFormat != "md" {
+					t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
+				}
+				if cfg.OutputDir != "." {
+					t.Errorf("OutputDir = %q, want '.'", cfg.OutputDir)
+				}
+				if !cfg.AnalyzeDependencies {
+					t.Error("AnalyzeDependencies should be true")
+				}
+				if !cfg.ShowSecurityInfo {
+					t.Error("ShowSecurityInfo should be true")
+				}
+				if cfg.GitHubToken != "github_pat_testtoken" {
+					t.Errorf("GitHubToken = %q, want 'github_pat_testtoken'", cfg.GitHubToken)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wizard := testWizard(tt.inputs)
+
+			config, err := wizard.Run()
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+
+			if tt.wantErr {
+				if config != nil {
+					t.Error("Run() should return nil config on error")
+				}
+
+				return
+			}
+
+			if config == nil {
+				t.Fatal("Run() returned nil config")
+			}
+
+			if tt.verify != nil {
+				tt.verify(t, config)
+			}
+		})
+	}
+}
+
+// TestDetectProjectSettings tests project settings auto-detection.
+func TestDetectProjectSettings(t *testing.T) {
+	t.Run("detect in non-git directory", func(t *testing.T) {
+		wizard := testWizard("")
+
+		// Should not error even if not in git repo
+		err := wizard.detectProjectSettings()
+
+		// This should not fail, just log warnings
+		if err != nil {
+			// Error is acceptable but shouldn't crash
+			t.Logf("detectProjectSettings() error = %v (expected in non-git context)", err)
+		}
+
+		// Action directory should be set
+		if wizard.actionDir == "" {
+			t.Error("detectProjectSettings() did not set actionDir")
+		}
+	})
+
+	t.Run("sets action directory", func(t *testing.T) {
+		wizard := testWizard("")
+
+		_ = wizard.detectProjectSettings()
+
+		if wizard.actionDir == "" {
+			t.Error("detectProjectSettings() should set actionDir")
+		}
+	})
+
+	t.Run("detects repo info when available", func(t *testing.T) {
+		wizard := testWizard("")
+
+		// This test runs in the project directory which is a git repo
+		err := wizard.detectProjectSettings()
+
+		// Should not error
+		if err != nil {
+			t.Logf("detectProjectSettings() error = %v", err)
+		}
+
+		// Should have detected action directory
+		if wizard.actionDir == "" {
+			t.Error("actionDir should be set")
+		}
+
+		// RepoInfo might be set if we're in a git repo
+		if wizard.repoInfo != nil {
+			t.Logf("Detected repo info: %+v", wizard.repoInfo)
+		}
+	})
+}
+
+// TestShowSummaryWithTokenFromEnv tests summary with token from environment.
+func TestShowSummaryWithTokenFromEnv(t *testing.T) {
+	const defaultTheme = "default"
+
+	// Test to improve showSummaryAndConfirm coverage
+	wizard := testWizard("y\n")
+	wizard.config = &internal.AppConfig{
+		Organization:        "test",
+		Repository:          "repo",
+		Theme:               defaultTheme,
+		OutputFormat:        "md",
+		OutputDir:           ".",
+		AnalyzeDependencies: true,
+		ShowSecurityInfo:    false,
+	}
+
+	// Set env var to simulate token from environment
+	t.Setenv("GITHUB_TOKEN", "test_token_from_env")
+
+	err := wizard.showSummaryAndConfirm()
+	if err != nil {
+		t.Errorf("showSummaryAndConfirm() unexpected error = %v", err)
+	}
+}
+
+// TestPromptWithDefaultEdgeCases tests edge cases for promptWithDefault.
+func TestPromptWithDefaultEdgeCases(t *testing.T) {
+	t.Run("scanner error returns default", func(t *testing.T) {
+		// Create a wizard with an input that will cause scanner to return false
+		wizard := testWizard("")
+		// Scanner will immediately return false since input is exhausted
+		result := wizard.promptWithDefault("test", "default")
+		if result != "default" {
+			t.Errorf("Expected default value when scanner fails, got %q", result)
+		}
+	})
+}
+
+// TestPromptYesNoEdgeCases tests edge cases for promptYesNo.
+func TestPromptYesNoEdgeCases(t *testing.T) {
+	t.Run("scanner error returns default", func(t *testing.T) {
+		wizard := testWizard("")
+		// Scanner will immediately return false since input is exhausted
+		result := wizard.promptYesNo("test", true)
+		if result != true {
+			t.Errorf("Expected default true when scanner fails, got %v", result)
+		}
+	})
+}
+
+// TestPromptSensitiveEdgeCases tests edge cases for promptSensitive.
+func TestPromptSensitiveEdgeCases(t *testing.T) {
+	t.Run("scanner error returns empty string", func(t *testing.T) {
+		wizard := testWizard("")
+		// Scanner will immediately return false since input is exhausted
+		result := wizard.promptSensitive("test")
+		if result != "" {
+			t.Errorf("Expected empty string when scanner fails, got %q", result)
+		}
+	})
+
+	t.Run("whitespace is trimmed", func(t *testing.T) {
+		wizard := testWizard("  value  \n")
+		result := wizard.promptSensitive("test")
+		if result != "value" {
+			t.Errorf("Expected trimmed value, got %q", result)
+		}
+	})
 }
 
 // TestDisplayThemeOptions tests theme display (verifies no panic).

@@ -1,0 +1,8 @@
+name: Permission Test Action
+description: Action file in directory for permission testing
+runs:
+  using: composite
+  steps:
+    - name: Test step
+      run: echo "test"
+      shell: bash

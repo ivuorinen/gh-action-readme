@@ -1,0 +1,5 @@
+name: Test Action
+description: Test action
+runs:
+  using: invalid-runtime
+  main: index.js

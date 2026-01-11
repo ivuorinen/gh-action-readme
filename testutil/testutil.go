@@ -69,17 +69,19 @@ func MockGitHubClient(responses map[string]string) *github.Client {
 		}
 	}
 
-	client := github.NewClient(&http.Client{Transport: &mockTransport{client: mockClient}})
+	client := github.NewClient(&http.Client{Transport: &MockTransport{Client: mockClient}})
 
 	return client
 }
 
-type mockTransport struct {
-	client *MockHTTPClient
+// MockTransport implements http.RoundTripper for testing HTTP clients.
+type MockTransport struct {
+	Client *MockHTTPClient
 }
 
-func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return t.client.Do(req)
+// RoundTrip implements http.RoundTripper interface.
+func (t *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return t.Client.Do(req)
 }
 
 // TempDir creates a temporary directory for testing and returns cleanup function.
@@ -240,86 +242,6 @@ func AssertFileNotExists(t *testing.T, path string) {
 		t.Fatalf("error checking file existence: %v", err)
 	}
 	// err != nil && os.IsNotExist(err) - this is the success case
-}
-
-// MockColoredOutput captures output for testing.
-type MockColoredOutput struct {
-	Messages []string
-	Errors   []string
-	Quiet    bool
-}
-
-// NewMockColoredOutput creates a new mock colored output.
-func NewMockColoredOutput(quiet bool) *MockColoredOutput {
-	return &MockColoredOutput{Quiet: quiet}
-}
-
-// Info captures info messages.
-func (m *MockColoredOutput) Info(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("INFO: "+format, args...))
-	}
-}
-
-// Success captures success messages.
-func (m *MockColoredOutput) Success(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("SUCCESS: "+format, args...))
-	}
-}
-
-// Warning captures warning messages.
-func (m *MockColoredOutput) Warning(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("WARNING: "+format, args...))
-	}
-}
-
-// Error captures error messages.
-func (m *MockColoredOutput) Error(format string, args ...any) {
-	m.Errors = append(m.Errors, fmt.Sprintf("ERROR: "+format, args...))
-}
-
-// Bold captures bold messages.
-func (m *MockColoredOutput) Bold(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("BOLD: "+format, args...))
-	}
-}
-
-// Printf captures printf messages.
-func (m *MockColoredOutput) Printf(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf(format, args...))
-	}
-}
-
-// Reset clears all captured messages.
-func (m *MockColoredOutput) Reset() {
-	m.Messages = nil
-	m.Errors = nil
-}
-
-// HasMessage checks if a message contains the given substring.
-func (m *MockColoredOutput) HasMessage(substring string) bool {
-	for _, msg := range m.Messages {
-		if strings.Contains(msg, substring) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// HasError checks if an error contains the given substring.
-func (m *MockColoredOutput) HasError(substring string) bool {
-	for _, err := range m.Errors {
-		if strings.Contains(err, substring) {
-			return true
-		}
-	}
-
-	return false
 }
 
 // CreateTestAction creates a test action.yml file content.

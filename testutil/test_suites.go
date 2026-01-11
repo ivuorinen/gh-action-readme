@@ -97,7 +97,7 @@ type TestResult struct {
 // MockSuite holds all configured mocks for a test.
 type MockSuite struct {
 	GitHubClient  *github.Client
-	ColoredOutput *MockColoredOutput
+	ColoredOutput *CapturedOutput
 	HTTPClient    *MockHTTPClient
 	Environment   map[string]string
 	TempDirs      []string
@@ -307,9 +307,7 @@ func createMockSuite(t *testing.T, config *MockConfig) *MockSuite {
 
 	// Set up colored output mock
 	if config.ColoredOutput {
-		suite.ColoredOutput = &MockColoredOutput{
-			Messages: make([]string, 0),
-		}
+		suite.ColoredOutput = &CapturedOutput{}
 	}
 
 	// Set up HTTP client mock
@@ -757,9 +755,7 @@ func CreateMockSuite(config *MockConfig) *MockSuite {
 
 	// Set up colored output mock
 	if config.ColoredOutput {
-		suite.ColoredOutput = &MockColoredOutput{
-			Messages: make([]string, 0),
-		}
+		suite.ColoredOutput = &CapturedOutput{}
 	}
 
 	// Set up HTTP client mock

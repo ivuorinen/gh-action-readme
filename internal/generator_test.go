@@ -838,16 +838,18 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		outputFilename  string
 		outputDir       string
 		defaultFilename string
-		wantPath        string
-		isAbsolute      bool
+		wantPath        string // Expected path (if no error)
+		wantErr         bool   // Whether error is expected
+		errContains     string // Error message substring (if wantErr)
 	}{
+		// LEGITIMATE PATHS - Should succeed
 		{
 			name:            "no custom filename",
 			outputFilename:  "",
 			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/README.md",
-			isAbsolute:      true,
+			wantErr:         false,
 		},
 		{
 			name:            "relative custom filename",
@@ -855,7 +857,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/custom.md",
-			isAbsolute:      true,
+			wantErr:         false,
 		},
 		{
 			name:            "absolute custom filename",
@@ -863,7 +865,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/absolute/path/output.md",
-			isAbsolute:      true,
+			wantErr:         false,
 		},
 		{
 			name:            "custom filename with subdirectory",
@@ -871,31 +873,41 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
 			wantPath:        "/tmp/output/docs/output.md",
-			isAbsolute:      true,
+			wantErr:         false,
 		},
+		{
+			name:            "outputDir with .. component (filename is clean)",
+			outputFilename:  "file.md",
+			outputDir:       "/tmp/output/../escape",
+			defaultFilename: "README.md",
+			wantPath:        "/tmp/escape/file.md",
+			wantErr:         false,
+		},
+
+		// PATH TRAVERSAL ATTEMPTS - Should error
 		{
 			name:            "path traversal attempt with ../",
 			outputFilename:  "../escape.md",
 			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
-			wantPath:        "/tmp/escape.md",
-			isAbsolute:      true,
+			wantErr:         true,
+			errContains:     "path traversal",
 		},
 		{
 			name:            "path traversal with ../ in middle",
 			outputFilename:  "sub/../escape.md",
 			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
-			wantPath:        "/tmp/output/escape.md",
-			isAbsolute:      true,
+			wantErr:         true,
+			errContains:     "path traversal",
 		},
 		{
-			name:            "outputDir with .. component",
-			outputFilename:  "file.md",
-			outputDir:       "/tmp/output/../escape",
+			name:            "multiple ../ escaping directory",
+			outputFilename:  "../../escape.md",
+			outputDir:       "/tmp/output",
 			defaultFilename: "README.md",
-			wantPath:        "/tmp/escape/file.md",
-			isAbsolute:      true,
+			wantErr:         true,
+			errContains:     "path traversal",
 		},
 	}
 
@@ -908,19 +920,26 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			config.Quiet = true
 			gen := NewGenerator(config)
 
-			got := gen.resolveOutputPath(tt.outputDir, tt.defaultFilename)
+			gotPath, err := gen.resolveOutputPath(tt.outputDir, tt.defaultFilename)
 
-			if got != tt.wantPath {
-				t.Errorf("resolveOutputPath() = %q, want %q", got, tt.wantPath)
-			}
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("resolveOutputPath() expected error but got nil")
 
-			if tt.isAbsolute && !filepath.IsAbs(got) {
-				t.Errorf("Expected absolute path, got relative: %q", got)
-			}
+					return
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("error message %q does not contain %q", err.Error(), tt.errContains)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("resolveOutputPath() unexpected error: %v", err)
 
-			// Verify no .. components remain in resolved path
-			if strings.Contains(got, "..") {
-				t.Errorf("Resolved path contains .. components: %q", got)
+					return
+				}
+				if gotPath != tt.wantPath {
+					t.Errorf("resolveOutputPath() = %q, want %q", gotPath, tt.wantPath)
+				}
 			}
 		})
 	}
@@ -1044,7 +1063,7 @@ func TestGeneratorGenerateHTMLErrorPaths(t *testing.T) {
 	gen := NewGenerator(config)
 
 	// Test with valid directory
-	err := gen.generateHTML(action, tmpDir, tmpDir+"/action.yml")
+	err := gen.generateHTML(action, tmpDir, filepath.Join(tmpDir, "action.yml"))
 	if err != nil {
 		t.Errorf("generateHTML() unexpected error = %v", err)
 	}
@@ -1106,7 +1125,7 @@ func TestGeneratorGenerateASCIIDocErrorPaths(t *testing.T) {
 	gen := NewGenerator(config)
 
 	// Test with valid directory
-	err := gen.generateASCIIDoc(action, tmpDir, tmpDir+"/action.yml")
+	err := gen.generateASCIIDoc(action, tmpDir, filepath.Join(tmpDir, "action.yml"))
 	if err != nil {
 		t.Errorf("generateASCIIDoc() unexpected error = %v", err)
 	}

@@ -2,6 +2,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // MockMessageLogger implements MessageLogger for testing.
@@ -22,28 +24,28 @@ type MockMessageLogger struct {
 }
 
 func (m *MockMessageLogger) Info(format string, args ...any) {
-	m.InfoCalls = append(m.InfoCalls, formatMessage(format, args...))
+	m.InfoCalls = append(m.InfoCalls, fmt.Sprintf(format, args...))
 }
 
 func (m *MockMessageLogger) Success(format string, args ...any) {
-	m.SuccessCalls = append(m.SuccessCalls, formatMessage(format, args...))
+	m.SuccessCalls = append(m.SuccessCalls, fmt.Sprintf(format, args...))
 }
 
 func (m *MockMessageLogger) Warning(format string, args ...any) {
-	m.WarningCalls = append(m.WarningCalls, formatMessage(format, args...))
+	m.WarningCalls = append(m.WarningCalls, fmt.Sprintf(format, args...))
 }
 
 func (m *MockMessageLogger) Bold(format string, args ...any) {
-	m.BoldCalls = append(m.BoldCalls, formatMessage(format, args...))
+	m.BoldCalls = append(m.BoldCalls, fmt.Sprintf(format, args...))
 }
 
 func (m *MockMessageLogger) Printf(format string, args ...any) {
-	m.PrintfCalls = append(m.PrintfCalls, formatMessage(format, args...))
+	m.PrintfCalls = append(m.PrintfCalls, fmt.Sprintf(format, args...))
 }
 
 func (m *MockMessageLogger) Fprintf(_ *os.File, format string, args ...any) {
 	// For testing, just track the formatted message
-	m.PrintfCalls = append(m.PrintfCalls, formatMessage(format, args...))
+	m.PrintfCalls = append(m.PrintfCalls, fmt.Sprintf(format, args...))
 }
 
 // MockErrorReporter implements ErrorReporter for testing.
@@ -55,7 +57,7 @@ type MockErrorReporter struct {
 }
 
 func (m *MockErrorReporter) Error(format string, args ...any) {
-	m.ErrorCalls = append(m.ErrorCalls, formatMessage(format, args...))
+	m.ErrorCalls = append(m.ErrorCalls, fmt.Sprintf(format, args...))
 }
 
 func (m *MockErrorReporter) ErrorWithSuggestions(err *apperrors.ContextualError) {
@@ -78,7 +80,7 @@ type MockProgressReporter struct {
 }
 
 func (m *MockProgressReporter) Progress(format string, args ...any) {
-	m.ProgressCalls = append(m.ProgressCalls, formatMessage(format, args...))
+	m.ProgressCalls = append(m.ProgressCalls, fmt.Sprintf(format, args...))
 }
 
 // MockOutputConfig implements OutputConfig for testing.
@@ -101,7 +103,7 @@ type MockProgressManager struct {
 }
 
 func (m *MockProgressManager) CreateProgressBar(description string, total int) *progressbar.ProgressBar {
-	m.CreateProgressBarCalls = append(m.CreateProgressBarCalls, formatMessage("%s (total: %d)", description, total))
+	m.CreateProgressBarCalls = append(m.CreateProgressBarCalls, fmt.Sprintf("%s (total: %d)", description, total))
 
 	return nil // Return nil for mock to avoid actual progress bar
 }
@@ -109,7 +111,7 @@ func (m *MockProgressManager) CreateProgressBar(description string, total int) *
 func (m *MockProgressManager) CreateProgressBarForFiles(description string, files []string) *progressbar.ProgressBar {
 	m.CreateProgressBarForFilesCalls = append(
 		m.CreateProgressBarForFilesCalls,
-		formatMessage("%s (files: %d)", description, len(files)),
+		fmt.Sprintf("%s (files: %d)", description, len(files)),
 	)
 
 	return nil // Return nil for mock to avoid actual progress bar
@@ -134,61 +136,12 @@ func (m *MockProgressManager) ProcessWithProgressBar(
 ) {
 	m.ProcessWithProgressBarCalls = append(
 		m.ProcessWithProgressBarCalls,
-		formatMessage("%s (items: %d)", description, len(items)),
+		fmt.Sprintf("%s (items: %d)", description, len(items)),
 	)
 	// Execute the process function for each item
 	for _, item := range items {
 		processFunc(item, nil)
 	}
-}
-
-// Helper function to format messages consistently.
-func formatMessage(format string, args ...any) string {
-	if len(args) == 0 {
-		return format
-	}
-	// Simple formatting for test purposes
-	result := format
-	for _, arg := range args {
-		result = strings.Replace(result, "%s", toString(arg), 1)
-		result = strings.Replace(result, "%d", toString(arg), 1)
-		result = strings.Replace(result, "%v", toString(arg), 1)
-	}
-
-	return result
-}
-
-func toString(v any) string {
-	switch val := v.(type) {
-	case string:
-		return val
-	case int:
-		return formatInt(val)
-	default:
-		return "unknown"
-	}
-}
-
-func formatInt(i int) string {
-	// Simple int to string conversion for testing
-	if i == 0 {
-		return "0"
-	}
-	result := ""
-	negative := i < 0
-	if negative {
-		i = -i
-	}
-	for i > 0 {
-		digit := i % 10
-		result = string(rune('0'+digit)) + result
-		i /= 10
-	}
-	if negative {
-		result = "-" + result
-	}
-
-	return result
 }
 
 // Test that demonstrates improved testability with focused interfaces.
@@ -244,7 +197,7 @@ func TestFocusedInterfacesSimpleLoggerWithFailure(t *testing.T) {
 func TestFocusedInterfacesErrorManager(t *testing.T) {
 	t.Parallel()
 	mockReporter := &MockErrorReporter{}
-	mockFormatter := &MockErrorFormatter{}
+	mockFormatter := &errorFormatterWrapper{&testutil.ErrorFormatterMock{}}
 	mockManager := &mockErrorManager{
 		reporter:  mockReporter,
 		formatter: mockFormatter,
@@ -355,7 +308,7 @@ func TestFocusedInterfacesGeneratorWithDependencyInjection(t *testing.T) {
 	mockOutput := &mockCompleteOutput{
 		logger:    &MockMessageLogger{},
 		reporter:  &MockErrorReporter{},
-		formatter: &MockErrorFormatter{},
+		formatter: &errorFormatterWrapper{&testutil.ErrorFormatterMock{}},
 		progress:  &MockProgressReporter{},
 		config:    &MockOutputConfig{QuietMode: false},
 	}
@@ -440,20 +393,14 @@ func (m *mockOutputWriter) Fprintf(w *os.File, format string, args ...any) {
 func (m *mockOutputWriter) Progress(format string, args ...any) { m.reporter.Progress(format, args...) }
 func (m *mockOutputWriter) IsQuiet() bool                       { return m.config.IsQuiet() }
 
-// MockErrorFormatter implements ErrorFormatter for testing.
-type MockErrorFormatter struct {
-	FormatContextualErrorCalls []string
+// errorFormatterWrapper wraps testutil.ErrorFormatterMock to implement ErrorFormatter interface.
+type errorFormatterWrapper struct {
+	*testutil.ErrorFormatterMock
 }
 
-func (m *MockErrorFormatter) FormatContextualError(err *apperrors.ContextualError) string {
-	if err != nil {
-		formatted := err.Error()
-		m.FormatContextualErrorCalls = append(m.FormatContextualErrorCalls, formatted)
-
-		return formatted
-	}
-
-	return ""
+// FormatContextualError adapts the generic error interface to ContextualError.
+func (w *errorFormatterWrapper) FormatContextualError(err *apperrors.ContextualError) string {
+	return w.ErrorFormatterMock.FormatContextualError(err)
 }
 
 // mockErrorManager implements ErrorManager for testing.

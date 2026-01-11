@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
+	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/wizard"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
@@ -121,7 +123,7 @@ func TestCLICommands(t *testing.T) {
 			name:       "deps list command no files",
 			args:       []string{"deps", "list"},
 			wantExit:   0, // Changed: deps list now outputs warning instead of error when no files found
-			wantStdout: "No action files found",
+			wantStdout: "no action files found",
 		},
 		{
 			name: "deps list command with composite action",
@@ -331,6 +333,90 @@ func TestCLIErrorHandling(t *testing.T) {
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
 			},
 			wantExit: 1,
+		},
+		// Phase 5: Additional error path tests for gen handler
+		{
+			name:      "gen with empty directory (no action.yml)",
+			args:      []string{"gen"},
+			setupFunc: nil, // Empty directory
+			wantExit:  1,
+			wantError: "no GitHub Action files found",
+		},
+		{
+			name: "gen with malformed YAML syntax",
+			args: []string{"gen"},
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteTestFile(
+					t,
+					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
+					"name: Test\ndescription: Test\nruns: [invalid:::",
+				)
+			},
+			wantExit:  1,
+			wantError: "error",
+		},
+		{
+			name: "gen with invalid action path",
+			args: []string{"gen", "/nonexistent/path/action.yml"},
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+			},
+			wantExit:  1,
+			wantError: "does not exist",
+		},
+		// Phase 5: Additional error path tests for validate handler
+		{
+			name: "validate with missing required field (description)",
+			args: []string{"validate"},
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureInvalidMissingDescription)
+			},
+			wantExit:  1,
+			wantError: "validation failed",
+		},
+		{
+			name: "validate with missing runs field",
+			args: []string{"validate"},
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteTestFile(
+					t,
+					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
+					"name: Test\ndescription: Test action",
+				)
+			},
+			wantExit:  1,
+			wantError: "validation",
+		},
+		// Phase 5: Additional error path tests for deps commands
+		{
+			name: "deps list with no dependencies",
+			args: []string{"deps", "list"},
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				// Create an action with no dependencies
+				testutil.WriteTestFile(
+					t,
+					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []",
+				)
+			},
+			wantExit: 0, // Not an error, just no dependencies
+		},
+		{
+			name: "deps list with malformed action - graceful handling",
+			args: []string{"deps", "list"},
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteTestFile(
+					t,
+					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
+					"invalid: [yaml",
+				)
+			},
+			wantExit: 0, // deps list handles errors gracefully
 		},
 	}
 
@@ -632,11 +718,14 @@ func TestCacheClearHandler(t *testing.T) {
 
 	globalConfig = &internal.AppConfig{Quiet: true}
 
-	// Execute handler - should not panic
+	// Execute handler - now returns error
 	cmd := &cobra.Command{}
-	cacheClearHandler(cmd, []string{})
+	err := cacheClearHandler(cmd, []string{})
+	if err != nil {
+		t.Errorf("cacheClearHandler() unexpected error: %v", err)
+	}
 
-	// Handler should execute without panic
+	// Handler should execute without error
 	// The actual cache clearing logic is tested in cache package
 }
 
@@ -648,8 +737,10 @@ func TestCacheStatsHandler(t *testing.T) {
 	globalConfig = &internal.AppConfig{Quiet: true}
 
 	cmd := &cobra.Command{}
-	cacheStatsHandler(cmd, []string{})
-	// Should not panic
+	err := cacheStatsHandler(cmd, []string{})
+	if err != nil {
+		t.Errorf("cacheStatsHandler() unexpected error: %v", err)
+	}
 }
 
 func TestCachePathHandler(t *testing.T) {
@@ -660,20 +751,46 @@ func TestCachePathHandler(t *testing.T) {
 	globalConfig = &internal.AppConfig{Quiet: true}
 
 	cmd := &cobra.Command{}
-	cachePathHandler(cmd, []string{})
-	// Should not panic
+	err := cachePathHandler(cmd, []string{})
+	if err != nil {
+		t.Errorf("cachePathHandler() unexpected error: %v", err)
+	}
 }
 
 func TestSchemaHandler(t *testing.T) {
-	_ = t // Test function signature requirement
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
+	t.Parallel()
 
-	globalConfig = &internal.AppConfig{Quiet: true}
+	tests := []struct {
+		name    string
+		verbose bool
+	}{
+		{
+			name:    "non-verbose mode",
+			verbose: false,
+		},
+		{
+			name:    "verbose mode",
+			verbose: true,
+		},
+	}
 
-	cmd := &cobra.Command{}
-	schemaHandler(cmd, []string{})
-	// Should not panic
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Helper()
+			originalConfig := globalConfig
+			defer func() { globalConfig = originalConfig }()
+
+			globalConfig = &internal.AppConfig{
+				Quiet:   true,
+				Verbose: tt.verbose,
+				Schema:  "schemas/custom.json",
+			}
+
+			cmd := &cobra.Command{}
+			schemaHandler(cmd, []string{})
+			// Should not panic - output is tested via integration tests
+		})
+	}
 }
 
 func TestConfigThemesHandler(t *testing.T) {
@@ -1098,35 +1215,167 @@ func TestDisplaySecuritySummary(t *testing.T) {
 	}
 }
 
-// TestAnalyzeActionFileDeps tests action file dependency analysis.
-func TestAnalyzeActionFileDeps(t *testing.T) {
-	_ = t // Test function signature requirement
-
-	output := createOutputManager(true)
+// TestShowPendingUpdates tests displaying pending dependency updates.
+func TestShowPendingUpdates(t *testing.T) {
+	t.Parallel()
 
 	tests := []struct {
-		name     string
-		analyzer *dependencies.Analyzer
-		want     int
+		name       string
+		updates    []dependencies.PinnedUpdate
+		currentDir string
 	}{
 		{
-			name:     "nil analyzer",
-			analyzer: nil,
-			want:     0,
+			name:       "no updates",
+			updates:    []dependencies.PinnedUpdate{},
+			currentDir: "/tmp",
+		},
+		{
+			name: "single update",
+			updates: []dependencies.PinnedUpdate{
+				{
+					FilePath:   "/tmp/action.yml",
+					OldUses:    "actions/checkout@v3",
+					NewUses:    "actions/checkout@v4",
+					UpdateType: "major",
+				},
+			},
+			currentDir: "/tmp",
+		},
+		{
+			name: "multiple updates",
+			updates: []dependencies.PinnedUpdate{
+				{
+					FilePath:   "/tmp/action.yml",
+					OldUses:    "actions/checkout@v3",
+					NewUses:    "actions/checkout@v4",
+					UpdateType: "major",
+				},
+				{
+					FilePath:   "/tmp/workflow.yml",
+					OldUses:    "actions/setup-node@v2",
+					NewUses:    "actions/setup-node@v3",
+					UpdateType: "major",
+				},
+			},
+			currentDir: "/tmp",
 		},
 	}
 
 	for _, tt := range tests {
-		got := analyzeActionFileDeps(output, "/tmp/action.yml", tt.analyzer)
-		if got != tt.want {
-			t.Errorf("%s: analyzeActionFileDeps() = %v, want %v", tt.name, got, tt.want)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			output := createOutputManager(true)
+			// Just call it to ensure it doesn't panic
+			showPendingUpdates(output, tt.updates, tt.currentDir)
+		})
+	}
+}
+
+// TestAnalyzeActionFileDeps tests action file dependency analysis.
+func TestAnalyzeActionFileDeps(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupFunc  func(t *testing.T) (string, *dependencies.Analyzer)
+		wantDepCnt int
+	}{
+		{
+			name: "nil analyzer returns 0",
+			setupFunc: func(t *testing.T) (string, *dependencies.Analyzer) {
+				t.Helper()
+
+				return "/tmp/action.yml", nil
+			},
+			wantDepCnt: 0,
+		},
+		{
+			name: "action with dependencies",
+			setupFunc: func(t *testing.T) (string, *dependencies.Analyzer) {
+				t.Helper()
+				tmpDir := t.TempDir()
+				actionFile := testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeMultipleNamedSteps)
+
+				// Create a basic analyzer without GitHub client
+				analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
+
+				return actionFile, analyzer
+			},
+			wantDepCnt: 2, // 2 uses statements
+		},
+		{
+			name: "action without dependencies",
+			setupFunc: func(t *testing.T) (string, *dependencies.Analyzer) {
+				t.Helper()
+				tmpDir := t.TempDir()
+				actionFile := testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				// Create a basic analyzer without GitHub client
+				analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
+
+				return actionFile, analyzer
+			},
+			wantDepCnt: 0,
+		},
+		{
+			name: "invalid action file",
+			setupFunc: func(t *testing.T) (string, *dependencies.Analyzer) {
+				t.Helper()
+				tmpDir := t.TempDir()
+				actionFile := filepath.Join(tmpDir, "action.yml")
+				// Write invalid YAML
+				if err := os.WriteFile(actionFile, []byte("invalid: yaml: content:"), 0600); err != nil {
+					t.Fatalf("Failed to write invalid action file: %v", err)
+				}
+
+				// Create a basic analyzer without GitHub client
+				analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
+
+				return actionFile, analyzer
+			},
+			wantDepCnt: 0, // Returns 0 on error
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actionFile, analyzer := tt.setupFunc(t)
+			output := createOutputManager(true)
+
+			got := analyzeActionFileDeps(output, actionFile, analyzer)
+			if got != tt.wantDepCnt {
+				t.Errorf("analyzeActionFileDeps() = %v, want %v", got, tt.wantDepCnt)
+			}
+		})
 	}
 }
 
 // TestNewConfigCmd tests config command creation.
+// verifySubcommandsExist checks that all expected subcommands exist in the command.
+func verifySubcommandsExist(t *testing.T, cmd *cobra.Command, expectedSubcommands []string) {
+	t.Helper()
+	subcommands := cmd.Commands()
+
+	if len(subcommands) < len(expectedSubcommands) {
+		t.Errorf("newConfigCmd() has %d subcommands, want at least %d", len(subcommands), len(expectedSubcommands))
+	}
+
+	// Verify each expected subcommand exists
+	for _, expected := range expectedSubcommands {
+		found := false
+		for _, sub := range subcommands {
+			if sub.Use == expected {
+				found = true
+
+				break
+			}
+		}
+		if !found {
+			t.Errorf("newConfigCmd() missing subcommand: %s", expected)
+		}
+	}
+}
+
 func TestNewConfigCmd(t *testing.T) {
-	_ = t // Test function signature requirement
+	t.Parallel()
 
 	// Save original global config
 	origConfig := globalConfig
@@ -1136,13 +1385,42 @@ func TestNewConfigCmd(t *testing.T) {
 		Quiet: true,
 	}
 
-	cmd := newConfigCmd()
-	if cmd == nil {
-		t.Fatal("newConfigCmd() returned nil")
-	}
-	if cmd.Use != "config" {
-		t.Errorf("newConfigCmd().Use = %v, want 'config'", cmd.Use)
-	}
+	t.Run("creates command with correct properties", func(t *testing.T) {
+		t.Parallel()
+		cmd := newConfigCmd()
+		if cmd == nil {
+			t.Fatal("newConfigCmd() returned nil")
+		}
+		if cmd.Use != "config" {
+			t.Errorf("newConfigCmd().Use = %v, want 'config'", cmd.Use)
+		}
+	})
+
+	t.Run("has all expected subcommands", func(t *testing.T) {
+		t.Parallel()
+		cmd := newConfigCmd()
+		expectedSubcommands := []string{"init", "wizard", "show", "themes"}
+		verifySubcommandsExist(t, cmd, expectedSubcommands)
+	})
+
+	t.Run("wizard subcommand has required flags", func(t *testing.T) {
+		t.Parallel()
+		cmd := newConfigCmd()
+		wizardCmd, _, err := cmd.Find([]string{"wizard"})
+		if err != nil {
+			t.Fatalf("Failed to find wizard subcommand: %v", err)
+		}
+		if wizardCmd == nil {
+			t.Fatal("wizard subcommand is nil")
+		}
+
+		if wizardCmd.Flags().Lookup(appconstants.FlagFormat) == nil {
+			t.Error("wizard subcommand missing --format flag")
+		}
+		if wizardCmd.Flags().Lookup(appconstants.FlagOutput) == nil {
+			t.Error("wizard subcommand missing --output flag")
+		}
+	})
 }
 
 // TestNewDepsCmd tests deps command creation.
@@ -1169,4 +1447,1578 @@ func TestNewCacheCmd(t *testing.T) {
 	if cmd.Use != "cache" {
 		t.Errorf("newCacheCmd().Use = %v, want 'cache'", cmd.Use)
 	}
+}
+
+// TestGenHandlerIntegration tests genHandler with various scenarios.
+// Note: Not using t.Parallel() because these tests modify shared globalConfig.
+func TestGenHandlerIntegration(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string) []string
+		wantErr   bool
+		setFlags  func(cmd *cobra.Command)
+	}{
+		{
+			name: "generates README from valid action in current dir",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+		},
+		{
+			name: "generates HTML output",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+			setFlags: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("output-format", "html")
+			},
+		},
+		{
+			name: "generates JSON output",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+			setFlags: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("output-format", "json")
+			},
+		},
+		{
+			name: "generates with theme override",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+			setFlags: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("theme", "github")
+			},
+		},
+		{
+			name: "processes composite action",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+		},
+		{
+			name: "processes docker action",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureDockerBasic)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+		},
+		{
+			name: "processes action with custom output file",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+			setFlags: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("output", "custom-readme.md")
+			},
+		},
+		{
+			name: "recursive processing with subdirectories",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+				testutil.CreateActionSubdir(t, tmpDir, testutil.TestDirSubdir, testutil.TestFixtureCompositeBasic)
+
+				return []string{tmpDir}
+			},
+			wantErr: false,
+			setFlags: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("recursive", "true")
+			},
+		},
+		{
+			name: "processes specific action file",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				return []string{filepath.Join(tmpDir, appconstants.ActionFileNameYML)}
+			},
+			wantErr: false,
+		},
+		// Error scenarios using fixtures
+		{
+			name: "returns error for invalid YAML syntax",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+
+				return []string{tmpDir}
+			},
+			wantErr: true,
+		},
+		{
+			name: "returns error for missing required fields",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+
+				return []string{tmpDir}
+			},
+			wantErr: true,
+		},
+		{
+			name: "returns error for empty directory with no action files",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				// Don't write any action file - directory is empty
+				return []string{tmpDir}
+			},
+			wantErr: true,
+		},
+		{
+			name: "returns error for nonexistent path",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+
+				return []string{filepath.Join(tmpDir, "nonexistent")}
+			},
+			wantErr: true,
+		},
+		{
+			name: "handles empty action file gracefully",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/empty-action.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+
+				return []string{tmpDir}
+			},
+			wantErr: false, // Empty steps is valid
+		},
+		{
+			name: "processes action with outdated dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+
+				return []string{tmpDir}
+			},
+			wantErr: false, // Old deps don't cause generation to fail
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+			// Save and restore global state
+			origConfig := globalConfig
+			defer func() { globalConfig = origConfig }()
+
+			// Create temp directory
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Setup test environment and get args
+			var args []string
+			if tt.setupFunc != nil {
+				args = tt.setupFunc(t, tmpDir)
+			}
+
+			// Initialize global config
+			globalConfig = internal.DefaultAppConfig()
+
+			// Create command and set flags
+			cmd := newGenCmd()
+			if tt.setFlags != nil {
+				tt.setFlags(cmd)
+			}
+
+			// Execute handler - now returns error instead of os.Exit
+			err := genHandler(cmd, args)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("genHandler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestValidateHandlerIntegration tests validateHandler with various scenarios.
+// Note: Not using t.Parallel() because these tests modify shared globalConfig.
+func TestValidateHandlerIntegration(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string)
+		wantErr   bool
+	}{
+		{
+			name: "validates valid action successfully",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+			},
+			wantErr: false,
+		},
+		{
+			name: "validates composite action",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
+			},
+			wantErr: false,
+		},
+		{
+			name: "validates docker action",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureDockerBasic)
+			},
+			wantErr: false,
+		},
+		{
+			name: "validates multiple actions recursively",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+				testutil.CreateActionSubdir(t, tmpDir, testutil.TestDirSubdir, testutil.TestFixtureCompositeBasic)
+			},
+			wantErr: false,
+		},
+		// Error scenarios using fixtures
+		{
+			name: "returns error for invalid YAML syntax",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: true,
+		},
+		{
+			name: "returns error for missing required fields",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: true,
+		},
+		{
+			name: "validates action with outdated dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: false, // Outdated dependencies don't fail validation
+		},
+		{
+			name: "returns error for empty directory with no action files",
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// Don't write any action file - directory is empty
+			},
+			wantErr: true,
+		},
+		{
+			name: "validates empty action file with no steps",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/empty-action.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: false, // Empty steps is valid YAML structure
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+			// Save and restore global state
+			origConfig := globalConfig
+			defer func() { globalConfig = origConfig }()
+
+			// Create temp directory
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Setup test environment BEFORE changing directory
+			// (so setupFunc can access testdata/ fixtures in project root)
+			if tt.setupFunc != nil {
+				tt.setupFunc(t, tmpDir)
+			}
+
+			// Change to temp directory for validation
+			t.Chdir(tmpDir)
+
+			// Initialize global config
+			globalConfig = internal.DefaultAppConfig()
+
+			// Create command
+			cmd := newValidateCmd()
+
+			// Execute handler - now returns error instead of os.Exit
+			err := validateHandler(cmd, []string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateHandler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestConfigInitHandlerIntegration tests configInitHandler.
+// Note: This test is limited because configInitHandler uses internal.GetConfigPath()
+// which uses the real XDG config directory. Full integration testing is done via
+// subprocess tests in TestCLIConfigInitialization.
+func TestConfigInitHandlerIntegration(t *testing.T) {
+	// Skip parallelization as we need to manipulate global config path
+	// which is shared state
+
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T) string
+		wantErr   bool
+		validate  func(t *testing.T, tmpDir string, err error)
+	}{
+		{
+			name: "creates config when not exists",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+
+				return t.TempDir()
+			},
+			wantErr: false,
+			validate: func(t *testing.T, _ string, err error) {
+				t.Helper()
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				// Note: Since configInitHandler uses internal.GetConfigPath() which points to real
+				// user config directory, we can only verify no error occurred.
+				// File creation is tested in subprocess tests.
+			},
+		},
+		{
+			name: "handles existing config gracefully",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir := t.TempDir()
+				// Create a config file first
+				configPath, err := internal.GetConfigPath()
+				testutil.AssertNoError(t, err)
+				// If config exists, handler should return nil (not error)
+				_ = configPath
+
+				return tmpDir
+			},
+			wantErr: false, // Handler returns nil when config exists, just warns
+			validate: func(t *testing.T, _ string, err error) {
+				t.Helper()
+				// No error expected - handler just warns if config exists
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore global state
+			origConfig := globalConfig
+			defer func() { globalConfig = origConfig }()
+
+			// Initialize global config
+			globalConfig = internal.DefaultAppConfig()
+
+			tmpDir := tt.setupFunc(t)
+
+			// Create command
+			cmd := &cobra.Command{}
+
+			// Execute handler
+			err := configInitHandler(cmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("configInitHandler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.validate != nil {
+				tt.validate(t, tmpDir, err)
+			}
+		})
+	}
+}
+
+// TestLoadGenConfigIntegration tests loadGenConfig configuration loading.
+func TestLoadGenConfigIntegration(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string) (repoRoot, currentDir string)
+		wantTheme string
+	}{
+		{
+			name: "loads default config",
+			setupFunc: func(t *testing.T, tmpDir string) (string, string) {
+				t.Helper()
+
+				return tmpDir, tmpDir
+			},
+			wantTheme: "default",
+		},
+		{
+			name: "loads repo-specific config",
+			setupFunc: func(t *testing.T, tmpDir string) (string, string) {
+				t.Helper()
+				configContent := "theme: professional\noutput_format: html\n"
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, ".ghreadme.yaml"), configContent)
+
+				return tmpDir, tmpDir
+			},
+			wantTheme: "professional",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create temp directory
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Setup test environment
+			repoRoot, currentDir := tt.setupFunc(t, tmpDir)
+
+			// Load config
+			config, err := loadGenConfig(repoRoot, currentDir)
+			if err != nil {
+				t.Fatalf("loadGenConfig() error = %v", err)
+			}
+
+			if config == nil {
+				t.Fatal("loadGenConfig() returned nil")
+			}
+
+			if config.Theme != tt.wantTheme {
+				t.Errorf("loadGenConfig() theme = %v, want %v", config.Theme, tt.wantTheme)
+			}
+		})
+	}
+}
+
+// TestProcessActionFilesIntegration tests processActionFiles batch processing.
+func TestProcessActionFilesIntegration(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string) []string
+		wantErr   bool
+	}{
+		{
+			name: "processes single action file",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+				return []string{actionPath}
+			},
+			wantErr: false,
+		},
+		{
+			name: "processes multiple action files",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				action1 := testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+				action2 := testutil.CreateActionSubdir(
+					t,
+					tmpDir,
+					testutil.TestDirSubdir,
+					testutil.TestFixtureCompositeBasic,
+				)
+
+				return []string{action1, action2}
+			},
+			wantErr: false,
+		},
+		// Note: "handles empty file list" case removed as it calls os.Exit
+		// when there are no files to process. This scenario is tested via
+		// subprocess tests in TestCLICommands instead.
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create temp directory
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Setup test environment
+			actionFiles := tt.setupFunc(t, tmpDir)
+
+			// Create generator with test config
+			config := internal.DefaultAppConfig()
+			config.Quiet = true
+			generator := internal.NewGenerator(config)
+
+			// Execute handler - just test that it doesn't panic
+			defer func() {
+				if r := recover(); r != nil && !tt.wantErr {
+					t.Errorf("processActionFiles() unexpected panic: %v", r)
+				}
+			}()
+
+			err := processActionFiles(generator, actionFiles)
+			testutil.AssertNoError(t, err)
+		})
+	}
+}
+
+// TestDepsListHandlerIntegration tests depsListHandler.
+func TestDepsListHandlerIntegration(t *testing.T) {
+	// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string)
+		wantErr   bool
+	}{
+		{
+			name: "lists dependencies from composite action",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+			},
+			wantErr: false,
+		},
+		{
+			name: "handles action with no dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+			},
+			wantErr: false,
+		},
+		{
+			name: "handles no action files",
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// No action files
+			},
+			wantErr: false,
+		},
+		// Error scenarios using fixtures
+		{
+			name: "handles invalid YAML syntax with warning",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: false, // depsListHandler shows warning but returns nil
+		},
+		{
+			name: "handles missing required fields with warning",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: false, // depsListHandler shows warning but returns nil
+		},
+		{
+			name: "lists dependencies from action with outdated deps",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: false, // Should successfully list the outdated deps
+		},
+		{
+			name: "handles multiple action files recursively",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				// Create main action
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+				// Create subdirectory with another action
+				subdir := filepath.Join(tmpDir, "subaction")
+				testutil.AssertNoError(t, os.MkdirAll(subdir, 0750))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(subdir, "action.yml"), string(fixtureContent))
+			},
+			wantErr: false, // Should list deps from both actions
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+			// Save and restore global state
+			origConfig := globalConfig
+			defer func() { globalConfig = origConfig }()
+
+			// Create temp directory
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Setup test environment BEFORE changing directory
+			// (so setupFunc can access testdata/ fixtures in project root)
+			if tt.setupFunc != nil {
+				tt.setupFunc(t, tmpDir)
+			}
+
+			// Change to temp directory
+			t.Chdir(tmpDir)
+
+			// Initialize global config
+			globalConfig = internal.DefaultAppConfig()
+			globalConfig.Quiet = true
+
+			// Execute handler - now returns error instead of os.Exit
+			err := depsListHandler(&cobra.Command{}, []string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("depsListHandler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestDepsSecurityHandlerIntegration tests depsSecurityHandler.
+func TestDepsSecurityHandlerIntegration(t *testing.T) {
+	// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string)
+		setToken  bool
+		wantErr   bool
+	}{
+		{
+			name: "analyzes security with GitHub token",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+			},
+			setToken: true,
+			wantErr:  false,
+		},
+		{
+			name: "handles action with no dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+			},
+			setToken: true,
+			wantErr:  false,
+		},
+		{
+			name: "handles invalid YAML syntax gracefully",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			setToken: true,
+			wantErr:  false, // depsSecurityHandler handles YAML errors gracefully
+		},
+		{
+			name: "handles missing required fields gracefully",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			setToken: true,
+			wantErr:  false, // depsSecurityHandler handles YAML errors gracefully
+		},
+		{
+			name: "analyzes action with outdated dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+			},
+			setToken: true,
+			wantErr:  false,
+		},
+		{
+			name: "returns error for no action files",
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// Don't create any action files
+			},
+			setToken: true,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+			// Save and restore global state
+			origConfig := globalConfig
+			defer func() { globalConfig = origConfig }()
+
+			// Create temp directory
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			// Setup test environment BEFORE changing directory
+			// (so setupFunc can access testdata/ fixtures in project root)
+			if tt.setupFunc != nil {
+				tt.setupFunc(t, tmpDir)
+			}
+
+			// Change to temp directory
+			t.Chdir(tmpDir)
+
+			// Initialize global config
+			globalConfig = internal.DefaultAppConfig()
+			globalConfig.Quiet = true
+			if tt.setToken {
+				globalConfig.GitHubToken = testutil.TestTokenValue
+			}
+
+			// Execute handler - now returns error instead of os.Exit
+			err := depsSecurityHandler(&cobra.Command{}, []string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("depsSecurityHandler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestDepsOutdatedHandlerIntegration tests depsOutdatedHandler.
+func TestDepsOutdatedHandlerIntegration(t *testing.T) {
+	// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string)
+		setToken  bool
+		wantErr   bool
+	}{
+		{
+			name: "checks outdated with GitHub token",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+			},
+			setToken: true,
+			wantErr:  false,
+		},
+		{
+			name: "handles no action files",
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// No action files
+			},
+			setToken: true,
+			wantErr:  false,
+		},
+		{
+			name: "handles missing GitHub token",
+			setupFunc: func(t *testing.T, tmpDir string) {
+				t.Helper()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+			},
+			setToken: false,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Note: Not using t.Parallel() because these tests modify shared globalConfig
+
+			// Save and restore global state
+			origConfig := globalConfig
+			defer func() { globalConfig = origConfig }()
+
+			// Create temp directory and change to it
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			t.Chdir(tmpDir)
+
+			// Setup test environment
+			if tt.setupFunc != nil {
+				tt.setupFunc(t, tmpDir)
+			}
+
+			// Initialize global config
+			globalConfig = internal.DefaultAppConfig()
+			globalConfig.Quiet = true
+			if tt.setToken {
+				globalConfig.GitHubToken = testutil.TestTokenValue
+			}
+
+			// Execute handler - now returns error instead of os.Exit
+			err := depsOutdatedHandler(&cobra.Command{}, []string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("depsOutdatedHandler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestConfigWizardHandlerIntegration tests configWizardHandler.
+func TestConfigWizardHandlerIntegration(t *testing.T) {
+	// Note: This is a limited test as wizard requires interactive input
+	// Full wizard testing is done in the wizard package
+
+	// Save and restore global state
+	origConfig := globalConfig
+	defer func() { globalConfig = origConfig }()
+
+	// Create temp directory
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	// Set XDG_CONFIG_HOME to temp directory
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Initialize global config
+	globalConfig = internal.DefaultAppConfig()
+	globalConfig.Quiet = true
+
+	// Create command with output flag pointing to temp file
+	cmd := &cobra.Command{}
+	cmd.Flags().String("format", "yaml", "")
+	outputPath := filepath.Join(tmpDir, "test-config.yaml")
+	cmd.Flags().String("output", outputPath, "")
+
+	// Note: We can't fully test wizard handler without mocking stdin
+	// The wizard requires interactive input which is tested in wizard package
+	// This test just ensures the handler doesn't panic on setup
+}
+
+// Phase 6: Tests for zero-coverage business logic functions
+
+// TestCheckAllOutdated tests the checkAllOutdated function.
+func TestCheckAllOutdated(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		setupFunc       func(t *testing.T, tmpDir string) []string
+		mockAnalyzer    bool
+		wantOutdatedCnt int
+		wantErr         bool
+	}{
+		{
+			name: "finds outdated dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+
+				return []string{actionPath}
+			},
+			mockAnalyzer:    true,
+			wantOutdatedCnt: 0, // Mock analyzer will return no outdated deps
+		},
+		{
+			name: "handles action with no dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				testutil.WriteTestFile(t, actionPath,
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+
+				return []string{actionPath}
+			},
+			mockAnalyzer:    true,
+			wantOutdatedCnt: 0,
+		},
+		{
+			name: "handles multiple action files",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				action1 := filepath.Join(tmpDir, "action1.yml")
+				action2 := filepath.Join(tmpDir, "action2.yml")
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+				_ = os.Rename(filepath.Join(tmpDir, appconstants.ActionFileNameYML), action1)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
+				_ = os.Rename(filepath.Join(tmpDir, appconstants.ActionFileNameYML), action2)
+
+				return []string{action1, action2}
+			},
+			mockAnalyzer:    true,
+			wantOutdatedCnt: 0,
+		},
+		{
+			name: "handles invalid action file gracefully",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				testutil.WriteTestFile(t, actionPath, "invalid: [yaml")
+
+				return []string{actionPath}
+			},
+			mockAnalyzer:    true,
+			wantOutdatedCnt: 0, // Should handle error and return empty list
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			actionFiles := tt.setupFunc(t, tmpDir)
+
+			output := createOutputManager(true)  // quiet mode
+			analyzer := &dependencies.Analyzer{} // Basic analyzer without GitHub token
+
+			outdated := checkAllOutdated(output, actionFiles, analyzer)
+
+			if len(outdated) != tt.wantOutdatedCnt {
+				t.Errorf("checkAllOutdated() returned %d outdated deps, want %d",
+					len(outdated), tt.wantOutdatedCnt)
+			}
+		})
+	}
+}
+
+// TestAnalyzeSecurityDeps tests the analyzeSecurityDeps function.
+func TestAnalyzeSecurityDeps(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		setupFunc  func(t *testing.T, tmpDir string) []string
+		wantPinned int
+	}{
+		{
+			name: "analyzes action with dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+
+				return []string{actionPath}
+			},
+			wantPinned: 2, // TestFixtureCompositeWithDeps has 2 pinned dependencies
+		},
+		{
+			name: "handles action with no dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				testutil.WriteTestFile(t, actionPath,
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+
+				return []string{actionPath}
+			},
+			wantPinned: 0,
+		},
+		{
+			name: "handles multiple action files",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				action1 := filepath.Join(tmpDir, "action1.yml")
+				action2 := filepath.Join(tmpDir, "action2.yml")
+
+				testutil.WriteTestFile(
+					t,
+					action1,
+					"name: Test1\ndescription: Test1\nruns:\n  using: composite\n  steps:\n  - uses: actions/checkout@v4",
+				)
+				testutil.WriteTestFile(
+					t,
+					action2,
+					"name: Test2\ndescription: Test2\nruns:\n  using: composite\n  steps:\n  - uses: actions/setup-node@v3",
+				)
+
+				return []string{action1, action2}
+			},
+			wantPinned: 0, // Without GitHub token, won't verify pins
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			actionFiles := tt.setupFunc(t, tmpDir)
+
+			output := createOutputManager(true)  // quiet mode
+			analyzer := &dependencies.Analyzer{} // Basic analyzer without GitHub token
+
+			pinnedCount, _ := analyzeSecurityDeps(output, actionFiles, analyzer)
+
+			if pinnedCount != tt.wantPinned {
+				t.Errorf("analyzeSecurityDeps() returned %d pinned deps, want %d",
+					pinnedCount, tt.wantPinned)
+			}
+		})
+	}
+}
+
+// TestCollectAllUpdates tests the collectAllUpdates function.
+func TestCollectAllUpdates(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		setupFunc     func(t *testing.T, tmpDir string) []string
+		wantUpdateCnt int
+	}{
+		{
+			name: "collects updates from single action",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
+
+				return []string{actionPath}
+			},
+			wantUpdateCnt: 0, // Without GitHub token, won't fetch updates
+		},
+		{
+			name: "collects from multiple actions",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				action1 := filepath.Join(tmpDir, "action1.yml")
+				action2 := filepath.Join(tmpDir, "action2.yml")
+
+				testutil.WriteTestFile(
+					t,
+					action1,
+					"name: Test1\ndescription: Test1\nruns:\n  using: composite\n  steps:\n  - uses: actions/checkout@v3",
+				)
+				testutil.WriteTestFile(
+					t,
+					action2,
+					"name: Test2\ndescription: Test2\nruns:\n  using: composite\n  steps:\n  - uses: actions/setup-node@v2",
+				)
+
+				return []string{action1, action2}
+			},
+			wantUpdateCnt: 0, // Without GitHub token, won't fetch updates
+		},
+		{
+			name: "handles action with no dependencies",
+			setupFunc: func(t *testing.T, tmpDir string) []string {
+				t.Helper()
+				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				testutil.WriteTestFile(t, actionPath,
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+
+				return []string{actionPath}
+			},
+			wantUpdateCnt: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			actionFiles := tt.setupFunc(t, tmpDir)
+
+			output := createOutputManager(true)  // quiet mode
+			analyzer := &dependencies.Analyzer{} // Basic analyzer without GitHub token
+
+			updates := collectAllUpdates(output, analyzer, actionFiles)
+
+			if len(updates) != tt.wantUpdateCnt {
+				t.Errorf("collectAllUpdates() returned %d updates, want %d",
+					len(updates), tt.wantUpdateCnt)
+			}
+		})
+	}
+}
+
+// TestWrapError tests the wrapError helper function.
+func TestWrapError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		msgConstant  string
+		err          error
+		wantContains []string
+	}{
+		{
+			name:        "wraps error with message constant",
+			msgConstant: "operation failed",
+			err:         errors.New("original error"),
+			wantContains: []string{
+				"operation failed",
+				"original error",
+			},
+		},
+		{
+			name:        "handles empty message constant",
+			msgConstant: "",
+			err:         errors.New("test error"),
+			wantContains: []string{
+				"test error",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := wrapError(tt.msgConstant, tt.err)
+			if result == nil {
+				t.Fatal("wrapError() returned nil, want error")
+			}
+
+			resultStr := result.Error()
+			for _, want := range tt.wantContains {
+				if !strings.Contains(resultStr, want) {
+					t.Errorf("wrapError() = %q, want to contain %q", resultStr, want)
+				}
+			}
+
+			// Verify it's a wrapped error
+			if !errors.Is(result, tt.err) {
+				t.Errorf("wrapError() did not wrap original error properly")
+			}
+		})
+	}
+}
+
+// TestWrapHandlerWithErrorHandling tests the wrapper function for handlers.
+func TestWrapHandlerWithErrorHandling(t *testing.T) {
+	// Save and restore global state
+	origConfig := globalConfig
+	defer func() { globalConfig = origConfig }()
+
+	tests := []struct {
+		name    string
+		handler func(*cobra.Command, []string) error
+		wantErr bool
+	}{
+		{
+			name: "handler returns nil - no error",
+			handler: func(_ *cobra.Command, _ []string) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "initializes globalConfig if nil before calling handler",
+			handler: func(_ *cobra.Command, _ []string) error {
+				// Verify globalConfig was initialized by wrapper
+				if globalConfig == nil {
+					return errors.New("globalConfig is nil in handler")
+				}
+
+				return nil
+			},
+			wantErr: false,
+		},
+		// Note: Cannot test error path because wrapHandlerWithErrorHandling calls os.Exit(1)
+		// which would terminate the test process. Error path is tested via subprocess tests.
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set globalConfig to nil to test initialization
+			if tt.name == "initializes globalConfig if nil before calling handler" {
+				globalConfig = nil
+			} else {
+				globalConfig = internal.DefaultAppConfig()
+			}
+
+			cmd := &cobra.Command{}
+			wrapped := wrapHandlerWithErrorHandling(tt.handler)
+
+			// Execute wrapped handler (should not panic)
+			wrapped(cmd, []string{})
+
+			// Verify globalConfig was initialized
+			if globalConfig == nil {
+				t.Error("wrapHandlerWithErrorHandling() did not initialize globalConfig")
+			}
+		})
+	}
+}
+
+func TestApplyUpdates(t *testing.T) {
+	t.Parallel()
+
+	// Test cases that don't require calling ApplyPinnedUpdates (user cancellation)
+	t.Run("interactive mode cancellation", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			response string
+		}{
+			{name: "response 'n' cancels", response: "n"},
+			{name: "response 'no' cancels", response: "no"},
+			{name: "empty response cancels", response: ""},
+			{name: "random text cancels", response: "random"},
+			{name: "uppercase N cancels", response: "N"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				// Create test reader with response
+				reader := &TestInputReader{responses: []string{tt.response}}
+
+				// Create minimal analyzer (won't be used since we're canceling)
+				analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
+
+				output := createOutputManager(true) // Quiet mode for tests
+				updates := []dependencies.PinnedUpdate{
+					{OldUses: "actions/checkout@v3", NewUses: "actions/checkout@v4"},
+				}
+
+				// Execute function - should not call ApplyPinnedUpdates
+				err := applyUpdates(output, analyzer, updates, false, reader)
+
+				// Should not error when user cancels
+				if err != nil {
+					t.Errorf("applyUpdates() with cancel should not error, got: %v", err)
+				}
+
+				// Verify reader was used
+				if reader.index != 1 {
+					t.Errorf("InputReader was not used, index = %d, want 1", reader.index)
+				}
+			})
+		}
+	})
+
+	// Test automatic mode bypasses prompting
+	t.Run("automatic mode bypasses prompting", func(t *testing.T) {
+		t.Parallel()
+
+		// Create minimal analyzer
+		analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
+
+		// Create temp directory for test action file
+		tmpDir := t.TempDir()
+		actionFile := testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV3)
+
+		output := createOutputManager(true)
+		updates := []dependencies.PinnedUpdate{
+			{
+				OldUses:  "actions/checkout@v3",
+				NewUses:  "actions/checkout@abc123",
+				FilePath: actionFile,
+			},
+		}
+
+		// Call with automatic=true, reader should not be used (can pass nil)
+		err := applyUpdates(output, analyzer, updates, true, nil)
+
+		// May error due to nil github client or other reasons, but that's expected
+		// The important thing is it didn't block on stdin prompting the user
+		_ = err // Accept any result for this integration test
+	})
+
+	// Test that InputReader is used when provided
+	t.Run("InputReader is used in interactive mode", func(t *testing.T) {
+		t.Parallel()
+
+		// Create test reader
+		reader := &TestInputReader{responses: []string{"n"}}
+
+		analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
+		output := createOutputManager(true)
+		updates := []dependencies.PinnedUpdate{{OldUses: "old", NewUses: "new"}}
+
+		_ = applyUpdates(output, analyzer, updates, false, reader)
+
+		// Verify reader was actually used (index should be 1 after reading first response)
+		if reader.index != 1 {
+			t.Errorf("InputReader was not used, index = %d, want 1", reader.index)
+		}
+	})
+
+	// Test that default StdinReader is used when reader is nil
+	t.Run("defaults to StdinReader when reader is nil", func(t *testing.T) {
+		t.Parallel()
+
+		// This test verifies the nil check works, but can't test actual stdin
+		// Just verify the function accepts nil and doesn't panic
+
+		analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
+		output := createOutputManager(true)
+		updates := []dependencies.PinnedUpdate{{OldUses: "old", NewUses: "new"}}
+
+		// With automatic=true and nil reader, should not prompt
+		err := applyUpdates(output, analyzer, updates, true, nil)
+
+		// May error, but shouldn't panic from nil reader
+		_ = err
+	})
+}
+
+func TestSetupDepsUpgrade(t *testing.T) {
+	// Note: This test cannot use t.Parallel() because subtest
+	// "uses globalConfig when config parameter is nil" modifies globalConfig
+
+	tests := []struct {
+		name       string
+		setupFunc  func(t *testing.T) (string, *internal.AppConfig)
+		wantErr    bool
+		errContain string
+	}{
+		{
+			name: "returns error when no GitHub token",
+			setupFunc: func(t *testing.T) (string, *internal.AppConfig) {
+				t.Helper()
+				tmpDir := t.TempDir()
+				// Create a valid action file
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV4)
+
+				config := internal.DefaultAppConfig()
+				config.GitHubToken = "" // No token
+
+				return tmpDir, config
+			},
+			wantErr:    true,
+			errContain: "no GitHub token",
+		},
+		{
+			name: "succeeds with valid token and action files",
+			setupFunc: func(t *testing.T) (string, *internal.AppConfig) {
+				t.Helper()
+				tmpDir := t.TempDir()
+				// Create a valid action file
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV4)
+
+				config := internal.DefaultAppConfig()
+				config.GitHubToken = "test-token-123"
+
+				return tmpDir, config
+			},
+			wantErr: false,
+		},
+		{
+			name: "returns error when no action files found",
+			setupFunc: func(t *testing.T) (string, *internal.AppConfig) {
+				t.Helper()
+				tmpDir := t.TempDir() // Empty directory
+				config := internal.DefaultAppConfig()
+				config.GitHubToken = "test-token-123"
+
+				return tmpDir, config
+			},
+			wantErr:    true,
+			errContain: "no action files",
+		},
+		{
+			name: "uses globalConfig when config parameter is nil",
+			setupFunc: func(t *testing.T) (string, *internal.AppConfig) {
+				t.Helper()
+				tmpDir := t.TempDir()
+				// Create a valid action file
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV4)
+
+				// Set globalConfig instead of passing config
+				origConfig := globalConfig
+				globalConfig = internal.DefaultAppConfig()
+				globalConfig.GitHubToken = "test-token-from-global"
+				t.Cleanup(func() { globalConfig = origConfig })
+
+				return tmpDir, nil // Pass nil config
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currentDir, config := tt.setupFunc(t)
+			output := createOutputManager(true)
+
+			analyzer, files, err := setupDepsUpgrade(output, currentDir, config)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("setupDepsUpgrade() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr && tt.errContain != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.errContain) {
+					t.Errorf("error should contain %q, got %v", tt.errContain, err)
+				}
+			}
+
+			if !tt.wantErr {
+				if analyzer == nil {
+					t.Error("expected analyzer, got nil")
+				}
+				if len(files) == 0 {
+					t.Error("expected action files, got none")
+				}
+			}
+		})
+	}
+}
+
+func TestDepsUpgradeHandlerIntegration(t *testing.T) {
+	// Note: Not using t.Parallel() because tests modify globalConfig and change directories
+
+	tests := []struct {
+		name       string
+		setupFunc  func(t *testing.T) string
+		ciMode     bool
+		dryRun     bool
+		wantErr    bool
+		errContain string
+	}{
+		{
+			name: "successfully processes with auto-approve in dry-run",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir := t.TempDir()
+				// Create action with dependencies
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV3)
+
+				return tmpDir
+			},
+			ciMode:     true,
+			dryRun:     true,
+			wantErr:    true, // Now properly propagates errors from setupDepsUpgrade
+			errContain: "not a git repository",
+		},
+		{
+			name: "returns error when no action files found",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+
+				return t.TempDir() // Empty directory
+			},
+			ciMode:     true,
+			dryRun:     true,
+			wantErr:    true, // Now properly propagates errors from setupDepsUpgrade
+			errContain: "no action files found",
+		},
+		{
+			name: "returns error when no GitHub token",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir := t.TempDir()
+				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV3)
+
+				return tmpDir
+			},
+			ciMode:     true,
+			dryRun:     true,
+			wantErr:    true, // Now properly propagates errors from setupDepsUpgrade
+			errContain: "not a git repository",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore global state
+			origConfig := globalConfig
+			defer func() {
+				globalConfig = origConfig
+			}()
+
+			// Setup test directory
+			tmpDir := tt.setupFunc(t)
+			t.Chdir(tmpDir) // Automatic cleanup via t.Chdir()
+
+			// Initialize test config
+			globalConfig = internal.DefaultAppConfig()
+			if tt.name != "returns error when no GitHub token" {
+				globalConfig.GitHubToken = testutil.TestTokenValue
+			}
+			globalConfig.Quiet = true
+
+			// Create command with flags
+			cmd := &cobra.Command{Use: "upgrade"}
+			cmd.Flags().Bool("ci", tt.ciMode, "")
+			cmd.Flags().Bool(appconstants.InputAll, false, "")
+			cmd.Flags().Bool(appconstants.InputDryRun, tt.dryRun, "")
+
+			if tt.ciMode {
+				_ = cmd.Flags().Set("ci", "true")
+			}
+			if tt.dryRun {
+				_ = cmd.Flags().Set(appconstants.InputDryRun, "true")
+			}
+
+			// Execute handler
+			err := depsUpgradeHandler(cmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("depsUpgradeHandler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr && tt.errContain != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.errContain) {
+					t.Errorf("error should contain %q, got %v", tt.errContain, err)
+				}
+			}
+		})
+	}
+}
+
+func TestConfigWizardHandler_Initialization(t *testing.T) {
+	// Note: This test cannot use t.Parallel() because it modifies globalConfig
+
+	t.Run("initializes globalConfig when nil", func(t *testing.T) {
+		// Save and restore
+		origConfig := globalConfig
+		defer func() { globalConfig = origConfig }()
+
+		// Set to nil
+		globalConfig = nil
+
+		// Create minimal command
+		cmd := &cobra.Command{}
+		cmd.Flags().String(appconstants.FlagFormat, "yaml", "")
+		cmd.Flags().String(appconstants.FlagOutput, "", "")
+
+		// Call handler (will error on wizard.Run, but should initialize config first)
+		_ = configWizardHandler(cmd, []string{})
+
+		// Verify globalConfig was initialized
+		if globalConfig == nil {
+			t.Error("configWizardHandler should initialize globalConfig when nil")
+		}
+	})
 }

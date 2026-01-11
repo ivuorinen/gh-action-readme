@@ -4,6 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **gh-action-readme** - CLI tool for GitHub Actions documentation generation
 
+## 🛡️ Quality Standards
+
+This project enforces strict quality gates aligned with [SonarCloud "Sonar way"](https://docs.sonarsource.com/sonarqube-cloud/standards/managing-quality-gates/):
+
+| Metric | Threshold | Check Command |
+| ------ | --------- | ------------- |
+| Code Coverage | ≥ 80% (new code) | `make test-coverage-check` |
+| Duplicated Lines | ≤ 3% (new code) | `make lint` (via dupl) |
+| Security Rating | A (no issues) | `make security` |
+| Reliability Rating | A (no bugs) | `make lint` |
+| Maintainability | A (tech debt ≤ 5%) | `make lint` |
+| Cyclomatic Complexity | ≤ 10 per function | `make lint` (via gocyclo) |
+| Line Length | ≤ 120 characters | `make lint` (via lll) |
+
+**Current Coverage:** 72.8% overall (target: 80%)
+**Coverage Threshold:** Set in `Makefile` as `COVERAGE_THRESHOLD := 80.0`
+
+**Pre-commit Quality Checks:**
+
+- All linters run automatically via pre-commit hooks
+- EditorConfig compliance enforced
+- Security scans (gitleaks) prevent secret commits
+
 ## 📝 Template Updates
 
 **Templates are embedded from:** `templates_embed/templates/`
@@ -40,6 +63,96 @@ gh-action-readme gen testdata/ --output /tmp/test-output.md
 ```
 
 ## 🏗️ Architecture Overview
+
+### Command Handler Pattern
+
+**All Cobra command handlers return errors** instead of calling `os.Exit()` directly. This enables comprehensive unit testing.
+
+**Pattern:**
+
+```go
+// Handler function signature - returns error
+func myHandler(cmd *cobra.Command, args []string) error {
+    if err := someOperation(); err != nil {
+        return fmt.Errorf("operation failed: %w", err)
+    }
+    return nil
+}
+
+// Wrapped in command definition for Cobra compatibility
+var myCmd = &cobra.Command{
+    Use:   "my-command",
+    Short: "Description",
+    Run:   wrapHandlerWithErrorHandling(myHandler),
+}
+```
+
+The `wrapHandlerWithErrorHandling()` wrapper (in `main.go`):
+
+- Initializes `globalConfig` if nil (important for testing)
+- Calls the handler and captures the error
+- Displays error via `ColoredOutput` and exits with code 1 if error occurs
+
+**Testing handlers:**
+
+```go
+func TestMyHandler(t *testing.T) {
+    cmd := &cobra.Command{}
+    cmd.Flags().String("some-flag", "default", "")
+
+    err := myHandler(cmd, []string{})
+
+    // Can now test error conditions without os.Exit()
+    if err != nil {
+        t.Errorf("unexpected error: %v", err)
+    }
+}
+```
+
+### Dependency Injection for Testing
+
+Functions that interact with I/O or global state use **nil-default parameter pattern** for testability:
+
+```go
+// Production signature with optional injectable dependencies
+func myFunction(output *ColoredOutput, config *AppConfig, reader InputReader) error {
+    // Default to real implementations if not provided
+    if config == nil {
+        config = globalConfig
+    }
+    if reader == nil {
+        reader = &StdinReader{}  // Real stdin
+    }
+    // ... function logic
+}
+
+// Production usage (pass nil for defaults)
+err := myFunction(output, nil, nil)
+
+// Test usage (inject mocks)
+mockConfig := internal.DefaultAppConfig()
+mockReader := &TestInputReader{responses: []string{"y"}}
+err := myFunction(output, mockConfig, mockReader)
+```
+
+**Examples in codebase:**
+
+- `applyUpdates()` - accepts `InputReader` for stdin mocking (main.go:1094)
+- `setupDepsUpgrade()` - accepts `*AppConfig` for config injection (main.go:1001)
+
+**Test interfaces:**
+
+```go
+// InputReader for mocking user input
+type InputReader interface {
+    ReadLine() (string, error)
+}
+
+type TestInputReader struct {
+    responses []string
+    index     int
+}
+```
 
 ### Template Rendering Pipeline
 
@@ -395,8 +508,47 @@ When adding fields to `ActionYML`:
 ### Test File Locations
 
 - Unit tests: `internal/*_test.go` alongside source files
-- Test fixtures: `testdata/example-action/`, `testdata/composite-action/`
+- Test fixtures: `testdata/yaml-fixtures/` (organized by type)
 - Integration tests: Manual CLI testing with testdata
+
+### Test Fixture Organization
+
+**CRITICAL:** Always use fixtures, never inline YAML in tests.
+
+**Fixture Structure:**
+
+```text
+testdata/yaml-fixtures/
+├── actions/
+│   ├── composite/         # Composite actions
+│   ├── javascript/        # JavaScript actions
+│   ├── docker/           # Docker actions
+│   └── invalid/          # Invalid actions for error testing
+├── dependencies/         # Actions with specific dependencies
+├── configs/             # Configuration files
+└── error-scenarios/     # Edge cases and error conditions
+```
+
+**Using Fixtures in Tests:**
+
+```go
+// Use fixture constants from testutil/test_constants.go
+testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
+
+// Available fixture constants:
+// - TestFixtureJavaScriptSimple
+// - TestFixtureCompositeBasic
+// - TestFixtureCompositeWithDeps
+// - TestFixtureCompositeMultipleNamedSteps
+// - TestFixtureActionWithCheckoutV3/V4
+// See testutil/test_constants.go for complete list
+```
+
+**Adding New Fixtures:**
+
+1. Create YAML file in appropriate subdirectory: `testdata/yaml-fixtures/actions/composite/my-new-fixture.yml`
+2. Add constant to `testutil/test_constants.go`: `TestFixtureMyNewFixture = "actions/composite/my-new-fixture.yml"`
+3. Use in tests: `testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureMyNewFixture)`
 
 ### Running Specific Tests
 

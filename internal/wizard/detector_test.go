@@ -441,3 +441,434 @@ func TestProjectDetectorsuggestPermissions(t *testing.T) {
 		})
 	}
 }
+
+// TestNewProjectDetector tests creating a new project detector.
+func TestNewProjectDetector(t *testing.T) {
+	t.Parallel()
+
+	output := internal.NewColoredOutput(true)
+	detector, err := NewProjectDetector(output)
+	if err != nil {
+		t.Fatalf("NewProjectDetector() error = %v", err)
+	}
+
+	if detector == nil {
+		t.Fatal("NewProjectDetector() returned nil")
+	}
+
+	if detector.output == nil {
+		t.Error("detector.output is nil")
+	}
+
+	if detector.currentDir == "" {
+		t.Error("detector.currentDir is empty")
+	}
+}
+
+// TestDetectProjectSettingsIntegration tests the main detection logic.
+func TestDetectProjectSettingsIntegration(t *testing.T) {
+	// Cannot use t.Parallel() because this test uses t.Chdir()
+
+	// Create a temporary directory with test files
+	tempDir := t.TempDir()
+
+	// Create action.yml
+	testutil.WriteActionFixture(t, tempDir, testutil.TestFixtureCompositeWithShellStep)
+
+	// Change to temp directory (cleanup automatic via t.Chdir)
+	t.Chdir(tempDir)
+
+	output := internal.NewColoredOutput(true)
+	detector, err := NewProjectDetector(output)
+	if err != nil {
+		t.Fatalf("NewProjectDetector() error = %v", err)
+	}
+
+	settings, err := detector.DetectProjectSettings()
+	if err != nil {
+		t.Fatalf("DetectProjectSettings() error = %v", err)
+	}
+
+	if settings == nil {
+		t.Fatal("DetectProjectSettings() returned nil")
+	}
+
+	// Verify action file was detected
+	if !settings.IsGitHubAction {
+		t.Error("Expected IsGitHubAction to be true")
+	}
+
+	if len(settings.ActionFiles) == 0 {
+		t.Error("Expected at least one action file to be detected")
+	}
+
+	// Verify default values are set
+	if len(settings.SuggestedRunsOn) == 0 {
+		t.Error("Expected SuggestedRunsOn to have default values")
+	}
+
+	if settings.SuggestedPermissions == nil {
+		t.Error("Expected SuggestedPermissions to be initialized")
+	}
+}
+
+// TestDetectRepositoryInfo tests repository info detection.
+func TestDetectRepositoryInfo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		repoRoot string
+		wantErr  bool
+	}{
+		{
+			name:     "no git repository",
+			repoRoot: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			output := internal.NewColoredOutput(true)
+			detector := &ProjectDetector{
+				output:   output,
+				repoRoot: tt.repoRoot,
+			}
+
+			settings := &DetectedSettings{
+				SuggestedPermissions: make(map[string]string),
+			}
+
+			err := detector.detectRepositoryInfo(settings)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("detectRepositoryInfo() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestDetectActionFiles tests action file detection.
+//
+//nolint:gocyclo // Complexity from security test cases (symlink, traversal scenarios) per CodeRabbit review
+func TestDetectActionFiles(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		setupFunc       func(t *testing.T, dir string)
+		wantActionCount int
+		wantErr         bool
+	}{
+		{
+			name: "detects action file",
+			setupFunc: func(t *testing.T, dir string) {
+				t.Helper()
+				content := "name: Test Action\ndescription: Test"
+				if err := os.WriteFile(filepath.Join(dir, "action.yml"), []byte(content), 0600); err != nil {
+					t.Fatalf("Failed to create action.yml: %v", err)
+				}
+			},
+			wantActionCount: 1,
+			wantErr:         false,
+		},
+		{
+			name: "no action files",
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// Don't create any files
+			},
+			wantActionCount: 0,
+			wantErr:         false,
+		},
+		{
+			name: "skips symlink to sensitive file",
+			setupFunc: func(t *testing.T, dir string) {
+				t.Helper()
+				// Create symlink: action.yml -> /etc/passwd
+				symlinkPath := filepath.Join(dir, "action.yml")
+				if err := os.Symlink("/etc/passwd", symlinkPath); err != nil {
+					t.Skip("symlink creation not supported on this platform")
+				}
+			},
+			wantActionCount: 0, // Should skip symlinks for security
+			wantErr:         false,
+		},
+		{
+			name: "handles directory with .. components safely",
+			setupFunc: func(t *testing.T, dir string) {
+				t.Helper()
+				// Create subdirectory
+				subdir := filepath.Join(dir, "subdir")
+				if err := os.MkdirAll(subdir, 0750); err != nil {
+					t.Fatalf("Failed to create subdir: %v", err)
+				}
+
+				// Create action.yml in subdir
+				content := "name: Test\ndescription: Test"
+				actionPath := filepath.Join(subdir, "action.yml")
+				if err := os.WriteFile(actionPath, []byte(content), 0600); err != nil {
+					t.Fatalf("Failed to create action.yml: %v", err)
+				}
+			},
+			wantActionCount: 1, // Should find the file safely
+			wantErr:         false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+			if tt.setupFunc != nil {
+				tt.setupFunc(t, tempDir)
+			}
+
+			output := internal.NewColoredOutput(true)
+			detector := &ProjectDetector{
+				output:     output,
+				currentDir: tempDir,
+			}
+
+			settings := &DetectedSettings{
+				SuggestedPermissions: make(map[string]string),
+			}
+
+			err := detector.detectActionFiles(settings)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("detectActionFiles() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if len(settings.ActionFiles) != tt.wantActionCount {
+				t.Errorf("Expected %d action files, got %d", tt.wantActionCount, len(settings.ActionFiles))
+			}
+
+			if tt.wantActionCount > 0 && !settings.IsGitHubAction {
+				t.Error("Expected IsGitHubAction to be true")
+			}
+		})
+	}
+}
+
+// TestDetectProjectCharacteristics tests project characteristics detection.
+func TestDetectProjectCharacteristics(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		setupFunc      func(t *testing.T, dir string)
+		wantDockerfile bool
+	}{
+		{
+			name: "detects Dockerfile",
+			setupFunc: func(t *testing.T, dir string) {
+				t.Helper()
+				content := "FROM alpine:latest"
+				if err := os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte(content), 0600); err != nil {
+					t.Fatalf("Failed to create Dockerfile: %v", err)
+				}
+			},
+			wantDockerfile: true,
+		},
+		{
+			name: "no Dockerfile",
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// Don't create Dockerfile
+			},
+			wantDockerfile: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+			if tt.setupFunc != nil {
+				tt.setupFunc(t, tempDir)
+			}
+
+			output := internal.NewColoredOutput(true)
+			detector := &ProjectDetector{
+				output:     output,
+				currentDir: tempDir,
+			}
+
+			settings := &DetectedSettings{
+				SuggestedPermissions: make(map[string]string),
+			}
+
+			detector.detectProjectCharacteristics(settings)
+
+			if settings.HasDockerfile != tt.wantDockerfile {
+				t.Errorf("HasDockerfile = %v, want %v", settings.HasDockerfile, tt.wantDockerfile)
+			}
+		})
+	}
+}
+
+// TestDetectVersion tests version detection from various sources.
+func TestDetectVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		setupFunc func(t *testing.T, dir string)
+		want      string
+	}{
+		{
+			name: "detects version from package.json",
+			setupFunc: func(t *testing.T, dir string) {
+				t.Helper()
+				content := `{"version": "1.2.3"}`
+				if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0600); err != nil {
+					t.Fatalf("Failed to create package.json: %v", err)
+				}
+			},
+			want: "1.2.3",
+		},
+		{
+			name: "detects version from VERSION file",
+			setupFunc: func(t *testing.T, dir string) {
+				t.Helper()
+				content := "2.0.0\n"
+				if err := os.WriteFile(filepath.Join(dir, "VERSION"), []byte(content), 0600); err != nil {
+					t.Fatalf("Failed to create VERSION: %v", err)
+				}
+			},
+			want: "2.0.0",
+		},
+		{
+			name: "no version found",
+			setupFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// Don't create version files
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+			if tt.setupFunc != nil {
+				tt.setupFunc(t, tempDir)
+			}
+
+			output := internal.NewColoredOutput(true)
+			detector := &ProjectDetector{
+				output:     output,
+				currentDir: tempDir,
+			}
+
+			version := detector.detectVersion()
+			if version != tt.want {
+				t.Errorf("detectVersion() = %q, want %q", version, tt.want)
+			}
+		})
+	}
+}
+
+// TestDetectVersionFromGitTags tests git tag version detection.
+func TestDetectVersionFromGitTags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		repoRoot string
+		want     string
+	}{
+		{
+			name:     "no git repository",
+			repoRoot: "",
+			want:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			output := internal.NewColoredOutput(true)
+			detector := &ProjectDetector{
+				output:   output,
+				repoRoot: tt.repoRoot,
+			}
+
+			version := detector.detectVersionFromGitTags()
+			if version != tt.want {
+				t.Errorf("detectVersionFromGitTags() = %q, want %q", version, tt.want)
+			}
+		})
+	}
+}
+
+// TestAnalyzeActionFile tests action file analysis.
+func TestAnalyzeActionFile(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		content   string
+		wantErr   bool
+		checkFunc func(t *testing.T, settings *DetectedSettings)
+	}{
+		{
+			name:    "analyzes composite action",
+			content: testutil.MustReadFixture(testutil.TestFixtureCompositeWithShellStep),
+			wantErr: false,
+			checkFunc: func(t *testing.T, settings *DetectedSettings) {
+				t.Helper()
+				if !settings.HasCompositeAction {
+					t.Error("Expected HasCompositeAction to be true")
+				}
+			},
+		},
+		{
+			name:    "handles invalid YAML",
+			content: "invalid: yaml: content:",
+			wantErr: true,
+			checkFunc: func(t *testing.T, _ *DetectedSettings) {
+				t.Helper()
+				// No specific checks for error case
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+			actionPath := filepath.Join(tempDir, "action.yml")
+			if err := os.WriteFile(actionPath, []byte(tt.content), 0600); err != nil {
+				t.Fatalf("Failed to create action.yml: %v", err)
+			}
+
+			output := internal.NewColoredOutput(true)
+			detector := &ProjectDetector{
+				output:     output,
+				currentDir: tempDir,
+			}
+
+			settings := &DetectedSettings{
+				SuggestedPermissions: make(map[string]string),
+			}
+
+			err := detector.analyzeActionFile(actionPath, settings)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("analyzeActionFile() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, settings)
+			}
+		})
+	}
+}

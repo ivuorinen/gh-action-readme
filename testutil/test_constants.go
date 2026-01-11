@@ -26,6 +26,11 @@ const (
 	TestActionDesc = "Test Description"
 )
 
+// GitHub authentication test constants for reducing string duplication.
+const (
+	TestTokenValue = "test-token"
+)
+
 // Validation test file identifiers for reducing string duplication.
 const (
 	ValidationTestFile1 = "file: action1.yml"
@@ -49,15 +54,19 @@ const (
 
 // Test fixture path constants for reducing string duplication.
 const (
-	TestFixtureJavaScriptSimple          = "actions/javascript/simple.yml"
-	TestFixtureCompositeBasic            = "actions/composite/basic.yml"
-	TestFixtureCompositeWithDeps         = "actions/composite/with-dependencies.yml"
-	TestFixtureDockerBasic               = "actions/docker/basic.yml"
-	TestFixtureInvalidMissingDescription = "actions/invalid/missing-description.yml"
-	TestFixtureInvalidInvalidUsing       = "actions/invalid/invalid-using.yml"
-	TestFixtureMinimalAction             = "minimal-action.yml"
-	TestFixtureTestCompositeAction       = "test-composite-action.yml"
-	TestFixtureMyNewAction               = "my-new-action.yml"
+	TestFixtureJavaScriptSimple            = "actions/javascript/simple.yml"
+	TestFixtureCompositeBasic              = "actions/composite/basic.yml"
+	TestFixtureCompositeWithDeps           = "actions/composite/with-dependencies.yml"
+	TestFixtureCompositeMultipleNamedSteps = "actions/composite/with-multiple-named-steps.yml"
+	TestFixtureCompositeWithShellStep      = "actions/composite/with-shell-step.yml"
+	TestFixtureDockerBasic                 = "actions/docker/basic.yml"
+	TestFixtureInvalidMissingDescription   = "actions/invalid/missing-description.yml"
+	TestFixtureInvalidInvalidUsing         = "actions/invalid/invalid-using.yml"
+	TestFixtureMinimalAction               = "minimal-action.yml"
+	TestFixtureTestCompositeAction         = "test-composite-action.yml"
+	TestFixtureMyNewAction                 = "my-new-action.yml"
+	TestFixtureActionWithCheckoutV3        = "dependencies/action-with-checkout-v3.yml"
+	TestFixtureActionWithCheckoutV4        = "dependencies/action-with-checkout-v4.yml"
 )
 
 // Test file path constants for reducing string duplication.

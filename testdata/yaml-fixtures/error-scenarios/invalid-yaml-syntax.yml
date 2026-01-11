@@ -1,0 +1,9 @@
+name: Invalid YAML Action
+description: This action has invalid YAML syntax
+runs:
+  using: composite
+  steps:
+    - name: Invalid Step
+      # Malformed YAML - missing colon after key
+      invalid_field without colon
+      another_field: value

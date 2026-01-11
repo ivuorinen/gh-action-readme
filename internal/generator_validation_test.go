@@ -1,129 +1,32 @@
 package internal
 
 import (
-	"os"
-	"strings"
 	"testing"
 
-	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-// capturedOutput captures output for testing validation reporting functions.
-// Implements CompleteOutput interface.
+// capturedOutput wraps testutil.CapturedOutput to satisfy CompleteOutput interface.
 type capturedOutput struct {
-	boldMessages               []string
-	successMessages            []string
-	errorMessages              []string
-	warningMessages            []string
-	infoMessages               []string
-	printfMessages             []string
-	progressMessages           []string
-	errorWithSuggestionsCalls  []string
-	errorWithContextCalls      []string
-	errorWithSimpleFixCalls    []string
-	formatContextualErrorCalls []string
+	*testutil.CapturedOutput
 }
 
-// MessageLogger implementation.
-func (c *capturedOutput) Bold(format string, args ...any) {
-	c.boldMessages = append(c.boldMessages, formatMessage(format, args...))
-}
-
-func (c *capturedOutput) Success(format string, args ...any) {
-	c.successMessages = append(c.successMessages, formatMessage(format, args...))
-}
-
-func (c *capturedOutput) Error(format string, args ...any) {
-	c.errorMessages = append(c.errorMessages, formatMessage(format, args...))
-}
-
-func (c *capturedOutput) Warning(format string, args ...any) {
-	c.warningMessages = append(c.warningMessages, formatMessage(format, args...))
-}
-
-func (c *capturedOutput) Info(format string, args ...any) {
-	c.infoMessages = append(c.infoMessages, formatMessage(format, args...))
-}
-
-func (c *capturedOutput) Printf(format string, args ...any) {
-	c.printfMessages = append(c.printfMessages, formatMessage(format, args...))
-}
-
-func (c *capturedOutput) Fprintf(_ *os.File, format string, args ...any) {
-	c.printfMessages = append(c.printfMessages, formatMessage(format, args...))
-}
-
-// ErrorReporter implementation.
+// ErrorWithSuggestions wraps the testutil version to match interface signature.
 func (c *capturedOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
-	if err != nil {
-		c.errorWithSuggestionsCalls = append(c.errorWithSuggestionsCalls, err.Error())
-	}
+	c.CapturedOutput.ErrorWithSuggestions(err)
 }
 
-func (c *capturedOutput) ErrorWithContext(_ appconstants.ErrorCode, message string, _ map[string]string) {
-	c.errorWithContextCalls = append(c.errorWithContextCalls, message)
-}
-
-func (c *capturedOutput) ErrorWithSimpleFix(message, suggestion string) {
-	c.errorWithSimpleFixCalls = append(c.errorWithSimpleFixCalls, message+": "+suggestion)
-}
-
-// ErrorFormatter implementation.
+// FormatContextualError wraps the testutil version to match interface signature.
 func (c *capturedOutput) FormatContextualError(err *apperrors.ContextualError) string {
-	if err != nil {
-		formatted := err.Error()
-		c.formatContextualErrorCalls = append(c.formatContextualErrorCalls, formatted)
+	return c.CapturedOutput.FormatContextualError(err)
+}
 
-		return formatted
+// newCapturedOutput creates a new capturedOutput instance.
+func newCapturedOutput() *capturedOutput {
+	return &capturedOutput{
+		CapturedOutput: &testutil.CapturedOutput{},
 	}
-
-	return ""
-}
-
-// ProgressReporter implementation.
-func (c *capturedOutput) Progress(format string, args ...any) {
-	c.progressMessages = append(c.progressMessages, formatMessage(format, args...))
-}
-
-// OutputConfig implementation.
-func (c *capturedOutput) IsQuiet() bool {
-	return false
-}
-
-// allMessages consolidates all message slices into a single slice.
-func (c *capturedOutput) allMessages() []string {
-	total := len(c.infoMessages) + len(c.errorMessages) + len(c.warningMessages) + len(c.printfMessages)
-	messages := make([]string, 0, total)
-	messages = append(messages, c.infoMessages...)
-	messages = append(messages, c.errorMessages...)
-	messages = append(messages, c.warningMessages...)
-	messages = append(messages, c.printfMessages...)
-
-	return messages
-}
-
-// containsAnyMessage checks if any message in the consolidated list contains the needle.
-func (c *capturedOutput) containsAnyMessage(needle string) bool {
-	for _, msg := range c.allMessages() {
-		if strings.Contains(msg, needle) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// containsErrorMessage checks if any error message contains the needle.
-func (c *capturedOutput) containsErrorMessage(needle string) bool {
-	for _, msg := range c.errorMessages {
-		if strings.Contains(msg, needle) {
-			return true
-		}
-	}
-
-	return false
 }
 
 // TestCountValidationStats tests the validation statistics counting function.
@@ -220,11 +123,11 @@ func assertMessageCounts(t *testing.T, output *capturedOutput, want messageCount
 		got      int
 		expected int
 	}{
-		{"bold messages", len(output.boldMessages), want.bold},
-		{"success messages", len(output.successMessages), want.success},
-		{"warning messages", len(output.warningMessages), want.warning},
-		{"error messages", len(output.errorMessages), want.error},
-		{"info messages", len(output.infoMessages), want.info},
+		{"bold messages", len(output.BoldMessages), want.bold},
+		{"success messages", len(output.SuccessMessages), want.success},
+		{"warning messages", len(output.WarningMessages), want.warning},
+		{"error messages", len(output.ErrorMessages), want.error},
+		{"info messages", len(output.InfoMessages), want.info},
 	}
 
 	for _, check := range checks {
@@ -318,7 +221,7 @@ func TestShowValidationSummary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := &capturedOutput{}
+			output := newCapturedOutput()
 			gen := &Generator{Output: output}
 
 			gen.showValidationSummary(tt.totalFiles, tt.validFiles, tt.totalIssues, tt.resultCount, tt.errorCount)
@@ -372,23 +275,23 @@ func TestShowParseErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := &capturedOutput{}
+			output := newCapturedOutput()
 			gen := &Generator{Output: output}
 
 			gen.showParseErrors(tt.errors)
 
-			if len(output.boldMessages) != tt.wantBold {
-				t.Errorf("showParseErrors() bold messages = %d, want %d", len(output.boldMessages), tt.wantBold)
+			if len(output.BoldMessages) != tt.wantBold {
+				t.Errorf("showParseErrors() bold messages = %d, want %d", len(output.BoldMessages), tt.wantBold)
 			}
-			if len(output.errorMessages) != tt.wantError {
-				t.Errorf("showParseErrors() error messages = %d, want %d", len(output.errorMessages), tt.wantError)
+			if len(output.ErrorMessages) != tt.wantError {
+				t.Errorf("showParseErrors() error messages = %d, want %d", len(output.ErrorMessages), tt.wantError)
 			}
 
-			if tt.wantContains != "" && !output.containsErrorMessage(tt.wantContains) {
+			if tt.wantContains != "" && !output.ContainsError(tt.wantContains) {
 				t.Errorf(
 					"showParseErrors() error messages should contain %q, got %v",
 					tt.wantContains,
-					output.errorMessages,
+					output.ErrorMessages,
 				)
 			}
 		})
@@ -462,25 +365,25 @@ func TestShowFileIssues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := &capturedOutput{}
+			output := newCapturedOutput()
 			gen := &Generator{Output: output}
 
 			gen.showFileIssues(tt.result)
 
-			if len(output.infoMessages) < tt.wantInfo {
-				t.Errorf("showFileIssues() info messages = %d, want at least %d", len(output.infoMessages), tt.wantInfo)
+			if len(output.InfoMessages) < tt.wantInfo {
+				t.Errorf("showFileIssues() info messages = %d, want at least %d", len(output.InfoMessages), tt.wantInfo)
 			}
-			if len(output.errorMessages) != tt.wantError {
-				t.Errorf("showFileIssues() error messages = %d, want %d", len(output.errorMessages), tt.wantError)
+			if len(output.ErrorMessages) != tt.wantError {
+				t.Errorf("showFileIssues() error messages = %d, want %d", len(output.ErrorMessages), tt.wantError)
 			}
-			if len(output.warningMessages) != tt.wantWarning {
-				t.Errorf("showFileIssues() warning messages = %d, want %d", len(output.warningMessages), tt.wantWarning)
+			if len(output.WarningMessages) != tt.wantWarning {
+				t.Errorf("showFileIssues() warning messages = %d, want %d", len(output.WarningMessages), tt.wantWarning)
 			}
 
 			// Check if expected content appears somewhere in the output
-			if tt.wantContains != "" && !output.containsAnyMessage(tt.wantContains) {
+			if tt.wantContains != "" && !output.ContainsMessage(tt.wantContains) {
 				t.Errorf("showFileIssues() output should contain %q, got info=%v, error=%v, warning=%v",
-					tt.wantContains, output.infoMessages, output.errorMessages, output.warningMessages)
+					tt.wantContains, output.InfoMessages, output.ErrorMessages, output.WarningMessages)
 			}
 		})
 	}
@@ -538,7 +441,7 @@ func TestShowDetailedIssues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := &capturedOutput{}
+			output := newCapturedOutput()
 			gen := &Generator{
 				Output: output,
 				Config: &AppConfig{Verbose: tt.verbose},
@@ -546,8 +449,8 @@ func TestShowDetailedIssues(t *testing.T) {
 
 			gen.showDetailedIssues(tt.results, tt.totalIssues)
 
-			if len(output.boldMessages) != tt.wantBold {
-				t.Errorf("showDetailedIssues() bold messages = %d, want %d", len(output.boldMessages), tt.wantBold)
+			if len(output.BoldMessages) != tt.wantBold {
+				t.Errorf("showDetailedIssues() bold messages = %d, want %d", len(output.BoldMessages), tt.wantBold)
 			}
 		})
 	}
@@ -615,7 +518,7 @@ func TestReportValidationResults(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := &capturedOutput{}
+			output := newCapturedOutput()
 			gen := &Generator{
 				Output: output,
 				Config: &AppConfig{Verbose: false},
@@ -623,9 +526,9 @@ func TestReportValidationResults(t *testing.T) {
 
 			gen.reportValidationResults(tt.results, tt.errors)
 
-			gotBoldCount := len(output.boldMessages)
-			gotSuccessCount := len(output.successMessages)
-			gotErrorCount := len(output.errorMessages)
+			gotBoldCount := len(output.BoldMessages)
+			gotSuccessCount := len(output.SuccessMessages)
+			gotErrorCount := len(output.ErrorMessages)
 
 			if gotBoldCount < tt.wantBold {
 				t.Errorf(

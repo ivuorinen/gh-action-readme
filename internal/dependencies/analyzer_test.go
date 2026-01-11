@@ -518,7 +518,7 @@ func TestAnalyzerRateLimitHandling(t *testing.T) {
 		},
 	}
 
-	client := github.NewClient(&http.Client{Transport: &mockTransport{client: mockClient}})
+	client := github.NewClient(&http.Client{Transport: &testutil.MockTransport{Client: mockClient}})
 	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
 
 	analyzer := &Analyzer{
@@ -567,15 +567,6 @@ func TestAnalyzerWithoutGitHubClient(t *testing.T) {
 			}
 		}
 	}
-}
-
-// mockTransport wraps our mock HTTP client for GitHub client.
-type mockTransport struct {
-	client *testutil.MockHTTPClient
-}
-
-func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return t.client.Do(req)
 }
 
 // TestNewAnalyzer tests the analyzer constructor.

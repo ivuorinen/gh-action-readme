@@ -1,0 +1,7 @@
+# Missing required 'name' and 'description' fields
+runs:
+  using: composite
+  steps:
+    - name: Test Step
+      run: echo "test"
+      shell: bash

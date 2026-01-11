@@ -289,12 +289,13 @@ func TestFatalErrorComponents(t *testing.T) {
 	suggestions := apperrors.GetSuggestions(code, context)
 	helpURL := apperrors.GetHelpURL(code)
 
+	// ErrCodeFileNotFound should have suggestions and help URL
 	if len(suggestions) == 0 {
-		t.Log("Note: No suggestions found for error code (this may be expected)")
+		t.Errorf("GetSuggestions(%v) returned empty, expected non-empty for ErrCodeFileNotFound", code)
 	}
 
 	if helpURL == "" {
-		t.Log("Note: No help URL found for error code (this may be expected)")
+		t.Errorf("GetHelpURL(%v) returned empty string, expected URL for ErrCodeFileNotFound", code)
 	}
 
 	// Verify error construction (without calling HandleFatalError which exits)

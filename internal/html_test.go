@@ -264,7 +264,7 @@ func TestHTMLWriterWriteOverwrite(t *testing.T) {
 	}
 
 	// Verify new content
-	content, err := os.ReadFile(outputPath) //nolint:gosec // Testing with safe temp dir
+	content, err := os.ReadFile(mustSafePath(t, outputPath))
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}
