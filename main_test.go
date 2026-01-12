@@ -413,7 +413,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-					"invalid: [yaml",
+					testutil.TestInvalidYAMLPrefix,
 				)
 			},
 			wantExit: 0, // deps list handles errors gracefully
@@ -599,7 +599,7 @@ func TestNewGenCmd(t *testing.T) {
 	}
 
 	// Check that required flags exist
-	flags := []string{"output-format", "output-dir", "theme", "recursive"}
+	flags := []string{appconstants.FlagOutputFormat, "output-dir", "theme", "recursive"}
 	for _, flag := range flags {
 		if cmd.Flags().Lookup(flag) == nil {
 			t.Errorf("expected flag %q to exist", flag)
@@ -970,13 +970,13 @@ func TestApplyCommandFlags(t *testing.T) {
 
 		// Always define flags with proper defaults
 		cmd.Flags().String("theme", "", "")
-		cmd.Flags().String("output-format", appconstants.OutputFormatMarkdown, "")
+		cmd.Flags().String(appconstants.FlagOutputFormat, appconstants.OutputFormatMarkdown, "")
 
 		if tt.theme != "" {
 			_ = cmd.Flags().Set("theme", tt.theme)
 		}
 		if tt.format != appconstants.OutputFormatMarkdown {
-			_ = cmd.Flags().Set("output-format", tt.format)
+			_ = cmd.Flags().Set(appconstants.FlagOutputFormat, tt.format)
 		}
 
 		applyCommandFlags(cmd, config)
@@ -1121,7 +1121,7 @@ func TestDisplayOutdatedResults(t *testing.T) {
 			allOutdated: []dependencies.OutdatedDependency{
 				{
 					Current: dependencies.Dependency{
-						Name:    "actions/checkout",
+						Name:    testutil.TestActionCheckout,
 						Version: "v3",
 					},
 					LatestVersion: "v4",
@@ -1200,7 +1200,7 @@ func TestDisplaySecuritySummary(t *testing.T) {
 				{
 					file: appconstants.TestTmpActionFile,
 					dep: dependencies.Dependency{
-						Name:    "actions/checkout",
+						Name:    testutil.TestActionCheckout,
 						Version: "v4",
 					},
 				},
@@ -1240,7 +1240,7 @@ func TestShowPendingUpdates(t *testing.T) {
 				{
 					FilePath:   appconstants.TestTmpActionFile,
 					OldUses:    appconstants.TestActionCheckoutV3,
-					NewUses:    "actions/checkout@v4",
+					NewUses:    testutil.TestActionCheckoutV4,
 					UpdateType: "major",
 				},
 			},
@@ -1252,7 +1252,7 @@ func TestShowPendingUpdates(t *testing.T) {
 				{
 					FilePath:   appconstants.TestTmpActionFile,
 					OldUses:    appconstants.TestActionCheckoutV3,
-					NewUses:    "actions/checkout@v4",
+					NewUses:    testutil.TestActionCheckoutV4,
 					UpdateType: "major",
 				},
 				{
@@ -1327,7 +1327,7 @@ func TestAnalyzeActionFileDeps(t *testing.T) {
 				tmpDir := t.TempDir()
 				actionFile := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				// Write invalid YAML (unclosed bracket)
-				if err := os.WriteFile(actionFile, []byte("invalid: [yaml"), 0600); err != nil {
+				if err := os.WriteFile(actionFile, []byte(testutil.TestInvalidYAMLPrefix), 0600); err != nil {
 					t.Fatalf("Failed to write invalid action file: %v", err)
 				}
 
@@ -1483,7 +1483,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			},
 			wantErr: false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set("output-format", "html")
+				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, "html")
 			},
 		},
 		{
@@ -1496,7 +1496,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			},
 			wantErr: false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set("output-format", "json")
+				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, "json")
 			},
 		},
 		{
@@ -2370,8 +2370,8 @@ func TestCheckAllOutdated(t *testing.T) {
 			name: "handles multiple action files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				action1 := filepath.Join(tmpDir, "action1.yml")
-				action2 := filepath.Join(tmpDir, "action2.yml")
+				action1 := filepath.Join(tmpDir, testutil.TestFileAction1)
+				action2 := filepath.Join(tmpDir, testutil.TestFileAction2)
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
 				_ = os.Rename(filepath.Join(tmpDir, appconstants.ActionFileNameYML), action1)
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
@@ -2387,7 +2387,7 @@ func TestCheckAllOutdated(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-				testutil.WriteTestFile(t, actionPath, "invalid: [yaml")
+				testutil.WriteTestFile(t, actionPath, testutil.TestInvalidYAMLPrefix)
 
 				return []string{actionPath}
 			},
@@ -2454,8 +2454,8 @@ func TestAnalyzeSecurityDeps(t *testing.T) {
 			name: "handles multiple action files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				action1 := filepath.Join(tmpDir, "action1.yml")
-				action2 := filepath.Join(tmpDir, "action2.yml")
+				action1 := filepath.Join(tmpDir, testutil.TestFileAction1)
+				action2 := filepath.Join(tmpDir, testutil.TestFileAction2)
 
 				testutil.WriteTestFile(
 					t,
@@ -2520,8 +2520,8 @@ func TestCollectAllUpdates(t *testing.T) {
 			name: "collects from multiple actions",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				action1 := filepath.Join(tmpDir, "action1.yml")
-				action2 := filepath.Join(tmpDir, "action2.yml")
+				action1 := filepath.Join(tmpDir, testutil.TestFileAction1)
+				action2 := filepath.Join(tmpDir, testutil.TestFileAction2)
 
 				testutil.WriteTestFile(
 					t,
@@ -2712,7 +2712,7 @@ func TestApplyUpdates(t *testing.T) {
 
 				output := createOutputManager(true) // Quiet mode for tests
 				updates := []dependencies.PinnedUpdate{
-					{OldUses: appconstants.TestActionCheckoutV3, NewUses: "actions/checkout@v4"},
+					{OldUses: appconstants.TestActionCheckoutV3, NewUses: testutil.TestActionCheckoutV4},
 				}
 
 				// Execute function - should not call ApplyPinnedUpdates
@@ -2807,7 +2807,7 @@ func TestSetupDepsUpgrade(t *testing.T) {
 		errContain string
 	}{
 		{
-			name: "returns error when no GitHub token",
+			name: testutil.TestMsgNoGitHubToken,
 			setupFunc: func(t *testing.T) (string, *internal.AppConfig) {
 				t.Helper()
 				tmpDir := t.TempDir()
@@ -2939,7 +2939,7 @@ func setupDepsUpgradeCmd(ciMode, dryRun bool) *cobra.Command {
 // setupDepsUpgradeConfig initializes globalConfig for upgrade handler testing.
 func setupDepsUpgradeConfig(testName string) {
 	globalConfig = internal.DefaultAppConfig()
-	if testName != "returns error when no GitHub token" {
+	if testName != testutil.TestMsgNoGitHubToken {
 		globalConfig.GitHubToken = testutil.TestTokenValue
 	}
 	globalConfig.Quiet = true
@@ -2962,7 +2962,7 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 				t.Helper()
 				// Check if git is available
 				if _, err := exec.LookPath("git"); err != nil {
-					t.Skip("git not installed")
+					t.Skip(testutil.TestMsgGitNotInstalled)
 				}
 
 				tmpDir := t.TempDir()
@@ -2983,7 +2983,7 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 				t.Helper()
 				// Check if git is available
 				if _, err := exec.LookPath("git"); err != nil {
-					t.Skip("git not installed")
+					t.Skip(testutil.TestMsgGitNotInstalled)
 				}
 
 				tmpDir := t.TempDir()
@@ -2998,12 +2998,12 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 			errContain: "no action files found",
 		},
 		{
-			name: "returns error when no GitHub token",
+			name: testutil.TestMsgNoGitHubToken,
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				// Check if git is available
 				if _, err := exec.LookPath("git"); err != nil {
-					t.Skip("git not installed")
+					t.Skip(testutil.TestMsgGitNotInstalled)
 				}
 
 				tmpDir := t.TempDir()
