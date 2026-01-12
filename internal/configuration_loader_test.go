@@ -817,7 +817,7 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 			name:         "applies override for matching repository (HTTPS)",
 			gitRemoteURL: "https://github.com/test-org/test-repo.git",
 			repoOverrides: map[string]AppConfig{
-				appconstants.TestRepoTestOrgTestRepo: {
+				testutil.TestRepoTestOrgTestRepo: {
 					Theme:        "github",
 					OutputFormat: "html",
 				},
@@ -830,7 +830,7 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 			name:         "applies override for matching repository (SSH)",
 			gitRemoteURL: "git@github.com:test-org/test-repo.git",
 			repoOverrides: map[string]AppConfig{
-				appconstants.TestRepoTestOrgTestRepo: {
+				testutil.TestRepoTestOrgTestRepo: {
 					Theme:        "minimal",
 					OutputFormat: "json",
 				},
@@ -843,7 +843,7 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 			name:         "no override applied for non-matching repository",
 			gitRemoteURL: "https://github.com/other-org/other-repo.git",
 			repoOverrides: map[string]AppConfig{
-				appconstants.TestRepoTestOrgTestRepo: {
+				testutil.TestRepoTestOrgTestRepo: {
 					Theme:        "github",
 					OutputFormat: "html",
 				},
@@ -855,7 +855,7 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 		{
 			name: "no override when repository cannot be detected (no .git)",
 			repoOverrides: map[string]AppConfig{
-				appconstants.TestRepoTestOrgTestRepo: {
+				testutil.TestRepoTestOrgTestRepo: {
 					Theme:        "github",
 					OutputFormat: "html",
 				},

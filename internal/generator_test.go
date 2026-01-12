@@ -898,7 +898,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "no custom filename",
 			outputFilename:  "",
-			outputDir:       appconstants.TestOutputPath,
+			outputDir:       testutil.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/output/README.md",
 			wantErr:         false,
@@ -906,7 +906,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "relative custom filename",
 			outputFilename:  "custom.md",
-			outputDir:       appconstants.TestOutputPath,
+			outputDir:       testutil.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/output/custom.md",
 			wantErr:         false,
@@ -914,7 +914,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "absolute custom filename",
 			outputFilename:  "/absolute/path/output.md",
-			outputDir:       appconstants.TestOutputPath,
+			outputDir:       testutil.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/absolute/path/output.md",
 			wantErr:         false,
@@ -922,7 +922,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "custom filename with subdirectory",
 			outputFilename:  "docs/output.md",
-			outputDir:       appconstants.TestOutputPath,
+			outputDir:       testutil.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/output/docs/output.md",
 			wantErr:         false,
@@ -940,7 +940,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "path traversal attempt with ../",
 			outputFilename:  "../escape.md",
-			outputDir:       appconstants.TestOutputPath,
+			outputDir:       testutil.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
 			errContains:     testutil.TestErrPathTraversal,
@@ -948,7 +948,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "path traversal with ../ in middle",
 			outputFilename:  "sub/../escape.md",
-			outputDir:       appconstants.TestOutputPath,
+			outputDir:       testutil.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
 			errContains:     testutil.TestErrPathTraversal,
@@ -956,7 +956,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "multiple ../ escaping directory",
 			outputFilename:  "../../escape.md",
-			outputDir:       appconstants.TestOutputPath,
+			outputDir:       testutil.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
 			errContains:     testutil.TestErrPathTraversal,

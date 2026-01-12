@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -91,7 +90,7 @@ func TestIsCommitSHA(t *testing.T) {
 	}{
 		{
 			name:     "full commit SHA",
-			version:  appconstants.TestSHAForTesting,
+			version:  testutil.TestSHAForTesting,
 			expected: true,
 		},
 		{
@@ -166,7 +165,7 @@ func TestIsSemanticVersion(t *testing.T) {
 		},
 		{
 			name:     "commit SHA",
-			version:  appconstants.TestSHAForTesting,
+			version:  testutil.TestSHAForTesting,
 			expected: false,
 		},
 		{
@@ -206,7 +205,7 @@ func TestIsVersionPinned(t *testing.T) {
 		},
 		{
 			name:     "full commit SHA",
-			version:  appconstants.TestSHAForTesting,
+			version:  testutil.TestSHAForTesting,
 			expected: true,
 		},
 		{
@@ -398,8 +397,8 @@ func TestCleanVersionString(t *testing.T) {
 		},
 		{
 			name:     "commit SHA",
-			input:    appconstants.TestSHAForTesting,
-			expected: appconstants.TestSHAForTesting,
+			input:    testutil.TestSHAForTesting,
+			expected: testutil.TestSHAForTesting,
 		},
 	}
 

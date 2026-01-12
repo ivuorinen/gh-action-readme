@@ -153,7 +153,7 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 			uses:            "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
-			expectedVersion: appconstants.TestSHAForTesting,
+			expectedVersion: testutil.TestSHAForTesting,
 			expectedType:    CommitSHA,
 		},
 		{
@@ -208,7 +208,7 @@ func TestAnalyzerVersionChecking(t *testing.T) {
 		},
 		{
 			name:        "commit SHA full",
-			version:     appconstants.TestSHAForTesting,
+			version:     testutil.TestSHAForTesting,
 			isPinned:    true,
 			isCommitSHA: true,
 			isSemantic:  false,
@@ -278,15 +278,15 @@ func TestAnalyzerGetLatestVersion(t *testing.T) {
 			name:            "valid repository",
 			owner:           "actions",
 			repo:            "checkout",
-			expectedVersion: appconstants.TestVersionV4_1_1,
-			expectedSHA:     appconstants.TestSHAForTesting,
+			expectedVersion: testutil.TestVersionV4_1_1,
+			expectedSHA:     testutil.TestSHAForTesting,
 			expectError:     false,
 		},
 		{
 			name:            "another valid repository",
 			owner:           "actions",
 			repo:            "setup-node",
-			expectedVersion: appconstants.TestVersionV4_0_0,
+			expectedVersion: testutil.TestVersionV4_0_0,
 			expectedSHA:     "1a4e6d7c9f8e5b2a3c4d5e6f7a8b9c0d1e2f3a4b",
 			expectError:     false,
 		},
@@ -328,7 +328,7 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 	dependencies := []Dependency{
 		{
 			Name:        testutil.TestActionCheckout,
-			Uses:        appconstants.TestActionCheckoutV3,
+			Uses:        testutil.TestActionCheckoutV3,
 			Version:     "v3",
 			IsPinned:    false,
 			VersionType: SemanticVersion,
@@ -337,7 +337,7 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 		{
 			Name:        "actions/setup-node",
 			Uses:        "actions/setup-node@v4.0.0",
-			Version:     appconstants.TestVersionV4_0_0,
+			Version:     testutil.TestVersionV4_0_0,
 			IsPinned:    true,
 			VersionType: SemanticVersion,
 			Description: "Setup Node.js",
@@ -356,7 +356,7 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 	for _, dep := range outdated {
 		if dep.Current.Name == testutil.TestActionCheckout && dep.Current.Version == "v3" {
 			found = true
-			if dep.LatestVersion != appconstants.TestVersionV4_1_1 {
+			if dep.LatestVersion != testutil.TestVersionV4_1_1 {
 				t.Errorf("expected latest version v4.1.1, got %s", dep.LatestVersion)
 			}
 			if dep.UpdateType != "major" {
@@ -384,31 +384,31 @@ func TestAnalyzerCompareVersions(t *testing.T) {
 		{
 			name:         "major version difference",
 			current:      "v3.0.0",
-			latest:       appconstants.TestVersionV4_0_0,
+			latest:       testutil.TestVersionV4_0_0,
 			expectedType: "major",
 		},
 		{
 			name:         "minor version difference",
-			current:      appconstants.TestVersionV4_0_0,
+			current:      testutil.TestVersionV4_0_0,
 			latest:       "v4.1.0",
 			expectedType: "minor",
 		},
 		{
 			name:         "patch version difference",
 			current:      "v4.1.0",
-			latest:       appconstants.TestVersionV4_1_1,
+			latest:       testutil.TestVersionV4_1_1,
 			expectedType: "patch",
 		},
 		{
 			name:         "no difference",
-			current:      appconstants.TestVersionV4_1_1,
-			latest:       appconstants.TestVersionV4_1_1,
+			current:      testutil.TestVersionV4_1_1,
+			latest:       testutil.TestVersionV4_1_1,
 			expectedType: "none",
 		},
 		{
 			name:         "floating to specific",
 			current:      "v4",
-			latest:       appconstants.TestVersionV4_1_1,
+			latest:       testutil.TestVersionV4_1_1,
 			expectedType: "patch",
 		},
 	}
@@ -448,7 +448,7 @@ func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	// Create test dependency
 	dep := Dependency{
 		Name:        testutil.TestActionCheckout,
-		Uses:        appconstants.TestActionCheckoutV3,
+		Uses:        testutil.TestActionCheckoutV3,
 		Version:     "v3",
 		IsPinned:    false,
 		VersionType: SemanticVersion,
@@ -459,15 +459,15 @@ func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	update, err := analyzer.GeneratePinnedUpdate(
 		actionPath,
 		dep,
-		appconstants.TestVersionV4_1_1,
-		appconstants.TestSHAForTesting,
+		testutil.TestVersionV4_1_1,
+		testutil.TestSHAForTesting,
 	)
 
 	testutil.AssertNoError(t, err)
 
 	// Verify update details
 	testutil.AssertEqual(t, actionPath, update.FilePath)
-	testutil.AssertEqual(t, appconstants.TestActionCheckoutV3, update.OldUses)
+	testutil.AssertEqual(t, testutil.TestActionCheckoutV3, update.OldUses)
 	testutil.AssertStringContains(t, update.NewUses, "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e")
 	testutil.AssertStringContains(t, update.NewUses, "# v4.1.1")
 	testutil.AssertEqual(t, "major", update.UpdateType)

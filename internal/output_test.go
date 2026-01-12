@@ -9,6 +9,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // captureStdout captures stdout output for testing.
@@ -53,12 +54,12 @@ func TestNewColoredOutput(t *testing.T) {
 		wantQuiet bool
 	}{
 		{
-			name:      appconstants.TestScenarioQuietEnabled,
+			name:      testutil.TestScenarioQuietEnabled,
 			quiet:     true,
 			wantQuiet: true,
 		},
 		{
-			name:      appconstants.TestScenarioQuietDisabled,
+			name:      testutil.TestScenarioQuietDisabled,
 			quiet:     false,
 			wantQuiet: false,
 		},
@@ -87,12 +88,12 @@ func TestIsQuiet(t *testing.T) {
 		want  bool
 	}{
 		{
-			name:  appconstants.TestScenarioQuietEnabled,
+			name:  testutil.TestScenarioQuietEnabled,
 			quiet: true,
 			want:  true,
 		},
 		{
-			name:  appconstants.TestScenarioQuietDisabled,
+			name:  testutil.TestScenarioQuietDisabled,
 			quiet: false,
 			want:  false,
 		},
@@ -122,14 +123,14 @@ func TestSuccess(t *testing.T) {
 		{
 			name:         "success message displayed",
 			quiet:        false,
-			message:      appconstants.TestMsgOperationCompleted,
+			message:      testutil.TestMsgOperationCompleted,
 			wantContains: "✅ Operation completed",
 			wantEmpty:    false,
 		},
 		{
-			name:      appconstants.TestMsgQuietSuppressOutput,
+			name:      testutil.TestMsgQuietSuppressOutput,
 			quiet:     true,
-			message:   appconstants.TestMsgOperationCompleted,
+			message:   testutil.TestMsgOperationCompleted,
 			wantEmpty: true,
 		},
 		{
@@ -150,7 +151,7 @@ func TestSuccess(t *testing.T) {
 			})
 
 			if tt.wantEmpty && captured != "" {
-				t.Errorf(appconstants.TestMsgNoOutputInQuiet, captured)
+				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
 			}
 
 			if !tt.wantEmpty && !strings.Contains(captured, "✅") {
@@ -169,7 +170,7 @@ func TestError(t *testing.T) {
 	}{
 		{
 			name:         "error message displayed",
-			message:      appconstants.TestMsgFileNotFound,
+			message:      testutil.TestMsgFileNotFound,
 			wantContains: "❌ File not found",
 		},
 		{
@@ -188,7 +189,7 @@ func TestError(t *testing.T) {
 			})
 
 			if !strings.Contains(captured, "❌") {
-				t.Errorf(appconstants.TestMsgOutputMissingEmoji, captured)
+				t.Errorf(testutil.TestMsgOutputMissingEmoji, captured)
 			}
 
 			if !strings.Contains(captured, strings.TrimPrefix(tt.wantContains, "❌ ")) {
@@ -213,7 +214,7 @@ func TestWarning(t *testing.T) {
 			wantEmpty: false,
 		},
 		{
-			name:      appconstants.TestMsgQuietSuppressOutput,
+			name:      testutil.TestMsgQuietSuppressOutput,
 			quiet:     true,
 			message:   "Deprecated feature",
 			wantEmpty: true,
@@ -229,7 +230,7 @@ func TestWarning(t *testing.T) {
 			})
 
 			if tt.wantEmpty && captured != "" {
-				t.Errorf(appconstants.TestMsgNoOutputInQuiet, captured)
+				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
 			}
 
 			if !tt.wantEmpty && !strings.Contains(captured, "⚠️") {
@@ -250,13 +251,13 @@ func TestInfo(t *testing.T) {
 		{
 			name:      "info message displayed",
 			quiet:     false,
-			message:   appconstants.TestMsgProcessingStarted,
+			message:   testutil.TestMsgProcessingStarted,
 			wantEmpty: false,
 		},
 		{
-			name:      appconstants.TestMsgQuietSuppressOutput,
+			name:      testutil.TestMsgQuietSuppressOutput,
 			quiet:     true,
-			message:   appconstants.TestMsgProcessingStarted,
+			message:   testutil.TestMsgProcessingStarted,
 			wantEmpty: true,
 		},
 	}
@@ -270,7 +271,7 @@ func TestInfo(t *testing.T) {
 			})
 
 			if tt.wantEmpty && captured != "" {
-				t.Errorf(appconstants.TestMsgNoOutputInQuiet, captured)
+				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
 			}
 
 			if !tt.wantEmpty && !strings.Contains(captured, "ℹ️") {
@@ -295,7 +296,7 @@ func TestProgress(t *testing.T) {
 			wantEmpty: false,
 		},
 		{
-			name:      appconstants.TestMsgQuietSuppressOutput,
+			name:      testutil.TestMsgQuietSuppressOutput,
 			quiet:     true,
 			message:   "Loading data...",
 			wantEmpty: true,
@@ -311,7 +312,7 @@ func TestProgress(t *testing.T) {
 			})
 
 			if tt.wantEmpty && captured != "" {
-				t.Errorf(appconstants.TestMsgNoOutputInQuiet, captured)
+				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
 			}
 
 			if !tt.wantEmpty && !strings.Contains(captured, "🔄") {
@@ -336,7 +337,7 @@ func TestBold(t *testing.T) {
 			wantEmpty: false,
 		},
 		{
-			name:      appconstants.TestMsgQuietSuppressOutput,
+			name:      testutil.TestMsgQuietSuppressOutput,
 			quiet:     true,
 			message:   "Important Notice",
 			wantEmpty: true,
@@ -352,7 +353,7 @@ func TestBold(t *testing.T) {
 			})
 
 			if tt.wantEmpty && captured != "" {
-				t.Errorf(appconstants.TestMsgNoOutputInQuiet, captured)
+				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
 			}
 
 			if !tt.wantEmpty && !strings.Contains(captured, tt.message) {
@@ -375,7 +376,7 @@ func TestPrintf(t *testing.T) {
 			wantEmpty: false,
 		},
 		{
-			name:      appconstants.TestMsgQuietSuppressOutput,
+			name:      testutil.TestMsgQuietSuppressOutput,
 			quiet:     true,
 			wantEmpty: true,
 		},
@@ -390,7 +391,7 @@ func TestPrintf(t *testing.T) {
 			})
 
 			if tt.wantEmpty && captured != "" {
-				t.Errorf(appconstants.TestMsgNoOutputInQuiet, captured)
+				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
 			}
 
 			if !tt.wantEmpty && captured == "" {
@@ -440,8 +441,8 @@ func TestErrorWithSuggestions(t *testing.T) {
 		},
 		{
 			name: "error with suggestions",
-			err: apperrors.New(appconstants.ErrCodeFileNotFound, appconstants.TestMsgFileNotFound).
-				WithSuggestions(appconstants.TestMsgCheckFilePath),
+			err: apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+				WithSuggestions(testutil.TestMsgCheckFilePath),
 			wantContains: "❌",
 		},
 	}
@@ -476,13 +477,13 @@ func TestErrorWithContext(t *testing.T) {
 		{
 			name:    "error with context",
 			code:    appconstants.ErrCodeFileNotFound,
-			message: appconstants.TestMsgFileNotFound,
-			context: map[string]string{appconstants.TestKeyFile: appconstants.ActionFileNameYML},
+			message: testutil.TestMsgFileNotFound,
+			context: map[string]string{testutil.TestKeyFile: appconstants.ActionFileNameYML},
 		},
 		{
 			name:    "error without context",
 			code:    appconstants.ErrCodeInvalidYAML,
-			message: appconstants.TestMsgInvalidYAML,
+			message: testutil.TestMsgInvalidYAML,
 			context: nil,
 		},
 	}
@@ -496,7 +497,7 @@ func TestErrorWithContext(t *testing.T) {
 			})
 
 			if !strings.Contains(captured, "❌") {
-				t.Errorf(appconstants.TestMsgOutputMissingEmoji, captured)
+				t.Errorf(testutil.TestMsgOutputMissingEmoji, captured)
 			}
 		})
 	}
@@ -511,7 +512,7 @@ func TestErrorWithSimpleFix(t *testing.T) {
 	})
 
 	if !strings.Contains(captured, "❌") {
-		t.Errorf(appconstants.TestMsgOutputMissingEmoji, captured)
+		t.Errorf(testutil.TestMsgOutputMissingEmoji, captured)
 	}
 }
 
@@ -529,21 +530,21 @@ func TestFormatContextualError(t *testing.T) {
 		},
 		{
 			name: "error with all sections",
-			err: apperrors.New(appconstants.ErrCodeFileNotFound, appconstants.TestMsgFileNotFound).
-				WithSuggestions(appconstants.TestMsgCheckFilePath, appconstants.TestMsgVerifyPermissions).
-				WithDetails(map[string]string{appconstants.TestKeyFile: appconstants.ActionFileNameYML}).
-				WithHelpURL(appconstants.TestURLHelp),
+			err: apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+				WithSuggestions(testutil.TestMsgCheckFilePath, testutil.TestMsgVerifyPermissions).
+				WithDetails(map[string]string{testutil.TestKeyFile: appconstants.ActionFileNameYML}).
+				WithHelpURL(testutil.TestURLHelp),
 			wantContains: []string{
 				"❌",
-				appconstants.TestMsgFileNotFound,
-				appconstants.TestMsgCheckFilePath,
-				appconstants.TestURLHelp,
+				testutil.TestMsgFileNotFound,
+				testutil.TestMsgCheckFilePath,
+				testutil.TestURLHelp,
 			},
 		},
 		{
 			name:         "error without suggestions",
-			err:          apperrors.New(appconstants.ErrCodeInvalidYAML, appconstants.TestMsgInvalidYAML),
-			wantContains: []string{"❌", appconstants.TestMsgInvalidYAML},
+			err:          apperrors.New(appconstants.ErrCodeInvalidYAML, testutil.TestMsgInvalidYAML),
+			wantContains: []string{"❌", testutil.TestMsgInvalidYAML},
 		},
 	}
 
@@ -574,16 +575,16 @@ func TestFormatMainError(t *testing.T) {
 		wantContains []string
 	}{
 		{
-			name:         appconstants.TestScenarioColorDisabled,
+			name:         testutil.TestScenarioColorDisabled,
 			noColor:      true,
-			err:          apperrors.New(appconstants.ErrCodeFileNotFound, appconstants.TestMsgFileNotFound),
-			wantContains: []string{"❌", appconstants.TestMsgFileNotFound, string(appconstants.ErrCodeFileNotFound)},
+			err:          apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound),
+			wantContains: []string{"❌", testutil.TestMsgFileNotFound, string(appconstants.ErrCodeFileNotFound)},
 		},
 		{
-			name:         appconstants.TestScenarioColorEnabled,
+			name:         testutil.TestScenarioColorEnabled,
 			noColor:      false,
-			err:          apperrors.New(appconstants.ErrCodeInvalidYAML, appconstants.TestMsgInvalidYAML),
-			wantContains: []string{"❌", appconstants.TestMsgInvalidYAML, string(appconstants.ErrCodeInvalidYAML)},
+			err:          apperrors.New(appconstants.ErrCodeInvalidYAML, testutil.TestMsgInvalidYAML),
+			wantContains: []string{"❌", testutil.TestMsgInvalidYAML, string(appconstants.ErrCodeInvalidYAML)},
 		},
 	}
 
@@ -610,28 +611,28 @@ func TestFormatDetailsSection(t *testing.T) {
 		wantContains []string
 	}{
 		{
-			name:    appconstants.TestScenarioColorDisabled,
+			name:    testutil.TestScenarioColorDisabled,
 			noColor: true,
-			details: map[string]string{appconstants.TestKeyFile: appconstants.ActionFileNameYML, "line": "10"},
+			details: map[string]string{testutil.TestKeyFile: appconstants.ActionFileNameYML, "line": "10"},
 			wantContains: []string{
-				appconstants.TestMsgDetails,
-				appconstants.TestKeyFile,
+				testutil.TestMsgDetails,
+				testutil.TestKeyFile,
 				appconstants.ActionFileNameYML,
 				"line",
 				"10",
 			},
 		},
 		{
-			name:         appconstants.TestScenarioColorEnabled,
+			name:         testutil.TestScenarioColorEnabled,
 			noColor:      false,
-			details:      map[string]string{appconstants.TestKeyPath: "/tmp/test"},
-			wantContains: []string{appconstants.TestMsgDetails, "path", "/tmp/test"},
+			details:      map[string]string{testutil.TestKeyPath: "/tmp/test"},
+			wantContains: []string{testutil.TestMsgDetails, "path", "/tmp/test"},
 		},
 		{
 			name:         "empty details",
 			noColor:      true,
 			details:      map[string]string{},
-			wantContains: []string{appconstants.TestMsgDetails},
+			wantContains: []string{testutil.TestMsgDetails},
 		},
 	}
 
@@ -659,27 +660,27 @@ func TestFormatSuggestionsSection(t *testing.T) {
 		wantContains []string
 	}{
 		{
-			name:        appconstants.TestScenarioColorDisabled,
+			name:        testutil.TestScenarioColorDisabled,
 			noColor:     true,
-			suggestions: []string{"Check the file", appconstants.TestMsgVerifyPermissions},
+			suggestions: []string{"Check the file", testutil.TestMsgVerifyPermissions},
 			wantContains: []string{
-				appconstants.TestMsgSuggestions,
+				testutil.TestMsgSuggestions,
 				"•",
 				"Check the file",
-				appconstants.TestMsgVerifyPermissions,
+				testutil.TestMsgVerifyPermissions,
 			},
 		},
 		{
-			name:         appconstants.TestScenarioColorEnabled,
+			name:         testutil.TestScenarioColorEnabled,
 			noColor:      false,
-			suggestions:  []string{appconstants.TestMsgTryAgain},
-			wantContains: []string{appconstants.TestMsgSuggestions, "•", appconstants.TestMsgTryAgain},
+			suggestions:  []string{testutil.TestMsgTryAgain},
+			wantContains: []string{testutil.TestMsgSuggestions, "•", testutil.TestMsgTryAgain},
 		},
 		{
 			name:         "empty suggestions",
 			noColor:      true,
 			suggestions:  []string{},
-			wantContains: []string{appconstants.TestMsgSuggestions},
+			wantContains: []string{testutil.TestMsgSuggestions},
 		},
 	}
 
@@ -707,13 +708,13 @@ func TestFormatHelpURLSection(t *testing.T) {
 		wantContains []string
 	}{
 		{
-			name:         appconstants.TestScenarioColorDisabled,
+			name:         testutil.TestScenarioColorDisabled,
 			noColor:      true,
-			helpURL:      appconstants.TestURLHelp,
-			wantContains: []string{"For more help", appconstants.TestURLHelp},
+			helpURL:      testutil.TestURLHelp,
+			wantContains: []string{"For more help", testutil.TestURLHelp},
 		},
 		{
-			name:         appconstants.TestScenarioColorEnabled,
+			name:         testutil.TestScenarioColorEnabled,
 			noColor:      false,
 			helpURL:      "https://docs.example.com",
 			wantContains: []string{"For more help", "https://docs.example.com"},

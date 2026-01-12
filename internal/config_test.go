@@ -35,10 +35,10 @@ func TestInitConfig(t *testing.T) {
 		},
 		{
 			name:       "custom config file",
-			configFile: appconstants.TestFileCustomConfig,
+			configFile: testutil.TestFileCustomConfig,
 			setupFunc: func(t *testing.T, tempDir string) {
 				t.Helper()
-				configPath := filepath.Join(tempDir, appconstants.TestFileCustomConfig)
+				configPath := filepath.Join(tempDir, testutil.TestFileCustomConfig)
 				testutil.WriteTestFile(t, configPath, testutil.MustReadFixture("professional-config.yml"))
 			},
 			expected: &AppConfig{
@@ -129,9 +129,9 @@ func TestLoadConfiguration(t *testing.T) {
 				t.Setenv(appconstants.EnvGitHubToken, "")
 
 				// Create global config
-				globalConfigDir := filepath.Join(tempDir, testutil.TestDirDotConfig, appconstants.TestBinaryName)
+				globalConfigDir := filepath.Join(tempDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
 				_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
-				globalConfigPath := filepath.Join(globalConfigDir, appconstants.TestFileConfigYAML)
+				globalConfigPath := filepath.Join(globalConfigDir, testutil.TestFileConfigYAML)
 				testutil.WriteTestFile(t, globalConfigPath, `
 theme: default
 output_format: md
@@ -141,7 +141,7 @@ github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
 				// Create repo root with repo-specific config
 				repoRoot := filepath.Join(tempDir, "repo")
 				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, appconstants.TestFileGHReadmeYAML), `
+				testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestFileGHReadmeYAML), `
 theme: github
 output_format: html
 `)
@@ -149,7 +149,7 @@ output_format: html
 				// Create current directory with action-specific config
 				currentDir := filepath.Join(repoRoot, "action")
 				_ = os.MkdirAll(currentDir, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(currentDir, appconstants.TestFileConfigYAML), `
+				testutil.WriteTestFile(t, filepath.Join(currentDir, testutil.TestFileConfigYAML), `
 theme: professional
 output_dir: output
 `)
@@ -200,9 +200,9 @@ github_token: config-token
 				t.Setenv("XDG_CONFIG_HOME", xdgConfigHome)
 
 				// Create XDG-compliant config
-				configDir := filepath.Join(xdgConfigHome, appconstants.TestBinaryName)
+				configDir := filepath.Join(xdgConfigHome, testutil.TestBinaryName)
 				_ = os.MkdirAll(configDir, 0750) // #nosec G301 -- test directory permissions
-				configPath := filepath.Join(configDir, appconstants.TestFileConfigYAML)
+				configPath := filepath.Join(configDir, testutil.TestFileConfigYAML)
 				testutil.WriteTestFile(t, configPath, `
 theme: github
 verbose: true
@@ -224,7 +224,7 @@ verbose: true
 				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 
 				// Create multiple hidden config files
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, appconstants.TestFileGHReadmeYAML), `
+				testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestFileGHReadmeYAML), `
 theme: minimal
 output_format: json
 `)
@@ -291,7 +291,7 @@ func TestGetConfigPath(t *testing.T) {
 				t.Setenv("XDG_CONFIG_HOME", tempDir)
 				t.Setenv("HOME", "")
 			},
-			contains: appconstants.TestBinaryName,
+			contains: testutil.TestBinaryName,
 		},
 		{
 			name: "HOME fallback",
@@ -457,9 +457,9 @@ func TestConfigMerging(t *testing.T) {
 
 	// Test config merging by creating config files and seeing the result
 
-	globalConfigDir := filepath.Join(tmpDir, testutil.TestDirDotConfig, appconstants.TestBinaryName)
+	globalConfigDir := filepath.Join(tmpDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
 	_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
-	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, appconstants.TestFileConfigYAML), `
+	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, testutil.TestFileConfigYAML), `
 theme: default
 output_format: md
 github_token: base-token
@@ -468,7 +468,7 @@ verbose: false
 
 	repoRoot := filepath.Join(tmpDir, "repo")
 	_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
-	testutil.WriteTestFile(t, filepath.Join(repoRoot, appconstants.TestFileGHReadmeYAML), `
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestFileGHReadmeYAML), `
 theme: github
 output_format: html
 verbose: true
@@ -482,8 +482,8 @@ verbose: true
 	configPath := filepath.Join(
 		tmpDir,
 		testutil.TestDirDotConfig,
-		appconstants.TestBinaryName,
-		appconstants.TestFileConfigYAML,
+		testutil.TestBinaryName,
+		testutil.TestFileConfigYAML,
 	)
 	config, err := LoadConfiguration(configPath, repoRoot, repoRoot)
 	testutil.AssertNoError(t, err)
@@ -509,23 +509,23 @@ func TestGetGitHubToken(t *testing.T) {
 		{
 			name:          "tool-specific env var has highest priority",
 			toolEnvToken:  "tool-token",
-			stdEnvToken:   appconstants.TestTokenStd,
-			configToken:   appconstants.TestTokenConfig,
+			stdEnvToken:   testutil.TestTokenStd,
+			configToken:   testutil.TestTokenConfig,
 			expectedToken: "tool-token",
 		},
 		{
 			name:          "standard env var when tool env not set",
 			toolEnvToken:  "",
-			stdEnvToken:   appconstants.TestTokenStd,
-			configToken:   appconstants.TestTokenConfig,
-			expectedToken: appconstants.TestTokenStd,
+			stdEnvToken:   testutil.TestTokenStd,
+			configToken:   testutil.TestTokenConfig,
+			expectedToken: testutil.TestTokenStd,
 		},
 		{
 			name:          "config token when env vars not set",
 			toolEnvToken:  "",
 			stdEnvToken:   "",
-			configToken:   appconstants.TestTokenConfig,
-			expectedToken: appconstants.TestTokenConfig,
+			configToken:   testutil.TestTokenConfig,
+			expectedToken: testutil.TestTokenConfig,
 		},
 		{
 			name:          "empty string when nothing set",
@@ -538,8 +538,8 @@ func TestGetGitHubToken(t *testing.T) {
 			name:          "empty env var does not override config",
 			toolEnvToken:  "",
 			stdEnvToken:   "",
-			configToken:   appconstants.TestTokenConfig,
-			expectedToken: appconstants.TestTokenConfig,
+			configToken:   testutil.TestTokenConfig,
+			expectedToken: testutil.TestTokenConfig,
 		},
 	}
 

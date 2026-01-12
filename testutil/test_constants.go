@@ -188,3 +188,141 @@ const (
 	TestInvalidYAMLPrefix        = "invalid: [yaml"
 	TestLangJavaScriptTypeScript = "JavaScript/TypeScript"
 )
+
+// Test commands - moved from appconstants for better separation.
+const (
+	TestCmdGen      = "gen"
+	TestCmdConfig   = "config"
+	TestCmdValidate = "validate"
+	TestCmdDeps     = "deps"
+	TestCmdShow     = "show"
+	TestCmdList     = "list"
+)
+
+// Test file paths and names - moved from appconstants.
+const (
+	TestTmpDir                     = "/tmp"
+	TestTmpActionFile              = "/tmp/action.yml"
+	TestErrorScenarioOldDeps       = "error-scenarios/action-with-old-deps.yml"
+	TestErrorScenarioInvalidYAML   = "error-scenarios/invalid-yaml-syntax.yml"
+	TestErrorScenarioMissingFields = "error-scenarios/missing-required-fields.yml"
+)
+
+// TestMinimalAction is the minimal action YAML content for testing.
+const TestMinimalAction = "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
+
+// TestScenarioNoDeps is the common test scenario description for actions with no dependencies.
+const TestScenarioNoDeps = "handles action with no dependencies"
+
+// Test messages and error strings - moved from appconstants.
+const (
+	TestMsgFileNotFound        = "File not found"
+	TestMsgInvalidYAML         = "Invalid YAML"
+	TestMsgQuietSuppressOutput = "quiet mode suppresses output"
+	TestMsgNoOutputInQuiet     = "Expected no output in quiet mode, got %q"
+	TestMsgVerifyPermissions   = "Verify permissions"
+	TestMsgSuggestions         = "Suggestions"
+	TestMsgDetails             = "Details"
+	TestMsgCheckFilePath       = "Check the file path"
+	TestMsgTryAgain            = "Try again"
+	TestMsgProcessingStarted   = "Processing started"
+	TestMsgOperationCompleted  = "Operation completed"
+	TestMsgOutputMissingEmoji  = "Output missing error emoji: %q"
+)
+
+// Test scenario names - moved from appconstants.
+const (
+	TestScenarioColorEnabled  = "with color enabled"
+	TestScenarioColorDisabled = "with color disabled"
+	TestScenarioQuietEnabled  = "quiet mode enabled"
+	TestScenarioQuietDisabled = "quiet mode disabled"
+)
+
+// Test URLs and paths - moved from appconstants.
+const (
+	TestURLHelp = "https://example.com/help"
+	TestKeyFile = "file"
+	TestKeyPath = "path"
+)
+
+// Test repository and organization values - moved from appconstants.
+const (
+	TestValue   = "test"
+	TestVersion = "v1.0.0"
+)
+
+// Test dependency actions - moved from appconstants.
+const (
+	TestActionCheckoutV3  = "actions/checkout@v3"
+	TestActionCheckoutSHA = "692973e3d937129bcbf40652eb9f2f61becf3332"
+)
+
+// Test paths and output - moved from appconstants.
+const (
+	TestOutputPath = "/tmp/output"
+)
+
+// Test HTML content - moved from appconstants.
+const (
+	TestHTMLNewContent        = "New content"
+	TestHTMLClosingTag        = "\n</html>"
+	TestMsgFailedToReadOutput = "Failed to read output file: %v"
+)
+
+// Test detector messages - moved from appconstants.
+const (
+	TestMsgFailedToCreateAction = "Failed to create action.yml: %v"
+	TestPermRead                = "read"
+	TestPermWrite               = "write"
+	TestPermContents            = "contents"
+)
+
+// Test repository names - moved from appconstants.
+const (
+	TestRepoTestOrgTestRepo = "test-org/test-repo"
+)
+
+// Integration test directory and file names - moved from appconstants.
+const (
+	TestDirDotGitHub       = ".github"
+	TestFileGitIgnore      = ".gitignore"
+	TestFileGHActionReadme = "gh-action-readme.yml"
+	TestBinaryName         = "gh-action-readme"
+)
+
+// Integration test CLI flags - moved from appconstants.
+const (
+	TestFlagOutputFormat = "--output-format"
+	TestFlagRecursive    = "--recursive"
+	TestFlagTheme        = "--theme"
+	TestFlagVerbose      = "--verbose"
+)
+
+// Integration test output messages - moved from appconstants.
+const (
+	TestMsgCurrentConfig     = "Current Configuration"
+	TestMsgDependenciesFound = "Dependencies found"
+)
+
+// Integration test file patterns - moved from appconstants.
+const (
+	TestPatternHTML      = "*.html"
+	TestPatternREADME    = "README*.md"
+	TestPatternREADMEAll = "**/README*.md"
+)
+
+// Config test constants - moved from appconstants.
+const (
+	TestFileGHReadmeYAML = ".ghreadme.yaml"
+	TestFileConfigYAML   = "config.yaml"
+	TestTokenConfig      = "config-token"
+	TestTokenStd         = "std-token"
+	TestFileCustomConfig = "custom-config.yml"
+)
+
+// Dependency analyzer test constants - moved from appconstants.
+const (
+	TestVersionV4_1_1 = "v4.1.1"
+	TestVersionV4_0_0 = "v4.0.0"
+	TestSHAForTesting = "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e"
+)
