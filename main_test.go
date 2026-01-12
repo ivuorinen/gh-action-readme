@@ -2872,32 +2872,50 @@ func TestSetupDepsUpgrade(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// Note: Cannot use t.Parallel() for "uses globalConfig when config parameter is nil"
+			// because it mutates shared globalConfig
+			if tt.name != "uses globalConfig when config parameter is nil" {
+				t.Parallel()
+			}
 
 			currentDir, config := tt.setupFunc(t)
 			output := createOutputManager(true)
 
 			analyzer, files, err := setupDepsUpgrade(output, currentDir, config)
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("setupDepsUpgrade() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if tt.wantErr && tt.errContain != "" {
-				if err == nil || !strings.Contains(err.Error(), tt.errContain) {
-					t.Errorf("error should contain %q, got %v", tt.errContain, err)
-				}
-			}
-
-			if !tt.wantErr {
-				if analyzer == nil {
-					t.Error("expected analyzer, got nil")
-				}
-				if len(files) == 0 {
-					t.Error("expected action files, got none")
-				}
-			}
+			validateSetupDepsUpgradeResult(t, analyzer, files, err, tt.wantErr, tt.errContain)
 		})
+	}
+}
+
+// validateSetupDepsUpgradeResult validates the results of setupDepsUpgrade call.
+func validateSetupDepsUpgradeResult(
+	t *testing.T,
+	analyzer *dependencies.Analyzer,
+	files []string,
+	err error,
+	wantErr bool,
+	errContain string,
+) {
+	t.Helper()
+
+	if (err != nil) != wantErr {
+		t.Errorf("setupDepsUpgrade() error = %v, wantErr %v", err, wantErr)
+	}
+
+	if wantErr && errContain != "" {
+		if err == nil || !strings.Contains(err.Error(), errContain) {
+			t.Errorf("error should contain %q, got %v", errContain, err)
+		}
+	}
+
+	if !wantErr {
+		if analyzer == nil {
+			t.Error("expected analyzer, got nil")
+		}
+		if len(files) == 0 {
+			t.Error("expected action files, got none")
+		}
 	}
 }
 
