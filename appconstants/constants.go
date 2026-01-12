@@ -727,29 +727,15 @@ const (
 	TestKeyPath = "path"
 )
 
-// Test wizard inputs and prompts - used in wizard tests.
-const (
-	TestWizardInputYes      = "y\n"
-	TestWizardInputNo       = "n\n"
-	TestWizardInputTwo      = "2\n"
-	TestWizardInputDoubleNL = "\n\n"
-)
-
 // Test repository and organization names - used in wizard tests.
 const (
 	TestValue   = "test"
 	TestVersion = "v1.0.0"
 )
 
-// Test assertion messages - used in wizard tests.
-const (
-	TestAssertTheme = "Theme = %q, want %q"
-)
-
 // Test dependency actions - used in updater tests.
 const (
 	TestActionCheckoutSHA = "692973e3d937129bcbf40652eb9f2f61becf3332"
-	TestUpdateTypePatch   = "patch"
 )
 
 // Test paths and output - used in generator tests.
