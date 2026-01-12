@@ -719,6 +719,32 @@ const (
 	TestKeyPath = "path"
 )
 
+// Test wizard inputs and prompts - used in wizard tests.
+const (
+	TestWizardInputYes       = "y\n"
+	TestWizardInputNo        = "n\n"
+	TestWizardInputYesYes    = "y\ny\n"
+	TestWizardInputTwo       = "2\n"
+	TestWizardInputTripleNL  = "\n\n\n"
+	TestWizardInputDoubleNL  = "\n\n"
+	TestWizardPromptContinue = "Continue?"
+	TestWizardPromptEnter    = "Enter value"
+)
+
+// Test repository and organization names - used in wizard tests.
+const (
+	TestOrgName  = "testorg"
+	TestRepoName = "testrepo"
+	TestValue    = "test"
+	TestVersion  = "v1.0.0"
+	TestDocsPath = "./docs"
+)
+
+// Test assertion messages - used in wizard tests.
+const (
+	TestAssertTheme = "Theme = %q, want %q"
+)
+
 // File permissions (additional).
 const (
 	// FilePermDir is the directory permission.
