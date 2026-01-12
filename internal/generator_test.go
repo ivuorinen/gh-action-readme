@@ -830,6 +830,38 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 }
 
 // TestGeneratorResolveOutputPath tests output path resolution.
+// validateResolveOutputPathResult validates the result of resolveOutputPath call.
+func validateResolveOutputPathResult(
+	t *testing.T,
+	gotPath string,
+	err error,
+	wantPath string,
+	wantErr bool,
+	errContains string,
+) {
+	t.Helper()
+
+	if wantErr {
+		if err == nil {
+			t.Errorf("resolveOutputPath() expected error but got nil")
+
+			return
+		}
+		if errContains != "" && !strings.Contains(err.Error(), errContains) {
+			t.Errorf("error message %q does not contain %q", err.Error(), errContains)
+		}
+	} else {
+		if err != nil {
+			t.Errorf("resolveOutputPath() unexpected error: %v", err)
+
+			return
+		}
+		if gotPath != wantPath {
+			t.Errorf("resolveOutputPath() = %q, want %q", gotPath, wantPath)
+		}
+	}
+}
+
 func TestGeneratorResolveOutputPath(t *testing.T) {
 	t.Parallel()
 
@@ -922,25 +954,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 
 			gotPath, err := gen.resolveOutputPath(tt.outputDir, tt.defaultFilename)
 
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("resolveOutputPath() expected error but got nil")
-
-					return
-				}
-				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-					t.Errorf("error message %q does not contain %q", err.Error(), tt.errContains)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("resolveOutputPath() unexpected error: %v", err)
-
-					return
-				}
-				if gotPath != tt.wantPath {
-					t.Errorf("resolveOutputPath() = %q, want %q", gotPath, tt.wantPath)
-				}
-			}
+			validateResolveOutputPathResult(t, gotPath, err, tt.wantPath, tt.wantErr, tt.errContains)
 		})
 	}
 }

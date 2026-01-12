@@ -553,7 +553,29 @@ func TestDetectRepositoryInfo(t *testing.T) {
 
 // TestDetectActionFiles tests action file detection.
 //
-//nolint:gocyclo // Complexity from security test cases (symlink, traversal scenarios) per CodeRabbit review
+// validateDetectActionFilesResult validates the results of detectActionFiles call.
+func validateDetectActionFilesResult(
+	t *testing.T,
+	settings *DetectedSettings,
+	err error,
+	wantActionCount int,
+	wantErr bool,
+) {
+	t.Helper()
+
+	if (err != nil) != wantErr {
+		t.Errorf("detectActionFiles() error = %v, wantErr %v", err, wantErr)
+	}
+
+	if len(settings.ActionFiles) != wantActionCount {
+		t.Errorf("Expected %d action files, got %d", wantActionCount, len(settings.ActionFiles))
+	}
+
+	if wantActionCount > 0 && !settings.IsGitHubAction {
+		t.Error("Expected IsGitHubAction to be true")
+	}
+}
+
 func TestDetectActionFiles(t *testing.T) {
 	t.Parallel()
 
@@ -639,17 +661,8 @@ func TestDetectActionFiles(t *testing.T) {
 			}
 
 			err := detector.detectActionFiles(settings)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("detectActionFiles() error = %v, wantErr %v", err, tt.wantErr)
-			}
 
-			if len(settings.ActionFiles) != tt.wantActionCount {
-				t.Errorf("Expected %d action files, got %d", tt.wantActionCount, len(settings.ActionFiles))
-			}
-
-			if tt.wantActionCount > 0 && !settings.IsGitHubAction {
-				t.Error("Expected IsGitHubAction to be true")
-			}
+			validateDetectActionFilesResult(t, settings, err, tt.wantActionCount, tt.wantErr)
 		})
 	}
 }
