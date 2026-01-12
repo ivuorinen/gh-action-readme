@@ -184,19 +184,19 @@ func TestPromptSensitive(t *testing.T) {
 		{
 			name:   "user provides token",
 			input:  "ghp_1234567890abcdef\n",
-			prompt: "Enter token",
+			prompt: testutil.WizardInputEnterToken,
 			want:   "ghp_1234567890abcdef",
 		},
 		{
 			name:   "user provides empty input",
 			input:  "\n",
-			prompt: "Enter token",
+			prompt: testutil.WizardInputEnterToken,
 			want:   "",
 		},
 		{
 			name:   "user provides value with whitespace",
 			input:  "  token-value  \n",
-			prompt: "Enter token",
+			prompt: testutil.WizardInputEnterToken,
 			want:   "token-value",
 		},
 	}
@@ -315,7 +315,7 @@ func TestConfigureThemeSelection(t *testing.T) {
 			wizard.configureThemeSelection()
 
 			if wizard.config.Theme != tt.wantTheme {
-				t.Errorf("Theme = %q, want %q", wizard.config.Theme, tt.wantTheme)
+				t.Errorf(testutil.TestMsgThemeFormat, wizard.config.Theme, tt.wantTheme)
 			}
 		})
 	}
@@ -377,7 +377,7 @@ func TestConfigureFeatures(t *testing.T) {
 	}{
 		{
 			name:                 "enable both features",
-			inputs:               "y\ny\n",
+			inputs:               testutil.WizardInputYesNewline,
 			wantAnalyzeDeps:      true,
 			wantShowSecurityInfo: true,
 		},
@@ -524,14 +524,14 @@ func TestConfigureOutputDirectory(t *testing.T) {
 		{
 			name:    "use default directory",
 			input:   "\n",
-			initial: "./docs",
-			want:    "./docs",
+			initial: testutil.TestDirDocs,
+			want:    testutil.TestDirDocs,
 		},
 		{
 			name:    "relative path",
-			input:   "./output\n",
+			input:   testutil.TestDirOutput + "\n",
 			initial: ".",
-			want:    "./output",
+			want:    testutil.TestDirOutput,
 		},
 	}
 
@@ -561,24 +561,24 @@ func TestConfigureTemplateSettings(t *testing.T) {
 	}{
 		{
 			name:       "all defaults",
-			inputs:     "\n\n\n",
+			inputs:     testutil.WizardInputThreeNewlines,
 			wantTheme:  appconstants.ThemeDefault,
 			wantFormat: appconstants.OutputFormatMarkdown,
 			wantDir:    ".",
 		},
 		{
 			name:       "custom theme and format",
-			inputs:     "2\n3\n./output\n",
+			inputs:     "2\n3\n" + testutil.TestDirOutput + "\n",
 			wantTheme:  appconstants.ThemeGitHub,
 			wantFormat: appconstants.OutputFormatJSON,
-			wantDir:    "./output",
+			wantDir:    testutil.TestDirOutput,
 		},
 		{
 			name:       "professional theme html format",
-			inputs:     "5\n2\n./docs\n",
+			inputs:     "5\n2\n" + testutil.TestDirDocs + "\n",
 			wantTheme:  appconstants.ThemeProfessional,
 			wantFormat: appconstants.OutputFormatHTML,
-			wantDir:    "./docs",
+			wantDir:    testutil.TestDirDocs,
 		},
 	}
 
@@ -588,7 +588,7 @@ func TestConfigureTemplateSettings(t *testing.T) {
 			wizard.configureTemplateSettings()
 
 			if wizard.config.Theme != tt.wantTheme {
-				t.Errorf("Theme = %q, want %q", wizard.config.Theme, tt.wantTheme)
+				t.Errorf(testutil.TestMsgThemeFormat, wizard.config.Theme, tt.wantTheme)
 			}
 			if wizard.config.OutputFormat != tt.wantFormat {
 				t.Errorf("OutputFormat = %q, want %q", wizard.config.OutputFormat, tt.wantFormat)
@@ -793,11 +793,11 @@ func verifyCompleteWizardFlow(t *testing.T, cfg *internal.AppConfig) {
 	if cfg.OutputFormat != appconstants.OutputFormatHTML {
 		t.Errorf("OutputFormat = %q, want 'html'", cfg.OutputFormat)
 	}
-	if cfg.OutputDir != "./docs" {
-		t.Errorf("OutputDir = %q, want './docs'", cfg.OutputDir)
+	if cfg.OutputDir != testutil.TestDirDocs {
+		t.Errorf("OutputDir = %q, want %q", cfg.OutputDir, testutil.TestDirDocs)
 	}
 	if !cfg.AnalyzeDependencies {
-		t.Error("AnalyzeDependencies should be true")
+		t.Error(testutil.TestMsgAnalyzeDepsTrue)
 	}
 	if !cfg.ShowSecurityInfo {
 		t.Error("ShowSecurityInfo should be true")
@@ -808,7 +808,7 @@ func verifyWizardDefaults(t *testing.T, cfg *internal.AppConfig) {
 	t.Helper()
 	const defaultTheme = appconstants.ThemeDefault
 	if cfg.Theme != defaultTheme {
-		t.Errorf("Theme = %q, want %q", cfg.Theme, defaultTheme)
+		t.Errorf(testutil.TestMsgThemeFormat, cfg.Theme, defaultTheme)
 	}
 	if cfg.OutputFormat != appconstants.OutputFormatMarkdown {
 		t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
@@ -830,8 +830,8 @@ func verifyMinimalThemeJSON(t *testing.T, cfg *internal.AppConfig) {
 	if cfg.OutputFormat != appconstants.OutputFormatJSON {
 		t.Errorf("OutputFormat = %q, want 'json'", cfg.OutputFormat)
 	}
-	if cfg.OutputDir != "./output" {
-		t.Errorf("OutputDir = %q, want './output'", cfg.OutputDir)
+	if cfg.OutputDir != testutil.TestDirOutput {
+		t.Errorf("OutputDir = %q, want %q", cfg.OutputDir, testutil.TestDirOutput)
 	}
 	if cfg.AnalyzeDependencies {
 		t.Error("AnalyzeDependencies should be false")
@@ -850,7 +850,7 @@ func verifyGitLabThemeASCIIDoc(t *testing.T, cfg *internal.AppConfig) {
 		t.Errorf("OutputFormat = %q, want 'asciidoc'", cfg.OutputFormat)
 	}
 	if !cfg.AnalyzeDependencies {
-		t.Error("AnalyzeDependencies should be true")
+		t.Error(testutil.TestMsgAnalyzeDepsTrue)
 	}
 	if cfg.ShowSecurityInfo {
 		t.Error("ShowSecurityInfo should be false")
@@ -869,7 +869,7 @@ func verifyProfessionalThemeAllFeatures(t *testing.T, cfg *internal.AppConfig) {
 		t.Errorf("OutputDir = %q, want '.'", cfg.OutputDir)
 	}
 	if !cfg.AnalyzeDependencies {
-		t.Error("AnalyzeDependencies should be true")
+		t.Error(testutil.TestMsgAnalyzeDepsTrue)
 	}
 	if !cfg.ShowSecurityInfo {
 		t.Error("ShowSecurityInfo should be true")
@@ -892,8 +892,8 @@ func TestRun(t *testing.T) {
 			inputs: "myorg\nmyrepo\nv1.0.0\n" + // Basic settings
 				"2\n" + // GitHub theme
 				"2\n" + // HTML format
-				"./docs\n" + // Output dir
-				"y\ny\n" + // Features: enable both
+				testutil.TestDirDocs + "\n" + // Output dir
+				testutil.WizardInputYesNewline + // Features: enable both
 				testutil.WizardInputNo + // GitHub: skip token
 				testutil.WizardInputYes, // Confirm
 			wantErr: false,
@@ -901,8 +901,8 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name: "wizard with defaults and confirmation",
-			inputs: "\n\n\n" + // Basic: all defaults
-				"\n\n\n" + // Template: all defaults
+			inputs: testutil.WizardInputThreeNewlines + // Basic: all defaults
+				testutil.WizardInputThreeNewlines + // Template: all defaults
 				"\n\n" + // Features: all defaults
 				testutil.WizardInputNo + // GitHub: skip
 				testutil.WizardInputYes, // Confirm
@@ -911,8 +911,8 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name: "wizard with GitHub token",
-			inputs: "\n\n\n" + // Basic: all defaults
-				"\n\n\n" + // Template: all defaults
+			inputs: testutil.WizardInputThreeNewlines + // Basic: all defaults
+				testutil.WizardInputThreeNewlines + // Template: all defaults
 				"\n\n" + // Features: all defaults
 				"y\nghp_testtoken123456\n" + // GitHub: set token
 				testutil.WizardInputYes, // Confirm
@@ -922,7 +922,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "user cancels at confirmation",
 			inputs: "testorg\ntestrepo\n\n" + // Basic settings
-				"\n\n\n" + // Template: all defaults
+				testutil.WizardInputThreeNewlines + // Template: all defaults
 				"\n\n" + // Features: all defaults
 				testutil.WizardInputNo + // GitHub: skip
 				testutil.WizardInputNo, // Cancel at confirmation
@@ -932,7 +932,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "minimal theme with json output",
 			inputs: "org\nrepo\n\n" + // Basic
-				"4\n3\n./output\n" + // Minimal theme, JSON format
+				"4\n3\n" + testutil.TestDirOutput + "\n" + // Minimal theme, JSON format
 				"n\nn\n" + // Features: disable both
 				testutil.WizardInputNo + // GitHub: skip
 				testutil.WizardInputYes, // Confirm
@@ -942,7 +942,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "gitlab theme with asciidoc format",
 			inputs: "gitlab-org\nmy-project\nv2.5.0\n" + // Basic
-				"3\n4\n./docs\n" + // GitLab theme, AsciiDoc format
+				"3\n4\n" + testutil.TestDirDocs + "\n" + // GitLab theme, AsciiDoc format
 				"yes\nno\n" + // Features: deps yes, security no
 				testutil.WizardInputNo + // GitHub: skip
 				"yes\n", // Confirm with 'yes'
@@ -953,7 +953,7 @@ func TestRun(t *testing.T) {
 			name: "professional theme with all features",
 			inputs: "my-org\nawesome-action\n\n" + // Basic (no version)
 				"5\n1\n.\n" + // Professional theme, markdown, current dir
-				"y\ny\n" + // Features: both enabled
+				testutil.WizardInputYesNewline + // Features: both enabled
 				"y\ngithub_pat_testtoken\n" + // GitHub: set PAT token
 				testutil.WizardInputYes, // Confirm
 			wantErr: false,
