@@ -40,10 +40,10 @@ func TestProjectDetectoranalyzeProjectFiles(t *testing.T) {
 
 	characteristics := detector.analyzeProjectFiles()
 
-	// Test that a language is detected (either Go or JavaScript/TypeScript is valid)
+	// Test that a language is detected (either Go or testutil.TestLangJavaScriptTypeScript is valid)
 	language := characteristics["language"]
-	if language != "Go" && language != "JavaScript/TypeScript" {
-		t.Errorf("Expected language 'Go' or 'JavaScript/TypeScript', got '%s'", language)
+	if language != "Go" && language != testutil.TestLangJavaScriptTypeScript {
+		t.Errorf("Expected language 'Go' or '%s', got '%s'", testutil.TestLangJavaScriptTypeScript, language)
 	}
 
 	// Test that appropriate type is detected
@@ -277,7 +277,7 @@ func TestProjectDetectorsuggestRunsOn(t *testing.T) {
 		{
 			name: "javascript/typescript project",
 			settings: &DetectedSettings{
-				Language:        "JavaScript/TypeScript",
+				Language:        testutil.TestLangJavaScriptTypeScript,
 				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest},
 			},
 			expected: []string{
@@ -305,7 +305,7 @@ func TestProjectDetectorsuggestRunsOn(t *testing.T) {
 		{
 			name: "already has multiple runners",
 			settings: &DetectedSettings{
-				Language:        "JavaScript/TypeScript",
+				Language:        testutil.TestLangJavaScriptTypeScript,
 				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest, "custom-runner"},
 			},
 			expected: []string{testutil.RunnerUbuntuLatest, "custom-runner"},
