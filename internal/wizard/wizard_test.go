@@ -766,12 +766,113 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 	}
 }
 
-// TestRun tests the complete wizard workflow.
-//
-//nolint:gocyclo,thelper // Complex test with multiple scenarios; verify funcs are not helpers
-func TestRun(t *testing.T) {
-	const defaultTheme = "default"
+// Test verification helpers for TestRun.
 
+func verifyCompleteWizardFlow(t *testing.T, cfg *internal.AppConfig) {
+	t.Helper()
+	if cfg.Organization != "myorg" {
+		t.Errorf("Organization = %q, want 'myorg'", cfg.Organization)
+	}
+	if cfg.Repository != "myrepo" {
+		t.Errorf("Repository = %q, want 'myrepo'", cfg.Repository)
+	}
+	if cfg.Version != "v1.0.0" {
+		t.Errorf("Version = %q, want 'v1.0.0'", cfg.Version)
+	}
+	if cfg.Theme != "github" {
+		t.Errorf("Theme = %q, want 'github'", cfg.Theme)
+	}
+	if cfg.OutputFormat != "html" {
+		t.Errorf("OutputFormat = %q, want 'html'", cfg.OutputFormat)
+	}
+	if cfg.OutputDir != "./docs" {
+		t.Errorf("OutputDir = %q, want './docs'", cfg.OutputDir)
+	}
+	if !cfg.AnalyzeDependencies {
+		t.Error("AnalyzeDependencies should be true")
+	}
+	if !cfg.ShowSecurityInfo {
+		t.Error("ShowSecurityInfo should be true")
+	}
+}
+
+func verifyWizardDefaults(t *testing.T, cfg *internal.AppConfig) {
+	t.Helper()
+	const defaultTheme = "default"
+	if cfg.Theme != defaultTheme {
+		t.Errorf("Theme = %q, want %q", cfg.Theme, defaultTheme)
+	}
+	if cfg.OutputFormat != "md" {
+		t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
+	}
+}
+
+func verifyGitHubToken(t *testing.T, cfg *internal.AppConfig) {
+	t.Helper()
+	if cfg.GitHubToken != "ghp_testtoken123456" {
+		t.Errorf("GitHubToken = %q, want 'ghp_testtoken123456'", cfg.GitHubToken)
+	}
+}
+
+func verifyMinimalThemeJSON(t *testing.T, cfg *internal.AppConfig) {
+	t.Helper()
+	if cfg.Theme != "minimal" {
+		t.Errorf("Theme = %q, want 'minimal'", cfg.Theme)
+	}
+	if cfg.OutputFormat != "json" {
+		t.Errorf("OutputFormat = %q, want 'json'", cfg.OutputFormat)
+	}
+	if cfg.OutputDir != "./output" {
+		t.Errorf("OutputDir = %q, want './output'", cfg.OutputDir)
+	}
+	if cfg.AnalyzeDependencies {
+		t.Error("AnalyzeDependencies should be false")
+	}
+	if cfg.ShowSecurityInfo {
+		t.Error("ShowSecurityInfo should be false")
+	}
+}
+
+func verifyGitLabThemeASCIIDoc(t *testing.T, cfg *internal.AppConfig) {
+	t.Helper()
+	if cfg.Theme != "gitlab" {
+		t.Errorf("Theme = %q, want 'gitlab'", cfg.Theme)
+	}
+	if cfg.OutputFormat != "asciidoc" {
+		t.Errorf("OutputFormat = %q, want 'asciidoc'", cfg.OutputFormat)
+	}
+	if !cfg.AnalyzeDependencies {
+		t.Error("AnalyzeDependencies should be true")
+	}
+	if cfg.ShowSecurityInfo {
+		t.Error("ShowSecurityInfo should be false")
+	}
+}
+
+func verifyProfessionalThemeAllFeatures(t *testing.T, cfg *internal.AppConfig) {
+	t.Helper()
+	if cfg.Theme != "professional" {
+		t.Errorf("Theme = %q, want 'professional'", cfg.Theme)
+	}
+	if cfg.OutputFormat != "md" {
+		t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
+	}
+	if cfg.OutputDir != "." {
+		t.Errorf("OutputDir = %q, want '.'", cfg.OutputDir)
+	}
+	if !cfg.AnalyzeDependencies {
+		t.Error("AnalyzeDependencies should be true")
+	}
+	if !cfg.ShowSecurityInfo {
+		t.Error("ShowSecurityInfo should be true")
+	}
+	if cfg.GitHubToken != "github_pat_testtoken" {
+		t.Errorf("GitHubToken = %q, want 'github_pat_testtoken'", cfg.GitHubToken)
+	}
+}
+
+// TestRun tests the complete wizard workflow.
+func TestRun(t *testing.T) {
 	tests := []struct {
 		name    string
 		inputs  string
@@ -788,32 +889,7 @@ func TestRun(t *testing.T) {
 				"n\n" + // GitHub: skip token
 				"y\n", // Confirm
 			wantErr: false,
-			verify: func(t *testing.T, cfg *internal.AppConfig) {
-				if cfg.Organization != "myorg" {
-					t.Errorf("Organization = %q, want 'myorg'", cfg.Organization)
-				}
-				if cfg.Repository != "myrepo" {
-					t.Errorf("Repository = %q, want 'myrepo'", cfg.Repository)
-				}
-				if cfg.Version != "v1.0.0" {
-					t.Errorf("Version = %q, want 'v1.0.0'", cfg.Version)
-				}
-				if cfg.Theme != "github" {
-					t.Errorf("Theme = %q, want 'github'", cfg.Theme)
-				}
-				if cfg.OutputFormat != "html" {
-					t.Errorf("OutputFormat = %q, want 'html'", cfg.OutputFormat)
-				}
-				if cfg.OutputDir != "./docs" {
-					t.Errorf("OutputDir = %q, want './docs'", cfg.OutputDir)
-				}
-				if !cfg.AnalyzeDependencies {
-					t.Error("AnalyzeDependencies should be true")
-				}
-				if !cfg.ShowSecurityInfo {
-					t.Error("ShowSecurityInfo should be true")
-				}
-			},
+			verify:  verifyCompleteWizardFlow,
 		},
 		{
 			name: "wizard with defaults and confirmation",
@@ -823,14 +899,7 @@ func TestRun(t *testing.T) {
 				"n\n" + // GitHub: skip
 				"y\n", // Confirm
 			wantErr: false,
-			verify: func(t *testing.T, cfg *internal.AppConfig) {
-				if cfg.Theme != defaultTheme {
-					t.Errorf("Theme = %q, want %q", cfg.Theme, defaultTheme)
-				}
-				if cfg.OutputFormat != "md" {
-					t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
-				}
-			},
+			verify:  verifyWizardDefaults,
 		},
 		{
 			name: "wizard with GitHub token",
@@ -840,11 +909,7 @@ func TestRun(t *testing.T) {
 				"y\nghp_testtoken123456\n" + // GitHub: set token
 				"y\n", // Confirm
 			wantErr: false,
-			verify: func(t *testing.T, cfg *internal.AppConfig) {
-				if cfg.GitHubToken != "ghp_testtoken123456" {
-					t.Errorf("GitHubToken = %q, want 'ghp_testtoken123456'", cfg.GitHubToken)
-				}
-			},
+			verify:  verifyGitHubToken,
 		},
 		{
 			name: "user cancels at confirmation",
@@ -864,23 +929,7 @@ func TestRun(t *testing.T) {
 				"n\n" + // GitHub: skip
 				"y\n", // Confirm
 			wantErr: false,
-			verify: func(t *testing.T, cfg *internal.AppConfig) {
-				if cfg.Theme != "minimal" {
-					t.Errorf("Theme = %q, want 'minimal'", cfg.Theme)
-				}
-				if cfg.OutputFormat != "json" {
-					t.Errorf("OutputFormat = %q, want 'json'", cfg.OutputFormat)
-				}
-				if cfg.OutputDir != "./output" {
-					t.Errorf("OutputDir = %q, want './output'", cfg.OutputDir)
-				}
-				if cfg.AnalyzeDependencies {
-					t.Error("AnalyzeDependencies should be false")
-				}
-				if cfg.ShowSecurityInfo {
-					t.Error("ShowSecurityInfo should be false")
-				}
-			},
+			verify:  verifyMinimalThemeJSON,
 		},
 		{
 			name: "gitlab theme with asciidoc format",
@@ -890,20 +939,7 @@ func TestRun(t *testing.T) {
 				"n\n" + // GitHub: skip
 				"yes\n", // Confirm with 'yes'
 			wantErr: false,
-			verify: func(t *testing.T, cfg *internal.AppConfig) {
-				if cfg.Theme != "gitlab" {
-					t.Errorf("Theme = %q, want 'gitlab'", cfg.Theme)
-				}
-				if cfg.OutputFormat != "asciidoc" {
-					t.Errorf("OutputFormat = %q, want 'asciidoc'", cfg.OutputFormat)
-				}
-				if !cfg.AnalyzeDependencies {
-					t.Error("AnalyzeDependencies should be true")
-				}
-				if cfg.ShowSecurityInfo {
-					t.Error("ShowSecurityInfo should be false")
-				}
-			},
+			verify:  verifyGitLabThemeASCIIDoc,
 		},
 		{
 			name: "professional theme with all features",
@@ -913,26 +949,7 @@ func TestRun(t *testing.T) {
 				"y\ngithub_pat_testtoken\n" + // GitHub: set PAT token
 				"y\n", // Confirm
 			wantErr: false,
-			verify: func(t *testing.T, cfg *internal.AppConfig) {
-				if cfg.Theme != "professional" {
-					t.Errorf("Theme = %q, want 'professional'", cfg.Theme)
-				}
-				if cfg.OutputFormat != "md" {
-					t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
-				}
-				if cfg.OutputDir != "." {
-					t.Errorf("OutputDir = %q, want '.'", cfg.OutputDir)
-				}
-				if !cfg.AnalyzeDependencies {
-					t.Error("AnalyzeDependencies should be true")
-				}
-				if !cfg.ShowSecurityInfo {
-					t.Error("ShowSecurityInfo should be true")
-				}
-				if cfg.GitHubToken != "github_pat_testtoken" {
-					t.Errorf("GitHubToken = %q, want 'github_pat_testtoken'", cfg.GitHubToken)
-				}
-			},
+			verify:  verifyProfessionalThemeAllFeatures,
 		},
 	}
 
