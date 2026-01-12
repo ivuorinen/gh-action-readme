@@ -75,6 +75,18 @@ const (
 	TestFixtureMyNewAction                 = "my-new-action.yml"
 	TestFixtureActionWithCheckoutV3        = "dependencies/action-with-checkout-v3.yml"
 	TestFixtureActionWithCheckoutV4        = "dependencies/action-with-checkout-v4.yml"
+	TestFixtureSimpleCheckout              = "dependencies/simple-test-checkout.yml"
+)
+
+// Dependency update test constants for reducing string duplication in updater_test.go.
+const (
+	// Actions checkout references for dependency update tests.
+	TestCheckoutV4OldUses  = "actions/checkout@v4"
+	TestCheckoutPinnedV417 = "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7"
+	TestCheckoutPinnedV411 = "actions/checkout@abc123 # v4.1.1"
+
+	// Version string for dependency tests.
+	TestVersionV417 = "v4.1.7"
 )
 
 // Test file path constants for reducing string duplication.
