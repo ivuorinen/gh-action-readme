@@ -23,6 +23,11 @@ const (
 	TestItemName = "test-item"
 )
 
+// Wizard test constants for reducing string duplication.
+const (
+	ErrOutputDirMismatch = "OutputDir = %q, want %q"
+)
+
 // Generator test constants for reducing string duplication.
 const (
 	TestActionName = "Test Action"

@@ -542,7 +542,7 @@ func TestConfigureOutputDirectory(t *testing.T) {
 			wizard.configureOutputDirectory()
 
 			if wizard.config.OutputDir != tt.want {
-				t.Errorf("OutputDir = %q, want %q", wizard.config.OutputDir, tt.want)
+				t.Errorf(testutil.ErrOutputDirMismatch, wizard.config.OutputDir, tt.want)
 			}
 		})
 	}
@@ -594,7 +594,7 @@ func TestConfigureTemplateSettings(t *testing.T) {
 				t.Errorf("OutputFormat = %q, want %q", wizard.config.OutputFormat, tt.wantFormat)
 			}
 			if wizard.config.OutputDir != tt.wantDir {
-				t.Errorf("OutputDir = %q, want %q", wizard.config.OutputDir, tt.wantDir)
+				t.Errorf(testutil.ErrOutputDirMismatch, wizard.config.OutputDir, tt.wantDir)
 			}
 		})
 	}
@@ -794,7 +794,7 @@ func verifyCompleteWizardFlow(t *testing.T, cfg *internal.AppConfig) {
 		t.Errorf("OutputFormat = %q, want 'html'", cfg.OutputFormat)
 	}
 	if cfg.OutputDir != testutil.TestDirDocs {
-		t.Errorf("OutputDir = %q, want %q", cfg.OutputDir, testutil.TestDirDocs)
+		t.Errorf(testutil.ErrOutputDirMismatch, cfg.OutputDir, testutil.TestDirDocs)
 	}
 	if !cfg.AnalyzeDependencies {
 		t.Error(testutil.TestMsgAnalyzeDepsTrue)
@@ -831,7 +831,7 @@ func verifyMinimalThemeJSON(t *testing.T, cfg *internal.AppConfig) {
 		t.Errorf("OutputFormat = %q, want 'json'", cfg.OutputFormat)
 	}
 	if cfg.OutputDir != testutil.TestDirOutput {
-		t.Errorf("OutputDir = %q, want %q", cfg.OutputDir, testutil.TestDirOutput)
+		t.Errorf(testutil.ErrOutputDirMismatch, cfg.OutputDir, testutil.TestDirOutput)
 	}
 	if cfg.AnalyzeDependencies {
 		t.Error("AnalyzeDependencies should be false")
