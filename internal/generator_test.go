@@ -215,6 +215,31 @@ func TestGeneratorDiscoverActionFilesVerbose(t *testing.T) {
 	}
 }
 
+// getOutputPattern returns the expected output filename pattern for the given format.
+func getOutputPattern(format string) string {
+	switch format {
+	case appconstants.OutputFormatHTML:
+		return "*.html"
+	case appconstants.OutputFormatJSON:
+		return "*.json"
+	case appconstants.OutputFormatASCIIDoc:
+		return "*.adoc"
+	default:
+		return "README*.md"
+	}
+}
+
+// validateGeneratedContent validates that the generated content contains expected strings.
+func validateGeneratedContent(t *testing.T, content []byte, expectedStrings []string) {
+	t.Helper()
+
+	for _, expected := range expectedStrings {
+		if !strings.Contains(string(content), expected) {
+			t.Errorf("Output missing expected string: %q", expected)
+		}
+	}
+}
+
 func TestGeneratorGenerateFromFile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -307,15 +332,8 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 			testutil.AssertNoError(t, err)
 
 			// Find the generated output file based on format
-			var pattern string
-			switch tt.outputFormat {
-			case appconstants.OutputFormatHTML:
-				pattern = filepath.Join(tmpDir, "*.html")
-			case appconstants.OutputFormatJSON:
-				pattern = filepath.Join(tmpDir, "*.json")
-			default:
-				pattern = filepath.Join(tmpDir, "README*.md")
-			}
+			filename := getOutputPattern(tt.outputFormat)
+			pattern := filepath.Join(tmpDir, filename)
 			readmeFiles, _ := filepath.Glob(pattern)
 			if len(readmeFiles) == 0 {
 				t.Errorf("no output file was created for format %s", tt.outputFormat)
@@ -326,14 +344,7 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 			// Read and verify output content
 			content, err := os.ReadFile(readmeFiles[0])
 			testutil.AssertNoError(t, err)
-
-			contentStr := string(content)
-			for _, expectedStr := range tt.contains {
-				if !strings.Contains(contentStr, expectedStr) {
-					t.Errorf("output does not contain expected string %q", expectedStr)
-					t.Logf("Output content: %s", contentStr)
-				}
-			}
+			validateGeneratedContent(t, content, tt.contains)
 		})
 	}
 }
