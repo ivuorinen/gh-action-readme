@@ -33,10 +33,10 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "actions/checkout@v4",
-					NewUses:    "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7",
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
-					Version:    "v4.1.7",
+					OldUses:    appconstants.TestActionCheckoutV4,
+					NewUses:    appconstants.TestActionCheckoutFullSHA,
+					CommitSHA:  appconstants.TestActionCheckoutSHA,
+					Version:    appconstants.TestActionCheckoutVersion,
 					UpdateType: "patch",
 					LineNumber: 0,
 				},
@@ -51,10 +51,10 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "actions/checkout@v4",
-					NewUses:    "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7",
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
-					Version:    "v4.1.7",
+					OldUses:    appconstants.TestActionCheckoutV4,
+					NewUses:    appconstants.TestActionCheckoutFullSHA,
+					CommitSHA:  appconstants.TestActionCheckoutSHA,
+					Version:    appconstants.TestActionCheckoutVersion,
 					UpdateType: "patch",
 					LineNumber: 0,
 				},
@@ -69,10 +69,10 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "actions/checkout@v4",
-					NewUses:    "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7",
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
-					Version:    "v4.1.7",
+					OldUses:    appconstants.TestActionCheckoutV4,
+					NewUses:    appconstants.TestActionCheckoutFullSHA,
+					CommitSHA:  appconstants.TestActionCheckoutSHA,
+					Version:    appconstants.TestActionCheckoutVersion,
 					UpdateType: "patch",
 					LineNumber: 0,
 				},
@@ -96,10 +96,10 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "actions/checkout@v4",
-					NewUses:    "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7",
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
-					Version:    "v4.1.7",
+					OldUses:    appconstants.TestActionCheckoutV4,
+					NewUses:    appconstants.TestActionCheckoutFullSHA,
+					CommitSHA:  appconstants.TestActionCheckoutSHA,
+					Version:    appconstants.TestActionCheckoutVersion,
 					UpdateType: "patch",
 					LineNumber: 0,
 				},
@@ -114,10 +114,10 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7",
-					NewUses:    "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7",
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
-					Version:    "v4.1.7",
+					OldUses:    appconstants.TestActionCheckoutFullSHA,
+					NewUses:    appconstants.TestActionCheckoutFullSHA,
+					CommitSHA:  appconstants.TestActionCheckoutSHA,
+					Version:    appconstants.TestActionCheckoutVersion,
 					UpdateType: "none",
 					LineNumber: 0,
 				},
@@ -230,8 +230,8 @@ func TestUpdateActionFile(t *testing.T) {
 			initialYAML: testutil.MustReadFixture("dependencies/test-checkout-v4.yml"),
 			updates: []PinnedUpdate{
 				{
-					OldUses: "actions/checkout@v4",
-					NewUses: "actions/checkout@abc123 # v4.1.1",
+					OldUses: appconstants.TestActionCheckoutV4,
+					NewUses: appconstants.TestActionCheckoutPinned,
 				},
 			},
 			expectedYAML: testutil.MustReadFixture("dependencies/test-checkout-pinned.yml"),
@@ -244,7 +244,7 @@ func TestUpdateActionFile(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					OldUses: "actions/checkout@v4.1.0",
-					NewUses: "actions/checkout@abc123 # v4.1.1",
+					NewUses: appconstants.TestActionCheckoutPinned,
 				},
 			},
 			expectedYAML: testutil.MustReadFixture("dependencies/test-checkout-pinned.yml"),
@@ -256,8 +256,8 @@ func TestUpdateActionFile(t *testing.T) {
 			initialYAML: testutil.MustReadFixture("dependencies/test-multiple-checkout.yml"),
 			updates: []PinnedUpdate{
 				{
-					OldUses: "actions/checkout@v4",
-					NewUses: "actions/checkout@abc123 # v4.1.1",
+					OldUses: appconstants.TestActionCheckoutV4,
+					NewUses: appconstants.TestActionCheckoutPinned,
 				},
 			},
 			expectedYAML: testutil.MustReadFixture("dependencies/test-multiple-checkout-pinned.yml"),
@@ -269,8 +269,8 @@ func TestUpdateActionFile(t *testing.T) {
 			initialYAML: testutil.MustReadFixture("dependencies/test-checkout-with-comment.yml"),
 			updates: []PinnedUpdate{
 				{
-					OldUses: "actions/checkout@v4",
-					NewUses: "actions/checkout@abc123 # v4.1.1",
+					OldUses: appconstants.TestActionCheckoutV4,
+					NewUses: appconstants.TestActionCheckoutPinned,
 				},
 			},
 			expectedYAML: testutil.MustReadFixture("dependencies/test-checkout-with-comment-pinned.yml"),
@@ -279,10 +279,10 @@ func TestUpdateActionFile(t *testing.T) {
 		},
 		{
 			name:        "invalid YAML triggers rollback",
-			initialYAML: testutil.MustReadFixture("dependencies/simple-test-checkout.yml"),
+			initialYAML: testutil.MustReadFixture(appconstants.TestDepsSimpleCheckoutFile),
 			updates: []PinnedUpdate{
 				{
-					OldUses: "actions/checkout@v4",
+					OldUses: appconstants.TestActionCheckoutV4,
 					NewUses: "\"unclosed string that breaks YAML parsing", // Unclosed quote breaks YAML
 				},
 			},
@@ -528,7 +528,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		t.Parallel()
 
 		analyzer := &Analyzer{Cache: nil}
-		version, sha, found := analyzer.getCachedVersion("test-key")
+		version, sha, found := analyzer.getCachedVersion(appconstants.TestCacheKey)
 
 		if found {
 			t.Error("getCachedVersion() should return false with nil cache")
@@ -546,10 +546,10 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		defer testutil.CleanupCache(t, cacheInstance)()
 
 		// Store invalid data type
-		_ = cacheInstance.Set("test-key", "invalid-string-not-map")
+		_ = cacheInstance.Set(appconstants.TestCacheKey, "invalid-string-not-map")
 
 		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
-		version, sha, found := analyzer.getCachedVersion("test-key")
+		version, sha, found := analyzer.getCachedVersion(appconstants.TestCacheKey)
 
 		if found {
 			t.Error("getCachedVersion() should return false with invalid data type")
@@ -582,7 +582,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 
 		analyzer := &Analyzer{Cache: nil}
 		// Should not panic
-		analyzer.cacheVersion("test-key", "v1.0.0", "abc123")
+		analyzer.cacheVersion(appconstants.TestCacheKey, "v1.0.0", "abc123")
 	})
 
 	t.Run("cacheVersion stores and retrieves correctly", func(t *testing.T) {
@@ -595,10 +595,10 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
 
 		// Cache a version
-		analyzer.cacheVersion("test-key", "v1.2.3", "def456")
+		analyzer.cacheVersion(appconstants.TestCacheKey, "v1.2.3", "def456")
 
 		// Retrieve it
-		version, sha, found := analyzer.getCachedVersion("test-key")
+		version, sha, found := analyzer.getCachedVersion(appconstants.TestCacheKey)
 
 		if !found {
 			t.Error("getCachedVersion() should return true after cacheVersion()")
@@ -623,7 +623,7 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		defer cleanup()
 
 		actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-		originalContent := testutil.MustReadFixture("dependencies/simple-test-checkout.yml")
+		originalContent := testutil.MustReadFixture(appconstants.TestDepsSimpleCheckoutFile)
 
 		testutil.WriteTestFile(t, actionPath, originalContent)
 
@@ -635,8 +635,8 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 
 		updates := []PinnedUpdate{
 			{
-				OldUses: "actions/checkout@v4",
-				NewUses: "actions/checkout@abc123 # v4.1.1",
+				OldUses: appconstants.TestActionCheckoutV4,
+				NewUses: appconstants.TestActionCheckoutPinned,
 			},
 		}
 
@@ -655,7 +655,7 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		defer cleanup()
 
 		actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-		originalContent := testutil.MustReadFixture("dependencies/simple-test-checkout.yml")
+		originalContent := testutil.MustReadFixture(appconstants.TestDepsSimpleCheckoutFile)
 
 		testutil.WriteTestFile(t, actionPath, originalContent)
 
@@ -752,8 +752,8 @@ func TestApplyPinnedUpdatesGroupedByFile(t *testing.T) {
 	updates := []PinnedUpdate{
 		{
 			FilePath: action1Path,
-			OldUses:  "actions/checkout@v4",
-			NewUses:  "actions/checkout@abc123 # v4.1.1",
+			OldUses:  appconstants.TestActionCheckoutV4,
+			NewUses:  appconstants.TestActionCheckoutPinned,
 		},
 		{
 			FilePath: action2Path,
@@ -767,7 +767,7 @@ func TestApplyPinnedUpdatesGroupedByFile(t *testing.T) {
 
 	// Verify both files were updated
 	content1 := testutil.SafeReadFile(t, action1Path, dir)
-	if !strings.Contains(string(content1), "actions/checkout@abc123 # v4.1.1") {
+	if !strings.Contains(string(content1), appconstants.TestActionCheckoutPinned) {
 		t.Errorf("action1.yml was not updated correctly, got:\n%s", string(content1))
 	}
 

@@ -116,7 +116,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			name: "no action files",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "README.md"), "# Test")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ReadmeMarkdown), "# Test")
 			},
 			recursive:   false,
 			expectedLen: 0,
@@ -346,7 +346,7 @@ func countREADMEFiles(t *testing.T, dir string) int {
 		if err != nil {
 			return err
 		}
-		if strings.HasSuffix(path, "README.md") {
+		if strings.HasSuffix(path, appconstants.ReadmeMarkdown) {
 			count++
 		}
 
@@ -363,7 +363,7 @@ func countREADMEFiles(t *testing.T, dir string) int {
 func logREADMELocations(t *testing.T, dir string) {
 	t.Helper()
 	_ = filepath.Walk(dir, func(path string, _ os.FileInfo, err error) error {
-		if err == nil && strings.HasSuffix(path, "README.md") {
+		if err == nil && strings.HasSuffix(path, appconstants.ReadmeMarkdown) {
 			t.Logf("Found README at: %s", path)
 		}
 
@@ -846,32 +846,32 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "no custom filename",
 			outputFilename:  "",
-			outputDir:       "/tmp/output",
-			defaultFilename: "README.md",
+			outputDir:       appconstants.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/output/README.md",
 			wantErr:         false,
 		},
 		{
 			name:            "relative custom filename",
 			outputFilename:  "custom.md",
-			outputDir:       "/tmp/output",
-			defaultFilename: "README.md",
+			outputDir:       appconstants.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/output/custom.md",
 			wantErr:         false,
 		},
 		{
 			name:            "absolute custom filename",
 			outputFilename:  "/absolute/path/output.md",
-			outputDir:       "/tmp/output",
-			defaultFilename: "README.md",
+			outputDir:       appconstants.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/absolute/path/output.md",
 			wantErr:         false,
 		},
 		{
 			name:            "custom filename with subdirectory",
 			outputFilename:  "docs/output.md",
-			outputDir:       "/tmp/output",
-			defaultFilename: "README.md",
+			outputDir:       appconstants.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/output/docs/output.md",
 			wantErr:         false,
 		},
@@ -879,7 +879,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			name:            "outputDir with .. component (filename is clean)",
 			outputFilename:  "file.md",
 			outputDir:       "/tmp/output/../escape",
-			defaultFilename: "README.md",
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/escape/file.md",
 			wantErr:         false,
 		},
@@ -888,24 +888,24 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 		{
 			name:            "path traversal attempt with ../",
 			outputFilename:  "../escape.md",
-			outputDir:       "/tmp/output",
-			defaultFilename: "README.md",
+			outputDir:       appconstants.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
 			errContains:     "path traversal",
 		},
 		{
 			name:            "path traversal with ../ in middle",
 			outputFilename:  "sub/../escape.md",
-			outputDir:       "/tmp/output",
-			defaultFilename: "README.md",
+			outputDir:       appconstants.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
 			errContains:     "path traversal",
 		},
 		{
 			name:            "multiple ../ escaping directory",
 			outputFilename:  "../../escape.md",
-			outputDir:       "/tmp/output",
-			defaultFilename: "README.md",
+			outputDir:       appconstants.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
 			errContains:     "path traversal",
 		},

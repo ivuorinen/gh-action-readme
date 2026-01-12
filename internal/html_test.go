@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // mustSafePath validates that a path is safe (no "..", matches cleaned version).
@@ -51,7 +53,7 @@ func TestHTMLWriterWrite(t *testing.T) {
 		{
 			name:       "with footer only",
 			header:     "",
-			footer:     "\n</html>",
+			footer:     appconstants.TestHTMLClosingTag,
 			content:    "<body>Content</body>",
 			wantString: "<body>Content</body>\n</html>",
 		},
@@ -93,7 +95,7 @@ func TestHTMLWriterWrite(t *testing.T) {
 			// Read the file and verify content
 			content, err := os.ReadFile(mustSafePath(t, outputPath))
 			if err != nil {
-				t.Fatalf("Failed to read output file: %v", err)
+				t.Fatalf(appconstants.TestMsgFailedToReadOutput, err)
 			}
 
 			got := string(content)
@@ -194,7 +196,7 @@ func TestHTMLWriterWriteLargeContent(t *testing.T) {
 
 	writer := &HTMLWriter{
 		Header: "<!DOCTYPE html>\n",
-		Footer: "\n</html>",
+		Footer: appconstants.TestHTMLClosingTag,
 	}
 
 	err := writer.Write(largeContent, outputPath)
@@ -208,7 +210,7 @@ func TestHTMLWriterWriteLargeContent(t *testing.T) {
 		t.Fatalf("Failed to stat output file: %v", err)
 	}
 
-	expectedSize := len("<!DOCTYPE html>\n") + len(largeContent) + len("\n</html>")
+	expectedSize := len("<!DOCTYPE html>\n") + len(largeContent) + len(appconstants.TestHTMLClosingTag)
 	if int(info.Size()) != expectedSize {
 		t.Errorf("File size = %d, want %d", info.Size(), expectedSize)
 	}
@@ -235,7 +237,7 @@ func TestHTMLWriterWriteSpecialCharacters(t *testing.T) {
 	// Verify content was written correctly
 	readContent, err := os.ReadFile(mustSafePath(t, outputPath))
 	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
+		t.Fatalf(appconstants.TestMsgFailedToReadOutput, err)
 	}
 
 	if string(readContent) != content {
@@ -258,7 +260,7 @@ func TestHTMLWriterWriteOverwrite(t *testing.T) {
 	}
 
 	// Overwrite with new content
-	err = writer.Write("New content", outputPath)
+	err = writer.Write(appconstants.TestHTMLNewContent, outputPath)
 	if err != nil {
 		t.Errorf("Overwrite failed: %v", err)
 	}
@@ -266,11 +268,11 @@ func TestHTMLWriterWriteOverwrite(t *testing.T) {
 	// Verify new content
 	content, err := os.ReadFile(mustSafePath(t, outputPath))
 	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
+		t.Fatalf(appconstants.TestMsgFailedToReadOutput, err)
 	}
 
-	if string(content) != "New content" {
-		t.Errorf("Content = %q, want %q", string(content), "New content")
+	if string(content) != appconstants.TestHTMLNewContent {
+		t.Errorf("Content = %q, want %q", string(content), appconstants.TestHTMLNewContent)
 	}
 }
 

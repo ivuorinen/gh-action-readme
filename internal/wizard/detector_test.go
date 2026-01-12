@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
@@ -127,7 +128,7 @@ func TestProjectDetectorfindActionFiles(t *testing.T) {
 		[]byte("name: Test Action"),
 		0600, // #nosec G306 -- test file permissions
 	); err != nil {
-		t.Fatalf("Failed to create action.yml: %v", err)
+		t.Fatalf(appconstants.TestMsgFailedToCreateAction, err)
 	}
 
 	// Create subdirectory with another action file
@@ -568,7 +569,7 @@ func TestDetectActionFiles(t *testing.T) {
 				t.Helper()
 				content := "name: Test Action\ndescription: Test"
 				if err := os.WriteFile(filepath.Join(dir, "action.yml"), []byte(content), 0600); err != nil {
-					t.Fatalf("Failed to create action.yml: %v", err)
+					t.Fatalf(appconstants.TestMsgFailedToCreateAction, err)
 				}
 			},
 			wantActionCount: 1,
@@ -610,7 +611,7 @@ func TestDetectActionFiles(t *testing.T) {
 				content := "name: Test\ndescription: Test"
 				actionPath := filepath.Join(subdir, "action.yml")
 				if err := os.WriteFile(actionPath, []byte(content), 0600); err != nil {
-					t.Fatalf("Failed to create action.yml: %v", err)
+					t.Fatalf(appconstants.TestMsgFailedToCreateAction, err)
 				}
 			},
 			wantActionCount: 1, // Should find the file safely
@@ -848,7 +849,7 @@ func TestAnalyzeActionFile(t *testing.T) {
 			tempDir := t.TempDir()
 			actionPath := filepath.Join(tempDir, "action.yml")
 			if err := os.WriteFile(actionPath, []byte(tt.content), 0600); err != nil {
-				t.Fatalf("Failed to create action.yml: %v", err)
+				t.Fatalf(appconstants.TestMsgFailedToCreateAction, err)
 			}
 
 			output := internal.NewColoredOutput(true)

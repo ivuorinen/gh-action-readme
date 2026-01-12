@@ -745,6 +745,38 @@ const (
 	TestAssertTheme = "Theme = %q, want %q"
 )
 
+// Test dependency actions - used in updater tests.
+const (
+	TestActionCheckoutV4       = "actions/checkout@v4"
+	TestActionCheckoutPinned   = "actions/checkout@abc123 # v4.1.1"
+	TestActionCheckoutFullSHA  = "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7"
+	TestActionCheckoutSHA      = "692973e3d937129bcbf40652eb9f2f61becf3332"
+	TestActionCheckoutVersion  = "v4.1.7"
+	TestCacheKey               = "test-key"
+	TestUpdateTypePatch        = "patch"
+	TestDepsSimpleCheckoutFile = "dependencies/simple-test-checkout.yml"
+)
+
+// Test paths and output - used in generator tests.
+const (
+	TestOutputPath = "/tmp/output"
+)
+
+// Test HTML content - used in html tests.
+const (
+	TestHTMLNewContent        = "New content"
+	TestHTMLClosingTag        = "\n</html>"
+	TestMsgFailedToReadOutput = "Failed to read output file: %v"
+)
+
+// Test detector messages - used in detector tests.
+const (
+	TestMsgFailedToCreateAction = "Failed to create action.yml: %v"
+	TestPermRead                = "read"
+	TestPermWrite               = "write"
+	TestPermContents            = "contents"
+)
+
 // File permissions (additional).
 const (
 	// FilePermDir is the directory permission.
