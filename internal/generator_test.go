@@ -733,6 +733,21 @@ func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
 }
 
 // TestGeneratorDiscoverActionFilesWithValidation tests the validation wrapper.
+// validateDiscoveryResult validates the result of action file discovery.
+func validateDiscoveryResult(t *testing.T, files []string, err error, wantErr bool) {
+	t.Helper()
+
+	if (err != nil) != wantErr {
+		t.Errorf("DiscoverActionFilesWithValidation() error = %v, wantErr %v", err, wantErr)
+
+		return
+	}
+
+	if !wantErr && len(files) == 0 {
+		t.Error("Expected files but got none")
+	}
+}
+
 func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 	t.Parallel()
 
@@ -818,14 +833,7 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 			}
 
 			files, err := gen.DiscoverActionFilesWithValidation(dir, tt.recursive, []string{}, tt.context)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DiscoverActionFilesWithValidation() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if !tt.wantErr && len(files) == 0 {
-				t.Error("Expected to find action files, got none")
-			}
+			validateDiscoveryResult(t, files, err, tt.wantErr)
 		})
 	}
 }
