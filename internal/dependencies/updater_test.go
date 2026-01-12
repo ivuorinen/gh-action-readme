@@ -542,64 +542,72 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 	}
 }
 
+// assertCacheVersionNotFound validates that no version was found in the cache.
+func assertCacheVersionNotFound(t *testing.T, version, sha string, found bool) {
+	t.Helper()
+
+	if found {
+		t.Error("getCachedVersion() should return false")
+	}
+	if version != "" {
+		t.Errorf("version = %q, want empty", version)
+	}
+	if sha != "" {
+		t.Errorf("sha = %q, want empty", sha)
+	}
+}
+
 // TestCacheVersionEdgeCases tests edge cases for cacheVersion and getCachedVersion.
-//
-//nolint:gocyclo // Test function with multiple independent test cases
 func TestCacheVersionEdgeCases(t *testing.T) {
 	t.Parallel()
 
-	t.Run("getCachedVersion with nil cache", func(t *testing.T) {
-		t.Parallel()
+	// Parametrized tests for getCachedVersion edge cases
+	notFoundCases := []struct {
+		name     string
+		setupFn  func(*testing.T) (*Analyzer, func())
+		cacheKey string
+	}{
+		{
+			name: "nil cache",
+			setupFn: func(_ *testing.T) (*Analyzer, func()) {
+				return &Analyzer{Cache: nil}, func() {}
+			},
+			cacheKey: "test-key",
+		},
+		{
+			name: "invalid data type",
+			setupFn: func(t *testing.T) (*Analyzer, func()) {
+				t.Helper()
+				c, err := cache.NewCache(cache.DefaultConfig())
+				testutil.AssertNoError(t, err)
+				_ = c.Set("test-key", "invalid-string")
 
-		analyzer := &Analyzer{Cache: nil}
-		version, sha, found := analyzer.getCachedVersion("test-key")
+				return &Analyzer{Cache: NewCacheAdapter(c)}, testutil.CleanupCache(t, c)
+			},
+			cacheKey: "test-key",
+		},
+		{
+			name: "empty cache entry",
+			setupFn: func(t *testing.T) (*Analyzer, func()) {
+				t.Helper()
+				c, err := cache.NewCache(cache.DefaultConfig())
+				testutil.AssertNoError(t, err)
 
-		if found {
-			t.Error("getCachedVersion() should return false with nil cache")
-		}
-		if version != "" || sha != "" {
-			t.Error("getCachedVersion() should return empty strings with nil cache")
-		}
-	})
+				return &Analyzer{Cache: NewCacheAdapter(c)}, testutil.CleanupCache(t, c)
+			},
+			cacheKey: "nonexistent-key",
+		},
+	}
 
-	t.Run("getCachedVersion with invalid cached data type", func(t *testing.T) {
-		t.Parallel()
-
-		cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-		testutil.AssertNoError(t, err)
-		defer testutil.CleanupCache(t, cacheInstance)()
-
-		// Store invalid data type
-		_ = cacheInstance.Set("test-key", "invalid-string-not-map")
-
-		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
-		version, sha, found := analyzer.getCachedVersion("test-key")
-
-		if found {
-			t.Error("getCachedVersion() should return false with invalid data type")
-		}
-		if version != "" || sha != "" {
-			t.Error("getCachedVersion() should return empty strings with invalid data type")
-		}
-	})
-
-	t.Run("getCachedVersion with empty cache entry", func(t *testing.T) {
-		t.Parallel()
-
-		cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-		testutil.AssertNoError(t, err)
-		defer testutil.CleanupCache(t, cacheInstance)()
-
-		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
-		version, sha, found := analyzer.getCachedVersion("nonexistent-key")
-
-		if found {
-			t.Error("getCachedVersion() should return false for nonexistent key")
-		}
-		if version != "" || sha != "" {
-			t.Error("getCachedVersion() should return empty strings for nonexistent key")
-		}
-	})
+	for _, tc := range notFoundCases {
+		t.Run("getCachedVersion with "+tc.name, func(t *testing.T) {
+			t.Parallel()
+			analyzer, cleanup := tc.setupFn(t)
+			defer cleanup()
+			version, sha, found := analyzer.getCachedVersion(tc.cacheKey)
+			assertCacheVersionNotFound(t, version, sha, found)
+		})
+	}
 
 	t.Run("cacheVersion with nil cache", func(t *testing.T) {
 		t.Parallel()
