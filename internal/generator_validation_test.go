@@ -457,6 +457,39 @@ func TestShowDetailedIssues(t *testing.T) {
 }
 
 // TestReportValidationResults tests the main validation reporting function.
+// reportCounts holds the expected counts for validation report output.
+type reportCounts struct {
+	bold    int
+	success bool
+	error   bool
+}
+
+// validateReportCounts validates that the report output contains expected message counts.
+func validateReportCounts(
+	t *testing.T,
+	gotBold, gotSuccess, gotError int,
+	want reportCounts,
+	allowUnexpectedErrors bool,
+) {
+	t.Helper()
+
+	if gotBold < want.bold {
+		t.Errorf("Bold messages = %d, want at least %d", gotBold, want.bold)
+	}
+
+	if want.success && gotSuccess == 0 {
+		t.Error("Expected success messages, got none")
+	}
+
+	if want.error && gotError == 0 {
+		t.Error("Expected error messages, got none")
+	}
+
+	if !allowUnexpectedErrors && gotError > 0 {
+		t.Errorf("Expected no error messages, got %d", gotError)
+	}
+}
+
 func TestReportValidationResults(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -526,26 +559,19 @@ func TestReportValidationResults(t *testing.T) {
 
 			gen.reportValidationResults(tt.results, tt.errors)
 
-			gotBoldCount := len(output.BoldMessages)
-			gotSuccessCount := len(output.SuccessMessages)
-			gotErrorCount := len(output.ErrorMessages)
-
-			if gotBoldCount < tt.wantBold {
-				t.Errorf(
-					"reportValidationResults() bold messages = %d, want at least %d",
-					gotBoldCount,
-					tt.wantBold,
-				)
+			counts := reportCounts{
+				bold:    tt.wantBold,
+				success: tt.wantSuccess,
+				error:   tt.wantError,
 			}
-			if tt.wantSuccess && gotSuccessCount == 0 {
-				t.Error("reportValidationResults() expected success messages, got none")
-			}
-			if tt.wantError && gotErrorCount == 0 {
-				t.Error("reportValidationResults() expected error messages, got none")
-			}
-			if !tt.wantError && gotErrorCount > 0 {
-				t.Errorf("reportValidationResults() expected no error messages, got %d", gotErrorCount)
-			}
+			validateReportCounts(
+				t,
+				len(output.BoldMessages),
+				len(output.SuccessMessages),
+				len(output.ErrorMessages),
+				counts,
+				tt.wantError,
+			)
 		})
 	}
 }
