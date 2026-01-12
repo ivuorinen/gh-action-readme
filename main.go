@@ -232,7 +232,12 @@ Examples:
 		Run:  wrapHandlerWithErrorHandling(genHandler),
 	}
 
-	cmd.Flags().StringP(appconstants.FlagOutputFormat, "f", "md", "output format: md, html, json, asciidoc")
+	cmd.Flags().StringP(
+		appconstants.FlagOutputFormat,
+		"f",
+		appconstants.OutputFormatMarkdown,
+		"output format: md, html, json, asciidoc",
+	)
 	cmd.Flags().StringP(appconstants.FlagOutputDir, "o", ".", "output directory")
 	cmd.Flags().StringP(appconstants.FlagOutput, "", "", "custom output filename (overrides default naming)")
 	cmd.Flags().StringP(appconstants.ConfigKeyTheme, "t", "", "template theme: github, gitlab, minimal, professional")
@@ -386,7 +391,7 @@ func applyCommandFlags(cmd *cobra.Command, config *internal.AppConfig) {
 	outputFilename, _ := cmd.Flags().GetString(appconstants.FlagOutput)
 	theme, _ := cmd.Flags().GetString(appconstants.ConfigKeyTheme)
 
-	if outputFormat != "md" {
+	if outputFormat != appconstants.OutputFormatMarkdown {
 		config.OutputFormat = outputFormat
 	}
 	if outputDir != "." {
@@ -618,13 +623,13 @@ func newDepsCmd() *cobra.Command {
 		Long:  "Upgrade dependencies to latest versions. Use --ci for automated pinned updates.",
 		Run:   wrapHandlerWithErrorHandling(depsUpgradeHandler),
 	}
-	upgradeCmd.Flags().Bool("ci", false, "CI/CD mode: automatically pin all updates to commit SHAs")
+	upgradeCmd.Flags().Bool(appconstants.FlagCI, false, "CI/CD mode: automatically pin all updates to commit SHAs")
 	upgradeCmd.Flags().Bool(appconstants.InputAll, false, "Update all outdated dependencies without prompts")
 	upgradeCmd.Flags().Bool(appconstants.InputDryRun, false, "Show what would be updated without making changes")
 	cmd.AddCommand(upgradeCmd)
 
 	pinCmd := &cobra.Command{
-		Use:   "pin",
+		Use:   appconstants.CommandPin,
 		Short: "Pin floating versions to specific commits",
 		Long:  "Convert floating versions (like @v4) to pinned commit SHAs with version comments.",
 		Run:   wrapHandlerWithErrorHandling(depsUpgradeHandler), // Uses same handler with different flags
@@ -1006,10 +1011,10 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Parse flags and show mode
-	ciMode, _ := cmd.Flags().GetBool("ci")
+	ciMode, _ := cmd.Flags().GetBool(appconstants.FlagCI)
 	allFlag, _ := cmd.Flags().GetBool(appconstants.InputAll)
 	dryRun, _ := cmd.Flags().GetBool(appconstants.InputDryRun)
-	isPinCmd := cmd.Use == "pin"
+	isPinCmd := cmd.Use == appconstants.CommandPin
 
 	showUpgradeMode(output, ciMode, isPinCmd)
 
@@ -1231,7 +1236,7 @@ func cacheStatsHandler(_ *cobra.Command, _ []string) error {
 	stats := cacheInstance.Stats()
 
 	output.Bold("Cache Statistics:")
-	output.Printf("Cache location: %s\n", stats["cache_dir"])
+	output.Printf("Cache location: %s\n", stats[appconstants.CacheStatsKeyDir])
 	output.Printf("Total entries: %d\n", stats["total_entries"])
 	output.Printf("Expired entries: %d\n", stats["expired_count"])
 
@@ -1261,7 +1266,7 @@ func cachePathHandler(_ *cobra.Command, _ []string) error {
 	}
 
 	stats := cacheInstance.Stats()
-	cachePath, ok := stats["cache_dir"].(string)
+	cachePath, ok := stats[appconstants.CacheStatsKeyDir].(string)
 	if !ok {
 		cachePath = appconstants.ScopeUnknown
 	}

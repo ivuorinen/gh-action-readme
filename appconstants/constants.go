@@ -549,6 +549,14 @@ const (
 	FlagRecursive = "recursive"
 	// FlagIgnoreDirs is the ignore-dirs flag name.
 	FlagIgnoreDirs = "ignore-dirs"
+	// FlagCI is the CI mode flag name.
+	FlagCI = "ci"
+
+	// CommandPin is the pin command name.
+	CommandPin = "pin"
+
+	// CacheStatsKeyDir is the cache stats key for directory.
+	CacheStatsKeyDir = "cache_dir"
 )
 
 // Field names for validation.
