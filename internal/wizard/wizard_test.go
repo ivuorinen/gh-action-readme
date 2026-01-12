@@ -524,14 +524,14 @@ func TestConfigureOutputDirectory(t *testing.T) {
 		{
 			name:    "use default directory",
 			input:   "\n",
-			initial: testutil.TestDirDocs,
-			want:    testutil.TestDirDocs,
+			initial: "testutil.TestDirDocs",
+			want:    "testutil.TestDirDocs",
 		},
 		{
 			name:    "relative path",
-			input:   testutil.TestDirOutput + "\n",
+			input:   "testutil.TestDirOutput\n",
 			initial: ".",
-			want:    testutil.TestDirOutput,
+			want:    "testutil.TestDirOutput",
 		},
 	}
 
@@ -880,6 +880,39 @@ func verifyProfessionalThemeAllFeatures(t *testing.T, cfg *internal.AppConfig) {
 }
 
 // TestRun tests the complete wizard workflow.
+// verifyWizardTestResult validates the result of a wizard Run() call.
+func verifyWizardTestResult(
+	t *testing.T,
+	err error,
+	wantErr bool,
+	config *internal.AppConfig,
+	verify func(*testing.T, *internal.AppConfig),
+) {
+	t.Helper()
+
+	if (err != nil) != wantErr {
+		t.Errorf("Run() error = %v, wantErr %v", err, wantErr)
+
+		return
+	}
+
+	if wantErr {
+		if config != nil {
+			t.Error("Run() should return nil config on error")
+		}
+
+		return
+	}
+
+	if config == nil {
+		t.Fatal("Run() returned nil config")
+	}
+
+	if verify != nil {
+		verify(t, config)
+	}
+}
+
 func TestRun(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -967,27 +1000,7 @@ func TestRun(t *testing.T) {
 
 			config, err := wizard.Run()
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
-
-			if tt.wantErr {
-				if config != nil {
-					t.Error("Run() should return nil config on error")
-				}
-
-				return
-			}
-
-			if config == nil {
-				t.Fatal("Run() returned nil config")
-			}
-
-			if tt.verify != nil {
-				tt.verify(t, config)
-			}
+			verifyWizardTestResult(t, err, tt.wantErr, config, tt.verify)
 		})
 	}
 }
