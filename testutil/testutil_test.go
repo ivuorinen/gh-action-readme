@@ -101,7 +101,7 @@ func executeRequest(t *testing.T, client *MockHTTPClient, req *http.Request) *ht
 	t.Helper()
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(TestErrUnexpected, err)
 	}
 
 	return resp
@@ -176,11 +176,11 @@ func TestMockGitHubClient(t *testing.T) {
 		ctx := context.Background()
 		_, resp, err := client.Repositories.Get(ctx, "test", "repo")
 		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Fatalf(TestErrUnexpected, err)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			t.Errorf("expected status 200, got %d", resp.StatusCode)
+			t.Errorf(TestErrStatusCode, resp.StatusCode)
 		}
 	})
 
@@ -193,11 +193,11 @@ func TestMockGitHubClient(t *testing.T) {
 		ctx := context.Background()
 		_, resp, err := client.Repositories.Get(ctx, "actions", "checkout")
 		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Fatalf(TestErrUnexpected, err)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			t.Errorf("expected status 200, got %d", resp.StatusCode)
+			t.Errorf(TestErrStatusCode, resp.StatusCode)
 		}
 	})
 }
@@ -222,12 +222,12 @@ func TestMockTransport(t *testing.T) {
 
 	resp, err := transport.RoundTrip(req)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(TestErrUnexpected, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status 200, got %d", resp.StatusCode)
+		t.Errorf(TestErrStatusCode, resp.StatusCode)
 	}
 }
 
@@ -397,7 +397,7 @@ func TestCreateTestAction(t *testing.T) {
 		action := CreateTestAction(name, description, inputs)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		// Verify the action contains our values
@@ -424,7 +424,7 @@ func TestCreateTestAction(t *testing.T) {
 		action := CreateTestAction("Simple Action", "No inputs", nil)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		if !strings.Contains(action, "Simple Action") {
@@ -447,7 +447,7 @@ func TestCreateCompositeAction(t *testing.T) {
 		action := CreateCompositeAction(name, description, steps)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		// Verify the action contains our values
@@ -471,7 +471,7 @@ func TestCreateCompositeAction(t *testing.T) {
 		action := CreateCompositeAction("Empty Composite", "No steps", nil)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		if !strings.Contains(action, "Empty Composite") {

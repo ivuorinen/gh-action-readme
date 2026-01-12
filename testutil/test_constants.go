@@ -111,3 +111,10 @@ const (
 	TestRepoBuildActionPath = "/repo/build/action.yml"
 	TestVersionV123         = "@v1.2.3"
 )
+
+// Test error message formats for testutil tests.
+const (
+	TestErrUnexpected     = "unexpected error: %v"
+	TestErrNonEmptyAction = "expected non-empty action content"
+	TestErrStatusCode     = "expected status 200, got %d"
+)
