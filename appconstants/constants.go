@@ -777,6 +777,11 @@ const (
 	TestPermContents            = "contents"
 )
 
+// Test repository names - used in configuration tests.
+const (
+	TestRepoTestOrgTestRepo = "test-org/test-repo"
+)
+
 // File permissions (additional).
 const (
 	// FilePermDir is the directory permission.
