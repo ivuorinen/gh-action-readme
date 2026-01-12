@@ -22,15 +22,11 @@ func TestFindRepositoryRoot(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				// Create .git directory
-				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
-				if err != nil {
-					t.Fatalf("failed to create .git directory: %v", err)
-				}
+				testutil.SetupGitDirectory(t, tmpDir)
 
 				// Create subdirectory to test from
 				subDir := filepath.Join(tmpDir, "subdir", "nested")
-				err = os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
+				err := os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
 				if err != nil {
 					t.Fatalf("failed to create subdirectory: %v", err)
 				}
@@ -128,11 +124,7 @@ func TestDetectGitRepository(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				// Create .git directory
-				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
-				if err != nil {
-					t.Fatalf("failed to create .git directory: %v", err)
-				}
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
 
 				// Create config file with GitHub remote
 				configContent := `[core]

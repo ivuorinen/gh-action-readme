@@ -729,23 +729,16 @@ const (
 
 // Test wizard inputs and prompts - used in wizard tests.
 const (
-	TestWizardInputYes       = "y\n"
-	TestWizardInputNo        = "n\n"
-	TestWizardInputYesYes    = "y\ny\n"
-	TestWizardInputTwo       = "2\n"
-	TestWizardInputTripleNL  = "\n\n\n"
-	TestWizardInputDoubleNL  = "\n\n"
-	TestWizardPromptContinue = "Continue?"
-	TestWizardPromptEnter    = "Enter value"
+	TestWizardInputYes      = "y\n"
+	TestWizardInputNo       = "n\n"
+	TestWizardInputTwo      = "2\n"
+	TestWizardInputDoubleNL = "\n\n"
 )
 
 // Test repository and organization names - used in wizard tests.
 const (
-	TestOrgName  = "testorg"
-	TestRepoName = "testrepo"
-	TestValue    = "test"
-	TestVersion  = "v1.0.0"
-	TestDocsPath = "./docs"
+	TestValue   = "test"
+	TestVersion = "v1.0.0"
 )
 
 // Test assertion messages - used in wizard tests.
@@ -755,14 +748,8 @@ const (
 
 // Test dependency actions - used in updater tests.
 const (
-	TestActionCheckoutV4       = "actions/checkout@v4"
-	TestActionCheckoutPinned   = "actions/checkout@abc123 # v4.1.1"
-	TestActionCheckoutFullSHA  = "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7"
-	TestActionCheckoutSHA      = "692973e3d937129bcbf40652eb9f2f61becf3332"
-	TestActionCheckoutVersion  = "v4.1.7"
-	TestCacheKey               = "test-key"
-	TestUpdateTypePatch        = "patch"
-	TestDepsSimpleCheckoutFile = "dependencies/simple-test-checkout.yml"
+	TestActionCheckoutSHA = "692973e3d937129bcbf40652eb9f2f61becf3332"
+	TestUpdateTypePatch   = "patch"
 )
 
 // Test paths and output - used in generator tests.

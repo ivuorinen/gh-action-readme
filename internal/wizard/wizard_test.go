@@ -229,7 +229,7 @@ func TestConfigureBasicSettings(t *testing.T) {
 			inputs:   "myorg\nmyrepo\nv1.0.0\n",
 			wantOrg:  "myorg",
 			wantRepo: "myrepo",
-			wantVer:  testutil.WizardVersionTest,
+			wantVer:  appconstants.TestVersion,
 		},
 		{
 			name:     "use defaults for org and repo, custom version",
@@ -736,7 +736,7 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 			config: &internal.AppConfig{
 				Organization: testutil.WizardOrgTest,
 				Repository:   testutil.WizardRepoTest,
-				Version:      testutil.WizardVersionTest,
+				Version:      appconstants.TestVersion,
 			},
 			wantErr: false,
 		},
@@ -784,7 +784,7 @@ func verifyCompleteWizardFlow(t *testing.T, cfg *internal.AppConfig) {
 	if cfg.Repository != "myrepo" {
 		t.Errorf("Repository = %q, want 'myrepo'", cfg.Repository)
 	}
-	if cfg.Version != testutil.WizardVersionTest {
+	if cfg.Version != appconstants.TestVersion {
 		t.Errorf("Version = %q, want 'v1.0.0'", cfg.Version)
 	}
 	if cfg.Theme != appconstants.ThemeGitHub {

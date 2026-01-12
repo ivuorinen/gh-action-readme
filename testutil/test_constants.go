@@ -158,7 +158,6 @@ const (
 	WizardOrgTest            = "testorg"
 	WizardRepoTest           = "testrepo"
 	WizardPromptEnter        = "Enter value"
-	WizardVersionTest        = "v1.0.0"
 )
 
 // Test directories and paths for wizard tests.

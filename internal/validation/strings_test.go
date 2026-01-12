@@ -10,63 +10,50 @@ import (
 func TestTrimAndNormalize(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name  string
-		input string
-		want  string
-	}{
+	tests := []testutil.StringTestCase{
 		{
-			name:  "no whitespace",
-			input: "test",
-			want:  "test",
+			Name:  "no whitespace",
+			Input: "test",
+			Want:  "test",
 		},
 		{
-			name:  "leading and trailing whitespace",
-			input: "  test  ",
-			want:  "test",
+			Name:  "leading and trailing whitespace",
+			Input: "  test  ",
+			Want:  "test",
 		},
 		{
-			name:  "multiple internal spaces",
-			input: "hello    world",
-			want:  testutil.HelloWorldStr,
+			Name:  "multiple internal spaces",
+			Input: "hello    world",
+			Want:  testutil.HelloWorldStr,
 		},
 		{
-			name:  "mixed whitespace",
-			input: "  hello   world  ",
-			want:  testutil.HelloWorldStr,
+			Name:  "mixed whitespace",
+			Input: "  hello   world  ",
+			Want:  testutil.HelloWorldStr,
 		},
 		{
-			name:  "newlines and tabs",
-			input: "hello\n\t\tworld",
-			want:  testutil.HelloWorldStr,
+			Name:  "newlines and tabs",
+			Input: "hello\n\t\tworld",
+			Want:  testutil.HelloWorldStr,
 		},
 		{
-			name:  "empty string",
-			input: "",
-			want:  "",
+			Name:  "empty string",
+			Input: "",
+			Want:  "",
 		},
 		{
-			name:  "whitespace only",
-			input: "   \n\t  ",
-			want:  "",
+			Name:  "whitespace only",
+			Input: "   \n\t  ",
+			Want:  "",
 		},
 		{
-			name:  "multiple lines",
-			input: "line one\n  line two\n    line three",
-			want:  "line one line two line three",
+			Name:  "multiple lines",
+			Input: "line one\n  line two\n    line three",
+			Want:  "line one line two line three",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := TrimAndNormalize(tt.input)
-			if got != tt.want {
-				t.Errorf("TrimAndNormalize(%q) = %q, want %q", tt.input, got, tt.want)
-			}
-		})
-	}
+	testutil.RunStringTests(t, tests, TrimAndNormalize)
 }
 
 // TestFormatUsesStatement tests the FormatUsesStatement function.

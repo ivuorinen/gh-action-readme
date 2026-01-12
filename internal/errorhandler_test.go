@@ -10,6 +10,12 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// newTestErrorHandler creates an ErrorHandler for testing with quiet output.
+// Reduces duplication across error handler tests.
+func newTestErrorHandler() *ErrorHandler {
+	return NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
+}
+
 // TestNewErrorHandler tests error handler creation.
 func TestNewErrorHandler(t *testing.T) {
 	output := &ColoredOutput{NoColor: true, Quiet: true}
@@ -28,7 +34,7 @@ func TestNewErrorHandler(t *testing.T) {
 //
 
 func TestDetermineErrorCode(t *testing.T) {
-	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
+	handler := newTestErrorHandler()
 
 	tests := []struct {
 		name     string
@@ -91,7 +97,7 @@ func TestDetermineErrorCode(t *testing.T) {
 //
 
 func TestCheckTypedError(t *testing.T) {
-	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
+	handler := newTestErrorHandler()
 
 	tests := []struct {
 		name     string
@@ -152,7 +158,7 @@ func TestCheckTypedError(t *testing.T) {
 
 // TestCheckStringPatterns tests string pattern matching.
 func TestCheckStringPatterns(t *testing.T) {
-	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
+	handler := newTestErrorHandler()
 
 	tests := []struct {
 		name     string
@@ -278,7 +284,7 @@ func TestContains(t *testing.T) {
 func TestFatalErrorComponents(t *testing.T) {
 	// Test the logic that HandleFatalError uses before calling os.Exit
 
-	handler := NewErrorHandler(&ColoredOutput{NoColor: true, Quiet: true})
+	handler := newTestErrorHandler()
 
 	// Test that HandleFatalError correctly constructs contextual errors
 	code := appconstants.ErrCodeFileNotFound

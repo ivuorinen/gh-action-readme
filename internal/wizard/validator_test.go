@@ -6,10 +6,17 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal"
 )
 
+// newTestValidator creates a ConfigValidator for testing with quiet output.
+// Reduces duplication across validator tests.
+func newTestValidator() *ConfigValidator {
+	output := internal.NewColoredOutput(true)
+
+	return NewConfigValidator(output)
+}
+
 func TestConfigValidatorValidateConfig(t *testing.T) {
 	t.Parallel()
-	output := internal.NewColoredOutput(true) // quiet mode for testing
-	validator := NewConfigValidator(output)
+	validator := newTestValidator()
 
 	tests := []struct {
 		name           string
@@ -95,8 +102,7 @@ func TestConfigValidatorValidateConfig(t *testing.T) {
 
 func TestConfigValidatorValidateField(t *testing.T) {
 	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+	validator := newTestValidator()
 
 	tests := []struct {
 		name        string
@@ -130,8 +136,7 @@ func TestConfigValidatorValidateField(t *testing.T) {
 
 func TestConfigValidatorIsValidGitHubName(t *testing.T) {
 	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+	validator := newTestValidator()
 
 	tests := []struct {
 		name  string
@@ -162,8 +167,7 @@ func TestConfigValidatorIsValidGitHubName(t *testing.T) {
 
 func TestConfigValidatorIsValidSemanticVersion(t *testing.T) {
 	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+	validator := newTestValidator()
 
 	tests := []struct {
 		name  string
@@ -193,8 +197,7 @@ func TestConfigValidatorIsValidSemanticVersion(t *testing.T) {
 
 func TestConfigValidatorIsValidGitHubToken(t *testing.T) {
 	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+	validator := newTestValidator()
 
 	tests := []struct {
 		name  string
@@ -224,8 +227,7 @@ func TestConfigValidatorIsValidGitHubToken(t *testing.T) {
 
 func TestConfigValidatorIsValidVariableName(t *testing.T) {
 	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+	validator := newTestValidator()
 
 	tests := []struct {
 		name  string
