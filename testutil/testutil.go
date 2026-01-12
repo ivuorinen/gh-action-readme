@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -521,4 +522,49 @@ func ErrCreateDir(name string) string {
 // ErrDiscoverActionFiles returns the error format string for DiscoverActionFiles failures.
 func ErrDiscoverActionFiles() string {
 	return "DiscoverActionFiles() error = %v"
+}
+
+// InitGitRepo initializes a git repository in the given directory.
+// It runs git init and creates an initial commit.
+func InitGitRepo(t *testing.T, dir string) {
+	t.Helper()
+
+	// Initialize git repo
+	cmd := exec.Command("git", "init") // #nosec G204 -- test helper with controlled input
+	cmd.Dir = dir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to initialize git repo: %v", err)
+	}
+
+	// Configure git user for commits
+	configCmds := [][]string{
+		{"git", "config", "user.name", "Test User"},
+		{"git", "config", "user.email", "test@example.com"},
+	}
+
+	for _, args := range configCmds {
+		cmd := exec.Command(args[0], args[1:]...) // #nosec G204 -- test helper
+		cmd.Dir = dir
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("Failed to configure git: %v", err)
+		}
+	}
+
+	// Create an initial commit
+	readmePath := filepath.Join(dir, "README.md")
+	if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0600); err != nil {
+		t.Fatalf("Failed to create README: %v", err)
+	}
+
+	addCmd := exec.Command("git", "add", "README.md") // #nosec G204 -- test helper
+	addCmd.Dir = dir
+	if err := addCmd.Run(); err != nil {
+		t.Fatalf("Failed to add file to git: %v", err)
+	}
+
+	commitCmd := exec.Command("git", "commit", "-m", "Initial commit") // #nosec G204 -- test helper
+	commitCmd.Dir = dir
+	if err := commitCmd.Run(); err != nil {
+		t.Fatalf("Failed to create initial commit: %v", err)
+	}
 }

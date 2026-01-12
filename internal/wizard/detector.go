@@ -255,11 +255,6 @@ func validateDirectoryPath(dir string) error {
 		}
 	}
 
-	// Check if Clean changed the path significantly (not just trailing slashes)
-	if cleanDir != dir && cleanDir != strings.TrimRight(dir, "/\\") {
-		return fmt.Errorf("invalid directory path: path normalization detected traversal in %q", dir)
-	}
-
 	return nil
 }
 

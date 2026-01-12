@@ -775,8 +775,8 @@ func TestSchemaHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+		t.Run(tt.name, func(_ *testing.T) {
+			// Note: Cannot use t.Parallel() because test modifies shared globalConfig
 
 			originalConfig := globalConfig
 			defer func() { globalConfig = originalConfig }()
@@ -1326,8 +1326,8 @@ func TestAnalyzeActionFileDeps(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir()
 				actionFile := filepath.Join(tmpDir, "action.yml")
-				// Write invalid YAML
-				if err := os.WriteFile(actionFile, []byte("invalid: yaml: content:"), 0600); err != nil {
+				// Write invalid YAML (unclosed bracket)
+				if err := os.WriteFile(actionFile, []byte("invalid: [yaml"), 0600); err != nil {
 					t.Fatalf("Failed to write invalid action file: %v", err)
 				}
 
@@ -2901,6 +2901,32 @@ func TestSetupDepsUpgrade(t *testing.T) {
 	}
 }
 
+// setupDepsUpgradeCmd creates and configures a command for upgrade handler testing.
+func setupDepsUpgradeCmd(ciMode, dryRun bool) *cobra.Command {
+	cmd := &cobra.Command{Use: "upgrade"}
+	cmd.Flags().Bool("ci", ciMode, "")
+	cmd.Flags().Bool(appconstants.InputAll, false, "")
+	cmd.Flags().Bool(appconstants.InputDryRun, dryRun, "")
+
+	if ciMode {
+		_ = cmd.Flags().Set("ci", "true")
+	}
+	if dryRun {
+		_ = cmd.Flags().Set(appconstants.InputDryRun, "true")
+	}
+
+	return cmd
+}
+
+// setupDepsUpgradeConfig initializes globalConfig for upgrade handler testing.
+func setupDepsUpgradeConfig(testName string) {
+	globalConfig = internal.DefaultAppConfig()
+	if testName != "returns error when no GitHub token" {
+		globalConfig.GitHubToken = testutil.TestTokenValue
+	}
+	globalConfig.Quiet = true
+}
+
 func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 	// Note: Not using t.Parallel() because tests modify globalConfig and change directories
 
@@ -2916,7 +2942,14 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 			name: "successfully processes with auto-approve in dry-run",
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
+				// Check if git is available
+				if _, err := exec.LookPath("git"); err != nil {
+					t.Skip("git not installed")
+				}
+
 				tmpDir := t.TempDir()
+				// Initialize git repo
+				testutil.InitGitRepo(t, tmpDir)
 				// Create action with dependencies
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV3)
 
@@ -2927,29 +2960,45 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "returns nil error when no action files found",
+			name: "returns error when no action files found",
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
+				// Check if git is available
+				if _, err := exec.LookPath("git"); err != nil {
+					t.Skip("git not installed")
+				}
 
-				return t.TempDir() // Empty directory
+				tmpDir := t.TempDir()
+				// Initialize git repo
+				testutil.InitGitRepo(t, tmpDir)
+
+				return tmpDir // Empty directory with no action files
 			},
-			ciMode:  true,
-			dryRun:  true,
-			wantErr: false, // Handler returns nil but warns
+			ciMode:     true,
+			dryRun:     true,
+			wantErr:    true, // Should return error when no action files
+			errContain: "no action files found",
 		},
 		{
 			name: "returns error when no GitHub token",
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
+				// Check if git is available
+				if _, err := exec.LookPath("git"); err != nil {
+					t.Skip("git not installed")
+				}
+
 				tmpDir := t.TempDir()
+				// Initialize git repo
+				testutil.InitGitRepo(t, tmpDir)
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV3)
 
 				return tmpDir
 			},
 			ciMode:     true,
 			dryRun:     true,
-			wantErr:    false, // Handler returns nil but warns about no token
-			errContain: "",
+			wantErr:    true, // Handler returns error when no token
+			errContain: "no GitHub token found",
 		},
 	}
 
@@ -2966,24 +3015,10 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 			t.Chdir(tmpDir) // Automatic cleanup via t.Chdir()
 
 			// Initialize test config
-			globalConfig = internal.DefaultAppConfig()
-			if tt.name != "returns error when no GitHub token" {
-				globalConfig.GitHubToken = testutil.TestTokenValue
-			}
-			globalConfig.Quiet = true
+			setupDepsUpgradeConfig(tt.name)
 
 			// Create command with flags
-			cmd := &cobra.Command{Use: "upgrade"}
-			cmd.Flags().Bool("ci", tt.ciMode, "")
-			cmd.Flags().Bool(appconstants.InputAll, false, "")
-			cmd.Flags().Bool(appconstants.InputDryRun, tt.dryRun, "")
-
-			if tt.ciMode {
-				_ = cmd.Flags().Set("ci", "true")
-			}
-			if tt.dryRun {
-				_ = cmd.Flags().Set(appconstants.InputDryRun, "true")
-			}
+			cmd := setupDepsUpgradeCmd(tt.ciMode, tt.dryRun)
 
 			// Execute handler
 			err := depsUpgradeHandler(cmd, []string{})
