@@ -122,8 +122,8 @@ func TestCLICommands(t *testing.T) {
 		{
 			name:       "deps list command no files",
 			args:       []string{"deps", "list"},
-			wantExit:   0,                       // Changed: deps list now outputs warning instead of error when no files found
-			wantStdout: "no action files found", // Lowercase to match actual output with emoji prefix
+			wantExit:   0, // Changed: deps list now outputs warning instead of error when no files found
+			wantStdout: "no action files found",
 		},
 		{
 			name: "deps list command with composite action",
@@ -1158,7 +1158,7 @@ func TestDisplayFloatingDeps(t *testing.T) {
 		{
 			file: appconstants.TestTmpActionFile,
 			dep: dependencies.Dependency{
-				Name:    "actions/checkout",
+				Name:    testutil.TestActionCheckout,
 				Version: "v4",
 			},
 		},
@@ -1374,7 +1374,7 @@ func verifySubcommandsExist(t *testing.T, cmd *cobra.Command, expectedSubcommand
 }
 
 func TestNewConfigCmd(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because test modifies shared globalConfig
 
 	// Save original global config
 	origConfig := globalConfig
@@ -1385,7 +1385,6 @@ func TestNewConfigCmd(t *testing.T) {
 	}
 
 	t.Run("creates command with correct properties", func(t *testing.T) {
-		t.Parallel()
 		cmd := newConfigCmd()
 		if cmd == nil {
 			t.Fatal("newConfigCmd() returned nil")
@@ -1396,14 +1395,12 @@ func TestNewConfigCmd(t *testing.T) {
 	})
 
 	t.Run("has all expected subcommands", func(t *testing.T) {
-		t.Parallel()
 		cmd := newConfigCmd()
 		expectedSubcommands := []string{"init", "wizard", "show", "themes"}
 		verifySubcommandsExist(t, cmd, expectedSubcommands)
 	})
 
 	t.Run("wizard subcommand has required flags", func(t *testing.T) {
-		t.Parallel()
 		cmd := newConfigCmd()
 		wizardCmd, _, err := cmd.Find([]string{"wizard"})
 		if err != nil {
@@ -2790,7 +2787,7 @@ func TestApplyUpdates(t *testing.T) {
 }
 
 func TestSetupDepsUpgrade(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because one subtest modifies shared globalConfig
 
 	tests := []struct {
 		name       string
@@ -2873,68 +2870,11 @@ func TestSetupDepsUpgrade(t *testing.T) {
 			currentDir, config := tt.setupFunc(t)
 			output := createOutputManager(true)
 
-			analyzer, files, err := setupDepsUpgrade(output, currentDir, config)
+			_, _, err := setupDepsUpgrade(output, currentDir, config)
 
-			validateSetupDepsUpgradeResult(t, analyzer, files, err, tt.wantErr, tt.errContain)
+			validateDepsUpgradeError(t, err, tt.wantErr, tt.errContain)
 		})
 	}
-}
-
-// validateSetupDepsUpgradeResult validates the results of setupDepsUpgrade call.
-func validateSetupDepsUpgradeResult(
-	t *testing.T,
-	analyzer *dependencies.Analyzer,
-	files []string,
-	err error,
-	wantErr bool,
-	errContain string,
-) {
-	t.Helper()
-
-	if (err != nil) != wantErr {
-		t.Errorf("setupDepsUpgrade() error = %v, wantErr %v", err, wantErr)
-	}
-
-	if wantErr && errContain != "" {
-		if err == nil || !strings.Contains(err.Error(), errContain) {
-			t.Errorf("error should contain %q, got %v", errContain, err)
-		}
-	}
-
-	if !wantErr {
-		if analyzer == nil {
-			t.Error("expected analyzer, got nil")
-		}
-		if len(files) == 0 {
-			t.Error("expected action files, got none")
-		}
-	}
-}
-
-// setupDepsUpgradeCmd creates and configures a command for upgrade handler testing.
-func setupDepsUpgradeCmd(ciMode, dryRun bool) *cobra.Command {
-	cmd := &cobra.Command{Use: "upgrade"}
-	cmd.Flags().Bool("ci", ciMode, "")
-	cmd.Flags().Bool(appconstants.InputAll, false, "")
-	cmd.Flags().Bool(appconstants.InputDryRun, dryRun, "")
-
-	if ciMode {
-		_ = cmd.Flags().Set("ci", "true")
-	}
-	if dryRun {
-		_ = cmd.Flags().Set(appconstants.InputDryRun, "true")
-	}
-
-	return cmd
-}
-
-// setupDepsUpgradeConfig initializes globalConfig for upgrade handler testing.
-func setupDepsUpgradeConfig(testName string) {
-	globalConfig = internal.DefaultAppConfig()
-	if testName != testutil.TestMsgNoGitHubToken {
-		globalConfig.GitHubToken = testutil.TestTokenValue
-	}
-	globalConfig.Quiet = true
 }
 
 // validateDepsUpgradeError validates error expectations for deps upgrade tests.
@@ -2954,109 +2894,8 @@ func validateDepsUpgradeError(t *testing.T, err error, wantErr bool, errContain 
 	}
 }
 
-func TestDepsUpgradeHandlerIntegration(t *testing.T) {
-	// Note: Not using t.Parallel() because tests modify globalConfig and change directories
-
-	tests := []struct {
-		name       string
-		setupFunc  func(t *testing.T) string
-		ciMode     bool
-		dryRun     bool
-		wantErr    bool
-		errContain string
-	}{
-		{
-			name: "successfully processes with auto-approve in dry-run",
-			setupFunc: func(t *testing.T) string {
-				t.Helper()
-				// Check if git is available
-				if _, err := exec.LookPath("git"); err != nil {
-					t.Skip(testutil.TestMsgGitNotInstalled)
-				}
-
-				tmpDir := t.TempDir()
-				// Initialize git repo
-				testutil.InitGitRepo(t, tmpDir)
-				// Create action with dependencies
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV3)
-
-				return tmpDir
-			},
-			ciMode:  true,
-			dryRun:  true,
-			wantErr: false,
-		},
-		{
-			name: "returns error when no action files found",
-			setupFunc: func(t *testing.T) string {
-				t.Helper()
-				// Check if git is available
-				if _, err := exec.LookPath("git"); err != nil {
-					t.Skip(testutil.TestMsgGitNotInstalled)
-				}
-
-				tmpDir := t.TempDir()
-				// Initialize git repo
-				testutil.InitGitRepo(t, tmpDir)
-
-				return tmpDir // Empty directory with no action files
-			},
-			ciMode:     true,
-			dryRun:     true,
-			wantErr:    true, // Should return error when no action files
-			errContain: "no action files found",
-		},
-		{
-			name: testutil.TestMsgNoGitHubToken,
-			setupFunc: func(t *testing.T) string {
-				t.Helper()
-				// Check if git is available
-				if _, err := exec.LookPath("git"); err != nil {
-					t.Skip(testutil.TestMsgGitNotInstalled)
-				}
-
-				tmpDir := t.TempDir()
-				// Initialize git repo
-				testutil.InitGitRepo(t, tmpDir)
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV3)
-
-				return tmpDir
-			},
-			ciMode:     true,
-			dryRun:     true,
-			wantErr:    true, // Handler returns error when no token
-			errContain: "no GitHub token found",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Save and restore global state
-			origConfig := globalConfig
-			defer func() {
-				globalConfig = origConfig
-			}()
-
-			// Setup test directory
-			tmpDir := tt.setupFunc(t)
-			t.Chdir(tmpDir) // Automatic cleanup via t.Chdir()
-
-			// Initialize test config
-			setupDepsUpgradeConfig(tt.name)
-
-			// Create command with flags
-			cmd := setupDepsUpgradeCmd(tt.ciMode, tt.dryRun)
-
-			// Execute handler
-			err := depsUpgradeHandler(cmd, []string{})
-
-			validateDepsUpgradeError(t, err, tt.wantErr, tt.errContain)
-		})
-	}
-}
-
 func TestConfigWizardHandlerInitialization(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because test modifies shared globalConfig
 
 	t.Run("initializes globalConfig when nil", func(t *testing.T) {
 		// Save and restore

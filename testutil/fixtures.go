@@ -848,16 +848,20 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 }
 
 // Global fixture manager instance.
-var defaultFixtureManager *FixtureManager
+var (
+	defaultFixtureManager *FixtureManager
+	fixtureManagerOnce    sync.Once
+)
 
 // GetFixtureManager returns the global fixture manager instance.
+// Thread-safe singleton initialization using sync.Once.
 func GetFixtureManager() *FixtureManager {
-	if defaultFixtureManager == nil {
+	fixtureManagerOnce.Do(func() {
 		defaultFixtureManager = NewFixtureManager()
 		if err := defaultFixtureManager.LoadScenarios(); err != nil {
 			panic(fmt.Sprintf("failed to load test scenarios: %v", err))
 		}
-	}
+	})
 
 	return defaultFixtureManager
 }
