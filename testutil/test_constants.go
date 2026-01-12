@@ -5,8 +5,11 @@ package testutil
 
 // Test cache constants for reducing string duplication.
 const (
-	CacheTestKey   = "test-key"
-	CacheTestValue = "test-value"
+	CacheTestKey    = "test-key"
+	CacheTestValue  = "test-value"
+	CacheTestKey1   = "key1"
+	CacheTestKey2   = "key2"
+	CacheTestValue1 = "value1"
 )
 
 // Error handler test constants for reducing string duplication.

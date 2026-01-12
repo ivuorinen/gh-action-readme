@@ -84,9 +84,9 @@ func TestCacheSetAndGet(t *testing.T) {
 	}{
 		{
 			name:     "string value",
-			key:      "test-key",
-			value:    "test-value",
-			expected: "test-value",
+			key:      testutil.CacheTestKey,
+			value:    testutil.CacheTestValue,
+			expected: testutil.CacheTestValue,
 		},
 		{
 			name:     "struct value",
@@ -290,12 +290,12 @@ func TestCacheClear(t *testing.T) {
 	defer testutil.CleanupCache(t, cache)()
 
 	// Add some data
-	_ = cache.Set("key1", "value1")
-	_ = cache.Set("key2", "value2")
+	_ = cache.Set(testutil.CacheTestKey1, testutil.CacheTestValue1)
+	_ = cache.Set(testutil.CacheTestKey2, "value2")
 
 	// Verify data exists
-	_, exists1 := cache.Get("key1")
-	_, exists2 := cache.Get("key2")
+	_, exists1 := cache.Get(testutil.CacheTestKey1)
+	_, exists2 := cache.Get(testutil.CacheTestKey2)
 	if !exists1 || !exists2 {
 		t.Fatal("expected test data to exist before clear")
 	}
@@ -305,8 +305,8 @@ func TestCacheClear(t *testing.T) {
 	testutil.AssertNoError(t, err)
 
 	// Verify data is gone
-	_, exists1 = cache.Get("key1")
-	_, exists2 = cache.Get("key2")
+	_, exists1 = cache.Get(testutil.CacheTestKey1)
+	_, exists2 = cache.Get(testutil.CacheTestKey2)
 	if exists1 || exists2 {
 		t.Error("expected data to be cleared")
 	}
@@ -320,22 +320,22 @@ func TestCacheDelete(t *testing.T) {
 	defer testutil.CleanupCache(t, cache)()
 
 	// Add some data
-	_ = cache.Set("key1", "value1")
-	_ = cache.Set("key2", "value2")
+	_ = cache.Set(testutil.CacheTestKey1, testutil.CacheTestValue1)
+	_ = cache.Set(testutil.CacheTestKey2, "value2")
 	_ = cache.Set("key3", "value3")
 
 	// Verify data exists
-	_, exists := cache.Get("key1")
+	_, exists := cache.Get(testutil.CacheTestKey1)
 	if !exists {
 		t.Fatal("expected key1 to exist before delete")
 	}
 
 	// Delete specific key
-	cache.Delete("key1")
+	cache.Delete(testutil.CacheTestKey1)
 
 	// Verify deleted key is gone but others remain
-	_, exists1 := cache.Get("key1")
-	_, exists2 := cache.Get("key2")
+	_, exists1 := cache.Get(testutil.CacheTestKey1)
+	_, exists2 := cache.Get(testutil.CacheTestKey2)
 	_, exists3 := cache.Get("key3")
 
 	if exists1 {
@@ -360,8 +360,8 @@ func TestCacheStats(t *testing.T) {
 	_ = cache.Clear()
 
 	// Add some data
-	_ = cache.Set("key1", "value1")
-	_ = cache.Set("key2", "larger-value-with-more-content")
+	_ = cache.Set(testutil.CacheTestKey1, testutil.CacheTestValue1)
+	_ = cache.Set(testutil.CacheTestKey2, "larger-value-with-more-content")
 
 	stats := cache.Stats()
 
@@ -481,7 +481,7 @@ func TestCacheAsyncSaveErrorHandling(t *testing.T) {
 
 	// This tests our new saveToDiskAsync error handling
 	// Set a value to trigger async save
-	err := cache.Set("test-key", "test-value")
+	err := cache.Set(testutil.CacheTestKey, testutil.CacheTestValue)
 	testutil.AssertNoError(t, err)
 
 	// Give some time for async save to complete
@@ -490,11 +490,11 @@ func TestCacheAsyncSaveErrorHandling(t *testing.T) {
 	// The async save should have completed without panicking
 	// We can't easily test the error logging without capturing logs,
 	// but we can verify the cache still works
-	value, exists := cache.Get("test-key")
+	value, exists := cache.Get(testutil.CacheTestKey)
 	if !exists {
 		t.Error("expected value to exist after async save")
 	}
-	testutil.AssertEqual(t, "test-value", value)
+	testutil.AssertEqual(t, testutil.CacheTestValue, value)
 }
 
 func TestCacheEstimateSize(t *testing.T) {
@@ -525,9 +525,9 @@ func TestCacheEstimateSize(t *testing.T) {
 		{
 			name: "struct",
 			value: map[string]any{
-				"key1": "value1",
-				"key2": 42,
-				"key3": []string{"a", "b", "c"},
+				testutil.CacheTestKey1: testutil.CacheTestValue1,
+				testutil.CacheTestKey2: 42,
+				"key3":                 []string{"a", "b", "c"},
 			},
 			minSize: 30,
 			maxSize: 200,
