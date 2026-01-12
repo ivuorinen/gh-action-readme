@@ -225,6 +225,34 @@ func TestApplyPinnedUpdates(t *testing.T) {
 	}
 }
 
+// validateUpdateFileSuccess validates that the file was updated correctly and backup was cleaned up.
+func validateUpdateFileSuccess(t *testing.T, actionPath, expectedYAML, dir string, checkBackup bool) {
+	t.Helper()
+
+	actualContent := testutil.SafeReadFile(t, actionPath, dir)
+
+	if strings.TrimSpace(string(actualContent)) != strings.TrimSpace(expectedYAML) {
+		t.Errorf("updateActionFile() content mismatch\nGot:\n%s\nWant:\n%s",
+			string(actualContent), expectedYAML)
+	}
+
+	if checkBackup {
+		backupPath := actionPath + appconstants.BackupExtension
+		testutil.AssertFileNotExists(t, backupPath)
+	}
+}
+
+// validateUpdateFileRollback validates that the rollback succeeded and file is unchanged.
+func validateUpdateFileRollback(t *testing.T, actionPath, initialYAML, dir string) {
+	t.Helper()
+
+	actualContent := testutil.SafeReadFile(t, actionPath, dir)
+
+	if strings.TrimSpace(string(actualContent)) != strings.TrimSpace(initialYAML) {
+		t.Error("rollback failed, file was modified")
+	}
+}
+
 // TestUpdateActionFile tests the updateActionFile method directly.
 func TestUpdateActionFile(t *testing.T) {
 	t.Parallel()
@@ -337,28 +365,11 @@ func TestUpdateActionFile(t *testing.T) {
 			}
 
 			if !tt.expectError {
-				// Read and verify content
-				actualContent := testutil.SafeReadFile(t, actionPath, dir)
-
-				if strings.TrimSpace(string(actualContent)) != strings.TrimSpace(tt.expectedYAML) {
-					t.Errorf("updateActionFile() content mismatch\nGot:\n%s\nWant:\n%s",
-						string(actualContent), tt.expectedYAML)
-				}
-
-				// Check backup was removed
-				if tt.checkBackup {
-					backupPath := actionPath + appconstants.BackupExtension
-					testutil.AssertFileNotExists(t, backupPath)
-				}
+				validateUpdateFileSuccess(t, actionPath, tt.expectedYAML, dir, tt.checkBackup)
 			}
 
 			if tt.rollbackCheck {
-				// Verify rollback happened - file should be unchanged
-				actualContent := testutil.SafeReadFile(t, actionPath, dir)
-
-				if strings.TrimSpace(string(actualContent)) != strings.TrimSpace(tt.initialYAML) {
-					t.Errorf("rollback failed, file was modified")
-				}
+				validateUpdateFileRollback(t, actionPath, tt.initialYAML, dir)
 			}
 		})
 	}
