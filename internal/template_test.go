@@ -472,6 +472,29 @@ func assertTemplateData(
 }
 
 // TestAnalyzeDependencies tests the analyzeDependencies function.
+// prepareTestActionFile prepares a test action file for analyzeDependencies tests.
+func prepareTestActionFile(t *testing.T, actionPath string) string {
+	t.Helper()
+
+	if strings.HasPrefix(actionPath, "../../testdata/analyzer/") &&
+		actionPath != "../../testdata/analyzer/nonexistent.yml" {
+		filename := filepath.Base(actionPath)
+		yamlContent := testutil.MustReadAnalyzerFixture(filename)
+
+		tmpDir := t.TempDir()
+		tmpPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+		tmpPath = testutil.ValidateTestPath(t, tmpPath, tmpDir)
+		if err := os.WriteFile(tmpPath, []byte(yamlContent), appconstants.FilePermDefault); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+
+		return tmpPath
+	}
+
+	// For nonexistent file test
+	return filepath.Join(t.TempDir(), "nonexistent.yml")
+}
+
 func TestAnalyzeDependencies(t *testing.T) {
 	t.Parallel()
 
@@ -523,24 +546,7 @@ func TestAnalyzeDependencies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Create temp file with fixture content for valid fixtures
-			var actionPath string
-			if strings.HasPrefix(tt.actionPath, "../../testdata/analyzer/") &&
-				tt.actionPath != "../../testdata/analyzer/nonexistent.yml" {
-				// Extract just the filename from the path
-				filename := filepath.Base(tt.actionPath)
-				yamlContent := testutil.MustReadAnalyzerFixture(filename)
-
-				tmpDir := t.TempDir()
-				actionPath = filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-				actionPath = testutil.ValidateTestPath(t, actionPath, tmpDir)
-				if err := os.WriteFile(actionPath, []byte(yamlContent), appconstants.FilePermDefault); err != nil {
-					t.Fatalf("failed to write temp file: %v", err)
-				}
-			} else {
-				// For nonexistent file test, use a nonexistent path
-				actionPath = filepath.Join(t.TempDir(), "nonexistent.yml")
-			}
+			actionPath := prepareTestActionFile(t, tt.actionPath)
 
 			gitInfo := git.RepoInfo{
 				Organization: "testorg",
