@@ -12,10 +12,6 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-// TestApplyPinnedUpdates tests the ApplyPinnedUpdates method.
-// Note: These tests identify a bug where the `- ` list marker is not preserved
-// when updating YAML. The current implementation replaces entire lines with
-// just "uses: " prefix, losing the list marker. Tests are written to document
 // validatePinnedUpdateSuccess validates that the update succeeded and backup was cleaned up.
 func validatePinnedUpdateSuccess(t *testing.T, actionPath string, validateBackup bool, analyzer *Analyzer) {
 	t.Helper()
@@ -26,7 +22,8 @@ func validatePinnedUpdateSuccess(t *testing.T, actionPath string, validateBackup
 	}
 
 	// Verify file is still valid YAML
-	_ = analyzer.validateActionFile(actionPath)
+	err := analyzer.validateActionFile(actionPath)
+	testutil.AssertNoError(t, err)
 }
 
 // validatePinnedUpdateRollback validates that the rollback succeeded and file is unchanged.
@@ -45,6 +42,10 @@ func validatePinnedUpdateRollback(t *testing.T, actionPath, originalContent stri
 	testutil.AssertFileNotExists(t, backupPath)
 }
 
+// TestApplyPinnedUpdates tests the ApplyPinnedUpdates method.
+// Note: These tests identify a bug where the `- ` list marker is not preserved
+// when updating YAML. The current implementation replaces entire lines with
+// just "uses: " prefix, losing the list marker. Tests are written to document
 // current behavior while validating the logic works.
 func TestApplyPinnedUpdates(t *testing.T) {
 	t.Parallel()

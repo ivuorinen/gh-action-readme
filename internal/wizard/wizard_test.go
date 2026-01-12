@@ -524,14 +524,14 @@ func TestConfigureOutputDirectory(t *testing.T) {
 		{
 			name:    "use default directory",
 			input:   "\n",
-			initial: "testutil.TestDirDocs",
-			want:    "testutil.TestDirDocs",
+			initial: testutil.TestDirDocs,
+			want:    testutil.TestDirDocs,
 		},
 		{
 			name:    "relative path",
-			input:   "testutil.TestDirOutput\n",
+			input:   testutil.TestDirOutput + "\n",
 			initial: ".",
-			want:    "testutil.TestDirOutput",
+			want:    testutil.TestDirOutput,
 		},
 	}
 
