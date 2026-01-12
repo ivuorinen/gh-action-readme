@@ -924,7 +924,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			outputDir:       appconstants.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
-			errContains:     "path traversal",
+			errContains:     testutil.TestErrPathTraversal,
 		},
 		{
 			name:            "path traversal with ../ in middle",
@@ -932,7 +932,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			outputDir:       appconstants.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
-			errContains:     "path traversal",
+			errContains:     testutil.TestErrPathTraversal,
 		},
 		{
 			name:            "multiple ../ escaping directory",
@@ -940,7 +940,7 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			outputDir:       appconstants.TestOutputPath,
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantErr:         true,
-			errContains:     "path traversal",
+			errContains:     testutil.TestErrPathTraversal,
 		},
 	}
 
