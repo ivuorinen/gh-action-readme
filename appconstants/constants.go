@@ -817,6 +817,15 @@ const (
 	TestPatternREADMEAll = "**/README*.md"
 )
 
+// Config test constants - used in config tests.
+const (
+	TestFileGHReadmeYAML = ".ghreadme.yaml"
+	TestFileConfigYAML   = "config.yaml"
+	TestTokenConfig      = "config-token"
+	TestTokenStd         = "std-token"
+	TestFileCustomConfig = "custom-config.yml"
+)
+
 // String returns a string representation of a ConfigurationSource.
 func (s ConfigurationSource) String() string {
 	switch s {
