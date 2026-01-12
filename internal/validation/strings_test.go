@@ -2,6 +2,8 @@ package validation
 
 import (
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // TestTrimAndNormalize tests the TrimAndNormalize function.
@@ -26,17 +28,17 @@ func TestTrimAndNormalize(t *testing.T) {
 		{
 			name:  "multiple internal spaces",
 			input: "hello    world",
-			want:  "hello world",
+			want:  testutil.HelloWorldStr,
 		},
 		{
 			name:  "mixed whitespace",
 			input: "  hello   world  ",
-			want:  "hello world",
+			want:  testutil.HelloWorldStr,
 		},
 		{
 			name:  "newlines and tabs",
 			input: "hello\n\t\tworld",
-			want:  "hello world",
+			want:  testutil.HelloWorldStr,
 		},
 		{
 			name:  "empty string",
