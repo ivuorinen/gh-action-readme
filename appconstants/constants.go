@@ -788,6 +788,35 @@ const (
 	FilePermDir = 0750
 )
 
+// Integration test directory and file names - used in integration tests.
+const (
+	TestDirDotGitHub       = ".github"
+	TestFileGitIgnore      = ".gitignore"
+	TestFileGHActionReadme = "gh-action-readme.yml"
+	TestBinaryName         = "gh-action-readme"
+)
+
+// Integration test CLI flags - used in integration tests.
+const (
+	TestFlagOutputFormat = "--output-format"
+	TestFlagRecursive    = "--recursive"
+	TestFlagTheme        = "--theme"
+	TestFlagVerbose      = "--verbose"
+)
+
+// Integration test output messages - used in integration tests.
+const (
+	TestMsgCurrentConfig     = "Current Configuration"
+	TestMsgDependenciesFound = "Dependencies found"
+)
+
+// Integration test file patterns - used in integration tests.
+const (
+	TestPatternHTML      = "*.html"
+	TestPatternREADME    = "README*.md"
+	TestPatternREADMEAll = "**/README*.md"
+)
+
 // String returns a string representation of a ConfigurationSource.
 func (s ConfigurationSource) String() string {
 	switch s {
