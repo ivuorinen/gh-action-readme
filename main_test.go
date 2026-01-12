@@ -122,8 +122,8 @@ func TestCLICommands(t *testing.T) {
 		{
 			name:       "deps list command no files",
 			args:       []string{"deps", "list"},
-			wantExit:   0, // Changed: deps list now outputs warning instead of error when no files found
-			wantStdout: "No action files found",
+			wantExit:   0,                       // Changed: deps list now outputs warning instead of error when no files found
+			wantStdout: "no action files found", // Lowercase to match actual output with emoji prefix
 		},
 		{
 			name: "deps list command with composite action",
