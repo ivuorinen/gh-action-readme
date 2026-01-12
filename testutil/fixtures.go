@@ -808,7 +808,7 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 		return fmt.Errorf("failed to marshal default scenarios: %w", err)
 	}
 
-	if err := os.WriteFile(scenarioFile, data, 0600); err != nil {
+	if err := os.WriteFile(scenarioFile, data, appconstants.FilePermDefault); err != nil {
 		return fmt.Errorf("failed to write scenarios file: %w", err)
 	}
 
