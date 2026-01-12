@@ -826,6 +826,15 @@ const (
 	TestFileCustomConfig = "custom-config.yml"
 )
 
+// Dependency analyzer test constants - used in analyzer tests.
+const (
+	TestActionCheckoutV3   = "actions/checkout@v3"
+	TestActionCheckoutName = "actions/checkout"
+	TestVersionV4_1_1      = "v4.1.1"
+	TestVersionV4_0_0      = "v4.0.0"
+	TestSHAForTesting      = "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e"
+)
+
 // String returns a string representation of a ConfigurationSource.
 func (s ConfigurationSource) String() string {
 	switch s {
