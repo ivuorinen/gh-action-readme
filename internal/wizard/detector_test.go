@@ -10,7 +10,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestProjectDetectoranalyzeProjectFiles(t *testing.T) {
+func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
 	t.Parallel()
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
@@ -66,7 +66,7 @@ func TestProjectDetectoranalyzeProjectFiles(t *testing.T) {
 	}
 }
 
-func TestProjectDetectordetectVersionFromPackageJSON(t *testing.T) {
+func TestProjectDetectorDetectVersionFromPackageJSON(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 
@@ -94,7 +94,7 @@ func TestProjectDetectordetectVersionFromPackageJSON(t *testing.T) {
 	}
 }
 
-func TestProjectDetectordetectVersionFromFiles(t *testing.T) {
+func TestProjectDetectorDetectVersionFromFiles(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 
@@ -117,7 +117,7 @@ func TestProjectDetectordetectVersionFromFiles(t *testing.T) {
 	}
 }
 
-func TestProjectDetectorfindActionFiles(t *testing.T) {
+func TestProjectDetectorFindActionFiles(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 
@@ -173,7 +173,7 @@ func TestProjectDetectorfindActionFiles(t *testing.T) {
 	}
 }
 
-func TestProjectDetectorisActionFile(t *testing.T) {
+func TestProjectDetectorIsActionFile(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -203,7 +203,7 @@ func TestProjectDetectorisActionFile(t *testing.T) {
 	}
 }
 
-func TestProjectDetectorsuggestConfiguration(t *testing.T) {
+func TestProjectDetectorSuggestConfiguration(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -261,8 +261,8 @@ func TestProjectDetectorsuggestConfiguration(t *testing.T) {
 	}
 }
 
-// TestProjectDetectorsuggestRunsOn tests the runner suggestion logic.
-func TestProjectDetectorsuggestRunsOn(t *testing.T) {
+// TestProjectDetectorSuggestRunsOn tests the runner suggestion logic.
+func TestProjectDetectorSuggestRunsOn(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -377,8 +377,8 @@ func assertPermissionsMatch(t *testing.T, expected, actual map[string]string) {
 	}
 }
 
-// TestProjectDetectorsuggestPermissions tests the permissions suggestion logic.
-func TestProjectDetectorsuggestPermissions(t *testing.T) {
+// TestProjectDetectorSuggestPermissions tests the permissions suggestion logic.
+func TestProjectDetectorSuggestPermissions(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{

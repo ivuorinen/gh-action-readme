@@ -513,7 +513,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 			_, _, err := analyzer.getLatestVersion(tt.owner, tt.repo)
 
 			if (err != nil) != tt.expectError {
-				t.Errorf("getLatestTag() error = %v, expectError %v", err, tt.expectError)
+				t.Errorf("getLatestVersion() error = %v, expectError %v", err, tt.expectError)
 			}
 		})
 	}

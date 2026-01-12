@@ -1036,12 +1036,11 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer func() { _ = os.Remove(tmpFile.Name()) }() // Ignore error
+			defer func() { _ = tmpFile.Close() }() // Proper cleanup of file handle
 
 			if _, err := tmpFile.WriteString(tt.content); err != nil {
 				t.Fatal(err)
 			}
-			_ = tmpFile.Close() // Ignore error
 
 			config := DefaultAppConfig()
 			config.Quiet = true
@@ -1245,18 +1244,13 @@ func TestGeneratorNewGeneratorEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			var gen *Generator
-			if tt.config == nil {
-				// Should not panic with nil config
-				defer func() {
-					if r := recover(); r != nil {
-						t.Errorf("NewGenerator() panicked with nil config: %v", r)
-					}
-				}()
-				gen = NewGenerator(tt.config)
-			} else {
-				gen = NewGenerator(tt.config)
-			}
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("NewGenerator() panicked with config %v: %v", tt.config, r)
+				}
+			}()
+
+			gen := NewGenerator(tt.config)
 
 			if gen == nil {
 				t.Error("NewGenerator() returned nil")

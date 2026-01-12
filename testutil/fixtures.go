@@ -22,6 +22,27 @@ var fixtureCache = struct {
 	cache: make(map[string]string),
 }
 
+// validateFixtureFilename ensures filename is safe from path traversal.
+func validateFixtureFilename(filename string) error {
+	// Reject absolute paths
+	if filepath.IsAbs(filename) {
+		return fmt.Errorf("fixture filename must be relative, got: %s", filename)
+	}
+
+	// Clean the path and check for traversal attempts
+	cleaned := filepath.Clean(filename)
+	if cleaned != filename || strings.Contains(cleaned, "..") {
+		return fmt.Errorf("fixture filename contains invalid path components: %s", filename)
+	}
+
+	// Ensure filename doesn't start with .. (path traversal attempt)
+	if strings.HasPrefix(cleaned, "..") {
+		return fmt.Errorf("fixture filename cannot traverse directories: %s", filename)
+	}
+
+	return nil
+}
+
 // MustReadFixture reads a YAML fixture file from testdata/yaml-fixtures.
 func MustReadFixture(filename string) string {
 	return mustReadFixture(filename)
@@ -29,6 +50,11 @@ func MustReadFixture(filename string) string {
 
 // mustReadFixture reads a YAML fixture file from testdata/yaml-fixtures with caching.
 func mustReadFixture(filename string) string {
+	// Validate filename first (BEFORE cache lookup)
+	if err := validateFixtureFilename(filename); err != nil {
+		panic("invalid fixture filename: " + err.Error())
+	}
+
 	// Try to get from cache first (read lock)
 	fixtureCache.mu.RLock()
 	if content, exists := fixtureCache.cache[filename]; exists {
@@ -74,6 +100,11 @@ func mustReadFixture(filename string) string {
 // This is for analyzer-specific test fixtures that aren't in yaml-fixtures.
 // Panics on error to simplify test code.
 func MustReadAnalyzerFixture(filename string) string {
+	// Validate filename first
+	if err := validateFixtureFilename(filename); err != nil {
+		panic("invalid fixture filename: " + err.Error())
+	}
+
 	// Get project root using runtime.Caller
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {

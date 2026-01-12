@@ -711,7 +711,6 @@ func assertCommandResult(t *testing.T, result cmdResult, wantExit int, wantStdou
 // These test the handler logic directly without subprocess execution
 
 func TestCacheClearHandler(t *testing.T) {
-	_ = t // Test function signature requirement
 	// Setup
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
@@ -730,7 +729,6 @@ func TestCacheClearHandler(t *testing.T) {
 }
 
 func TestCacheStatsHandler(t *testing.T) {
-	_ = t // Test function signature requirement
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -744,7 +742,6 @@ func TestCacheStatsHandler(t *testing.T) {
 }
 
 func TestCachePathHandler(t *testing.T) {
-	_ = t // Test function signature requirement
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -795,7 +792,7 @@ func TestSchemaHandler(t *testing.T) {
 }
 
 func TestConfigThemesHandler(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused in this test
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -807,7 +804,7 @@ func TestConfigThemesHandler(t *testing.T) {
 }
 
 func TestConfigShowHandler(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused in this test
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -819,7 +816,7 @@ func TestConfigShowHandler(t *testing.T) {
 }
 
 func TestDepsGraphHandler(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused in this test
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -873,7 +870,6 @@ func TestBuildTestBinary(t *testing.T) {
 
 // TestApplyGlobalFlags tests global flag application.
 func TestApplyGlobalFlags(t *testing.T) {
-	_ = t // Test function signature requirement
 	tests := []struct {
 		name    string
 		verbose bool
@@ -933,7 +929,6 @@ func TestApplyGlobalFlags(t *testing.T) {
 
 // TestApplyCommandFlags tests command flag application.
 func TestApplyCommandFlags(t *testing.T) {
-	_ = t // Test function signature requirement
 	tests := []struct {
 		name      string
 		theme     string
@@ -992,7 +987,6 @@ func TestApplyCommandFlags(t *testing.T) {
 
 // TestValidateGitHubToken tests GitHub token validation.
 func TestValidateGitHubToken(t *testing.T) {
-	_ = t // Test function signature requirement
 	tests := []struct {
 		name  string
 		token string
@@ -1034,7 +1028,7 @@ func TestValidateGitHubToken(t *testing.T) {
 
 // TestLogConfigInfo tests configuration info logging.
 func TestLogConfigInfo(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused outside of subtests
 	tests := []struct {
 		name     string
 		verbose  bool
@@ -1071,7 +1065,7 @@ func TestLogConfigInfo(t *testing.T) {
 
 // TestShowUpgradeMode tests upgrade mode display.
 func TestShowUpgradeMode(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused outside of subtests
 	tests := []struct {
 		name      string
 		ciMode    bool
@@ -1107,7 +1101,7 @@ func TestShowUpgradeMode(t *testing.T) {
 
 // TestDisplayOutdatedResults tests outdated dependencies display.
 func TestDisplayOutdatedResults(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused outside of subtests
 	tests := []struct {
 		name        string
 		allOutdated []dependencies.OutdatedDependency
@@ -1154,7 +1148,7 @@ func TestDisplayOutdatedResults(t *testing.T) {
 
 // TestDisplayFloatingDeps tests floating dependencies display.
 func TestDisplayFloatingDeps(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused in this test
 
 	output := createOutputManager(true)
 	floatingDeps := []struct {
@@ -1176,7 +1170,7 @@ func TestDisplayFloatingDeps(t *testing.T) {
 
 // TestDisplaySecuritySummary tests security summary display.
 func TestDisplaySecuritySummary(t *testing.T) {
-	_ = t // Test function signature requirement
+	_ = t // unused outside of subtests
 	tests := []struct {
 		name         string
 		pinnedCount  int
@@ -1430,7 +1424,6 @@ func TestNewConfigCmd(t *testing.T) {
 
 // TestNewDepsCmd tests deps command creation.
 func TestNewDepsCmd(t *testing.T) {
-	_ = t // Test function signature requirement
 
 	cmd := newDepsCmd()
 	if cmd == nil {
@@ -1443,7 +1436,6 @@ func TestNewDepsCmd(t *testing.T) {
 
 // TestNewCacheCmd tests cache command creation.
 func TestNewCacheCmd(t *testing.T) {
-	_ = t // Test function signature requirement
 
 	cmd := newCacheCmd()
 	if cmd == nil {
