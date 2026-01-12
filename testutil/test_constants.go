@@ -129,3 +129,14 @@ const (
 	TestCaseNameEmpty   = "empty string"
 	TestBranchMain      = "main"
 )
+
+// Wizard test constants.
+const (
+	WizardInputYes       = "y\n"
+	WizardInputNo        = "n\n"
+	WizardPromptContinue = "Continue?"
+	WizardOrgTest        = "testorg"
+	WizardRepoTest       = "testrepo"
+	WizardPromptEnter    = "Enter value"
+	WizardVersionTest    = "v1.0.0"
+)

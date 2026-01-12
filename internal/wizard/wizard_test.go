@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // testWizard creates a wizard with mocked input for testing.
@@ -39,35 +41,35 @@ func TestPromptWithDefault(t *testing.T) {
 		{
 			name:         "user provides value",
 			input:        "custom-value\n",
-			prompt:       "Enter value",
-			defaultValue: "default",
+			prompt:       testutil.WizardPromptEnter,
+			defaultValue: appconstants.ThemeDefault,
 			want:         "custom-value",
 		},
 		{
 			name:         "user accepts default (empty input)",
 			input:        "\n",
-			prompt:       "Enter value",
-			defaultValue: "default",
-			want:         "default",
+			prompt:       testutil.WizardPromptEnter,
+			defaultValue: appconstants.ThemeDefault,
+			want:         appconstants.ThemeDefault,
 		},
 		{
 			name:         "user provides empty string with no default",
 			input:        "\n",
-			prompt:       "Enter value",
+			prompt:       testutil.WizardPromptEnter,
 			defaultValue: "",
 			want:         "",
 		},
 		{
 			name:         "user provides value with whitespace",
 			input:        "  value-with-spaces  \n",
-			prompt:       "Enter value",
-			defaultValue: "default",
+			prompt:       testutil.WizardPromptEnter,
+			defaultValue: appconstants.ThemeDefault,
 			want:         "value-with-spaces",
 		},
 		{
 			name:         "no default provided, user enters value",
 			input:        "myvalue\n",
-			prompt:       "Enter value",
+			prompt:       testutil.WizardPromptEnter,
 			defaultValue: "",
 			want:         "myvalue",
 		},
@@ -97,63 +99,63 @@ func TestPromptYesNo(t *testing.T) {
 		{
 			name:         "user enters yes",
 			input:        "yes\n",
-			prompt:       "Continue?",
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: false,
 			want:         true,
 		},
 		{
 			name:         "user enters y",
-			input:        "y\n",
-			prompt:       "Continue?",
+			input:        testutil.WizardInputYes,
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: false,
 			want:         true,
 		},
 		{
 			name:         "user enters no",
 			input:        "no\n",
-			prompt:       "Continue?",
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: true,
 			want:         false,
 		},
 		{
 			name:         "user enters n",
-			input:        "n\n",
-			prompt:       "Continue?",
+			input:        testutil.WizardInputNo,
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: true,
 			want:         false,
 		},
 		{
 			name:         "user accepts default true",
 			input:        "\n",
-			prompt:       "Continue?",
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: true,
 			want:         true,
 		},
 		{
 			name:         "user accepts default false",
 			input:        "\n",
-			prompt:       "Continue?",
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: false,
 			want:         false,
 		},
 		{
 			name:         "invalid input then default",
 			input:        "maybe\n",
-			prompt:       "Continue?",
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: true,
 			want:         true,
 		},
 		{
 			name:         "case insensitive YES",
 			input:        "YES\n",
-			prompt:       "Continue?",
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: false,
 			want:         true,
 		},
 		{
 			name:         "case insensitive NO",
 			input:        "NO\n",
-			prompt:       "Continue?",
+			prompt:       testutil.WizardPromptContinue,
 			defaultValue: true,
 			want:         false,
 		},
@@ -213,7 +215,7 @@ func TestPromptSensitive(t *testing.T) {
 
 // TestConfigureBasicSettings tests basic settings configuration.
 //
-//nolint:dupl // Similar test structure to TestConfigureTemplateSettings by design
+
 func TestConfigureBasicSettings(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -227,7 +229,7 @@ func TestConfigureBasicSettings(t *testing.T) {
 			inputs:   "myorg\nmyrepo\nv1.0.0\n",
 			wantOrg:  "myorg",
 			wantRepo: "myrepo",
-			wantVer:  "v1.0.0",
+			wantVer:  testutil.WizardVersionTest,
 		},
 		{
 			name:     "use defaults for org and repo, custom version",
@@ -239,8 +241,8 @@ func TestConfigureBasicSettings(t *testing.T) {
 		{
 			name:     "custom org and repo, no version",
 			inputs:   "testorg\ntestrepo\n\n",
-			wantOrg:  "testorg",
-			wantRepo: "testrepo",
+			wantOrg:  testutil.WizardOrgTest,
+			wantRepo: testutil.WizardRepoTest,
 			wantVer:  "",
 		},
 	}
@@ -273,37 +275,37 @@ func TestConfigureThemeSelection(t *testing.T) {
 		{
 			name:      "select default theme (1)",
 			input:     "1\n",
-			wantTheme: "default",
+			wantTheme: appconstants.ThemeDefault,
 		},
 		{
 			name:      "select github theme (2)",
 			input:     "2\n",
-			wantTheme: "github",
+			wantTheme: appconstants.ThemeGitHub,
 		},
 		{
 			name:      "select gitlab theme (3)",
 			input:     "3\n",
-			wantTheme: "gitlab",
+			wantTheme: appconstants.ThemeGitLab,
 		},
 		{
 			name:      "select minimal theme (4)",
 			input:     "4\n",
-			wantTheme: "minimal",
+			wantTheme: appconstants.ThemeMinimal,
 		},
 		{
 			name:      "select professional theme (5)",
 			input:     "5\n",
-			wantTheme: "professional",
+			wantTheme: appconstants.ThemeProfessional,
 		},
 		{
 			name:      "invalid choice defaults to first",
 			input:     "99\n",
-			wantTheme: "default", // Default config theme
+			wantTheme: appconstants.ThemeDefault, // Default config theme
 		},
 		{
 			name:      "empty input uses default",
 			input:     "\n",
-			wantTheme: "default",
+			wantTheme: appconstants.ThemeDefault,
 		},
 	}
 
@@ -329,17 +331,17 @@ func TestConfigureOutputFormat(t *testing.T) {
 		{
 			name:       "select markdown (1)",
 			input:      "1\n",
-			wantFormat: "md",
+			wantFormat: appconstants.OutputFormatMarkdown,
 		},
 		{
 			name:       "select html (2)",
 			input:      "2\n",
-			wantFormat: "html",
+			wantFormat: appconstants.OutputFormatHTML,
 		},
 		{
 			name:       "select json (3)",
 			input:      "3\n",
-			wantFormat: "json",
+			wantFormat: appconstants.OutputFormatJSON,
 		},
 		{
 			name:       "select asciidoc (4)",
@@ -349,7 +351,7 @@ func TestConfigureOutputFormat(t *testing.T) {
 		{
 			name:       "invalid choice keeps default",
 			input:      "99\n",
-			wantFormat: "md", // Default format
+			wantFormat: appconstants.OutputFormatMarkdown, // Default format
 		},
 	}
 
@@ -424,7 +426,13 @@ func TestGetAvailableThemes(t *testing.T) {
 	}
 
 	// Verify theme names
-	expectedThemes := []string{"default", "github", "gitlab", "minimal", "professional"}
+	expectedThemes := []string{
+		appconstants.ThemeDefault,
+		appconstants.ThemeGitHub,
+		appconstants.ThemeGitLab,
+		appconstants.ThemeMinimal,
+		appconstants.ThemeProfessional,
+	}
 	for i, expected := range expectedThemes {
 		if themes[i].name != expected {
 			t.Errorf("Theme %d = %q, want %q", i, themes[i].name, expected)
@@ -542,7 +550,7 @@ func TestConfigureOutputDirectory(t *testing.T) {
 
 // TestConfigureTemplateSettings tests template settings configuration.
 //
-//nolint:dupl // Similar test structure to TestConfigureBasicSettings by design
+
 func TestConfigureTemplateSettings(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -554,22 +562,22 @@ func TestConfigureTemplateSettings(t *testing.T) {
 		{
 			name:       "all defaults",
 			inputs:     "\n\n\n",
-			wantTheme:  "default",
-			wantFormat: "md",
+			wantTheme:  appconstants.ThemeDefault,
+			wantFormat: appconstants.OutputFormatMarkdown,
 			wantDir:    ".",
 		},
 		{
 			name:       "custom theme and format",
 			inputs:     "2\n3\n./output\n",
-			wantTheme:  "github",
-			wantFormat: "json",
+			wantTheme:  appconstants.ThemeGitHub,
+			wantFormat: appconstants.OutputFormatJSON,
 			wantDir:    "./output",
 		},
 		{
 			name:       "professional theme html format",
 			inputs:     "5\n2\n./docs\n",
-			wantTheme:  "professional",
-			wantFormat: "html",
+			wantTheme:  appconstants.ThemeProfessional,
+			wantFormat: appconstants.OutputFormatHTML,
 			wantDir:    "./docs",
 		},
 	}
@@ -603,7 +611,7 @@ func TestConfigureGitHubIntegration(t *testing.T) {
 	}{
 		{
 			name:           "skip token setup",
-			inputs:         "n\n",
+			inputs:         testutil.WizardInputNo,
 			existingToken:  "",
 			wantTokenSet:   false,
 			wantTokenValue: "",
@@ -676,12 +684,12 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 	}{
 		{
 			name:  "user confirms with yes",
-			input: "y\n",
+			input: testutil.WizardInputYes,
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
-				Theme:        "default",
-				OutputFormat: "md",
+				Organization: testutil.WizardOrgTest,
+				Repository:   testutil.WizardRepoTest,
+				Theme:        appconstants.ThemeDefault,
+				OutputFormat: appconstants.OutputFormatMarkdown,
 				OutputDir:    ".",
 			},
 			wantErr: false,
@@ -690,17 +698,17 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 			name:  "user confirms with Y",
 			input: "Y\n",
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
+				Organization: testutil.WizardOrgTest,
+				Repository:   testutil.WizardRepoTest,
 			},
 			wantErr: false,
 		},
 		{
 			name:  "user cancels with n",
-			input: "n\n",
+			input: testutil.WizardInputNo,
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
+				Organization: testutil.WizardOrgTest,
+				Repository:   testutil.WizardRepoTest,
 			},
 			wantErr: true,
 		},
@@ -708,8 +716,8 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 			name:  "user cancels with no",
 			input: "no\n",
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
+				Organization: testutil.WizardOrgTest,
+				Repository:   testutil.WizardRepoTest,
 			},
 			wantErr: true,
 		},
@@ -717,27 +725,27 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 			name:  "user accepts default (yes)",
 			input: "\n",
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
+				Organization: testutil.WizardOrgTest,
+				Repository:   testutil.WizardRepoTest,
 			},
 			wantErr: false,
 		},
 		{
 			name:  "config with version",
-			input: "y\n",
+			input: testutil.WizardInputYes,
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
-				Version:      "v1.0.0",
+				Organization: testutil.WizardOrgTest,
+				Repository:   testutil.WizardRepoTest,
+				Version:      testutil.WizardVersionTest,
 			},
 			wantErr: false,
 		},
 		{
 			name:  "config with features enabled",
-			input: "y\n",
+			input: testutil.WizardInputYes,
 			config: &internal.AppConfig{
-				Organization:        "testorg",
-				Repository:          "testrepo",
+				Organization:        testutil.WizardOrgTest,
+				Repository:          testutil.WizardRepoTest,
 				AnalyzeDependencies: true,
 				ShowSecurityInfo:    true,
 			},
@@ -776,13 +784,13 @@ func verifyCompleteWizardFlow(t *testing.T, cfg *internal.AppConfig) {
 	if cfg.Repository != "myrepo" {
 		t.Errorf("Repository = %q, want 'myrepo'", cfg.Repository)
 	}
-	if cfg.Version != "v1.0.0" {
+	if cfg.Version != testutil.WizardVersionTest {
 		t.Errorf("Version = %q, want 'v1.0.0'", cfg.Version)
 	}
-	if cfg.Theme != "github" {
+	if cfg.Theme != appconstants.ThemeGitHub {
 		t.Errorf("Theme = %q, want 'github'", cfg.Theme)
 	}
-	if cfg.OutputFormat != "html" {
+	if cfg.OutputFormat != appconstants.OutputFormatHTML {
 		t.Errorf("OutputFormat = %q, want 'html'", cfg.OutputFormat)
 	}
 	if cfg.OutputDir != "./docs" {
@@ -798,11 +806,11 @@ func verifyCompleteWizardFlow(t *testing.T, cfg *internal.AppConfig) {
 
 func verifyWizardDefaults(t *testing.T, cfg *internal.AppConfig) {
 	t.Helper()
-	const defaultTheme = "default"
+	const defaultTheme = appconstants.ThemeDefault
 	if cfg.Theme != defaultTheme {
 		t.Errorf("Theme = %q, want %q", cfg.Theme, defaultTheme)
 	}
-	if cfg.OutputFormat != "md" {
+	if cfg.OutputFormat != appconstants.OutputFormatMarkdown {
 		t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
 	}
 }
@@ -816,10 +824,10 @@ func verifyGitHubToken(t *testing.T, cfg *internal.AppConfig) {
 
 func verifyMinimalThemeJSON(t *testing.T, cfg *internal.AppConfig) {
 	t.Helper()
-	if cfg.Theme != "minimal" {
+	if cfg.Theme != appconstants.ThemeMinimal {
 		t.Errorf("Theme = %q, want 'minimal'", cfg.Theme)
 	}
-	if cfg.OutputFormat != "json" {
+	if cfg.OutputFormat != appconstants.OutputFormatJSON {
 		t.Errorf("OutputFormat = %q, want 'json'", cfg.OutputFormat)
 	}
 	if cfg.OutputDir != "./output" {
@@ -835,7 +843,7 @@ func verifyMinimalThemeJSON(t *testing.T, cfg *internal.AppConfig) {
 
 func verifyGitLabThemeASCIIDoc(t *testing.T, cfg *internal.AppConfig) {
 	t.Helper()
-	if cfg.Theme != "gitlab" {
+	if cfg.Theme != appconstants.ThemeGitLab {
 		t.Errorf("Theme = %q, want 'gitlab'", cfg.Theme)
 	}
 	if cfg.OutputFormat != "asciidoc" {
@@ -851,10 +859,10 @@ func verifyGitLabThemeASCIIDoc(t *testing.T, cfg *internal.AppConfig) {
 
 func verifyProfessionalThemeAllFeatures(t *testing.T, cfg *internal.AppConfig) {
 	t.Helper()
-	if cfg.Theme != "professional" {
+	if cfg.Theme != appconstants.ThemeProfessional {
 		t.Errorf("Theme = %q, want 'professional'", cfg.Theme)
 	}
-	if cfg.OutputFormat != "md" {
+	if cfg.OutputFormat != appconstants.OutputFormatMarkdown {
 		t.Errorf("OutputFormat = %q, want 'md'", cfg.OutputFormat)
 	}
 	if cfg.OutputDir != "." {
@@ -886,8 +894,8 @@ func TestRun(t *testing.T) {
 				"2\n" + // HTML format
 				"./docs\n" + // Output dir
 				"y\ny\n" + // Features: enable both
-				"n\n" + // GitHub: skip token
-				"y\n", // Confirm
+				testutil.WizardInputNo + // GitHub: skip token
+				testutil.WizardInputYes, // Confirm
 			wantErr: false,
 			verify:  verifyCompleteWizardFlow,
 		},
@@ -896,8 +904,8 @@ func TestRun(t *testing.T) {
 			inputs: "\n\n\n" + // Basic: all defaults
 				"\n\n\n" + // Template: all defaults
 				"\n\n" + // Features: all defaults
-				"n\n" + // GitHub: skip
-				"y\n", // Confirm
+				testutil.WizardInputNo + // GitHub: skip
+				testutil.WizardInputYes, // Confirm
 			wantErr: false,
 			verify:  verifyWizardDefaults,
 		},
@@ -907,7 +915,7 @@ func TestRun(t *testing.T) {
 				"\n\n\n" + // Template: all defaults
 				"\n\n" + // Features: all defaults
 				"y\nghp_testtoken123456\n" + // GitHub: set token
-				"y\n", // Confirm
+				testutil.WizardInputYes, // Confirm
 			wantErr: false,
 			verify:  verifyGitHubToken,
 		},
@@ -916,8 +924,8 @@ func TestRun(t *testing.T) {
 			inputs: "testorg\ntestrepo\n\n" + // Basic settings
 				"\n\n\n" + // Template: all defaults
 				"\n\n" + // Features: all defaults
-				"n\n" + // GitHub: skip
-				"n\n", // Cancel at confirmation
+				testutil.WizardInputNo + // GitHub: skip
+				testutil.WizardInputNo, // Cancel at confirmation
 			wantErr: true,
 			verify:  nil,
 		},
@@ -926,8 +934,8 @@ func TestRun(t *testing.T) {
 			inputs: "org\nrepo\n\n" + // Basic
 				"4\n3\n./output\n" + // Minimal theme, JSON format
 				"n\nn\n" + // Features: disable both
-				"n\n" + // GitHub: skip
-				"y\n", // Confirm
+				testutil.WizardInputNo + // GitHub: skip
+				testutil.WizardInputYes, // Confirm
 			wantErr: false,
 			verify:  verifyMinimalThemeJSON,
 		},
@@ -936,7 +944,7 @@ func TestRun(t *testing.T) {
 			inputs: "gitlab-org\nmy-project\nv2.5.0\n" + // Basic
 				"3\n4\n./docs\n" + // GitLab theme, AsciiDoc format
 				"yes\nno\n" + // Features: deps yes, security no
-				"n\n" + // GitHub: skip
+				testutil.WizardInputNo + // GitHub: skip
 				"yes\n", // Confirm with 'yes'
 			wantErr: false,
 			verify:  verifyGitLabThemeASCIIDoc,
@@ -947,7 +955,7 @@ func TestRun(t *testing.T) {
 				"5\n1\n.\n" + // Professional theme, markdown, current dir
 				"y\ny\n" + // Features: both enabled
 				"y\ngithub_pat_testtoken\n" + // GitHub: set PAT token
-				"y\n", // Confirm
+				testutil.WizardInputYes, // Confirm
 			wantErr: false,
 			verify:  verifyProfessionalThemeAllFeatures,
 		},
@@ -1039,15 +1047,15 @@ func TestDetectProjectSettings(t *testing.T) {
 
 // TestShowSummaryWithTokenFromEnv tests summary with token from environment.
 func TestShowSummaryWithTokenFromEnv(t *testing.T) {
-	const defaultTheme = "default"
+	const defaultTheme = appconstants.ThemeDefault
 
 	// Test to improve showSummaryAndConfirm coverage
-	wizard := testWizard("y\n")
+	wizard := testWizard(testutil.WizardInputYes)
 	wizard.config = &internal.AppConfig{
 		Organization:        "test",
 		Repository:          "repo",
 		Theme:               defaultTheme,
-		OutputFormat:        "md",
+		OutputFormat:        appconstants.OutputFormatMarkdown,
 		OutputDir:           ".",
 		AnalyzeDependencies: true,
 		ShowSecurityInfo:    false,
@@ -1068,8 +1076,8 @@ func TestPromptWithDefaultEdgeCases(t *testing.T) {
 		// Create a wizard with an input that will cause scanner to return false
 		wizard := testWizard("")
 		// Scanner will immediately return false since input is exhausted
-		result := wizard.promptWithDefault("test", "default")
-		if result != "default" {
+		result := wizard.promptWithDefault("test", appconstants.ThemeDefault)
+		if result != appconstants.ThemeDefault {
 			t.Errorf("Expected default value when scanner fails, got %q", result)
 		}
 	})
@@ -1125,7 +1133,12 @@ func TestDisplayThemeOptions(t *testing.T) {
 // TestDisplayFormatOptions tests format display (verifies no panic).
 func TestDisplayFormatOptions(t *testing.T) {
 	wizard := testWizard("")
-	formats := []string{"md", "html", "json", "asciidoc"}
+	formats := []string{
+		appconstants.OutputFormatMarkdown,
+		appconstants.OutputFormatHTML,
+		appconstants.OutputFormatJSON,
+		"asciidoc",
+	}
 
 	// Should not panic
 	defer func() {
@@ -1146,12 +1159,12 @@ func TestConfirmConfiguration(t *testing.T) {
 	}{
 		{
 			name:    "user confirms",
-			input:   "y\n",
+			input:   testutil.WizardInputYes,
 			wantErr: false,
 		},
 		{
 			name:    "user cancels",
-			input:   "n\n",
+			input:   testutil.WizardInputNo,
 			wantErr: true,
 		},
 		{
