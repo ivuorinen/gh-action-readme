@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -90,7 +91,7 @@ func TestIsCommitSHA(t *testing.T) {
 	}{
 		{
 			name:     "full commit SHA",
-			version:  "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+			version:  appconstants.TestSHAForTesting,
 			expected: true,
 		},
 		{
@@ -100,16 +101,16 @@ func TestIsCommitSHA(t *testing.T) {
 		},
 		{
 			name:     "semantic version",
-			version:  "v1.2.3",
+			version:  testutil.TestVersionSemantic,
 			expected: false,
 		},
 		{
 			name:     "branch name",
-			version:  "main",
+			version:  testutil.TestBranchMain,
 			expected: false,
 		},
 		{
-			name:     "empty string",
+			name:     testutil.TestCaseNameEmpty,
 			version:  "",
 			expected: false,
 		},
@@ -140,12 +141,12 @@ func TestIsSemanticVersion(t *testing.T) {
 	}{
 		{
 			name:     "semantic version with v prefix",
-			version:  "v1.2.3",
+			version:  testutil.TestVersionSemantic,
 			expected: true,
 		},
 		{
 			name:     "semantic version without v prefix",
-			version:  "1.2.3",
+			version:  testutil.TestVersionPlain,
 			expected: true,
 		},
 		{
@@ -165,16 +166,16 @@ func TestIsSemanticVersion(t *testing.T) {
 		},
 		{
 			name:     "commit SHA",
-			version:  "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+			version:  appconstants.TestSHAForTesting,
 			expected: false,
 		},
 		{
 			name:     "branch name",
-			version:  "main",
+			version:  testutil.TestBranchMain,
 			expected: false,
 		},
 		{
-			name:     "empty string",
+			name:     testutil.TestCaseNameEmpty,
 			version:  "",
 			expected: false,
 		},
@@ -200,12 +201,12 @@ func TestIsVersionPinned(t *testing.T) {
 	}{
 		{
 			name:     "full semantic version",
-			version:  "v1.2.3",
+			version:  testutil.TestVersionSemantic,
 			expected: true,
 		},
 		{
 			name:     "full commit SHA",
-			version:  "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+			version:  appconstants.TestSHAForTesting,
 			expected: true,
 		},
 		{
@@ -220,7 +221,7 @@ func TestIsVersionPinned(t *testing.T) {
 		},
 		{
 			name:     "branch name",
-			version:  "main",
+			version:  testutil.TestBranchMain,
 			expected: false,
 		},
 		{
@@ -229,7 +230,7 @@ func TestIsVersionPinned(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "empty string",
+			name:     testutil.TestCaseNameEmpty,
 			version:  "",
 			expected: false,
 		},
@@ -265,20 +266,20 @@ func TestValidateGitBranch(t *testing.T) {
 	repositoryformatversion = 0
 	filemode = true
 	bare = false
-[branch "main"]
+[branch testutil.TestBranchMain]
 	remote = origin
 	merge = refs/heads/main
 `
 				testutil.WriteTestFile(t, filepath.Join(gitDir, "config"), configContent)
 
-				return tmpDir, "main"
+				return tmpDir, testutil.TestBranchMain
 			},
 			expected: true, // This may vary based on actual git repo state
 		},
 		{
 			name: "non-git directory",
 			setupFunc: func(_ *testing.T, tmpDir string) (string, string) {
-				return tmpDir, "main"
+				return tmpDir, testutil.TestBranchMain
 			},
 			expected: false,
 		},
@@ -377,28 +378,28 @@ func TestCleanVersionString(t *testing.T) {
 	}{
 		{
 			name:     "version with v prefix",
-			input:    "v1.2.3",
-			expected: "1.2.3",
+			input:    testutil.TestVersionSemantic,
+			expected: testutil.TestVersionPlain,
 		},
 		{
 			name:     "version without v prefix",
-			input:    "1.2.3",
-			expected: "1.2.3",
+			input:    testutil.TestVersionPlain,
+			expected: testutil.TestVersionPlain,
 		},
 		{
 			name:     "version with leading/trailing spaces",
 			input:    "  v1.2.3  ",
-			expected: "1.2.3",
+			expected: testutil.TestVersionPlain,
 		},
 		{
-			name:     "empty string",
+			name:     testutil.TestCaseNameEmpty,
 			input:    "",
 			expected: "",
 		},
 		{
 			name:     "commit SHA",
-			input:    "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
-			expected: "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+			input:    appconstants.TestSHAForTesting,
+			expected: appconstants.TestSHAForTesting,
 		},
 	}
 
@@ -488,7 +489,7 @@ func TestSanitizeActionName(t *testing.T) {
 			expected: "My Action",
 		},
 		{
-			name:     "empty string",
+			name:     testutil.TestCaseNameEmpty,
 			input:    "",
 			expected: "",
 		},

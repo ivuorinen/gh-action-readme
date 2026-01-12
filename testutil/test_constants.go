@@ -118,3 +118,11 @@ const (
 	TestErrNonEmptyAction = "expected non-empty action content"
 	TestErrStatusCode     = "expected status 200, got %d"
 )
+
+// Validation test constants.
+const (
+	TestVersionSemantic = "v1.2.3"
+	TestVersionPlain    = "1.2.3"
+	TestCaseNameEmpty   = "empty string"
+	TestBranchMain      = "main"
+)
