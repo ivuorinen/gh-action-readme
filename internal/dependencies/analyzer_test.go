@@ -327,7 +327,7 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 	// Create test dependencies
 	dependencies := []Dependency{
 		{
-			Name:        appconstants.TestActionCheckoutName,
+			Name:        testutil.TestActionCheckout,
 			Uses:        appconstants.TestActionCheckoutV3,
 			Version:     "v3",
 			IsPinned:    false,
@@ -354,7 +354,7 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 
 	found := false
 	for _, dep := range outdated {
-		if dep.Current.Name == appconstants.TestActionCheckoutName && dep.Current.Version == "v3" {
+		if dep.Current.Name == testutil.TestActionCheckout && dep.Current.Version == "v3" {
 			found = true
 			if dep.LatestVersion != appconstants.TestVersionV4_1_1 {
 				t.Errorf("expected latest version v4.1.1, got %s", dep.LatestVersion)
@@ -447,7 +447,7 @@ func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 
 	// Create test dependency
 	dep := Dependency{
-		Name:        appconstants.TestActionCheckoutName,
+		Name:        testutil.TestActionCheckout,
 		Uses:        appconstants.TestActionCheckoutV3,
 		Version:     "v3",
 		IsPinned:    false,
