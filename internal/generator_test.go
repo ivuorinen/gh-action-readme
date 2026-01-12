@@ -14,7 +14,7 @@ func TestGeneratorNewGenerator(t *testing.T) {
 	t.Parallel()
 	config := &AppConfig{
 		Theme:        "default",
-		OutputFormat: "md",
+		OutputFormat: appconstants.OutputFormatMarkdown,
 		OutputDir:    ".",
 		Verbose:      false,
 		Quiet:        false,
@@ -227,21 +227,21 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 		{
 			name:         "simple action to markdown",
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
-			outputFormat: "md",
+			outputFormat: appconstants.OutputFormatMarkdown,
 			expectError:  false,
 			contains:     []string{"# Simple JavaScript Action", "A simple JavaScript action for testing"},
 		},
 		{
 			name:         "composite action to markdown",
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureCompositeBasic),
-			outputFormat: "md",
+			outputFormat: appconstants.OutputFormatMarkdown,
 			expectError:  false,
 			contains:     []string{"# Basic Composite Action", "A simple composite action with basic steps"},
 		},
 		{
 			name:         "action to HTML",
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
-			outputFormat: "html",
+			outputFormat: appconstants.OutputFormatHTML,
 			expectError:  false,
 			contains: []string{
 				"Simple JavaScript Action",
@@ -251,7 +251,7 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 		{
 			name:         "action to JSON",
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
-			outputFormat: "json",
+			outputFormat: appconstants.OutputFormatJSON,
 			expectError:  false,
 			contains: []string{
 				`"name": "Simple JavaScript Action"`,
@@ -261,7 +261,7 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 		{
 			name:         "invalid action file",
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
-			outputFormat: "md",
+			outputFormat: appconstants.OutputFormatMarkdown,
 			expectError:  true, // Invalid runtime configuration should cause failure
 			contains:     []string{},
 		},
@@ -291,7 +291,7 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 				OutputFormat: tt.outputFormat,
 				OutputDir:    tmpDir,
 				Quiet:        true,
-				Template:     filepath.Join(tmpDir, "templates", "readme.tmpl"),
+				Template:     filepath.Join(tmpDir, "templates", appconstants.TemplateReadme),
 			}
 			generator := NewGenerator(config)
 
@@ -309,9 +309,9 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 			// Find the generated output file based on format
 			var pattern string
 			switch tt.outputFormat {
-			case "html":
+			case appconstants.OutputFormatHTML:
 				pattern = filepath.Join(tmpDir, "*.html")
-			case "json":
+			case appconstants.OutputFormatJSON:
 				pattern = filepath.Join(tmpDir, "*.json")
 			default:
 				pattern = filepath.Join(tmpDir, "README*.md")
@@ -448,10 +448,10 @@ func TestGeneratorProcessBatch(t *testing.T) {
 			testutil.SetupTestTemplates(t, tmpDir)
 
 			config := &AppConfig{
-				OutputFormat: "md",
+				OutputFormat: appconstants.OutputFormatMarkdown,
 				// Don't set OutputDir so each action generates README in its own directory
 				Verbose:  true, // Enable verbose to see what's happening
-				Template: filepath.Join(tmpDir, "templates", "readme.tmpl"),
+				Template: filepath.Join(tmpDir, "templates", appconstants.TemplateReadme),
 			}
 			generator := NewGenerator(config)
 
@@ -601,7 +601,7 @@ func TestGeneratorCreateDependencyAnalyzer(t *testing.T) {
 
 func TestGeneratorWithDifferentThemes(t *testing.T) {
 	t.Parallel()
-	themes := []string{"default", "github", "gitlab", "minimal", "professional"}
+	themes := []string{"default", appconstants.ThemeGitHub, "gitlab", "minimal", "professional"}
 
 	for _, theme := range themes {
 		t.Run("theme_"+theme, func(t *testing.T) {
@@ -618,7 +618,7 @@ func TestGeneratorWithDifferentThemes(t *testing.T) {
 
 			config := &AppConfig{
 				Theme:        theme,
-				OutputFormat: "md",
+				OutputFormat: appconstants.OutputFormatMarkdown,
 				OutputDir:    tmpDir,
 				Quiet:        true,
 			}
@@ -652,7 +652,7 @@ func TestGeneratorErrorHandling(t *testing.T) {
 				t.Helper()
 				config := &AppConfig{
 					Template:     "/nonexistent/template.tmpl",
-					OutputFormat: "md",
+					OutputFormat: appconstants.OutputFormatMarkdown,
 					OutputDir:    tmpDir,
 					Quiet:        true,
 				}
@@ -680,10 +680,10 @@ func TestGeneratorErrorHandling(t *testing.T) {
 				_ = os.MkdirAll(restrictedDir, 0444) // #nosec G301 -- intentionally read-only for test
 
 				config := &AppConfig{
-					OutputFormat: "md",
+					OutputFormat: appconstants.OutputFormatMarkdown,
 					OutputDir:    restrictedDir,
 					Quiet:        true,
-					Template:     filepath.Join(tmpDir, "templates", "readme.tmpl"),
+					Template:     filepath.Join(tmpDir, "templates", appconstants.TemplateReadme),
 				}
 				generator := NewGenerator(config)
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
@@ -770,8 +770,9 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir := t.TempDir()
-				actionPath := filepath.Clean(filepath.Join(tmpDir, "action.yml"))
-				if actionPath != filepath.Join(tmpDir, "action.yml") || strings.Contains(actionPath, "..") {
+				actionPath := filepath.Clean(filepath.Join(tmpDir, appconstants.ActionFileNameYML))
+				if actionPath != filepath.Join(tmpDir, appconstants.ActionFileNameYML) ||
+					strings.Contains(actionPath, "..") {
 					t.Fatalf("invalid path: %q", actionPath)
 				}
 				content := "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
@@ -1077,7 +1078,7 @@ func TestGeneratorGenerateHTMLErrorPaths(t *testing.T) {
 	gen := NewGenerator(config)
 
 	// Test with valid directory
-	err := gen.generateHTML(action, tmpDir, filepath.Join(tmpDir, "action.yml"))
+	err := gen.generateHTML(action, tmpDir, filepath.Join(tmpDir, appconstants.ActionFileNameYML))
 	if err != nil {
 		t.Errorf("generateHTML() unexpected error = %v", err)
 	}
@@ -1139,7 +1140,7 @@ func TestGeneratorGenerateASCIIDocErrorPaths(t *testing.T) {
 	gen := NewGenerator(config)
 
 	// Test with valid directory
-	err := gen.generateASCIIDoc(action, tmpDir, filepath.Join(tmpDir, "action.yml"))
+	err := gen.generateASCIIDoc(action, tmpDir, filepath.Join(tmpDir, appconstants.ActionFileNameYML))
 	if err != nil {
 		t.Errorf("generateASCIIDoc() unexpected error = %v", err)
 	}
@@ -1233,8 +1234,8 @@ func TestGeneratorNewGeneratorEdgeCases(t *testing.T) {
 		{
 			name: "custom config",
 			config: &AppConfig{
-				Theme:        "github",
-				OutputFormat: "html",
+				Theme:        appconstants.ThemeGitHub,
+				OutputFormat: appconstants.OutputFormatHTML,
 				Quiet:        true,
 			},
 		},
