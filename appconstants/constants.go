@@ -688,6 +688,37 @@ const TestMinimalAction = "name: Test\ndescription: Test\nruns:\n  using: compos
 // TestScenarioNoDeps is the common test scenario description for actions with no dependencies.
 const TestScenarioNoDeps = "handles action with no dependencies"
 
+// Test messages and error strings - used in output tests.
+const (
+	TestMsgFileNotFound        = "File not found"
+	TestMsgInvalidYAML         = "Invalid YAML"
+	TestMsgQuietSuppressOutput = "quiet mode suppresses output"
+	TestMsgNoOutputInQuiet     = "Expected no output in quiet mode, got %q"
+	TestMsgVerifyPermissions   = "Verify permissions"
+	TestMsgSuggestions         = "Suggestions"
+	TestMsgDetails             = "Details"
+	TestMsgCheckFilePath       = "Check the file path"
+	TestMsgTryAgain            = "Try again"
+	TestMsgProcessingStarted   = "Processing started"
+	TestMsgOperationCompleted  = "Operation completed"
+	TestMsgOutputMissingEmoji  = "Output missing error emoji: %q"
+)
+
+// Test scenario names - used in output tests.
+const (
+	TestScenarioColorEnabled  = "with color enabled"
+	TestScenarioColorDisabled = "with color disabled"
+	TestScenarioQuietEnabled  = "quiet mode enabled"
+	TestScenarioQuietDisabled = "quiet mode disabled"
+)
+
+// Test URLs and paths - used in output tests.
+const (
+	TestURLHelp = "https://example.com/help"
+	TestKeyFile = "file"
+	TestKeyPath = "path"
+)
+
 // File permissions (additional).
 const (
 	// FilePermDir is the directory permission.
