@@ -2937,6 +2937,23 @@ func setupDepsUpgradeConfig(testName string) {
 	globalConfig.Quiet = true
 }
 
+// validateDepsUpgradeError validates error expectations for deps upgrade tests.
+func validateDepsUpgradeError(t *testing.T, err error, wantErr bool, errContain string) {
+	t.Helper()
+
+	if (err != nil) != wantErr {
+		t.Errorf("error = %v, wantErr %v", err, wantErr)
+
+		return
+	}
+
+	if wantErr && errContain != "" {
+		if err == nil || !strings.Contains(err.Error(), errContain) {
+			t.Errorf("error should contain %q, got %v", errContain, err)
+		}
+	}
+}
+
 func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 	// Note: Not using t.Parallel() because tests modify globalConfig and change directories
 
@@ -3033,15 +3050,7 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 			// Execute handler
 			err := depsUpgradeHandler(cmd, []string{})
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("depsUpgradeHandler() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if tt.wantErr && tt.errContain != "" {
-				if err == nil || !strings.Contains(err.Error(), tt.errContain) {
-					t.Errorf("error should contain %q, got %v", tt.errContain, err)
-				}
-			}
+			validateDepsUpgradeError(t, err, tt.wantErr, tt.errContain)
 		})
 	}
 }
