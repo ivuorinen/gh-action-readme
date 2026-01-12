@@ -570,7 +570,9 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		{
 			name: "nil cache",
 			setupFn: func(_ *testing.T) (*Analyzer, func()) {
-				return &Analyzer{Cache: nil}, func() {}
+				return &Analyzer{Cache: nil}, func() {
+					// No cleanup needed for nil cache
+				}
 			},
 			cacheKey: testutil.CacheTestKey,
 		},
