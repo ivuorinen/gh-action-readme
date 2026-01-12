@@ -224,54 +224,77 @@ func (d *ProjectDetector) findActionFiles(dir string, recursive bool) ([]string,
 
 // findActionFilesRecursive discovers action files recursively using filepath.Walk.
 //
-//nolint:gocyclo // Complexity from security validation (path traversal, symlink checks) per CodeRabbit review
+
 func (d *ProjectDetector) findActionFilesRecursive(dir string) ([]string, error) {
-	// Validate directory path for explicit traversal attempts
-	cleanDir := filepath.Clean(dir)
-	// Check for ".." as a path component, not substring (avoids false positives with ".." in test names)
-	for _, component := range strings.Split(filepath.ToSlash(cleanDir), "/") {
-		if component == ".." {
-			return nil, fmt.Errorf("invalid directory path: traversal detected in %q", dir)
-		}
-	}
-	// Also check if Clean changed the path significantly (not just trailing slashes)
-	if cleanDir != dir && cleanDir != strings.TrimRight(dir, "/\\") {
-		return nil, fmt.Errorf("invalid directory path: path normalization detected traversal in %q", dir)
+	// Validate directory path
+	if err := validateDirectoryPath(dir); err != nil {
+		return nil, err
 	}
 
 	var actionFiles []string
 
 	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
-			return filepath.SkipDir // Skip errors by skipping this directory
+			return filepath.SkipDir
 		}
 
-		// Check for symlinks (both files and directories)
-		if entry.Type()&os.ModeSymlink != 0 {
-			if entry.IsDir() {
-				return filepath.SkipDir // Skip symlinked directories
-			}
-
-			return nil // Skip symlinked files
-		}
-
-		if entry.IsDir() {
-			info, err := entry.Info()
-			if err != nil {
-				return filepath.SkipDir
-			}
-
-			return d.handleDirectory(info)
-		}
-
-		if d.isActionFile(entry.Name()) {
-			actionFiles = append(actionFiles, path)
-		}
-
-		return nil
+		return d.processWalkDirEntry(path, entry, &actionFiles)
 	})
 
 	return actionFiles, err
+}
+
+// validateDirectoryPath checks for path traversal attempts.
+func validateDirectoryPath(dir string) error {
+	cleanDir := filepath.Clean(dir)
+
+	// Check for ".." as a path component, not substring
+	for _, component := range strings.Split(filepath.ToSlash(cleanDir), "/") {
+		if component == ".." {
+			return fmt.Errorf("invalid directory path: traversal detected in %q", dir)
+		}
+	}
+
+	// Check if Clean changed the path significantly (not just trailing slashes)
+	if cleanDir != dir && cleanDir != strings.TrimRight(dir, "/\\") {
+		return fmt.Errorf("invalid directory path: path normalization detected traversal in %q", dir)
+	}
+
+	return nil
+}
+
+// processWalkDirEntry processes a single entry during directory walking.
+func (d *ProjectDetector) processWalkDirEntry(path string, entry os.DirEntry, actionFiles *[]string) error {
+	// Check for symlinks - skip them
+	if entry.Type()&os.ModeSymlink != 0 {
+		if entry.IsDir() {
+			return filepath.SkipDir
+		}
+
+		return nil // Skip symlinked files
+	}
+
+	// Handle directories
+	if entry.IsDir() {
+		return d.handleDirectoryEntry(entry)
+	}
+
+	// Check if it's an action file
+	if d.isActionFile(entry.Name()) {
+		*actionFiles = append(*actionFiles, path)
+	}
+
+	return nil
+}
+
+// handleDirectoryEntry decides whether to skip a directory during walk.
+func (d *ProjectDetector) handleDirectoryEntry(entry os.DirEntry) error {
+	info, err := entry.Info()
+	if err != nil {
+		return filepath.SkipDir
+	}
+
+	return d.handleDirectory(info)
 }
 
 // handleDirectory decides whether to skip a directory during recursive search.

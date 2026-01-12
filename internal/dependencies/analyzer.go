@@ -605,26 +605,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Apply updates to content
 	lines := strings.Split(string(content), "\n")
-	for _, update := range updates {
-		// Find and replace the uses line
-		for i, line := range lines {
-			if strings.Contains(line, update.OldUses) {
-				// Preserve both indentation AND list markers
-				trimmed := strings.TrimLeft(line, " \t")
-				indent := strings.Repeat(" ", len(line)-len(trimmed))
-
-				// Check if this is a list item (starts with "- ")
-				listMarker := ""
-				if strings.HasPrefix(trimmed, "- ") {
-					listMarker = "- "
-				}
-
-				// Reconstruct: indent + list marker + uses field
-				lines[i] = indent + listMarker + appconstants.UsesFieldPrefix + update.NewUses
-				update.LineNumber = i + 1 // Store line number for last updated occurrence
-			}
-		}
-	}
+	applyUpdatesToLines(lines, updates)
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
@@ -632,7 +613,45 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 
-	// Validate the updated file by trying to parse it
+	// Validate and rollback on failure
+	if err := a.validateAndRollbackOnFailure(filePath, backupPath); err != nil {
+		return err
+	}
+
+	// Remove backup on success
+	_ = os.Remove(backupPath)
+
+	return nil
+}
+
+// applyUpdatesToLines applies all updates to the file lines in place.
+// Preserves indentation and YAML list markers.
+func applyUpdatesToLines(lines []string, updates []PinnedUpdate) {
+	for _, update := range updates {
+		for i, line := range lines {
+			if !strings.Contains(line, update.OldUses) {
+				continue
+			}
+
+			// Preserve both indentation AND list markers
+			trimmed := strings.TrimLeft(line, " \t")
+			indent := strings.Repeat(" ", len(line)-len(trimmed))
+
+			// Check if this is a list item (starts with "- ")
+			listMarker := ""
+			if strings.HasPrefix(trimmed, "- ") {
+				listMarker = "- "
+			}
+
+			// Reconstruct: indent + list marker + uses field
+			lines[i] = indent + listMarker + appconstants.UsesFieldPrefix + update.NewUses
+			update.LineNumber = i + 1 // Store line number for last updated occurrence
+		}
+	}
+}
+
+// validateAndRollbackOnFailure validates the action file and rolls back changes on failure.
+func (a *Analyzer) validateAndRollbackOnFailure(filePath, backupPath string) error {
 	if err := a.validateActionFile(filePath); err != nil {
 		// Rollback on validation failure
 		if rollbackErr := os.Rename(backupPath, filePath); rollbackErr != nil {
@@ -641,9 +660,6 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 		return fmt.Errorf("validation failed, rolled back changes: %w", err)
 	}
-
-	// Remove backup on success
-	_ = os.Remove(backupPath)
 
 	return nil
 }
