@@ -132,11 +132,43 @@ const (
 
 // Wizard test constants.
 const (
-	WizardInputYes       = "y\n"
-	WizardInputNo        = "n\n"
-	WizardPromptContinue = "Continue?"
-	WizardOrgTest        = "testorg"
-	WizardRepoTest       = "testrepo"
-	WizardPromptEnter    = "Enter value"
-	WizardVersionTest    = "v1.0.0"
+	WizardInputYes           = "y\n"
+	WizardInputNo            = "n\n"
+	WizardInputYesNewline    = "y\ny\n"
+	WizardInputThreeNewlines = "\n\n\n"
+	WizardInputEnterToken    = "Enter token"
+	WizardPromptContinue     = "Continue?"
+	WizardOrgTest            = "testorg"
+	WizardRepoTest           = "testrepo"
+	WizardPromptEnter        = "Enter value"
+	WizardVersionTest        = "v1.0.0"
+)
+
+// Test directories and paths for wizard tests.
+const (
+	TestDirDocs   = "./docs"
+	TestDirOutput = "./output"
+)
+
+// Test file names for multiple action scenarios.
+const (
+	TestFileAction1 = "action1.yml"
+	TestFileAction2 = "action2.yml"
+)
+
+// Test action references.
+const (
+	TestActionCheckout   = "actions/checkout"
+	TestActionCheckoutV4 = "actions/checkout@v4"
+)
+
+// Test assertion and error message formats.
+const (
+	TestMsgThemeFormat           = "Theme = %q, want %q"
+	TestMsgAnalyzeDepsTrue       = "AnalyzeDependencies should be true"
+	TestMsgNoGitHubToken         = "returns error when no GitHub token"
+	TestMsgGitNotInstalled       = "git not installed"
+	TestErrPathTraversal         = "path traversal"
+	TestInvalidYAMLPrefix        = "invalid: [yaml"
+	TestLangJavaScriptTypeScript = "JavaScript/TypeScript"
 )
