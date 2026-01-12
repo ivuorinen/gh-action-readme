@@ -683,11 +683,11 @@ const (
 
 // Test file paths and names - used across multiple test files.
 const (
-	TestTmpDir               = "/tmp"
-	TestTmpActionFile        = "/tmp/action.yml"
-	TestErrorScenarioOldDeps = "error-scenarios/action-with-old-deps.yml"
-	TestErrorScenarioMissing = "error-scenarios/missing-required-fields.yml"
-	TestErrorScenarioInvalid = "error-scenarios/invalid-yaml-syntax.yml"
+	TestTmpDir                     = "/tmp"
+	TestTmpActionFile              = "/tmp/action.yml"
+	TestErrorScenarioOldDeps       = "error-scenarios/action-with-old-deps.yml"
+	TestErrorScenarioInvalidYAML   = "error-scenarios/invalid-yaml-syntax.yml"
+	TestErrorScenarioMissingFields = "error-scenarios/missing-required-fields.yml"
 )
 
 // TestMinimalAction is the minimal action YAML content for testing.

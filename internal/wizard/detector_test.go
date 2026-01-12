@@ -17,11 +17,11 @@ func TestProjectDetectoranalyzeProjectFiles(t *testing.T) {
 
 	// Create test files (go.mod should be processed last to be the final language)
 	testFiles := map[string]string{
-		"Dockerfile":     "FROM alpine",
-		"action.yml":     "name: Test Action",
-		"next.config.js": "module.exports = {}",
-		"package.json":   `{"name": "test", "version": "1.0.0"}`,
-		"go.mod":         "module test", // This should be detected last
+		"Dockerfile":                   "FROM alpine",
+		appconstants.ActionFileNameYML: "name: Test Action",
+		"next.config.js":               "module.exports = {}",
+		appconstants.PackageJSON:       `{"name": "test", "version": "1.0.0"}`,
+		"go.mod":                       "module test", // This should be detected last
 	}
 
 	for filename, content := range testFiles {
@@ -77,7 +77,7 @@ func TestProjectDetectordetectVersionFromPackageJSON(t *testing.T) {
 		"description": "Test package"
 	}`
 
-	packagePath := filepath.Join(tempDir, "package.json")
+	packagePath := filepath.Join(tempDir, appconstants.PackageJSON)
 	if err := os.WriteFile(packagePath, []byte(packageJSON), 0600); err != nil { // #nosec G306 -- test file permissions
 		t.Fatalf("Failed to create package.json: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestProjectDetectorfindActionFiles(t *testing.T) {
 	tempDir := t.TempDir()
 
 	// Create action files
-	actionYML := filepath.Join(tempDir, "action.yml")
+	actionYML := filepath.Join(tempDir, appconstants.ActionFileNameYML)
 	if err := os.WriteFile(
 		actionYML,
 		[]byte("name: Test Action"),
@@ -184,7 +184,7 @@ func TestProjectDetectorisActionFile(t *testing.T) {
 		filename string
 		expected bool
 	}{
-		{"action.yml", true},
+		{appconstants.ActionFileNameYML, true},
 		{"action.yaml", true},
 		{"Action.yml", false},
 		{"action.yml.bak", false},
@@ -590,7 +590,7 @@ func TestDetectActionFiles(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				content := "name: Test Action\ndescription: Test"
-				if err := os.WriteFile(filepath.Join(dir, "action.yml"), []byte(content), 0600); err != nil {
+				if err := os.WriteFile(filepath.Join(dir, appconstants.ActionFileNameYML), []byte(content), 0600); err != nil {
 					t.Fatalf(appconstants.TestMsgFailedToCreateAction, err)
 				}
 			},
@@ -611,7 +611,7 @@ func TestDetectActionFiles(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				// Create symlink: action.yml -> /etc/passwd
-				symlinkPath := filepath.Join(dir, "action.yml")
+				symlinkPath := filepath.Join(dir, appconstants.ActionFileNameYML)
 				if err := os.Symlink("/etc/passwd", symlinkPath); err != nil {
 					t.Skip("symlink creation not supported on this platform")
 				}
@@ -631,7 +631,7 @@ func TestDetectActionFiles(t *testing.T) {
 
 				// Create action.yml in subdir
 				content := "name: Test\ndescription: Test"
-				actionPath := filepath.Join(subdir, "action.yml")
+				actionPath := filepath.Join(subdir, appconstants.ActionFileNameYML)
 				if err := os.WriteFile(actionPath, []byte(content), 0600); err != nil {
 					t.Fatalf(appconstants.TestMsgFailedToCreateAction, err)
 				}
@@ -739,7 +739,7 @@ func TestDetectVersion(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				content := `{"version": "1.2.3"}`
-				if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0600); err != nil {
+				if err := os.WriteFile(filepath.Join(dir, appconstants.PackageJSON), []byte(content), 0600); err != nil {
 					t.Fatalf("Failed to create package.json: %v", err)
 				}
 			},
@@ -860,7 +860,7 @@ func TestAnalyzeActionFile(t *testing.T) {
 			t.Parallel()
 
 			tempDir := t.TempDir()
-			actionPath := filepath.Join(tempDir, "action.yml")
+			actionPath := filepath.Join(tempDir, appconstants.ActionFileNameYML)
 			if err := os.WriteFile(actionPath, []byte(tt.content), 0600); err != nil {
 				t.Fatalf(appconstants.TestMsgFailedToCreateAction, err)
 			}
