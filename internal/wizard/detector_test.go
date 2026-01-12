@@ -612,7 +612,8 @@ func TestDetectActionFiles(t *testing.T) {
 				t.Helper()
 				// Create symlink: action.yml -> /etc/passwd
 				symlinkPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-				if err := os.Symlink("/etc/passwd", symlinkPath); err != nil {
+				err := os.Symlink("/etc/passwd", symlinkPath)
+				if err != nil {
 					t.Skip("symlink creation not supported on this platform")
 				}
 			},

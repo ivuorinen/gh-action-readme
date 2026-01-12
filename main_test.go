@@ -3055,7 +3055,7 @@ func TestDepsUpgradeHandlerIntegration(t *testing.T) {
 	}
 }
 
-func TestConfigWizardHandler_Initialization(t *testing.T) {
+func TestConfigWizardHandlerInitialization(t *testing.T) {
 	t.Parallel()
 
 	t.Run("initializes globalConfig when nil", func(t *testing.T) {

@@ -128,7 +128,7 @@ func TestConfigValidatorValidateField(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_IsValidGitHubName(t *testing.T) {
+func TestConfigValidatorIsValidGitHubName(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
@@ -160,7 +160,7 @@ func TestConfigValidator_IsValidGitHubName(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_IsValidSemanticVersion(t *testing.T) {
+func TestConfigValidatorIsValidSemanticVersion(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
@@ -191,7 +191,7 @@ func TestConfigValidator_IsValidSemanticVersion(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_IsValidGitHubToken(t *testing.T) {
+func TestConfigValidatorIsValidGitHubToken(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)
@@ -222,7 +222,7 @@ func TestConfigValidator_IsValidGitHubToken(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_IsValidVariableName(t *testing.T) {
+func TestConfigValidatorIsValidVariableName(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	validator := NewConfigValidator(output)

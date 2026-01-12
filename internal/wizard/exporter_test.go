@@ -167,7 +167,7 @@ func verifyTOMLContent(t *testing.T, outputPath string) {
 	}
 }
 
-func TestConfigExporter_SanitizeConfig(t *testing.T) {
+func TestConfigExporterSanitizeConfig(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)

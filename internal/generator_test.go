@@ -996,7 +996,8 @@ func TestGeneratorDiscoverActionFilesErrorPaths(t *testing.T) {
 	// Test with unreadable directory (if we can create one)
 	tmpDir := t.TempDir()
 	unreadableDir := filepath.Join(tmpDir, "unreadable")
-	if err := os.Mkdir(unreadableDir, 0000); err != nil {
+	err = os.Mkdir(unreadableDir, 0000)
+	if err != nil {
 		t.Skip("Cannot create unreadable directory for testing")
 	}
 	defer func() { _ = os.Chmod(unreadableDir, 0700) }() //nolint:gosec // Test cleanup needs to restore permissions
