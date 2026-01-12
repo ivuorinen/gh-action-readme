@@ -663,6 +663,31 @@ const (
 	MsgConfigurationExportedTo = "Configuration exported to: %s"
 )
 
+// Test command names - used across multiple test files.
+const (
+	TestCmdGen      = "gen"
+	TestCmdConfig   = "config"
+	TestCmdValidate = "validate"
+	TestCmdDeps     = "deps"
+	TestCmdShow     = "show"
+	TestCmdList     = "list"
+)
+
+// Test file paths and names - used across multiple test files.
+const (
+	TestTmpDir               = "/tmp"
+	TestTmpActionFile        = "/tmp/action.yml"
+	TestErrorScenarioOldDeps = "error-scenarios/action-with-old-deps.yml"
+	TestErrorScenarioMissing = "error-scenarios/missing-required-fields.yml"
+	TestErrorScenarioInvalid = "error-scenarios/invalid-yaml-syntax.yml"
+)
+
+// TestMinimalAction is the minimal action YAML content for testing.
+const TestMinimalAction = "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
+
+// TestScenarioNoDeps is the common test scenario description for actions with no dependencies.
+const TestScenarioNoDeps = "handles action with no dependencies"
+
 // File permissions (additional).
 const (
 	// FilePermDir is the directory permission.

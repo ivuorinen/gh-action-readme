@@ -54,7 +54,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "gen command with valid action",
-			args: []string{"gen", "--output-format", "md"},
+			args: []string{appconstants.TestCmdGen, "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -63,7 +63,10 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "gen command with theme flag",
-			args: []string{"gen", "--theme", "github", "--output-format", "json"},
+			args: []string{
+				appconstants.TestCmdGen, "--theme", appconstants.ThemeGitHub,
+				"--output-format", appconstants.OutputFormatJSON,
+			},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -72,13 +75,13 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "gen command with no action files",
-			args:       []string{"gen"},
+			args:       []string{appconstants.TestCmdGen},
 			wantExit:   1,
 			wantStderr: "no GitHub Action files found for documentation generation [NO_ACTION_FILES]",
 		},
 		{
 			name: "validate command with valid action",
-			args: []string{"validate"},
+			args: []string{appconstants.TestCmdValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -88,7 +91,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "validate command with invalid action",
-			args: []string{"validate"},
+			args: []string{appconstants.TestCmdValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureInvalidMissingDescription)
@@ -103,31 +106,31 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "config command default",
-			args:       []string{"config"},
+			args:       []string{appconstants.TestCmdConfig},
 			wantExit:   0,
 			wantStdout: "Configuration file location:",
 		},
 		{
 			name:       "config show command",
-			args:       []string{"config", "show"},
+			args:       []string{appconstants.TestCmdConfig, appconstants.TestCmdShow},
 			wantExit:   0,
 			wantStdout: "Current Configuration:",
 		},
 		{
 			name:       "config themes command",
-			args:       []string{"config", "themes"},
+			args:       []string{appconstants.TestCmdConfig, "themes"},
 			wantExit:   0,
 			wantStdout: "Available Themes:",
 		},
 		{
 			name:       "deps list command no files",
-			args:       []string{"deps", "list"},
+			args:       []string{appconstants.TestCmdDeps, appconstants.TestCmdList},
 			wantExit:   0, // Changed: deps list now outputs warning instead of error when no files found
 			wantStdout: "no action files found",
 		},
 		{
 			name: "deps list command with composite action",
-			args: []string{"deps", "list"},
+			args: []string{appconstants.TestCmdDeps, appconstants.TestCmdList},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
@@ -186,18 +189,18 @@ func TestCLIFlags(t *testing.T) {
 	}{
 		{
 			name:     "verbose flag",
-			args:     []string{"--verbose", "config", "show"},
+			args:     []string{"--verbose", appconstants.TestCmdConfig, appconstants.TestCmdShow},
 			wantExit: 0,
 			contains: "Current Configuration:",
 		},
 		{
 			name:     "quiet flag",
-			args:     []string{"--quiet", "config", "show"},
+			args:     []string{"--quiet", appconstants.TestCmdConfig, appconstants.TestCmdShow},
 			wantExit: 0,
 		},
 		{
 			name:     "config file flag",
-			args:     []string{"--config", "nonexistent.yml", "config", "show"},
+			args:     []string{"--config", "nonexistent.yml", appconstants.TestCmdConfig, appconstants.TestCmdShow},
 			wantExit: 1,
 		},
 		{
@@ -255,13 +258,18 @@ func TestCLIRecursiveFlag(t *testing.T) {
 	}{
 		{
 			name:     "without recursive flag",
-			args:     []string{"gen", "--output-format", "json"},
+			args:     []string{appconstants.TestCmdGen, "--output-format", appconstants.OutputFormatJSON},
 			wantExit: 0,
 			minFiles: 1, // should only process root action.yml
 		},
 		{
-			name:     "with recursive flag",
-			args:     []string{"gen", "--recursive", "--output-format", "json"},
+			name: "with recursive flag",
+			args: []string{
+				appconstants.TestCmdGen,
+				"--recursive",
+				"--output-format",
+				appconstants.OutputFormatJSON,
+			},
 			wantExit: 0,
 			minFiles: 2, // should process both action.yml files
 		},
@@ -295,7 +303,7 @@ func TestCLIErrorHandling(t *testing.T) {
 	}{
 		{
 			name: "permission denied on output directory",
-			args: []string{"gen", "--output-dir", "/root/restricted"},
+			args: []string{appconstants.TestCmdGen, "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -305,7 +313,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "invalid YAML in action file",
-			args: []string{"validate"},
+			args: []string{appconstants.TestCmdValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -318,7 +326,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "unknown output format",
-			args: []string{"gen", "--output-format", "unknown"},
+			args: []string{appconstants.TestCmdGen, "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -327,7 +335,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "unknown theme",
-			args: []string{"gen", "--theme", "nonexistent-theme"},
+			args: []string{appconstants.TestCmdGen, "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -337,14 +345,14 @@ func TestCLIErrorHandling(t *testing.T) {
 		// Phase 5: Additional error path tests for gen handler
 		{
 			name:      "gen with empty directory (no action.yml)",
-			args:      []string{"gen"},
+			args:      []string{appconstants.TestCmdGen},
 			setupFunc: nil, // Empty directory
 			wantExit:  1,
 			wantError: "no GitHub Action files found",
 		},
 		{
 			name: "gen with malformed YAML syntax",
-			args: []string{"gen"},
+			args: []string{appconstants.TestCmdGen},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -358,7 +366,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "gen with invalid action path",
-			args: []string{"gen", "/nonexistent/path/action.yml"},
+			args: []string{appconstants.TestCmdGen, "/nonexistent/path/action.yml"},
 			setupFunc: func(t *testing.T, _ string) {
 				t.Helper()
 			},
@@ -368,7 +376,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		// Phase 5: Additional error path tests for validate handler
 		{
 			name: "validate with missing required field (description)",
-			args: []string{"validate"},
+			args: []string{appconstants.TestCmdValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureInvalidMissingDescription)
@@ -378,7 +386,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "validate with missing runs field",
-			args: []string{"validate"},
+			args: []string{appconstants.TestCmdValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -393,21 +401,21 @@ func TestCLIErrorHandling(t *testing.T) {
 		// Phase 5: Additional error path tests for deps commands
 		{
 			name: "deps list with no dependencies",
-			args: []string{"deps", "list"},
+			args: []string{appconstants.TestCmdDeps, appconstants.TestCmdList},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				// Create an action with no dependencies
 				testutil.WriteTestFile(
 					t,
 					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []",
+					appconstants.TestMinimalAction,
 				)
 			},
 			wantExit: 0, // Not an error, just no dependencies
 		},
 		{
 			name: "deps list with malformed action - graceful handling",
-			args: []string{"deps", "list"},
+			args: []string{appconstants.TestCmdDeps, appconstants.TestCmdList},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -456,7 +464,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 	defer cleanup()
 
 	// Test config init command
-	cmd := exec.Command(binaryPath, "config", "init") // #nosec G204 -- controlled test input
+	cmd := exec.Command(binaryPath, appconstants.TestCmdConfig, "init") // #nosec G204 -- controlled test input
 	cmd.Dir = tmpDir
 
 	// Set XDG_CONFIG_HOME to temp directory
@@ -599,7 +607,7 @@ func TestNewGenCmd(t *testing.T) {
 	}
 
 	// Check that required flags exist
-	flags := []string{"output-format", "output-dir", "theme", "recursive"}
+	flags := []string{appconstants.FlagOutputFormat, "output-dir", "theme", "recursive"}
 	for _, flag := range flags {
 		if cmd.Flags().Lookup(flag) == nil {
 			t.Errorf("expected flag %q to exist", flag)
@@ -611,7 +619,7 @@ func TestNewValidateCmd(t *testing.T) {
 	t.Parallel()
 	cmd := newValidateCmd()
 
-	if cmd.Use != "validate" {
+	if cmd.Use != appconstants.TestCmdValidate {
 		t.Errorf("expected Use to be 'validate', got %q", cmd.Use)
 	}
 
@@ -940,24 +948,24 @@ func TestApplyCommandFlags(t *testing.T) {
 	}{
 		{
 			name:      "with theme flag only",
-			theme:     "github",
+			theme:     appconstants.ThemeGitHub,
 			format:    appconstants.OutputFormatMarkdown, // Must set format to avoid empty string
-			wantTheme: "github",
+			wantTheme: appconstants.ThemeGitHub,
 			wantFmt:   appconstants.OutputFormatMarkdown,
 		},
 		{
 			name:      "with format flag",
 			theme:     "",
-			format:    "html",
+			format:    appconstants.OutputFormatHTML,
 			wantTheme: "default", // Default from DefaultAppConfig
-			wantFmt:   "html",
+			wantFmt:   appconstants.OutputFormatHTML,
 		},
 		{
 			name:      "with both flags",
-			theme:     "professional",
-			format:    "json",
-			wantTheme: "professional",
-			wantFmt:   "json",
+			theme:     appconstants.ThemeProfessional,
+			format:    appconstants.OutputFormatJSON,
+			wantTheme: appconstants.ThemeProfessional,
+			wantFmt:   appconstants.OutputFormatJSON,
 		},
 	}
 
@@ -967,13 +975,13 @@ func TestApplyCommandFlags(t *testing.T) {
 
 		// Always define flags with proper defaults
 		cmd.Flags().String("theme", "", "")
-		cmd.Flags().String("output-format", appconstants.OutputFormatMarkdown, "")
+		cmd.Flags().String(appconstants.FlagOutputFormat, appconstants.OutputFormatMarkdown, "")
 
 		if tt.theme != "" {
 			_ = cmd.Flags().Set("theme", tt.theme)
 		}
 		if tt.format != appconstants.OutputFormatMarkdown {
-			_ = cmd.Flags().Set("output-format", tt.format)
+			_ = cmd.Flags().Set(appconstants.FlagOutputFormat, tt.format)
 		}
 
 		applyCommandFlags(cmd, config)
@@ -1120,7 +1128,7 @@ func TestDisplayOutdatedResults(t *testing.T) {
 						Version: "v3",
 					},
 					LatestVersion: "v4",
-					UpdateType:    "major",
+					UpdateType:    appconstants.UpdateTypeMajor,
 				},
 			},
 		},
@@ -1133,7 +1141,7 @@ func TestDisplayOutdatedResults(t *testing.T) {
 						Version: "v3",
 					},
 					LatestVersion:    "v4",
-					UpdateType:       "major",
+					UpdateType:       appconstants.UpdateTypeMajor,
 					IsSecurityUpdate: true,
 				},
 			},
@@ -1236,7 +1244,7 @@ func TestShowPendingUpdates(t *testing.T) {
 					FilePath:   "/tmp/action.yml",
 					OldUses:    "actions/checkout@v3",
 					NewUses:    "actions/checkout@v4",
-					UpdateType: "major",
+					UpdateType: appconstants.UpdateTypeMajor,
 				},
 			},
 			currentDir: "/tmp",
@@ -1248,13 +1256,13 @@ func TestShowPendingUpdates(t *testing.T) {
 					FilePath:   "/tmp/action.yml",
 					OldUses:    "actions/checkout@v3",
 					NewUses:    "actions/checkout@v4",
-					UpdateType: "major",
+					UpdateType: appconstants.UpdateTypeMajor,
 				},
 				{
 					FilePath:   "/tmp/workflow.yml",
 					OldUses:    "actions/setup-node@v2",
 					NewUses:    "actions/setup-node@v3",
-					UpdateType: "major",
+					UpdateType: appconstants.UpdateTypeMajor,
 				},
 			},
 			currentDir: "/tmp",
@@ -1320,7 +1328,7 @@ func TestAnalyzeActionFileDeps(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, *dependencies.Analyzer) {
 				t.Helper()
 				tmpDir := t.TempDir()
-				actionFile := filepath.Join(tmpDir, "action.yml")
+				actionFile := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				// Write invalid YAML
 				if err := os.WriteFile(actionFile, []byte("invalid: yaml: content:"), 0600); err != nil {
 					t.Fatalf("Failed to write invalid action file: %v", err)
@@ -1391,7 +1399,7 @@ func TestNewConfigCmd(t *testing.T) {
 		if cmd == nil {
 			t.Fatal("newConfigCmd() returned nil")
 		}
-		if cmd.Use != "config" {
+		if cmd.Use != appconstants.TestCmdConfig {
 			t.Errorf("newConfigCmd().Use = %v, want 'config'", cmd.Use)
 		}
 	})
@@ -1399,7 +1407,7 @@ func TestNewConfigCmd(t *testing.T) {
 	t.Run("has all expected subcommands", func(t *testing.T) {
 		t.Parallel()
 		cmd := newConfigCmd()
-		expectedSubcommands := []string{"init", "wizard", "show", "themes"}
+		expectedSubcommands := []string{"init", "wizard", appconstants.TestCmdShow, "themes"}
 		verifySubcommandsExist(t, cmd, expectedSubcommands)
 	})
 
@@ -1431,7 +1439,7 @@ func TestNewDepsCmd(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("newDepsCmd() returned nil")
 	}
-	if cmd.Use != "deps" {
+	if cmd.Use != appconstants.TestCmdDeps {
 		t.Errorf("newDepsCmd().Use = %v, want 'deps'", cmd.Use)
 	}
 }
@@ -1478,7 +1486,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			},
 			wantErr: false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set("output-format", "html")
+				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, appconstants.OutputFormatHTML)
 			},
 		},
 		{
@@ -1491,7 +1499,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			},
 			wantErr: false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set("output-format", "json")
+				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, appconstants.OutputFormatJSON)
 			},
 		},
 		{
@@ -1504,7 +1512,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			},
 			wantErr: false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set("theme", "github")
+				_ = cmd.Flags().Set("theme", appconstants.ThemeGitHub)
 			},
 		},
 		{
@@ -1569,8 +1577,8 @@ func TestGenHandlerIntegration(t *testing.T) {
 			name: "returns error for invalid YAML syntax",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioInvalid)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1580,8 +1588,8 @@ func TestGenHandlerIntegration(t *testing.T) {
 			name: "returns error for missing required fields",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioMissing)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1610,7 +1618,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				fixtureContent := testutil.MustReadFixture("error-scenarios/empty-action.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1620,8 +1628,8 @@ func TestGenHandlerIntegration(t *testing.T) {
 			name: "processes action with outdated dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioOldDeps)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1711,8 +1719,8 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			name: "returns error for invalid YAML syntax",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioInvalid)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: true,
 		},
@@ -1720,8 +1728,8 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			name: "returns error for missing required fields",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioMissing)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: true,
 		},
@@ -1729,8 +1737,8 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			name: "validates action with outdated dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioOldDeps)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: false, // Outdated dependencies don't fail validation
 		},
@@ -1747,7 +1755,7 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				fixtureContent := testutil.MustReadFixture("error-scenarios/empty-action.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: false, // Empty steps is valid YAML structure
 		},
@@ -1900,7 +1908,7 @@ func TestLoadGenConfigIntegration(t *testing.T) {
 
 				return tmpDir, tmpDir
 			},
-			wantTheme: "professional",
+			wantTheme: appconstants.ThemeProfessional,
 		},
 	}
 
@@ -2019,7 +2027,7 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "handles action with no dependencies",
+			name: appconstants.TestScenarioNoDeps,
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -2039,8 +2047,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			name: "handles invalid YAML syntax with warning",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioInvalid)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: false, // depsListHandler shows warning but returns nil
 		},
@@ -2048,8 +2056,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			name: "handles missing required fields with warning",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioMissing)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: false, // depsListHandler shows warning but returns nil
 		},
@@ -2057,8 +2065,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			name: "lists dependencies from action with outdated deps",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioOldDeps)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: false, // Should successfully list the outdated deps
 		},
@@ -2071,8 +2079,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 				// Create subdirectory with another action
 				subdir := filepath.Join(tmpDir, "subaction")
 				testutil.AssertNoError(t, os.MkdirAll(subdir, 0750))
-				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
-				testutil.WriteTestFile(t, filepath.Join(subdir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioOldDeps)
+				testutil.WriteTestFile(t, filepath.Join(subdir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			wantErr: false, // Should list deps from both actions
 		},
@@ -2132,7 +2140,7 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "handles action with no dependencies",
+			name: appconstants.TestScenarioNoDeps,
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -2144,8 +2152,8 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			name: "handles invalid YAML syntax gracefully",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioInvalid)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			setToken: true,
 			wantErr:  false, // depsSecurityHandler handles YAML errors gracefully
@@ -2154,8 +2162,8 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			name: "handles missing required fields gracefully",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioMissing)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			setToken: true,
 			wantErr:  false, // depsSecurityHandler handles YAML errors gracefully
@@ -2164,8 +2172,8 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			name: "analyzes action with outdated dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(appconstants.TestErrorScenarioOldDeps)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
 			setToken: true,
 			wantErr:  false,
@@ -2349,12 +2357,12 @@ func TestCheckAllOutdated(t *testing.T) {
 			wantOutdatedCnt: 0, // Mock analyzer will return no outdated deps
 		},
 		{
-			name: "handles action with no dependencies",
+			name: appconstants.TestScenarioNoDeps,
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(t, actionPath,
-					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+					appconstants.TestMinimalAction)
 
 				return []string{actionPath}
 			},
@@ -2434,12 +2442,12 @@ func TestAnalyzeSecurityDeps(t *testing.T) {
 			wantPinned: 2, // TestFixtureCompositeWithDeps has 2 pinned dependencies
 		},
 		{
-			name: "handles action with no dependencies",
+			name: appconstants.TestScenarioNoDeps,
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(t, actionPath,
-					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+					appconstants.TestMinimalAction)
 
 				return []string{actionPath}
 			},
@@ -2534,12 +2542,12 @@ func TestCollectAllUpdates(t *testing.T) {
 			wantUpdateCnt: 0, // Without GitHub token, won't fetch updates
 		},
 		{
-			name: "handles action with no dependencies",
+			name: appconstants.TestScenarioNoDeps,
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(t, actionPath,
-					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+					appconstants.TestMinimalAction)
 
 				return []string{actionPath}
 			},
