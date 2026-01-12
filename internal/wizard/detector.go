@@ -267,11 +267,7 @@ func validateDirectoryPath(dir string) error {
 func (d *ProjectDetector) processWalkDirEntry(path string, entry os.DirEntry, actionFiles *[]string) error {
 	// Check for symlinks - skip them
 	if entry.Type()&os.ModeSymlink != 0 {
-		if entry.IsDir() {
-			return filepath.SkipDir
-		}
-
-		return nil // Skip symlinked files
+		return nil // Skip all symlinks
 	}
 
 	// Handle directories
