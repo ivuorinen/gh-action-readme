@@ -4,7 +4,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -149,7 +148,7 @@ func main() {
 		Short: "Auto-generate beautiful README and HTML documentation for GitHub Actions.",
 		Long: `gh-action-readme is a CLI tool for parsing one or many action.yml files and ` +
 			`generating informative, modern, and customizable documentation.`,
-		PersistentPreRun: initConfig,
+		PersistentPreRunE: initConfig,
 	}
 
 	// Global flags
@@ -195,14 +194,14 @@ func main() {
 	}
 }
 
-func initConfig(_ *cobra.Command, _ []string) {
+func initConfig(_ *cobra.Command, _ []string) error {
 	var err error
 
 	// Use ConfigurationLoader for loading global configuration
 	loader := internal.NewConfigurationLoader()
 	globalConfig, err = loader.LoadGlobalConfig(configFile)
 	if err != nil {
-		log.Fatalf("Failed to initialize configuration: %v", err)
+		return fmt.Errorf("failed to initialize configuration: %w", err)
 	}
 
 	// Override with command line flags
@@ -213,6 +212,8 @@ func initConfig(_ *cobra.Command, _ []string) {
 		globalConfig.Quiet = true
 		globalConfig.Verbose = false // quiet overrides verbose
 	}
+
+	return nil
 }
 
 func newGenCmd() *cobra.Command {

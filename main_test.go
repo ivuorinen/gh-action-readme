@@ -54,7 +54,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "gen command with valid action",
-			args: []string{"gen", testutil.TestFlagOutputFormat, "md"},
+			args: []string{"gen", "--output-format", "md"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -63,7 +63,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "gen command with theme flag",
-			args: []string{"gen", testutil.TestFlagTheme, "github", testutil.TestFlagOutputFormat, "json"},
+			args: []string{"gen", "--theme", "github", "--output-format", "json"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -255,13 +255,13 @@ func TestCLIRecursiveFlag(t *testing.T) {
 	}{
 		{
 			name:     "without recursive flag",
-			args:     []string{"gen", testutil.TestFlagOutputFormat, "json"},
+			args:     []string{"gen", "--output-format", "json"},
 			wantExit: 0,
 			minFiles: 1, // should only process root action.yml
 		},
 		{
 			name:     "with recursive flag",
-			args:     []string{"gen", testutil.TestFlagRecursive, testutil.TestFlagOutputFormat, "json"},
+			args:     []string{"gen", "--recursive", "--output-format", "json"},
 			wantExit: 0,
 			minFiles: 2, // should process both action.yml files
 		},
@@ -318,7 +318,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "unknown output format",
-			args: []string{"gen", testutil.TestFlagOutputFormat, "unknown"},
+			args: []string{"gen", "--output-format", "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -327,7 +327,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "unknown theme",
-			args: []string{"gen", testutil.TestFlagTheme, "nonexistent-theme"},
+			args: []string{"gen", "--theme", "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -400,7 +400,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-					testutil.TestMinimalAction,
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []",
 				)
 			},
 			wantExit: 0, // Not an error, just no dependencies
@@ -599,7 +599,7 @@ func TestNewGenCmd(t *testing.T) {
 	}
 
 	// Check that required flags exist
-	flags := []string{appconstants.FlagOutputFormat, "output-dir", "theme", "recursive"}
+	flags := []string{"output-format", "output-dir", "theme", "recursive"}
 	for _, flag := range flags {
 		if cmd.Flags().Lookup(flag) == nil {
 			t.Errorf("expected flag %q to exist", flag)
@@ -791,8 +791,7 @@ func TestSchemaHandler(t *testing.T) {
 	}
 }
 
-func TestConfigThemesHandler(t *testing.T) {
-	_ = t // unused in this test
+func TestConfigThemesHandler(t *testing.T) { //nolint:revive // t required by testing framework
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -803,8 +802,7 @@ func TestConfigThemesHandler(t *testing.T) {
 	// Should not panic
 }
 
-func TestConfigShowHandler(t *testing.T) {
-	_ = t // unused in this test
+func TestConfigShowHandler(t *testing.T) { //nolint:revive // t required by testing framework
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -815,8 +813,7 @@ func TestConfigShowHandler(t *testing.T) {
 	// Should not panic
 }
 
-func TestDepsGraphHandler(t *testing.T) {
-	_ = t // unused in this test
+func TestDepsGraphHandler(t *testing.T) { //nolint:revive // t required by testing framework
 	originalConfig := globalConfig
 	defer func() { globalConfig = originalConfig }()
 
@@ -1027,8 +1024,7 @@ func TestValidateGitHubToken(t *testing.T) {
 }
 
 // TestLogConfigInfo tests configuration info logging.
-func TestLogConfigInfo(t *testing.T) {
-	_ = t // unused outside of subtests
+func TestLogConfigInfo(t *testing.T) { //nolint:revive // t required by testing framework
 	tests := []struct {
 		name     string
 		verbose  bool
@@ -1064,8 +1060,7 @@ func TestLogConfigInfo(t *testing.T) {
 }
 
 // TestShowUpgradeMode tests upgrade mode display.
-func TestShowUpgradeMode(t *testing.T) {
-	_ = t // unused outside of subtests
+func TestShowUpgradeMode(t *testing.T) { //nolint:revive // t required by testing framework
 	tests := []struct {
 		name      string
 		ciMode    bool
@@ -1100,8 +1095,7 @@ func TestShowUpgradeMode(t *testing.T) {
 }
 
 // TestDisplayOutdatedResults tests outdated dependencies display.
-func TestDisplayOutdatedResults(t *testing.T) {
-	_ = t // unused outside of subtests
+func TestDisplayOutdatedResults(t *testing.T) { //nolint:revive // t required by testing framework
 	tests := []struct {
 		name        string
 		allOutdated []dependencies.OutdatedDependency
@@ -1147,8 +1141,7 @@ func TestDisplayOutdatedResults(t *testing.T) {
 }
 
 // TestDisplayFloatingDeps tests floating dependencies display.
-func TestDisplayFloatingDeps(t *testing.T) {
-	_ = t // unused in this test
+func TestDisplayFloatingDeps(t *testing.T) { //nolint:revive // t required by testing framework
 
 	output := createOutputManager(true)
 	floatingDeps := []struct {
@@ -1156,7 +1149,7 @@ func TestDisplayFloatingDeps(t *testing.T) {
 		dep  dependencies.Dependency
 	}{
 		{
-			file: testutil.TestTmpActionFile,
+			file: "/tmp/action.yml",
 			dep: dependencies.Dependency{
 				Name:    testutil.TestActionCheckout,
 				Version: "v4",
@@ -1169,8 +1162,7 @@ func TestDisplayFloatingDeps(t *testing.T) {
 }
 
 // TestDisplaySecuritySummary tests security summary display.
-func TestDisplaySecuritySummary(t *testing.T) {
-	_ = t // unused outside of subtests
+func TestDisplaySecuritySummary(t *testing.T) { //nolint:revive // t required by testing framework
 	tests := []struct {
 		name         string
 		pinnedCount  int
@@ -1192,7 +1184,7 @@ func TestDisplaySecuritySummary(t *testing.T) {
 				dep  dependencies.Dependency
 			}{
 				{
-					file: testutil.TestTmpActionFile,
+					file: "/tmp/action.yml",
 					dep: dependencies.Dependency{
 						Name:    testutil.TestActionCheckout,
 						Version: "v4",
@@ -1232,8 +1224,8 @@ func TestShowPendingUpdates(t *testing.T) {
 			name: "single update",
 			updates: []dependencies.PinnedUpdate{
 				{
-					FilePath:   testutil.TestTmpActionFile,
-					OldUses:    testutil.TestActionCheckoutV3,
+					FilePath:   "/tmp/action.yml",
+					OldUses:    "actions/checkout@v3",
 					NewUses:    testutil.TestActionCheckoutV4,
 					UpdateType: "major",
 				},
@@ -1244,8 +1236,8 @@ func TestShowPendingUpdates(t *testing.T) {
 			name: "multiple updates",
 			updates: []dependencies.PinnedUpdate{
 				{
-					FilePath:   testutil.TestTmpActionFile,
-					OldUses:    testutil.TestActionCheckoutV3,
+					FilePath:   "/tmp/action.yml",
+					OldUses:    "actions/checkout@v3",
 					NewUses:    testutil.TestActionCheckoutV4,
 					UpdateType: "major",
 				},
@@ -1282,7 +1274,7 @@ func TestAnalyzeActionFileDeps(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, *dependencies.Analyzer) {
 				t.Helper()
 
-				return testutil.TestTmpActionFile, nil
+				return "/tmp/action.yml", nil
 			},
 			wantDepCnt: 0,
 		},
@@ -1319,7 +1311,7 @@ func TestAnalyzeActionFileDeps(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, *dependencies.Analyzer) {
 				t.Helper()
 				tmpDir := t.TempDir()
-				actionFile := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				actionFile := filepath.Join(tmpDir, "action.yml")
 				// Write invalid YAML (unclosed bracket)
 				if err := os.WriteFile(actionFile, []byte(testutil.TestInvalidYAMLPrefix), 0600); err != nil {
 					t.Fatalf("Failed to write invalid action file: %v", err)
@@ -1563,8 +1555,8 @@ func TestGenHandlerIntegration(t *testing.T) {
 			name: "returns error for invalid YAML syntax",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1574,8 +1566,8 @@ func TestGenHandlerIntegration(t *testing.T) {
 			name: "returns error for missing required fields",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioMissingFields)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1603,8 +1595,8 @@ func TestGenHandlerIntegration(t *testing.T) {
 			name: "handles empty action file gracefully",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/empty-action.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(testutil.TestFixtureEmptyAction)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1614,8 +1606,8 @@ func TestGenHandlerIntegration(t *testing.T) {
 			name: "processes action with outdated dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 
 				return []string{tmpDir}
 			},
@@ -1705,8 +1697,8 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			name: "returns error for invalid YAML syntax",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: true,
 		},
@@ -1714,8 +1706,8 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			name: "returns error for missing required fields",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioMissingFields)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: true,
 		},
@@ -1723,8 +1715,8 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			name: "validates action with outdated dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: false, // Outdated dependencies don't fail validation
 		},
@@ -1740,8 +1732,8 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			name: "validates empty action file with no steps",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture("error-scenarios/empty-action.yml")
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture(testutil.TestFixtureEmptyAction)
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: false, // Empty steps is valid YAML structure
 		},
@@ -2013,7 +2005,7 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
+			name: "handles action with no dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -2033,8 +2025,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			name: "handles invalid YAML syntax with warning",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: false, // depsListHandler shows warning but returns nil
 		},
@@ -2042,8 +2034,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			name: "handles missing required fields with warning",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioMissingFields)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: false, // depsListHandler shows warning but returns nil
 		},
@@ -2051,8 +2043,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			name: "lists dependencies from action with outdated deps",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: false, // Should successfully list the outdated deps
 		},
@@ -2065,8 +2057,8 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 				// Create subdirectory with another action
 				subdir := filepath.Join(tmpDir, "subaction")
 				testutil.AssertNoError(t, os.MkdirAll(subdir, 0750))
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(subdir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(subdir, "action.yml"), string(fixtureContent))
 			},
 			wantErr: false, // Should list deps from both actions
 		},
@@ -2126,7 +2118,7 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
+			name: "handles action with no dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -2138,8 +2130,8 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			name: "handles invalid YAML syntax gracefully",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/invalid-yaml-syntax.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			setToken: true,
 			wantErr:  false, // depsSecurityHandler handles YAML errors gracefully
@@ -2148,8 +2140,8 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			name: "handles missing required fields gracefully",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioMissingFields)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/missing-required-fields.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			setToken: true,
 			wantErr:  false, // depsSecurityHandler handles YAML errors gracefully
@@ -2158,8 +2150,8 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			name: "analyzes action with outdated dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+				fixtureContent := testutil.MustReadFixture("error-scenarios/action-with-old-deps.yml")
+				testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.yml"), string(fixtureContent))
 			},
 			setToken: true,
 			wantErr:  false,
@@ -2343,12 +2335,12 @@ func TestCheckAllOutdated(t *testing.T) {
 			wantOutdatedCnt: 0, // Mock analyzer will return no outdated deps
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
+			name: "handles action with no dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(t, actionPath,
-					testutil.TestMinimalAction)
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
 
 				return []string{actionPath}
 			},
@@ -2428,12 +2420,12 @@ func TestAnalyzeSecurityDeps(t *testing.T) {
 			wantPinned: 2, // TestFixtureCompositeWithDeps has 2 pinned dependencies
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
+			name: "handles action with no dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(t, actionPath,
-					testutil.TestMinimalAction)
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
 
 				return []string{actionPath}
 			},
@@ -2528,12 +2520,12 @@ func TestCollectAllUpdates(t *testing.T) {
 			wantUpdateCnt: 0, // Without GitHub token, won't fetch updates
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
+			name: "handles action with no dependencies",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(t, actionPath,
-					testutil.TestMinimalAction)
+					"name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
 
 				return []string{actionPath}
 			},
@@ -2701,7 +2693,7 @@ func TestApplyUpdates(t *testing.T) {
 
 				output := createOutputManager(true) // Quiet mode for tests
 				updates := []dependencies.PinnedUpdate{
-					{OldUses: testutil.TestActionCheckoutV3, NewUses: testutil.TestActionCheckoutV4},
+					{OldUses: "actions/checkout@v3", NewUses: testutil.TestActionCheckoutV4},
 				}
 
 				// Execute function - should not call ApplyPinnedUpdates
@@ -2734,7 +2726,7 @@ func TestApplyUpdates(t *testing.T) {
 		output := createOutputManager(true)
 		updates := []dependencies.PinnedUpdate{
 			{
-				OldUses:  testutil.TestActionCheckoutV3,
+				OldUses:  "actions/checkout@v3",
 				NewUses:  "actions/checkout@abc123",
 				FilePath: actionFile,
 			},

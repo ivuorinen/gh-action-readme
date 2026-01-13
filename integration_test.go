@@ -157,15 +157,15 @@ func setupConfigurationHierarchy(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	// Create global config
-	testutil.WriteConfigFile(t, tmpDir, testutil.MustReadFixture("configs/global/default.yml"))
+	testutil.WriteConfigFile(t, tmpDir, testutil.MustReadFixture(testutil.TestFixtureGlobalConfig))
 
 	// Create repo-specific config override
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGHActionReadme),
-		testutil.MustReadFixture("professional-config.yml"))
+		testutil.MustReadFixture(testutil.TestFixtureProfessionalConfig))
 
 	// Create action-specific config
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestDirDotGitHub, testutil.TestFileGHActionReadme),
-		testutil.MustReadFixture("repo-config.yml"))
+		testutil.MustReadFixture(testutil.TestFixtureRepoConfig))
 
 	// Set XDG config home to our test directory
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, testutil.TestDirDotConfig))
@@ -203,8 +203,7 @@ func setupCompleteServiceChain(t *testing.T, tmpDir string) {
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGitIgnore), testutil.GitIgnoreContent)
 
 	// Create cache directory structure
-	cacheDir := filepath.Join(tmpDir, ".cache", testutil.TestBinaryName)
-	_ = os.MkdirAll(cacheDir, 0750) // #nosec G301 -- test directory permissions
+	testutil.CreateTestSubdir(t, tmpDir, ".cache", testutil.TestBinaryName)
 }
 
 // setupDependencyAnalysisWorkflow creates a project with complex dependencies.
@@ -227,8 +226,7 @@ func setupDependencyAnalysisWorkflow(t *testing.T, tmpDir string) {
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "package.json"), testutil.PackageJSONContent)
 
 	// Add a nested action with different dependencies
-	nestedDir := filepath.Join(tmpDir, "actions", "deploy")
-	_ = os.MkdirAll(nestedDir, 0750) // #nosec G301 -- test directory permissions
+	nestedDir := testutil.CreateTestSubdir(t, tmpDir, "actions", "deploy")
 
 	nestedAction := testutil.CreateCompositeAction(
 		"Deploy Action",
@@ -253,8 +251,7 @@ func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 
 	// Global configuration (lowest priority)
-	globalConfigDir := filepath.Join(configHome, testutil.TestBinaryName)
-	_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
+	globalConfigDir := testutil.CreateTestSubdir(t, configHome, testutil.TestBinaryName)
 	globalConfig := `theme: default
 output_format: md
 verbose: false
@@ -269,8 +266,7 @@ schema: custom-schema.json`
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGHActionReadme), repoConfig)
 
 	// Action-specific configuration (higher priority)
-	githubDir := filepath.Join(tmpDir, testutil.TestDirDotGitHub)
-	_ = os.MkdirAll(githubDir, 0750) // #nosec G301 -- test directory permissions
+	githubDir := testutil.CreateTestSubdir(t, tmpDir, testutil.TestDirDotGitHub)
 	actionConfig := `theme: professional
 template: custom-template.tmpl
 output_dir: docs`
@@ -291,8 +287,7 @@ func setupTemplateErrorScenario(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 	// Create a broken template directory structure
-	templatesDir := filepath.Join(tmpDir, "templates")
-	_ = os.MkdirAll(templatesDir, 0750) // #nosec G301 -- test directory permissions
+	templatesDir := testutil.CreateTestSubdir(t, tmpDir, "templates")
 
 	// Create invalid template
 	brokenTemplate := `# {{ .Name }
@@ -317,8 +312,7 @@ verbose: not_a_boolean`
 	// Create configuration with missing required fields
 	incompleteConfig := `unknown_field: value
 invalid_theme: nonexistent`
-	configDir := filepath.Join(tmpDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
-	_ = os.MkdirAll(configDir, 0750) // #nosec G301 -- test directory permissions
+	configDir := testutil.CreateTestSubdir(t, tmpDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
 	testutil.WriteTestFile(t, filepath.Join(configDir, testutil.TestPathConfigYML), incompleteConfig)
 
 	// Set XDG config home
@@ -329,14 +323,8 @@ invalid_theme: nonexistent`
 func setupFileDiscoveryErrorScenario(t *testing.T, tmpDir string) {
 	t.Helper()
 	// Create directory structure but no action files
-	_ = os.MkdirAll(
-		filepath.Join(tmpDir, "actions"),
-		0750,
-	) // #nosec G301 -- test directory permissions
-	_ = os.MkdirAll(
-		filepath.Join(tmpDir, testutil.TestDirDotGitHub),
-		0750,
-	) // #nosec G301 -- test directory permissions
+	testutil.CreateTestSubdir(t, tmpDir, "actions")
+	testutil.CreateTestSubdir(t, tmpDir, testutil.TestDirDotGitHub)
 
 	// Create files with similar names but not action files
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "action.txt"), "not an action")
@@ -787,9 +775,7 @@ func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 		testutil.MustReadFixture(testutil.TestFixtureMyNewAction))
 
 	// Validate the action
-	cmd := exec.Command(binaryPath, "validate") // #nosec G204 -- controlled test input
-	cmd.Dir = tmpDir
-	err := cmd.Run()
+	_, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, "validate")
 	testutil.AssertNoError(t, err)
 }
 
@@ -830,14 +816,8 @@ func testDependencyManagement(t *testing.T, binaryPath, tmpDir string) {
 		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	// List dependencies
-	cmd := exec.Command(binaryPath, "deps", "list")
-	cmd.Dir = tmpDir
-	var stdout strings.Builder
-	cmd.Stdout = &stdout
-	err := cmd.Run()
+	output, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, "deps", "list")
 	testutil.AssertNoError(t, err)
-
-	output := stdout.String()
 	if !strings.Contains(output, testutil.TestMsgDependenciesFound) {
 		t.Error("expected dependency listing output")
 	}
@@ -888,21 +868,15 @@ func testOutputFormats(t *testing.T, binaryPath, tmpDir string) {
 func testCacheManagement(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
 	// Check cache stats
-	cmd := exec.Command(binaryPath, "cache", "stats")
-	cmd.Dir = tmpDir
-	err := cmd.Run()
+	_, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, "cache", "stats")
 	testutil.AssertNoError(t, err)
 
 	// Clear cache
-	cmd = exec.Command(binaryPath, "cache", "clear")
-	cmd.Dir = tmpDir
-	err = cmd.Run()
+	_, err = testutil.RunBinaryCommand(t, binaryPath, tmpDir, "cache", "clear")
 	testutil.AssertNoError(t, err)
 
 	// Check path
-	cmd = exec.Command(binaryPath, "cache", "path")
-	cmd.Dir = tmpDir
-	err = cmd.Run()
+	_, err = testutil.RunBinaryCommand(t, binaryPath, tmpDir, "cache", "path")
 	testutil.AssertNoError(t, err)
 }
 
@@ -1199,8 +1173,7 @@ func TestStressTestWorkflow(t *testing.T) {
 	// Create many action files to test performance
 	const numActions = 20
 	for i := 0; i < numActions; i++ {
-		actionDir := filepath.Join(tmpDir, "action"+string(rune('A'+i)))
-		_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
+		actionDir := testutil.CreateTestSubdir(t, tmpDir, "action"+string(rune('A'+i)))
 
 		actionContent := strings.ReplaceAll(testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			"Simple Action", "Action "+string(rune('A'+i)))
@@ -1351,29 +1324,19 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 		testutil.TestFixtureInvalidMissingDescription)
 
 	// Test that validation reports issues but doesn't crash
-	cmd := exec.Command(binaryPath, "validate") // #nosec G204 -- controlled test input
-	cmd.Dir = tmpDir
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	output, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, "validate")
 	// Validation should fail due to invalid file
 	if err == nil {
 		t.Error("expected validation to fail with invalid files")
 	}
 
 	// But it should still report on valid files with validation errors
-	output := stderr.String()
 	if !strings.Contains(output, "Missing required field:") && !strings.Contains(output, "validation failed") {
 		t.Errorf("expected validation error message, got: %s", output)
 	}
 
 	// Test generation with mixed files - should generate docs for valid ones
-	cmd = exec.Command(binaryPath, "gen", testutil.TestFlagRecursive) // #nosec G204 -- controlled test input
-	cmd.Dir = tmpDir
-	cmd.Stderr = &stderr
-
-	_ = cmd.Run()
+	_, _ = testutil.RunBinaryCommand(t, binaryPath, tmpDir, "gen", testutil.TestFlagRecursive)
 	// Generation might fail due to invalid files, but check what was generated
 	readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
 
