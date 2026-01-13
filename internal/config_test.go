@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -130,9 +129,7 @@ func TestLoadConfiguration(t *testing.T) {
 
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
-				_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
-				globalConfigPath := filepath.Join(globalConfigDir, testutil.TestFileConfigYAML)
-				testutil.WriteTestFile(t, globalConfigPath, `
+				globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML, `
 theme: default
 output_format: md
 github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
@@ -140,16 +137,14 @@ github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
 
 				// Create repo root with repo-specific config
 				repoRoot := filepath.Join(tempDir, "repo")
-				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestFileGHReadmeYAML), `
+				testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML, `
 theme: github
 output_format: html
 `)
 
 				// Create current directory with action-specific config
 				currentDir := filepath.Join(repoRoot, "action")
-				_ = os.MkdirAll(currentDir, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(currentDir, testutil.TestFileConfigYAML), `
+				testutil.WriteFileInDir(t, currentDir, testutil.TestFileConfigYAML, `
 theme: professional
 output_dir: output
 `)
@@ -201,9 +196,7 @@ github_token: config-token
 
 				// Create XDG-compliant config
 				configDir := filepath.Join(xdgConfigHome, testutil.TestBinaryName)
-				_ = os.MkdirAll(configDir, 0750) // #nosec G301 -- test directory permissions
-				configPath := filepath.Join(configDir, testutil.TestFileConfigYAML)
-				testutil.WriteTestFile(t, configPath, `
+				configPath := testutil.WriteFileInDir(t, configDir, testutil.TestFileConfigYAML, `
 theme: github
 verbose: true
 `)
@@ -221,10 +214,9 @@ verbose: true
 			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
 				t.Helper()
 				repoRoot := filepath.Join(tempDir, "repo")
-				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 
 				// Create multiple hidden config files
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestFileGHReadmeYAML), `
+				testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML, `
 theme: minimal
 output_format: json
 `)
@@ -458,8 +450,7 @@ func TestConfigMerging(t *testing.T) {
 	// Test config merging by creating config files and seeing the result
 
 	globalConfigDir := filepath.Join(tmpDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
-	_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
-	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, testutil.TestFileConfigYAML), `
+	testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML, `
 theme: default
 output_format: md
 github_token: base-token
@@ -467,8 +458,7 @@ verbose: false
 `)
 
 	repoRoot := filepath.Join(tmpDir, "repo")
-	_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
-	testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestFileGHReadmeYAML), `
+	testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML, `
 theme: github
 output_format: html
 verbose: true

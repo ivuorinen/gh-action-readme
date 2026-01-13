@@ -144,9 +144,7 @@ func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
 			setupFunc: func(_ *testing.T, tempDir string) (string, string, string) {
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
-				_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
-				globalConfigPath := filepath.Join(globalConfigDir, "config.yaml")
-				testutil.WriteTestFile(t, globalConfigPath, `
+				globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, "config.yaml", `
 theme: default
 output_format: md
 github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
@@ -155,8 +153,7 @@ verbose: false
 
 				// Create repo root with repo-specific config
 				repoRoot := filepath.Join(tempDir, "repo")
-				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, ".ghreadme.yaml"), `
+				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
 theme: github
 output_format: html
 verbose: true
@@ -164,8 +161,7 @@ verbose: true
 
 				// Create action directory with action-specific config
 				actionDir := filepath.Join(repoRoot, "action")
-				_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(actionDir, "config.yaml"), `
+				testutil.WriteFileInDir(t, actionDir, "config.yaml", `
 theme: professional
 output_dir: output
 quiet: false
@@ -210,24 +206,21 @@ github_token: config-token
 			name: "hidden config file priority",
 			setupFunc: func(_ *testing.T, tempDir string) (string, string, string) {
 				repoRoot := filepath.Join(tempDir, "repo")
-				_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 
 				// Create multiple hidden config files - first one should win
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, ".ghreadme.yaml"), `
+				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
 theme: minimal
 output_format: json
 `)
 
 				configDir := filepath.Join(repoRoot, ".config")
-				_ = os.MkdirAll(configDir, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(configDir, "ghreadme.yaml"), `
+				testutil.WriteFileInDir(t, configDir, "ghreadme.yaml", `
 theme: professional
 quiet: true
 `)
 
 				githubDir := filepath.Join(repoRoot, ".github")
-				_ = os.MkdirAll(githubDir, 0750) // #nosec G301 -- test directory permissions
-				testutil.WriteTestFile(t, filepath.Join(githubDir, "ghreadme.yaml"), `
+				testutil.WriteFileInDir(t, githubDir, "ghreadme.yaml", `
 theme: github
 verbose: true
 `)
@@ -545,12 +538,9 @@ func TestConfigurationLoader_RepoOverrides(t *testing.T) {
 
 	// Create a mock git repository structure for testing
 	repoRoot := filepath.Join(tmpDir, "test-repo")
-	_ = os.MkdirAll(repoRoot, 0750) // #nosec G301 -- test directory permissions
 
 	// Create global config with repo overrides
 	globalConfigDir := filepath.Join(tmpDir, ".config", "gh-action-readme")
-	_ = os.MkdirAll(globalConfigDir, 0750) // #nosec G301 -- test directory permissions
-	globalConfigPath := filepath.Join(globalConfigDir, "config.yaml")
 	globalConfigContent := "theme: default\n"
 	globalConfigContent += "output_format: md\n"
 	globalConfigContent += "repo_overrides:\n"
@@ -558,7 +548,7 @@ func TestConfigurationLoader_RepoOverrides(t *testing.T) {
 	globalConfigContent += "    theme: github\n"
 	globalConfigContent += "    output_format: html\n"
 	globalConfigContent += "    verbose: true\n"
-	testutil.WriteTestFile(t, globalConfigPath, globalConfigContent)
+	globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, "config.yaml", globalConfigContent)
 
 	// Set environment for XDG compliance
 	t.Setenv("HOME", tmpDir)
@@ -664,10 +654,8 @@ func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				actionDir := filepath.Join(tmpDir, "action")
-				_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
 
-				configPath := filepath.Join(actionDir, "config.yaml")
-				testutil.WriteTestFile(t, configPath, `
+				testutil.WriteFileInDir(t, actionDir, "config.yaml", `
 theme: minimal
 output_format: json
 verbose: true
@@ -686,10 +674,8 @@ verbose: true
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				actionDir := filepath.Join(tmpDir, "action")
-				_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
 
-				configPath := filepath.Join(actionDir, "config.yaml")
-				testutil.WriteTestFile(t, configPath, "invalid yaml content:\n  - broken [")
+				testutil.WriteFileInDir(t, actionDir, "config.yaml", "invalid yaml content:\n  - broken [")
 
 				return actionDir
 			},
@@ -698,9 +684,13 @@ verbose: true
 		},
 		{
 			name: "action directory without config file",
-			setupFunc: func(_ *testing.T, tmpDir string) string {
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
 				actionDir := filepath.Join(tmpDir, "action")
-				_ = os.MkdirAll(actionDir, 0750) // #nosec G301 -- test directory permissions
+				// Create empty directory - WriteFileInDir would create a file, so use MkdirAll directly
+				if err := os.MkdirAll(actionDir, appconstants.FilePermDir); err != nil {
+					t.Fatalf("failed to create action dir: %v", err)
+				}
 
 				return actionDir
 			},

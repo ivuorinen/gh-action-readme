@@ -168,6 +168,17 @@ func WriteTestFile(t *testing.T, path, content string) {
 	}
 }
 
+// WriteFileInDir writes a file with the given filename in the specified directory.
+// This is a convenience wrapper that combines filepath.Join + WriteTestFile.
+// Eliminates the pattern: path := filepath.Join(dir, filename); WriteTestFile(t, path, content).
+func WriteFileInDir(t *testing.T, dir, filename, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, filename)
+	WriteTestFile(t, path, content)
+
+	return path
+}
+
 // WriteActionFixture writes an action fixture to a standard action.yml file.
 func WriteActionFixture(t *testing.T, dir, fixturePath string) string {
 	t.Helper()

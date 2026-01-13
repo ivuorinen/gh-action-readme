@@ -53,6 +53,21 @@ func testOutputMethod(t *testing.T, testMessage, expectedEmoji string, methodFun
 	}
 }
 
+// testErrorStderr is a helper for testing error output methods that write to stderr.
+// Eliminates the repeated pattern of creating ColoredOutput, capturing stderr, and checking for emoji.
+func testErrorStderr(t *testing.T, expectedEmoji string, testFunc func(*ColoredOutput)) {
+	t.Helper()
+
+	output := &ColoredOutput{NoColor: true}
+	captured := testutil.CaptureStderr(func() {
+		testFunc(output)
+	})
+
+	if !strings.Contains(captured, expectedEmoji) {
+		t.Errorf("Output missing %s emoji: %q", expectedEmoji, captured)
+	}
+}
+
 // TestNewColoredOutput tests colored output creation.
 func TestNewColoredOutput(t *testing.T) {
 	tests := []struct {
@@ -302,15 +317,9 @@ func TestErrorWithContext(t *testing.T) {
 
 // TestErrorWithSimpleFix tests simple error with fix output.
 func TestErrorWithSimpleFix(t *testing.T) {
-	output := &ColoredOutput{NoColor: true}
-
-	captured := testutil.CaptureStderr(func() {
+	testErrorStderr(t, "❌", func(output *ColoredOutput) {
 		output.ErrorWithSimpleFix("Something went wrong", "Try running it again")
 	})
-
-	if !strings.Contains(captured, "❌") {
-		t.Errorf(testutil.TestMsgOutputMissingEmoji, captured)
-	}
 }
 
 // TestFormatContextualError tests contextual error formatting.
