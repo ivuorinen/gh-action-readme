@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/goccy/go-yaml"
 
@@ -896,4 +897,77 @@ func GetValidFixtures() []string {
 // GetInvalidFixtures returns all invalid fixtures using the global fixture manager.
 func GetInvalidFixtures() []string {
 	return GetFixtureManager().GetInvalidFixtures()
+}
+
+// Validation Helpers for Updater Tests
+
+// ValidatePinnedUpdate validates that a pinned dependency was correctly updated.
+// Checks that backup exists if requested and validates content with provided validator.
+func ValidatePinnedUpdate(t *testing.T, filePath string, requireBackup bool, validator func(content string) error) {
+	t.Helper()
+
+	// Check backup exists if required
+	if requireBackup {
+		backupPath := filePath + ".bak"
+		if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+			t.Errorf("backup file not created: %s", backupPath)
+		}
+	}
+
+	// Read and validate file content
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf("failed to read file %s: %v", filePath, err)
+	}
+
+	if validator != nil {
+		if err := validator(string(content)); err != nil {
+			t.Errorf("validation failed for %s: %v", filePath, err)
+		}
+	}
+}
+
+// ValidateRollback validates that a file was successfully rolled back to original content.
+func ValidateRollback(t *testing.T, filePath, originalContent string) {
+	t.Helper()
+
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf("failed to read file after rollback %s: %v", filePath, err)
+	}
+
+	if string(content) != originalContent {
+		t.Errorf("rollback failed: content mismatch in %s", filePath)
+		t.Logf("Expected:\n%s\n\nGot:\n%s", originalContent, string(content))
+	}
+}
+
+// AssertFileContains checks that a file contains the expected substring.
+func AssertFileContains(t *testing.T, filePath, expectedSubstring string) {
+	t.Helper()
+
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf("failed to read file %s: %v", filePath, err)
+	}
+
+	if !strings.Contains(string(content), expectedSubstring) {
+		t.Errorf("file %s does not contain expected substring: %q", filePath, expectedSubstring)
+		t.Logf("File content:\n%s", string(content))
+	}
+}
+
+// AssertFileNotContains checks that a file does NOT contain the given substring.
+func AssertFileNotContains(t *testing.T, filePath, unexpectedSubstring string) {
+	t.Helper()
+
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf("failed to read file %s: %v", filePath, err)
+	}
+
+	if strings.Contains(string(content), unexpectedSubstring) {
+		t.Errorf("file %s should not contain substring: %q", filePath, unexpectedSubstring)
+		t.Logf("File content:\n%s", string(content))
+	}
 }
