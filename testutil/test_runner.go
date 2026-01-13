@@ -93,3 +93,60 @@ func contains(s, substr string) bool {
 
 	return false
 }
+
+// MapValidationTestCase represents a test case that validates maps.
+type MapValidationTestCase struct {
+	Name     string
+	Input    map[string]string
+	Validate func(map[string]string) error
+}
+
+// RunMapValidationTests runs validation tests on maps.
+func RunMapValidationTests(t *testing.T, tests []MapValidationTestCase) {
+	t.Helper()
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			t.Parallel()
+			if err := tt.Validate(tt.Input); err != nil {
+				t.Errorf("validation failed: %v", err)
+			}
+		})
+	}
+}
+
+// StringSliceTestCase represents a test case for string slice operations.
+type StringSliceTestCase struct {
+	Name string
+	Input  []string
+	Want   []string
+	Fn     func([]string) []string
+}
+
+// RunStringSliceTests runs tests on string slice functions.
+func RunStringSliceTests(t *testing.T, tests []StringSliceTestCase) {
+	t.Helper()
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			t.Parallel()
+			got := tt.Fn(tt.Input)
+			if !slicesEqual(got, tt.Want) {
+				t.Errorf("got %v, want %v", got, tt.Want)
+			}
+		})
+	}
+}
+
+// slicesEqual compares two string slices for equality.
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
