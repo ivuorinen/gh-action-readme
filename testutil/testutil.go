@@ -619,3 +619,26 @@ func CaptureOutputStreams(f func()) *OutputStreams {
 		Stderr: CaptureStderr(f),
 	}
 }
+
+// CreateTempActionFile creates a temporary action.yml file with content.
+// Returns the file path. File is automatically cleaned up by t.TempDir().
+// Used to eliminate duplication in parser tests (4 occurrences).
+func CreateTempActionFile(t *testing.T, content string) string {
+	t.Helper()
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), TestActionFilePattern)
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		_ = tmpFile.Close()
+		t.Fatalf("failed to write temp file: %v", err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
+
+	return tmpFile.Name()
+}

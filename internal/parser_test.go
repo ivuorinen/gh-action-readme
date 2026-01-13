@@ -17,18 +17,9 @@ const testPermissionWrite = "write"
 func parseActionFromContent(t *testing.T, content string) (*ActionYML, error) {
 	t.Helper()
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), testutil.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	actionPath := testutil.CreateTempActionFile(t, content)
 
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
-	_ = tmpFile.Close()
-
-	return ParseActionYML(tmpFile.Name())
+	return ParseActionYML(actionPath)
 }
 
 // createTestDirWithAction creates a directory with an action.yml file and returns both paths.
@@ -397,19 +388,8 @@ name: Test Action`,
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Create temp file
-			tmpFile, err := os.CreateTemp(t.TempDir(), testutil.TestActionFilePattern)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-			if _, err := tmpFile.WriteString(tt.content); err != nil {
-				t.Fatal(err)
-			}
-			_ = tmpFile.Close()
-
-			got, err := parsePermissionsFromComments(tmpFile.Name())
+			actionPath := testutil.CreateTempActionFile(t, tt.content)
+			got, err := parsePermissionsFromComments(actionPath)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parsePermissionsFromComments() error = %v, wantErr %v", err, tt.wantErr)
@@ -557,15 +537,8 @@ func TestParseActionYMLMalformedYAML(t *testing.T) {
 func TestParseActionYMLEmptyFile(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), testutil.TestActionFilePattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	_ = tmpFile.Close()
-
-	_, err = ParseActionYML(tmpFile.Name())
+	actionPath := testutil.CreateTempActionFile(t, "")
+	_, err := ParseActionYML(actionPath)
 	// Empty file should return EOF error from YAML parser
 	if err == nil {
 		t.Error("Expected EOF error for empty file, got nil")
@@ -760,18 +733,8 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := os.CreateTemp(t.TempDir(), "test-*.yml")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-			if _, err := tmpFile.WriteString(tt.content); err != nil {
-				t.Fatal(err)
-			}
-			_ = tmpFile.Close()
-
-			perms, err := parsePermissionsFromComments(tmpFile.Name())
+			actionPath := testutil.CreateTempActionFile(t, tt.content)
+			perms, err := parsePermissionsFromComments(actionPath)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parsePermissionsFromComments() error = %v, wantErr %v", err, tt.wantErr)
