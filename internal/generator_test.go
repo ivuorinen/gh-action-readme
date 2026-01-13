@@ -10,15 +10,21 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestGeneratorNewGenerator(t *testing.T) {
-	t.Parallel()
-	config := &AppConfig{
-		Theme:        "default",
+// defaultTestConfig returns an AppConfig with sensible test defaults.
+// Sets Quiet: true to suppress output during tests.
+func defaultTestConfig() *AppConfig {
+	return &AppConfig{
+		Theme:        appconstants.ThemeDefault,
 		OutputFormat: appconstants.OutputFormatMarkdown,
 		OutputDir:    ".",
-		Verbose:      false,
-		Quiet:        false,
+		Quiet:        true,
 	}
+}
+
+func TestGeneratorNewGenerator(t *testing.T) {
+	t.Parallel()
+	config := defaultTestConfig()
+	config.Quiet = false // Override for this test
 
 	generator := NewGenerator(config)
 
@@ -135,7 +141,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			config := &AppConfig{Quiet: true}
+			config := defaultTestConfig()
 			generator := NewGenerator(config)
 
 			testDir := tmpDir
@@ -550,7 +556,7 @@ func TestGeneratorValidateFiles(t *testing.T) {
 			tmpDir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			config := &AppConfig{Quiet: true}
+			config := defaultTestConfig()
 			generator := NewGenerator(config)
 
 			files := tt.setupFunc(t, tmpDir)
