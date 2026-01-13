@@ -206,7 +206,8 @@ func TestGeneratorDiscoverActionFilesVerbose(t *testing.T) {
 			}
 
 			// Create generator with verbose mode enabled
-			config := &AppConfig{Verbose: true}
+			config := defaultTestConfig()
+			config.Verbose = true
 			generator := NewGenerator(config)
 
 			files, err := generator.DiscoverActionFiles(tmpDir, tt.recursive, []string{})
@@ -464,12 +465,12 @@ func TestGeneratorProcessBatch(t *testing.T) {
 			// Set up test templates
 			testutil.SetupTestTemplates(t, tmpDir)
 
-			config := &AppConfig{
-				OutputFormat: appconstants.OutputFormatMarkdown,
-				// Don't set OutputDir so each action generates README in its own directory
-				Verbose:  true, // Enable verbose to see what's happening
-				Template: filepath.Join(tmpDir, "templates", appconstants.TemplateReadme),
-			}
+			config := defaultTestConfig()
+			config.OutputFormat = appconstants.OutputFormatMarkdown
+			// Don't set OutputDir so each action generates README in its own directory
+			config.OutputDir = ""
+			config.Verbose = true // Enable verbose to see what's happening
+			config.Template = filepath.Join(tmpDir, "templates", appconstants.TemplateReadme)
 			generator := NewGenerator(config)
 
 			files := tt.setupFunc(t, tmpDir)
@@ -593,10 +594,8 @@ func TestGeneratorCreateDependencyAnalyzer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			config := &AppConfig{
-				GitHubToken: tt.token,
-				Quiet:       true,
-			}
+			config := defaultTestConfig()
+			config.GitHubToken = tt.token
 			generator := NewGenerator(config)
 
 			analyzer, err := generator.CreateDependencyAnalyzer()
@@ -633,12 +632,9 @@ func TestGeneratorWithDifferentThemes(t *testing.T) {
 			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 			testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
-			config := &AppConfig{
-				Theme:        theme,
-				OutputFormat: appconstants.OutputFormatMarkdown,
-				OutputDir:    tmpDir,
-				Quiet:        true,
-			}
+			config := defaultTestConfig()
+			config.Theme = theme
+			config.OutputDir = tmpDir
 			generator := NewGenerator(config)
 
 			if err := generator.GenerateFromFile(actionPath); err != nil {
@@ -669,8 +665,8 @@ func TestGeneratorErrorHandling(t *testing.T) {
 				t.Helper()
 				config := &AppConfig{
 					Template:     "/nonexistent/template.tmpl",
-					OutputFormat: appconstants.OutputFormatMarkdown,
 					OutputDir:    tmpDir,
+					OutputFormat: appconstants.OutputFormatMarkdown,
 					Quiet:        true,
 				}
 				generator := NewGenerator(config)
@@ -696,12 +692,9 @@ func TestGeneratorErrorHandling(t *testing.T) {
 				restrictedDir := filepath.Join(tmpDir, "restricted")
 				_ = os.MkdirAll(restrictedDir, 0444) // #nosec G301 -- intentionally read-only for test
 
-				config := &AppConfig{
-					OutputFormat: appconstants.OutputFormatMarkdown,
-					OutputDir:    restrictedDir,
-					Quiet:        true,
-					Template:     filepath.Join(tmpDir, "templates", appconstants.TemplateReadme),
-				}
+				config := defaultTestConfig()
+				config.OutputDir = restrictedDir
+				config.Template = filepath.Join(tmpDir, "templates", appconstants.TemplateReadme)
 				generator := NewGenerator(config)
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				testutil.WriteTestFile(
