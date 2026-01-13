@@ -971,3 +971,42 @@ func AssertFileNotContains(t *testing.T, filePath, unexpectedSubstring string) {
 		t.Logf("File content:\n%s", string(content))
 	}
 }
+
+// AssertBackupNotExists checks that a backup file does not exist.
+// Used to verify backup cleanup after successful operations.
+func AssertBackupNotExists(t *testing.T, filePath string) {
+	t.Helper()
+
+	backupPath := filePath + ".bak"
+	AssertFileNotExists(t, backupPath)
+}
+
+// AssertFileContentEquals compares file content with expected after trimming whitespace.
+// Useful for YAML file comparisons where formatting may vary slightly.
+func AssertFileContentEquals(t *testing.T, filePath, expectedContent string) {
+	t.Helper()
+
+	actualContent, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf("failed to read file %s: %v", filePath, err)
+	}
+
+	actual := strings.TrimSpace(string(actualContent))
+	expected := strings.TrimSpace(expectedContent)
+
+	if actual != expected {
+		t.Errorf("file content mismatch in %s\nGot:\n%s\n\nWant:\n%s",
+			filePath, actual, expected)
+	}
+}
+
+// WriteActionFile creates an action.yml file in the given directory.
+// Returns the full path to the created file.
+func WriteActionFile(t *testing.T, dir, content string) string {
+	t.Helper()
+
+	actionPath := filepath.Join(dir, "action.yml")
+	WriteTestFile(t, actionPath, content)
+
+	return actionPath
+}

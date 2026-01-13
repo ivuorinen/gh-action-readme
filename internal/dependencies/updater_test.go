@@ -12,13 +12,28 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// newTestAnalyzer creates an Analyzer with cache for testing.
+// Returns the analyzer and a cleanup function.
+// Pattern used 7+ times in updater_test.go.
+func newTestAnalyzer(t *testing.T) (*Analyzer, func()) {
+	t.Helper()
+
+	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
+	testutil.AssertNoError(t, err)
+
+	analyzer := &Analyzer{
+		Cache: NewCacheAdapter(cacheInstance),
+	}
+
+	return analyzer, testutil.CleanupCache(t, cacheInstance)
+}
+
 // validatePinnedUpdateSuccess validates that the update succeeded and backup was cleaned up.
 func validatePinnedUpdateSuccess(t *testing.T, actionPath string, validateBackup bool, analyzer *Analyzer) {
 	t.Helper()
 
 	if validateBackup {
-		backupPath := actionPath + appconstants.BackupExtension
-		testutil.AssertFileNotExists(t, backupPath)
+		testutil.AssertBackupNotExists(t, actionPath)
 	}
 
 	// Verify file is still valid YAML
@@ -33,8 +48,7 @@ func validatePinnedUpdateRollback(t *testing.T, actionPath, originalContent stri
 	testutil.ValidateRollback(t, actionPath, originalContent)
 
 	// Backup should be removed after rollback
-	backupPath := actionPath + appconstants.BackupExtension
-	testutil.AssertFileNotExists(t, backupPath)
+	testutil.AssertBackupNotExists(t, actionPath)
 }
 
 // TestApplyPinnedUpdates tests the ApplyPinnedUpdates method.
@@ -180,8 +194,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			dir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, tt.actionContent)
+			actionPath := testutil.WriteActionFile(t, dir, tt.actionContent)
 
 			// Store original content for rollback check
 			originalContent, _ := os.ReadFile(actionPath) // #nosec G304 -- test file path
@@ -192,16 +205,11 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			}
 
 			// Create analyzer
-			cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-			testutil.AssertNoError(t, err)
-			defer testutil.CleanupCache(t, cacheInstance)()
-
-			analyzer := &Analyzer{
-				Cache: NewCacheAdapter(cacheInstance),
-			}
+			analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+			defer cleanupAnalyzer()
 
 			// Apply updates
-			err = analyzer.ApplyPinnedUpdates(tt.updates)
+			err := analyzer.ApplyPinnedUpdates(tt.updates)
 
 			// Check error expectation
 			if (err != nil) != tt.wantErr {
@@ -222,31 +230,21 @@ func TestApplyPinnedUpdates(t *testing.T) {
 }
 
 // validateUpdateFileSuccess validates that the file was updated correctly and backup was cleaned up.
-func validateUpdateFileSuccess(t *testing.T, actionPath, expectedYAML, dir string, checkBackup bool) {
+func validateUpdateFileSuccess(t *testing.T, actionPath, expectedYAML string, checkBackup bool) {
 	t.Helper()
 
-	actualContent := testutil.SafeReadFile(t, actionPath, dir)
-
-	if strings.TrimSpace(string(actualContent)) != strings.TrimSpace(expectedYAML) {
-		t.Errorf("updateActionFile() content mismatch\nGot:\n%s\nWant:\n%s",
-			string(actualContent), expectedYAML)
-	}
+	testutil.AssertFileContentEquals(t, actionPath, expectedYAML)
 
 	if checkBackup {
-		backupPath := actionPath + appconstants.BackupExtension
-		testutil.AssertFileNotExists(t, backupPath)
+		testutil.AssertBackupNotExists(t, actionPath)
 	}
 }
 
 // validateUpdateFileRollback validates that the rollback succeeded and file is unchanged.
-func validateUpdateFileRollback(t *testing.T, actionPath, initialYAML, dir string) {
+func validateUpdateFileRollback(t *testing.T, actionPath, initialYAML string) {
 	t.Helper()
 
-	actualContent := testutil.SafeReadFile(t, actionPath, dir)
-
-	if strings.TrimSpace(string(actualContent)) != strings.TrimSpace(initialYAML) {
-		t.Error("rollback failed, file was modified")
-	}
+	testutil.AssertFileContentEquals(t, actionPath, initialYAML)
 }
 
 // TestUpdateActionFile tests the updateActionFile method directly.
@@ -338,20 +336,14 @@ func TestUpdateActionFile(t *testing.T) {
 			dir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, tt.initialYAML)
+			actionPath := testutil.WriteActionFile(t, dir, tt.initialYAML)
 
 			// Create analyzer
-			cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-			testutil.AssertNoError(t, err)
-			defer testutil.CleanupCache(t, cacheInstance)()
-
-			analyzer := &Analyzer{
-				Cache: NewCacheAdapter(cacheInstance),
-			}
+			analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+			defer cleanupAnalyzer()
 
 			// Apply update
-			err = analyzer.updateActionFile(actionPath, tt.updates)
+			err := analyzer.updateActionFile(actionPath, tt.updates)
 
 			// Check error expectation
 			if (err != nil) != tt.expectError {
@@ -361,11 +353,11 @@ func TestUpdateActionFile(t *testing.T) {
 			}
 
 			if !tt.expectError {
-				validateUpdateFileSuccess(t, actionPath, tt.expectedYAML, dir, tt.checkBackup)
+				validateUpdateFileSuccess(t, actionPath, tt.expectedYAML, tt.checkBackup)
 			}
 
 			if tt.rollbackCheck {
-				validateUpdateFileRollback(t, actionPath, tt.initialYAML, dir)
+				validateUpdateFileRollback(t, actionPath, tt.initialYAML)
 			}
 		})
 	}
@@ -430,20 +422,14 @@ func TestValidateActionFile(t *testing.T) {
 			dir, cleanup := testutil.TempDir(t)
 			defer cleanup()
 
-			actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, tt.yamlContent)
+			actionPath := testutil.WriteActionFile(t, dir, tt.yamlContent)
 
 			// Create analyzer
-			cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-			testutil.AssertNoError(t, err)
-			defer testutil.CleanupCache(t, cacheInstance)()
-
-			analyzer := &Analyzer{
-				Cache: NewCacheAdapter(cacheInstance),
-			}
+			analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+			defer cleanupAnalyzer()
 
 			// Validate
-			err = analyzer.validateActionFile(actionPath)
+			err := analyzer.validateActionFile(actionPath)
 
 			if tt.expectValid && err != nil {
 				t.Errorf("validateActionFile() expected valid but got error: %v", err)
@@ -652,16 +638,11 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		dir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
-		actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
 		originalContent := testutil.MustReadFixture(testutil.TestFixtureSimpleCheckout)
+		actionPath := testutil.WriteActionFile(t, dir, originalContent)
 
-		testutil.WriteTestFile(t, actionPath, originalContent)
-
-		cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-		testutil.AssertNoError(t, err)
-		defer testutil.CleanupCache(t, cacheInstance)()
-
-		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
+		analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+		defer cleanupAnalyzer()
 
 		updates := []PinnedUpdate{
 			{
@@ -670,12 +651,11 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 			},
 		}
 
-		err = analyzer.updateActionFile(actionPath, updates)
+		err := analyzer.updateActionFile(actionPath, updates)
 		testutil.AssertNoError(t, err)
 
 		// Backup should be removed after successful update
-		backupPath := actionPath + appconstants.BackupExtension
-		testutil.AssertFileNotExists(t, backupPath)
+		testutil.AssertBackupNotExists(t, actionPath)
 	})
 
 	t.Run("rollback on validation failure", func(t *testing.T) {
@@ -684,16 +664,11 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		dir, cleanup := testutil.TempDir(t)
 		defer cleanup()
 
-		actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
 		originalContent := testutil.MustReadFixture(testutil.TestFixtureSimpleCheckout)
+		actionPath := testutil.WriteActionFile(t, dir, originalContent)
 
-		testutil.WriteTestFile(t, actionPath, originalContent)
-
-		cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-		testutil.AssertNoError(t, err)
-		defer testutil.CleanupCache(t, cacheInstance)()
-
-		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
+		analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+		defer cleanupAnalyzer()
 
 		// Create an update that breaks YAML
 		updates := []PinnedUpdate{
@@ -703,20 +678,16 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 			},
 		}
 
-		err = analyzer.updateActionFile(actionPath, updates)
+		err := analyzer.updateActionFile(actionPath, updates)
 		if err == nil {
 			t.Error("updateActionFile() should return error for invalid YAML")
 		}
 
 		// File should be rolled back to original
-		actualContent := testutil.SafeReadFile(t, actionPath, dir)
-		if strings.TrimSpace(string(actualContent)) != strings.TrimSpace(originalContent) {
-			t.Error("rollback failed, file was not restored to original content")
-		}
+		testutil.AssertFileContentEquals(t, actionPath, originalContent)
 
 		// Backup should be removed after rollback
-		backupPath := actionPath + appconstants.BackupExtension
-		testutil.AssertFileNotExists(t, backupPath)
+		testutil.AssertBackupNotExists(t, actionPath)
 	})
 
 	t.Run("file permission errors", func(t *testing.T) {
@@ -735,11 +706,8 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		err := os.Chmod(actionPath, 0444) // #nosec G302 -- intentionally read-only for test
 		testutil.AssertNoError(t, err)
 
-		cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-		testutil.AssertNoError(t, err)
-		defer testutil.CleanupCache(t, cacheInstance)()
-
-		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
+		analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+		defer cleanupAnalyzer()
 
 		updates := []PinnedUpdate{
 			{
@@ -772,11 +740,8 @@ func TestApplyPinnedUpdatesGroupedByFile(t *testing.T) {
 	testutil.WriteTestFile(t, action1Path, action1Content)
 	testutil.WriteTestFile(t, action2Path, action2Content)
 
-	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
-	testutil.AssertNoError(t, err)
-	defer testutil.CleanupCache(t, cacheInstance)()
-
-	analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
+	analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+	defer cleanupAnalyzer()
 
 	// Create updates for both files
 	updates := []PinnedUpdate{
@@ -792,7 +757,7 @@ func TestApplyPinnedUpdatesGroupedByFile(t *testing.T) {
 		},
 	}
 
-	err = analyzer.ApplyPinnedUpdates(updates)
+	err := analyzer.ApplyPinnedUpdates(updates)
 	testutil.AssertNoError(t, err)
 
 	// Verify both files were updated
