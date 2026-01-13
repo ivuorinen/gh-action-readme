@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"bytes"
-	"io"
 	"os"
 	"strings"
 	"testing"
@@ -11,40 +9,6 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
-
-// captureStdout captures stdout output for testing.
-func captureStdout(f func()) string {
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	f()
-
-	_ = w.Close() // Ignore error in test helper
-	os.Stdout = oldStdout
-
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r) // Ignore error in test helper
-
-	return buf.String()
-}
-
-// captureStderr captures stderr output for testing.
-func captureStderr(f func()) string {
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	f()
-
-	_ = w.Close() // Ignore error in test helper
-	os.Stderr = oldStderr
-
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r) // Ignore error in test helper
-
-	return buf.String()
-}
 
 // TestNewColoredOutput tests colored output creation.
 func TestNewColoredOutput(t *testing.T) {
@@ -146,7 +110,7 @@ func TestSuccess(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
 
-			captured := captureStdout(func() {
+			captured := testutil.CaptureStdout(func() {
 				output.Success(tt.message)
 			})
 
@@ -184,7 +148,7 @@ func TestError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{NoColor: true}
 
-			captured := captureStderr(func() {
+			captured := testutil.CaptureStderr(func() {
 				output.Error(tt.message)
 			})
 
@@ -225,7 +189,7 @@ func TestWarning(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
 
-			captured := captureStdout(func() {
+			captured := testutil.CaptureStdout(func() {
 				output.Warning(tt.message)
 			})
 
@@ -266,7 +230,7 @@ func TestInfo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
 
-			captured := captureStdout(func() {
+			captured := testutil.CaptureStdout(func() {
 				output.Info(tt.message)
 			})
 
@@ -307,7 +271,7 @@ func TestProgress(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
 
-			captured := captureStdout(func() {
+			captured := testutil.CaptureStdout(func() {
 				output.Progress(tt.message)
 			})
 
@@ -348,7 +312,7 @@ func TestBold(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
 
-			captured := captureStdout(func() {
+			captured := testutil.CaptureStdout(func() {
 				output.Bold(tt.message)
 			})
 
@@ -386,7 +350,7 @@ func TestPrintf(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
 
-			captured := captureStdout(func() {
+			captured := testutil.CaptureStdout(func() {
 				output.Printf("Test message\n")
 			})
 
@@ -451,7 +415,7 @@ func TestErrorWithSuggestions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{NoColor: true}
 
-			captured := captureStderr(func() {
+			captured := testutil.CaptureStderr(func() {
 				output.ErrorWithSuggestions(tt.err)
 			})
 
@@ -492,7 +456,7 @@ func TestErrorWithContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &ColoredOutput{NoColor: true}
 
-			captured := captureStderr(func() {
+			captured := testutil.CaptureStderr(func() {
 				output.ErrorWithContext(tt.code, tt.message, tt.context)
 			})
 
@@ -507,7 +471,7 @@ func TestErrorWithContext(t *testing.T) {
 func TestErrorWithSimpleFix(t *testing.T) {
 	output := &ColoredOutput{NoColor: true}
 
-	captured := captureStderr(func() {
+	captured := testutil.CaptureStderr(func() {
 		output.ErrorWithSimpleFix("Something went wrong", "Try running it again")
 	})
 

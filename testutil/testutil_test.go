@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -837,4 +838,45 @@ func TestNewStringReader(t *testing.T) {
 			t.Error("large string content mismatch")
 		}
 	})
+}
+
+func TestCaptureStdout(t *testing.T) {
+	t.Parallel()
+
+	output := CaptureStdout(func() {
+		fmt.Print("test output")
+	})
+
+	if output != "test output" {
+		t.Errorf("expected 'test output', got %q", output)
+	}
+}
+
+func TestCaptureStderr(t *testing.T) {
+	t.Parallel()
+
+	output := CaptureStderr(func() {
+		fmt.Fprint(os.Stderr, "test error")
+	})
+
+	if output != "test error" {
+		t.Errorf("expected 'test error', got %q", output)
+	}
+}
+
+func TestCaptureOutputStreams(t *testing.T) {
+	t.Parallel()
+
+	output := CaptureOutputStreams(func() {
+		fmt.Print("stdout message")
+		fmt.Fprint(os.Stderr, "stderr message")
+	})
+
+	if output.Stdout != "stdout message" {
+		t.Errorf("expected stdout 'stdout message', got %q", output.Stdout)
+	}
+
+	if output.Stderr != "stderr message" {
+		t.Errorf("expected stderr 'stderr message', got %q", output.Stderr)
+	}
 }

@@ -568,3 +568,54 @@ func InitGitRepo(t *testing.T, dir string) {
 		t.Fatalf("Failed to create initial commit: %v", err)
 	}
 }
+
+// CaptureStdout captures stdout output during function execution.
+// Useful for testing functions that write to os.Stdout.
+func CaptureStdout(f func()) string {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	f()
+
+	_ = w.Close() // Ignore error in test helper
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r) // Ignore error in test helper
+
+	return buf.String()
+}
+
+// CaptureStderr captures stderr output during function execution.
+// Useful for testing functions that write to os.Stderr.
+func CaptureStderr(f func()) string {
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	f()
+
+	_ = w.Close() // Ignore error in test helper
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r) // Ignore error in test helper
+
+	return buf.String()
+}
+
+// OutputStreams holds both stdout and stderr capture results.
+type OutputStreams struct {
+	Stdout string
+	Stderr string
+}
+
+// CaptureOutputStreams captures both stdout and stderr during function execution.
+// Returns a struct with both outputs for convenience.
+func CaptureOutputStreams(f func()) *OutputStreams {
+	return &OutputStreams{
+		Stdout: CaptureStdout(f),
+		Stderr: CaptureStderr(f),
+	}
+}
