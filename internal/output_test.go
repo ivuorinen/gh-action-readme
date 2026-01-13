@@ -120,52 +120,9 @@ func TestIsQuiet(t *testing.T) {
 
 // TestSuccess tests success message output.
 func TestSuccess(t *testing.T) {
-	tests := []struct {
-		name         string
-		quiet        bool
-		message      string
-		wantContains string
-		wantEmpty    bool
-	}{
-		{
-			name:         "success message displayed",
-			quiet:        false,
-			message:      testutil.TestMsgOperationCompleted,
-			wantContains: "✅ Operation completed",
-			wantEmpty:    false,
-		},
-		{
-			name:      testutil.TestMsgQuietSuppressOutput,
-			quiet:     true,
-			message:   testutil.TestMsgOperationCompleted,
-			wantEmpty: true,
-		},
-		{
-			name:         "success with formatting",
-			quiet:        false,
-			message:      "Processed %d files",
-			wantContains: "✅ Processed %!d(MISSING) files",
-			wantEmpty:    false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
-
-			captured := testutil.CaptureStdout(func() {
-				output.Success(tt.message)
-			})
-
-			if tt.wantEmpty && captured != "" {
-				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
-			}
-
-			if !tt.wantEmpty && !strings.Contains(captured, "✅") {
-				t.Errorf("Output missing success emoji: %q", captured)
-			}
-		})
-	}
+	testOutputMethod(t, testutil.TestMsgOperationCompleted, "✅", func(o *ColoredOutput, msg string) {
+		o.Success(msg)
+	})
 }
 
 // TestError tests error message output.
@@ -215,43 +172,9 @@ func TestWarning(t *testing.T) {
 
 // TestInfo tests info message output.
 func TestInfo(t *testing.T) {
-	tests := []struct {
-		name      string
-		quiet     bool
-		message   string
-		wantEmpty bool
-	}{
-		{
-			name:      "info message displayed",
-			quiet:     false,
-			message:   testutil.TestMsgProcessingStarted,
-			wantEmpty: false,
-		},
-		{
-			name:      testutil.TestMsgQuietSuppressOutput,
-			quiet:     true,
-			message:   testutil.TestMsgProcessingStarted,
-			wantEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
-
-			captured := testutil.CaptureStdout(func() {
-				output.Info(tt.message)
-			})
-
-			if tt.wantEmpty && captured != "" {
-				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
-			}
-
-			if !tt.wantEmpty && !strings.Contains(captured, "ℹ️") {
-				t.Errorf("Output missing info emoji: %q", captured)
-			}
-		})
-	}
+	testOutputMethod(t, testutil.TestMsgProcessingStarted, "ℹ️", func(o *ColoredOutput, msg string) {
+		o.Info(msg)
+	})
 }
 
 // TestProgress tests progress message output.
@@ -263,81 +186,16 @@ func TestProgress(t *testing.T) {
 
 // TestBold tests bold text output.
 func TestBold(t *testing.T) {
-	tests := []struct {
-		name      string
-		quiet     bool
-		message   string
-		wantEmpty bool
-	}{
-		{
-			name:      "bold message displayed",
-			quiet:     false,
-			message:   "Important Notice",
-			wantEmpty: false,
-		},
-		{
-			name:      testutil.TestMsgQuietSuppressOutput,
-			quiet:     true,
-			message:   "Important Notice",
-			wantEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
-
-			captured := testutil.CaptureStdout(func() {
-				output.Bold(tt.message)
-			})
-
-			if tt.wantEmpty && captured != "" {
-				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
-			}
-
-			if !tt.wantEmpty && !strings.Contains(captured, tt.message) {
-				t.Errorf("Output doesn't contain message. Got: %q", captured)
-			}
-		})
-	}
+	testOutputMethod(t, "Important Notice", "Important Notice", func(o *ColoredOutput, msg string) {
+		o.Bold(msg)
+	})
 }
 
 // TestPrintf tests formatted print output.
 func TestPrintf(t *testing.T) {
-	tests := []struct {
-		name      string
-		quiet     bool
-		wantEmpty bool
-	}{
-		{
-			name:      "printf output displayed",
-			quiet:     false,
-			wantEmpty: false,
-		},
-		{
-			name:      testutil.TestMsgQuietSuppressOutput,
-			quiet:     true,
-			wantEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
-
-			captured := testutil.CaptureStdout(func() {
-				output.Printf("Test message\n")
-			})
-
-			if tt.wantEmpty && captured != "" {
-				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
-			}
-
-			if !tt.wantEmpty && captured == "" {
-				t.Error("Expected output, got empty string")
-			}
-		})
-	}
+	testOutputMethod(t, "Test message\n", "Test message", func(o *ColoredOutput, msg string) {
+		o.Printf("%s", msg) // #nosec G104 -- constant format string
+	})
 }
 
 // TestFprintf tests file output.
