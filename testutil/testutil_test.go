@@ -841,7 +841,7 @@ func TestNewStringReader(t *testing.T) {
 }
 
 func TestCaptureStdout(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot run in parallel as it manipulates global os.Stdout
 
 	output := CaptureStdout(func() {
 		fmt.Print("test output")
@@ -853,7 +853,7 @@ func TestCaptureStdout(t *testing.T) {
 }
 
 func TestCaptureStderr(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot run in parallel as it manipulates global os.Stderr
 
 	output := CaptureStderr(func() {
 		fmt.Fprint(os.Stderr, "test error")
@@ -865,7 +865,7 @@ func TestCaptureStderr(t *testing.T) {
 }
 
 func TestCaptureOutputStreams(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot run in parallel as it manipulates global os.Stdout/Stderr
 
 	output := CaptureOutputStreams(func() {
 		fmt.Print("stdout message")

@@ -87,3 +87,88 @@ func TestContains(t *testing.T) {
 		})
 	}
 }
+
+func TestRunMapValidationTests(t *testing.T) {
+	t.Parallel()
+
+	tests := []MapValidationTestCase{
+		{
+			Name:  "valid map",
+			Input: map[string]string{"key": "value"},
+			Validate: func(m map[string]string) error {
+				if m["key"] != "value" {
+					return errors.New("unexpected value")
+				}
+
+				return nil
+			},
+		},
+		{
+			Name:  "empty map",
+			Input: map[string]string{},
+			Validate: func(m map[string]string) error {
+				if len(m) != 0 {
+					return errors.New("expected empty map")
+				}
+
+				return nil
+			},
+		},
+		{
+			Name:  "map with multiple keys",
+			Input: map[string]string{"key1": "value1", "key2": "value2"},
+			Validate: func(m map[string]string) error {
+				if len(m) != 2 {
+					return errors.New("expected 2 keys")
+				}
+
+				return nil
+			},
+		},
+	}
+
+	RunMapValidationTests(t, tests)
+}
+
+func TestRunStringSliceTests(t *testing.T) {
+	t.Parallel()
+
+	tests := []StringSliceTestCase{
+		{
+			Name:  "reverse slice",
+			Input: []string{"a", "b", "c"},
+			Want:  []string{"c", "b", "a"},
+			Fn: func(s []string) []string {
+				result := make([]string, len(s))
+				for i, v := range s {
+					result[len(s)-1-i] = v
+				}
+
+				return result
+			},
+		},
+		{
+			Name:  "uppercase slice",
+			Input: []string{"hello", "world"},
+			Want:  []string{"HELLO", "WORLD"},
+			Fn: func(s []string) []string {
+				result := make([]string, len(s))
+				for i, v := range s {
+					result[i] = strings.ToUpper(v)
+				}
+
+				return result
+			},
+		},
+		{
+			Name:  "empty slice",
+			Input: []string{},
+			Want:  []string{},
+			Fn: func(s []string) []string {
+				return s
+			},
+		},
+	}
+
+	RunStringSliceTests(t, tests)
+}

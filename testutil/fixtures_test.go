@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -584,5 +585,101 @@ func TestHelperFunctions(t *testing.T) {
 		_ = validTaggedFixtures
 		_ = invalidTaggedFixtures
 		_ = basicTaggedFixtures
+	})
+}
+
+// TestValidatePinnedUpdate tests the ValidatePinnedUpdate helper function.
+func TestValidatePinnedUpdate(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := TempDir(t)
+	defer cleanup()
+
+	actionPath := filepath.Join(tmpDir, "action.yml")
+	testContent := "uses: actions/checkout@v3"
+	WriteTestFile(t, actionPath, testContent)
+
+	t.Run("validates without backup", func(t *testing.T) {
+		ValidatePinnedUpdate(t, actionPath, false, func(content string) error {
+			if !strings.Contains(content, "actions/checkout@v3") {
+				return errors.New("content does not contain expected string")
+			}
+
+			return nil
+		})
+	})
+
+	t.Run("validates with backup", func(t *testing.T) {
+		// Create backup file
+		backupPath := actionPath + ".bak"
+		WriteTestFile(t, backupPath, testContent)
+
+		ValidatePinnedUpdate(t, actionPath, true, func(content string) error {
+			if !strings.Contains(content, "actions/checkout@v3") {
+				return errors.New("content does not contain expected string")
+			}
+
+			return nil
+		})
+	})
+
+	t.Run("validates without validator function", func(t *testing.T) {
+		ValidatePinnedUpdate(t, actionPath, false, nil)
+	})
+}
+
+// TestValidateRollback tests the ValidateRollback helper function.
+func TestValidateRollback(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := TempDir(t)
+	defer cleanup()
+
+	actionPath := filepath.Join(tmpDir, "action.yml")
+	originalContent := "uses: actions/checkout@v3"
+	WriteTestFile(t, actionPath, originalContent)
+
+	t.Run("validates successful rollback", func(t *testing.T) {
+		ValidateRollback(t, actionPath, originalContent)
+	})
+}
+
+// TestAssertFileContains tests the AssertFileContains helper function.
+func TestAssertFileContains(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := TempDir(t)
+	defer cleanup()
+
+	testPath := filepath.Join(tmpDir, "test.txt")
+	testContent := "This is a test file with some content"
+	WriteTestFile(t, testPath, testContent)
+
+	t.Run("finds existing substring", func(t *testing.T) {
+		AssertFileContains(t, testPath, "test file")
+	})
+
+	t.Run("finds another existing substring", func(t *testing.T) {
+		AssertFileContains(t, testPath, "some content")
+	})
+}
+
+// TestAssertFileNotContains tests the AssertFileNotContains helper function.
+func TestAssertFileNotContains(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := TempDir(t)
+	defer cleanup()
+
+	testPath := filepath.Join(tmpDir, "test.txt")
+	testContent := "This is a test file"
+	WriteTestFile(t, testPath, testContent)
+
+	t.Run("confirms substring is absent", func(t *testing.T) {
+		AssertFileNotContains(t, testPath, "nonexistent string")
+	})
+
+	t.Run("confirms another substring is absent", func(t *testing.T) {
+		AssertFileNotContains(t, testPath, "missing content")
 	})
 }
