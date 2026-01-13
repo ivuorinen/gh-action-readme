@@ -621,7 +621,7 @@ func TestDetectActionFiles(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name: "handles directory with .. components safely",
+			name: "handles nested subdirectory discovery",
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				// Create subdirectory
@@ -637,7 +637,7 @@ func TestDetectActionFiles(t *testing.T) {
 					t.Fatalf(testutil.TestMsgFailedToCreateAction, err)
 				}
 			},
-			wantActionCount: 1, // Should find the file safely
+			wantActionCount: 1, // Should find the file in subdirectory
 			wantErr:         false,
 		},
 	}

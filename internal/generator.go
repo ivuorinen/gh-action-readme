@@ -48,7 +48,13 @@ func isUnitTestEnvironment() bool {
 // NewGenerator creates a new generator instance with the provided configuration.
 // This constructor maintains backward compatibility by using concrete implementations.
 // In unit test environments, it automatically uses NullOutput to suppress output.
+// If config is nil, it uses DefaultAppConfig() to prevent panics.
 func NewGenerator(config *AppConfig) *Generator {
+	// Handle nil config gracefully
+	if config == nil {
+		config = DefaultAppConfig()
+	}
+
 	// Use null output in unit test environments to keep tests clean
 	// Integration tests need real output to verify CLI behavior
 	if isUnitTestEnvironment() {

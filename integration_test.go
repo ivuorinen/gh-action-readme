@@ -37,6 +37,38 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// findFilesRecursive recursively searches for files matching the given pattern.
+// It uses filepath.WalkDir for recursive search and filepath.Match for pattern matching.
+// The pattern is matched against the basename of each file.
+func findFilesRecursive(rootDir, pattern string) ([]string, error) {
+	var matches []string
+
+	err := filepath.WalkDir(rootDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories
+		if d.IsDir() {
+			return nil
+		}
+
+		// Match pattern against basename
+		matched, err := filepath.Match(pattern, filepath.Base(path))
+		if err != nil {
+			return err
+		}
+
+		if matched {
+			matches = append(matches, path)
+		}
+
+		return nil
+	})
+
+	return matches, err
+}
+
 // getSharedTestBinary returns the path to the shared test binary, building it once if needed.
 func getSharedTestBinary(t *testing.T) string {
 	t.Helper()
@@ -778,7 +810,7 @@ func testDocumentationGeneration(t *testing.T, binaryPath, tmpDir string) {
 		testutil.AssertNoError(t, err)
 
 		// Verify README was created
-		readmeFiles, _ := filepath.Glob(filepath.Join(tmpDir, testutil.TestPatternREADME))
+		readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
 		if len(readmeFiles) == 0 {
 			t.Errorf("no README generated for theme %s", theme)
 		}
@@ -1188,7 +1220,7 @@ func TestStressTestWorkflow(t *testing.T) {
 	testutil.AssertNoError(t, err)
 
 	// Verify all READMEs were generated
-	readmeFiles, _ := filepath.Glob(filepath.Join(tmpDir, testutil.TestPatternREADMEAll))
+	readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
 	if len(readmeFiles) < numActions {
 		t.Errorf("expected at least %d README files, got %d", numActions, len(readmeFiles))
 	}
@@ -1346,7 +1378,7 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 
 	_ = cmd.Run()
 	// Generation might fail due to invalid files, but check what was generated
-	readmeFiles, _ := filepath.Glob(filepath.Join(tmpDir, testutil.TestPatternREADMEAll))
+	readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
 
 	// Should have generated at least some READMEs for valid files
 	if len(readmeFiles) == 0 {
