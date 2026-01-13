@@ -76,6 +76,10 @@ const (
 	TestFixtureActionWithCheckoutV3        = "dependencies/action-with-checkout-v3.yml"
 	TestFixtureActionWithCheckoutV4        = "dependencies/action-with-checkout-v4.yml"
 	TestFixtureSimpleCheckout              = "dependencies/simple-test-checkout.yml"
+	TestFixtureEmptyAction                 = "error-scenarios/empty-action.yml"
+	TestFixtureGlobalConfig                = "configs/global/default.yml"
+	TestFixtureProfessionalConfig          = "professional-config.yml"
+	TestFixtureRepoConfig                  = "repo-config.yml"
 )
 
 // Dependency update test constants for reducing string duplication in updater_test.go.
@@ -197,6 +201,7 @@ const (
 	TestCmdDeps     = "deps"
 	TestCmdShow     = "show"
 	TestCmdList     = "list"
+	TestCmdUpgrade  = "upgrade"
 )
 
 // Test file paths and names - moved from appconstants.
@@ -316,8 +321,30 @@ const (
 	TestFileGHReadmeYAML = ".ghreadme.yaml"
 	TestFileConfigYAML   = "config.yaml"
 	TestTokenConfig      = "config-token"
-	TestTokenStd         = "std-token"
+	TestTokenStd         = "ghp_test1234567890abcdefghijklmnopqrstuvwxyz"
+	TestTokenEnv         = "env-token"
 	TestFileCustomConfig = "custom-config.yml"
+)
+
+// Theme constants for testing - reducing string duplication across test files.
+const (
+	TestThemeDefault      = "default"
+	TestThemeGitHub       = "github"
+	TestThemeGitLab       = "gitlab"
+	TestThemeMinimal      = "minimal"
+	TestThemeProfessional = "professional"
+	TestThemeASCIIDoc     = "asciidoc"
+)
+
+// Template path constants for testing - reducing hardcoded template paths.
+const (
+	TestTemplateReadme       = "readme.tmpl"
+	TestTemplateWithPrefix   = "templates/readme.tmpl"
+	TestTemplateGitHub       = "themes/github/readme.tmpl"
+	TestTemplateGitLab       = "themes/gitlab/readme.tmpl"
+	TestTemplateMinimal      = "themes/minimal/readme.tmpl"
+	TestTemplateProfessional = "themes/professional/readme.tmpl"
+	TestTemplateASCIIDoc     = "themes/asciidoc/readme.adoc"
 )
 
 // Dependency analyzer test constants - moved from appconstants.
@@ -325,4 +352,67 @@ const (
 	TestVersionV4_1_1 = "v4.1.1"
 	TestVersionV4_0_0 = "v4.0.0"
 	TestSHAForTesting = "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e"
+)
+
+// File discovery test error messages for reducing string duplication in tests.
+const (
+	// TestErrDiscoveredFileCountFormat is used when file discovery returns unexpected count.
+	TestErrDiscoveredFileCountFormat = "DiscoverActionFiles() returned %d files, want %d"
+
+	// TestErrFileNotFoundInResults is used when expected file is missing from discovery.
+	TestErrFileNotFoundInResults = "Expected file %s not found in results"
+
+	// TestErrDiscoveredNestedFilesSkipped is used when nested files should be skipped.
+	TestErrDiscoveredNestedFilesSkipped = "DiscoverActionFiles() returned %d files, want 0 (nested dirs should be skipped)"
+
+	// TestErrDiscoveredNonRecursive is used for non-recursive discovery tests.
+	TestErrDiscoveredNonRecursive = "DiscoverActionFiles() non-recursive returned %d files, want %d"
+)
+
+// Assertion message formats for reducing string duplication in tests.
+const (
+	// TestMsgShouldIgnoreDirectory is used in shouldIgnoreDirectory tests.
+	TestMsgShouldIgnoreDirectory = "shouldIgnoreDirectory(%q, %v) = %v, want %v"
+
+	// TestMsgWalkFuncError is used in walkFunc tests.
+	TestMsgWalkFuncError = "walkFunc() with valid directory should return nil, got: %v"
+
+	// TestMsgFileContentMismatch is used when file content doesn't match expectations.
+	TestMsgFileContentMismatch = "file content mismatch in %s"
+)
+
+// Malformed YAML test content for reducing string duplication in error scenario tests.
+const (
+	// TestYAMLMalformedBracket has unclosed bracket for testing YAML parse errors.
+	TestYAMLMalformedBracket = `name: Test Action
+description: Test
+invalid-yaml: [
+  - item`
+
+	// TestYAMLMalformedIndentation has invalid indentation for testing YAML parse errors.
+	TestYAMLMalformedIndentation = `name: Test Action
+  description: Test
+    runs:
+  using: composite`
+)
+
+// Additional assertion message formats for reducing string duplication in tests.
+const (
+	// TestMsgExpectedError is used when error is expected but not returned.
+	TestMsgExpectedError = "expected error, got nil"
+
+	// TestMsgUnexpectedSuccess is used when expecting success but got error.
+	TestMsgUnexpectedSuccess = "expected success, got error: %v"
+
+	// TestMsgCountMismatch is used when counts don't match expectations.
+	TestMsgCountMismatch = "expected %d items, got %d"
+)
+
+// Config-related test constants for reducing string duplication in config tests.
+const (
+	// TestConfigEmpty is an empty JSON config.
+	TestConfigEmpty = "{}"
+
+	// TestConfigMinimal is a minimal JSON config with version.
+	TestConfigMinimal = `{"version": "1.0.0"}`
 )

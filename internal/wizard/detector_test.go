@@ -25,10 +25,7 @@ func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
 	}
 
 	for filename, content := range testFiles {
-		filePath := filepath.Join(tempDir, filename)
-		if err := os.WriteFile(filePath, []byte(content), 0600); err != nil { // #nosec G306 -- test file permissions
-			t.Fatalf("Failed to create test file %s: %v", filename, err)
-		}
+		testutil.WriteFileInDir(t, tempDir, filename, content)
 	}
 
 	// Create detector with temp directory
@@ -77,10 +74,7 @@ func TestProjectDetectorDetectVersionFromPackageJSON(t *testing.T) {
 		"description": "Test package"
 	}`
 
-	packagePath := filepath.Join(tempDir, appconstants.PackageJSON)
-	if err := os.WriteFile(packagePath, []byte(packageJSON), 0600); err != nil { // #nosec G306 -- test file permissions
-		t.Fatalf("Failed to create package.json: %v", err)
-	}
+	testutil.WriteFileInDir(t, tempDir, appconstants.PackageJSON, packageJSON)
 
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -100,10 +94,7 @@ func TestProjectDetectorDetectVersionFromFiles(t *testing.T) {
 
 	// Create VERSION file
 	versionContent := "3.2.1\n"
-	versionPath := filepath.Join(tempDir, "VERSION")
-	if err := os.WriteFile(versionPath, []byte(versionContent), 0600); err != nil { // #nosec G306 -- test file permissions
-		t.Fatalf("Failed to create VERSION file: %v", err)
-	}
+	testutil.WriteFileInDir(t, tempDir, "VERSION", versionContent)
 
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -123,28 +114,14 @@ func TestProjectDetectorFindActionFiles(t *testing.T) {
 
 	// Create action files
 	actionYML := filepath.Join(tempDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		actionYML,
-		[]byte("name: Test Action"),
-		0600, // #nosec G306 -- test file permissions
-	); err != nil {
-		t.Fatalf(testutil.TestMsgFailedToCreateAction, err)
-	}
+	testutil.WriteTestFile(t, actionYML, "name: Test Action")
 
 	// Create subdirectory with another action file
 	subDir := filepath.Join(tempDir, "subaction")
-	if err := os.MkdirAll(subDir, 0750); err != nil { // #nosec G301 -- test directory permissions
-		t.Fatalf("Failed to create subdirectory: %v", err)
-	}
+	testutil.CreateTestDir(t, subDir)
 
 	subActionYAML := filepath.Join(subDir, "action.yaml")
-	if err := os.WriteFile(
-		subActionYAML,
-		[]byte("name: Sub Action"),
-		0600, // #nosec G306 -- test file permissions
-	); err != nil {
-		t.Fatalf("Failed to create sub action.yaml: %v", err)
-	}
+	testutil.WriteTestFile(t, subActionYAML, "name: Sub Action")
 
 	output := internal.NewColoredOutput(true)
 	detector := &ProjectDetector{
@@ -590,9 +567,7 @@ func TestDetectActionFiles(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				content := "name: Test Action\ndescription: Test"
-				if err := os.WriteFile(filepath.Join(dir, appconstants.ActionFileNameYML), []byte(content), 0600); err != nil {
-					t.Fatalf(testutil.TestMsgFailedToCreateAction, err)
-				}
+				testutil.WriteFileInDir(t, dir, appconstants.ActionFileNameYML, content)
 			},
 			wantActionCount: 1,
 			wantErr:         false,
@@ -621,23 +596,14 @@ func TestDetectActionFiles(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name: "handles nested subdirectory discovery",
+			name: "handles directory with .. components safely",
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
-				// Create subdirectory
-				subdir := filepath.Join(dir, "subdir")
-				if err := os.MkdirAll(subdir, 0750); err != nil {
-					t.Fatalf("Failed to create subdir: %v", err)
-				}
-
-				// Create action.yml in subdir
+				// Create subdirectory with action.yml
 				content := "name: Test\ndescription: Test"
-				actionPath := filepath.Join(subdir, appconstants.ActionFileNameYML)
-				if err := os.WriteFile(actionPath, []byte(content), 0600); err != nil {
-					t.Fatalf(testutil.TestMsgFailedToCreateAction, err)
-				}
+				testutil.CreateNestedAction(t, dir, "subdir", content)
 			},
-			wantActionCount: 1, // Should find the file in subdirectory
+			wantActionCount: 1, // Should find the file safely
 			wantErr:         false,
 		},
 	}
@@ -682,9 +648,7 @@ func TestDetectProjectCharacteristics(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				content := "FROM alpine:latest"
-				if err := os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte(content), 0600); err != nil {
-					t.Fatalf("Failed to create Dockerfile: %v", err)
-				}
+				testutil.WriteFileInDir(t, dir, "Dockerfile", content)
 			},
 			wantDockerfile: true,
 		},
@@ -740,9 +704,7 @@ func TestDetectVersion(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				content := `{"version": "1.2.3"}`
-				if err := os.WriteFile(filepath.Join(dir, appconstants.PackageJSON), []byte(content), 0600); err != nil {
-					t.Fatalf("Failed to create package.json: %v", err)
-				}
+				testutil.WriteFileInDir(t, dir, appconstants.PackageJSON, content)
 			},
 			want: "1.2.3",
 		},
@@ -751,9 +713,7 @@ func TestDetectVersion(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				content := "2.0.0\n"
-				if err := os.WriteFile(filepath.Join(dir, "VERSION"), []byte(content), 0600); err != nil {
-					t.Fatalf("Failed to create VERSION: %v", err)
-				}
+				testutil.WriteFileInDir(t, dir, "VERSION", content)
 			},
 			want: "2.0.0",
 		},
@@ -861,10 +821,7 @@ func TestAnalyzeActionFile(t *testing.T) {
 			t.Parallel()
 
 			tempDir := t.TempDir()
-			actionPath := filepath.Join(tempDir, appconstants.ActionFileNameYML)
-			if err := os.WriteFile(actionPath, []byte(tt.content), 0600); err != nil {
-				t.Fatalf(testutil.TestMsgFailedToCreateAction, err)
-			}
+			actionPath := testutil.WriteFileInDir(t, tempDir, appconstants.ActionFileNameYML, tt.content)
 
 			output := internal.NewColoredOutput(true)
 			detector := &ProjectDetector{

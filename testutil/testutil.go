@@ -199,6 +199,104 @@ func WriteActionFixtureAs(t *testing.T, dir, filename, fixturePath string) strin
 	return actionPath
 }
 
+// CreateActionInTempDir creates a temporary directory with an action.yml file.
+// This is a convenience wrapper for the common pattern of t.TempDir() + WriteTestFile.
+// Returns the temp directory path and the full path to the action.yml file.
+//
+// Example:
+//
+//	tmpDir, actionPath := testutil.CreateActionInTempDir(t, "name: Test")
+func CreateActionInTempDir(t *testing.T, yamlContent string) (tmpDir, actionPath string) {
+	t.Helper()
+
+	tmpDir = t.TempDir()
+	actionPath = filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	WriteTestFile(t, actionPath, yamlContent)
+
+	return tmpDir, actionPath
+}
+
+// CreateNestedAction creates a nested action directory structure with an action.yml file.
+// This is useful for testing monorepo scenarios with multiple actions in subdirectories.
+// Returns the subdirectory path and the full path to the action.yml file.
+//
+// Example:
+//
+//	dirPath, actionPath := testutil.CreateNestedAction(t, tmpDir, "actions/build", "name: Build")
+func CreateNestedAction(t *testing.T, baseDir, subdir, yamlContent string) (dirPath, actionPath string) {
+	t.Helper()
+
+	dirPath = filepath.Join(baseDir, subdir)
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(dirPath, appconstants.FilePermDir); err != nil {
+		t.Fatalf("failed to create nested directory %s: %v", subdir, err)
+	}
+
+	actionPath = filepath.Join(dirPath, appconstants.ActionFileNameYML)
+	WriteTestFile(t, actionPath, yamlContent)
+
+	return dirPath, actionPath
+}
+
+// CreateTestSubdir creates a subdirectory within the base directory.
+// This is useful for test setup that needs directory structures without action files.
+// Returns the full path to the created subdirectory.
+//
+// Example:
+//
+//	subdir := testutil.CreateTestSubdir(t, tmpDir, ".config", "gh-action-readme")
+//	// Creates tmpDir/.config/gh-action-readme
+func CreateTestSubdir(t *testing.T, baseDir string, subdirs ...string) string {
+	t.Helper()
+
+	pathParts := append([]string{baseDir}, subdirs...)
+	fullPath := filepath.Join(pathParts...)
+
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(fullPath, appconstants.FilePermDir); err != nil {
+		t.Fatalf("failed to create test subdirectory %s: %v", fullPath, err)
+	}
+
+	return fullPath
+}
+
+// CreateTestDir creates a directory with test-appropriate permissions (0750).
+// Automatically fails the test if directory creation fails.
+// This is a convenience wrapper to reduce the 30+ instances of:
+//
+//	if err := os.MkdirAll(dir, 0750); err != nil { t.Fatalf(...) }
+//
+// Example:
+//
+//	testutil.CreateTestDir(t, filepath.Join(tmpDir, ".git"))
+func CreateTestDir(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0750); err != nil { // #nosec G301 -- test directory permissions
+		t.Fatalf("failed to create directory %s: %v", path, err)
+	}
+}
+
+// RunBinaryCommand executes the built binary with arguments in the given directory.
+// Returns the combined output (stdout + stderr) and error for verification in tests.
+// This helper consolidates the common pattern of running subprocess commands in integration tests.
+//
+// Example:
+//
+//	output, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, "gen", "--theme", "github")
+//	testutil.AssertNoError(t, err)
+//	if !strings.Contains(output, "Generated") {
+//	    t.Error("expected success message in output")
+//	}
+func RunBinaryCommand(t *testing.T, binaryPath, dir string, args ...string) (output string, err error) {
+	t.Helper()
+
+	cmd := exec.Command(binaryPath, args...) // #nosec G204 -- controlled test input
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+
+	return string(out), err
+}
+
 // CreateConfigDir creates a standard .config/gh-action-readme directory.
 func CreateConfigDir(t *testing.T, baseDir string) string {
 	t.Helper()
@@ -217,6 +315,45 @@ func WriteConfigFile(t *testing.T, baseDir, content string) string {
 	configDir := CreateConfigDir(t, baseDir)
 	configPath := filepath.Join(configDir, appconstants.ConfigFileNameFull)
 	WriteTestFile(t, configPath, content)
+
+	return configPath
+}
+
+// SetupConfigEnvironment sets up HOME and XDG_CONFIG_HOME environment variables for testing.
+// This is commonly needed for config hierarchy tests.
+//
+// Example:
+//
+//	testutil.SetupConfigEnvironment(t, tmpDir)
+func SetupConfigEnvironment(t *testing.T, tmpDir string) {
+	t.Helper()
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, TestDirDotConfig))
+}
+
+// CreateGitRepoWithRemote initializes a git repository and sets up a remote.
+// Returns the path to the git config file for further customization if needed.
+//
+// Example:
+//
+//	testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/user/repo.git")
+func CreateGitRepoWithRemote(t *testing.T, tmpDir, remoteURL string) string {
+	t.Helper()
+
+	InitGitRepo(t, tmpDir)
+
+	gitDir := filepath.Join(tmpDir, ".git")
+	configPath := filepath.Join(gitDir, "config")
+
+	configContent := fmt.Sprintf(`[remote "origin"]
+	url = %s
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+`, remoteURL)
+
+	WriteTestFile(t, configPath, configContent)
 
 	return configPath
 }

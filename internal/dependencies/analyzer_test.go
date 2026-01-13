@@ -56,7 +56,7 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 		},
 		{
 			name:        "minimal action - no dependencies",
-			actionYML:   testutil.MustReadFixture("minimal-action.yml"),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureMinimalAction),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,

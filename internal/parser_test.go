@@ -22,36 +22,6 @@ func parseActionFromContent(t *testing.T, content string) (*ActionYML, error) {
 	return ParseActionYML(actionPath)
 }
 
-// createTestDirWithAction creates a directory with an action.yml file and returns both paths.
-func createTestDirWithAction(t *testing.T, baseDir, dirName, yamlContent string) (string, string) {
-	t.Helper()
-	dirPath := filepath.Join(baseDir, dirName)
-	if err := os.Mkdir(dirPath, appconstants.FilePermDir); err != nil {
-		t.Fatalf(testutil.ErrCreateDir(dirName), err)
-	}
-	actionPath := filepath.Join(dirPath, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		actionPath, []byte(yamlContent), appconstants.FilePermDefault,
-	); err != nil {
-		t.Fatalf(testutil.ErrCreateFile(dirName+"/action.yml"), err)
-	}
-
-	return dirPath, actionPath
-}
-
-// createTestFile creates a file with the given content and returns its path.
-func createTestFile(t *testing.T, baseDir, fileName, content string) string {
-	t.Helper()
-	filePath := filepath.Join(baseDir, fileName)
-	if err := os.WriteFile(
-		filePath, []byte(content), appconstants.FilePermDefault,
-	); err != nil {
-		t.Fatalf(testutil.ErrCreateFile(fileName), err)
-	}
-
-	return filePath
-}
-
 // validateDiscoveredFiles checks if discovered files match expected count and paths.
 func validateDiscoveredFiles(t *testing.T, files []string, wantCount int, wantPaths []string) {
 	t.Helper()
@@ -174,18 +144,18 @@ func TestDiscoverActionFilesWithIgnoredDirectories(t *testing.T) {
 	//     action.yml (should be found)
 
 	// Create root action.yml
-	rootAction := createTestFile(t, tmpDir, appconstants.ActionFileNameYML, testutil.TestYAMLRoot)
+	rootAction := testutil.WriteFileInDir(t, tmpDir, appconstants.ActionFileNameYML, testutil.TestYAMLRoot)
 
 	// Create directories with action.yml files
-	_, nodeModulesAction := createTestDirWithAction(
+	_, nodeModulesAction := testutil.CreateNestedAction(
 		t,
 		tmpDir,
 		appconstants.DirNodeModules,
 		testutil.TestYAMLNodeModules,
 	)
-	_, vendorAction := createTestDirWithAction(t, tmpDir, appconstants.DirVendor, testutil.TestYAMLVendor)
-	_, gitAction := createTestDirWithAction(t, tmpDir, appconstants.DirGit, testutil.TestYAMLGit)
-	_, srcAction := createTestDirWithAction(t, tmpDir, "src", testutil.TestYAMLSrc)
+	_, vendorAction := testutil.CreateNestedAction(t, tmpDir, appconstants.DirVendor, testutil.TestYAMLVendor)
+	_, gitAction := testutil.CreateNestedAction(t, tmpDir, appconstants.DirGit, testutil.TestYAMLGit)
+	_, srcAction := testutil.CreateNestedAction(t, tmpDir, "src", testutil.TestYAMLSrc)
 
 	tests := []struct {
 		name        string
@@ -236,17 +206,9 @@ func TestDiscoverActionFilesNestedIgnoredDirs(t *testing.T) {
 	//       nested/
 	//         action.yml (should be ignored)
 
-	nodeModulesDir := filepath.Join(tmpDir, appconstants.DirNodeModules, "deep", "nested")
-	if err := os.MkdirAll(nodeModulesDir, appconstants.FilePermDir); err != nil {
-		t.Fatalf(testutil.ErrCreateDir("nested"), err)
-	}
+	nodeModulesDir := testutil.CreateTestSubdir(t, tmpDir, appconstants.DirNodeModules, "deep", "nested")
 
-	nestedAction := filepath.Join(nodeModulesDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		nestedAction, []byte(testutil.TestYAMLNested), appconstants.FilePermDefault,
-	); err != nil {
-		t.Fatalf(testutil.ErrCreateFile("nested action.yml"), err)
-	}
+	testutil.WriteFileInDir(t, nodeModulesDir, appconstants.ActionFileNameYML, testutil.TestYAMLNested)
 
 	files, err := DiscoverActionFiles(tmpDir, true, []string{appconstants.DirNodeModules})
 	if err != nil {
@@ -264,24 +226,14 @@ func TestDiscoverActionFilesNonRecursive(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create action.yml in root
-	rootAction := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		rootAction, []byte(testutil.TestYAMLRoot), appconstants.FilePermDefault,
-	); err != nil {
-		t.Fatalf(testutil.ErrCreateFile("action.yml"), err)
-	}
+	rootAction := testutil.WriteFileInDir(t, tmpDir, appconstants.ActionFileNameYML, testutil.TestYAMLRoot)
 
 	// Create subdirectory (should not be searched in non-recursive mode)
 	subDir := filepath.Join(tmpDir, "sub")
 	if err := os.Mkdir(subDir, appconstants.FilePermDir); err != nil {
 		t.Fatalf(testutil.ErrCreateDir("sub"), err)
 	}
-	subAction := filepath.Join(subDir, appconstants.ActionFileNameYML)
-	if err := os.WriteFile(
-		subAction, []byte(testutil.TestYAMLSub), appconstants.FilePermDefault,
-	); err != nil {
-		t.Fatalf(testutil.ErrCreateFile("sub/action.yml"), err)
-	}
+	testutil.WriteFileInDir(t, subDir, appconstants.ActionFileNameYML, testutil.TestYAMLSub)
 
 	files, err := DiscoverActionFiles(tmpDir, false, []string{})
 	if err != nil {

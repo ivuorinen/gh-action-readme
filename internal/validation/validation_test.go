@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -257,8 +256,7 @@ func TestValidateGitBranch(t *testing.T) {
 			name: "valid git repository with main branch",
 			setupFunc: func(_ *testing.T, tmpDir string) (string, string) {
 				// Create a simple git repository
-				gitDir := filepath.Join(tmpDir, ".git")
-				_ = os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
 
 				// Create a basic git config
 				configContent := `[core]
@@ -319,8 +317,7 @@ func TestIsGitRepository(t *testing.T) {
 		{
 			name: "directory with .git folder",
 			setupFunc: func(_ *testing.T, tmpDir string) string {
-				gitDir := filepath.Join(tmpDir, ".git")
-				_ = os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
+				_ = testutil.SetupGitDirectory(t, tmpDir)
 
 				return tmpDir
 			},

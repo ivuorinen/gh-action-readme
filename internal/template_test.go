@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -484,9 +483,7 @@ func prepareTestActionFile(t *testing.T, actionPath string) string {
 		tmpDir := t.TempDir()
 		tmpPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 		tmpPath = testutil.ValidateTestPath(t, tmpPath, tmpDir)
-		if err := os.WriteFile(tmpPath, []byte(yamlContent), appconstants.FilePermDefault); err != nil {
-			t.Fatalf("failed to write temp file: %v", err)
-		}
+		testutil.WriteTestFile(t, tmpPath, yamlContent)
 
 		return tmpPath
 	}

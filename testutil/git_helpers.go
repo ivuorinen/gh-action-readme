@@ -33,3 +33,22 @@ func SetupGitConfig(t *testing.T, gitDir, remoteURL string) {
 `, remoteURL)
 	WriteTestFile(t, configPath, config)
 }
+
+// WriteGitConfigFile creates a .git directory and writes a config file.
+// Returns the path to the config file for further assertions.
+// This is a convenience wrapper combining SetupGitDirectory + file writing.
+//
+// Example:
+//
+//	configPath := testutil.WriteGitConfigFile(t, tmpDir, `[remote "origin"]...`)
+func WriteGitConfigFile(t *testing.T, baseDir, configContent string) string {
+	t.Helper()
+
+	gitDir := filepath.Join(baseDir, appconstants.DirGit)
+	CreateTestDir(t, gitDir)
+
+	configPath := filepath.Join(gitDir, "config")
+	WriteTestFile(t, configPath, configContent)
+
+	return configPath
+}

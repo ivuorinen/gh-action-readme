@@ -297,10 +297,7 @@ func TestHTMLWriterWriteValidPath(t *testing.T) {
 
 	// Create nested directory structure
 	nestedDir := filepath.Join(tmpDir, "nested", "directory")
-	err := os.MkdirAll(nestedDir, 0750) // Use secure permissions
-	if err != nil {
-		t.Fatalf("Failed to create nested directory: %v", err)
-	}
+	testutil.CreateTestDir(t, nestedDir)
 
 	outputPath := filepath.Join(nestedDir, "nested.html")
 
@@ -309,7 +306,7 @@ func TestHTMLWriterWriteValidPath(t *testing.T) {
 		Footer: "</html>",
 	}
 
-	err = writer.Write("<body>Nested content</body>", outputPath)
+	err := writer.Write("<body>Nested content</body>", outputPath)
 	if err != nil {
 		t.Errorf("Write() to nested path failed: %v", err)
 	}

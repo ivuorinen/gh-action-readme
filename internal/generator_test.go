@@ -733,9 +733,7 @@ func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
 	dirs := make([]string, len(names))
 	for i, name := range names {
 		dirPath := filepath.Join(tmpDir, name)
-		if err := os.MkdirAll(dirPath, 0750); err != nil { // #nosec G301 -- test directory permissions
-			t.Fatalf("failed to create directory %s: %v", name, err)
-		}
+		testutil.CreateTestDir(t, dirPath)
 		dirs[i] = dirPath
 	}
 
@@ -801,9 +799,7 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 					t.Fatalf("invalid path: %q", actionPath)
 				}
 				content := "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
-				if err := os.WriteFile(actionPath, []byte(content), appconstants.FilePermDefault); err != nil {
-					t.Fatal(err)
-				}
+				testutil.WriteTestFile(t, actionPath, content)
 
 				return tmpDir
 			},
@@ -1051,21 +1047,13 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tmpFile, err := os.CreateTemp(t.TempDir(), "action-*.yml")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = tmpFile.Close() }() // Proper cleanup of file handle
-
-			if _, err := tmpFile.WriteString(tt.content); err != nil {
-				t.Fatal(err)
-			}
+			tmpPath := testutil.CreateTempActionFile(t, tt.content)
 
 			config := DefaultAppConfig()
 			config.Quiet = true
 			gen := NewGenerator(config)
 
-			action, err := gen.parseAndValidateAction(tmpFile.Name())
+			action, err := gen.parseAndValidateAction(tmpPath)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseAndValidateAction() error = %v, wantErr %v", err, tt.wantErr)

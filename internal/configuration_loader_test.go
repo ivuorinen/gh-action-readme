@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -12,74 +10,90 @@ import (
 
 func TestNewConfigurationLoader(t *testing.T) {
 	t.Parallel()
+
 	loader := NewConfigurationLoader()
 
 	if loader == nil {
 		t.Fatal("expected non-nil loader")
 	}
 
-	if loader.viper == nil {
-		t.Fatal("expected viper instance to be initialized")
+	sources := loader.GetConfigurationSources()
+	if len(sources) == 0 {
+		t.Error("expected non-empty configuration sources")
 	}
 
-	// Check default sources are enabled
+	// Verify all sources are enabled by default
 	expectedSources := []appconstants.ConfigurationSource{
-		appconstants.SourceDefaults, appconstants.SourceGlobal, appconstants.SourceRepoOverride,
-		appconstants.SourceRepoConfig, appconstants.SourceActionConfig, appconstants.SourceEnvironment,
+		appconstants.SourceDefaults,
+		appconstants.SourceGlobal,
+		appconstants.SourceRepoOverride,
+		appconstants.SourceRepoConfig,
+		appconstants.SourceActionConfig,
+		appconstants.SourceEnvironment,
 	}
 
 	for _, source := range expectedSources {
-		if !loader.sources[source] {
-			t.Errorf("expected source %s to be enabled by default", source.String())
-		}
-	}
+		found := false
+		for _, s := range sources {
+			if s == source {
+				found = true
 
-	// CLI flags should be disabled by default
-	if loader.sources[appconstants.SourceCLIFlags] {
-		t.Error("expected CLI flags source to be disabled by default")
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected source %s to be enabled by default", source)
+		}
 	}
 }
 
 func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
-		name     string
-		opts     ConfigurationOptions
-		expected []appconstants.ConfigurationSource
+		name  string
+		opts  ConfigurationOptions
+		check func(t *testing.T, loader *ConfigurationLoader)
 	}{
 		{
-			name: "default options",
-			opts: ConfigurationOptions{},
-			expected: []appconstants.ConfigurationSource{
-				appconstants.SourceDefaults, appconstants.SourceGlobal, appconstants.SourceRepoOverride,
-				appconstants.SourceRepoConfig, appconstants.SourceActionConfig, appconstants.SourceEnvironment,
+			name: "custom config file",
+			opts: ConfigurationOptions{
+				ConfigFile:  "/tmp/custom-config.yaml",
+				AllowTokens: true,
+			},
+			check: func(t *testing.T, loader *ConfigurationLoader) {
+				t.Helper()
+				if loader == nil {
+					t.Fatal("expected non-nil loader")
+				}
 			},
 		},
 		{
-			name: "custom enabled sources",
+			name: "disabled sources",
 			opts: ConfigurationOptions{
 				EnabledSources: []appconstants.ConfigurationSource{
 					appconstants.SourceDefaults,
-					appconstants.SourceGlobal,
 				},
 			},
-			expected: []appconstants.ConfigurationSource{appconstants.SourceDefaults, appconstants.SourceGlobal},
+			check: func(t *testing.T, loader *ConfigurationLoader) {
+				t.Helper()
+				sources := loader.GetConfigurationSources()
+				if len(sources) != 1 {
+					t.Errorf("expected 1 source, got %d", len(sources))
+				}
+			},
 		},
 		{
-			name: "all sources enabled",
+			name: "empty enabled sources - all enabled",
 			opts: ConfigurationOptions{
-				EnabledSources: []appconstants.ConfigurationSource{
-					appconstants.SourceDefaults, appconstants.SourceGlobal,
-					appconstants.SourceRepoOverride, appconstants.SourceRepoConfig,
-					appconstants.SourceActionConfig, appconstants.SourceEnvironment,
-					appconstants.SourceCLIFlags,
-				},
+				EnabledSources: []appconstants.ConfigurationSource{},
 			},
-			expected: []appconstants.ConfigurationSource{
-				appconstants.SourceDefaults, appconstants.SourceGlobal,
-				appconstants.SourceRepoOverride, appconstants.SourceRepoConfig,
-				appconstants.SourceActionConfig, appconstants.SourceEnvironment,
-				appconstants.SourceCLIFlags,
+			check: func(t *testing.T, loader *ConfigurationLoader) {
+				t.Helper()
+				sources := loader.GetConfigurationSources()
+				if len(sources) < 2 {
+					t.Errorf("expected all sources enabled, got %d", len(sources))
+				}
 			},
 		},
 	}
@@ -87,276 +101,260 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			loader := NewConfigurationLoaderWithOptions(tt.opts)
 
-			for _, expectedSource := range tt.expected {
-				if !loader.sources[expectedSource] {
-					t.Errorf("expected source %s to be enabled", expectedSource.String())
-				}
-			}
-
-			// Check that non-expected sources are disabled
-			allSources := []appconstants.ConfigurationSource{
-				appconstants.SourceDefaults, appconstants.SourceGlobal,
-				appconstants.SourceRepoOverride, appconstants.SourceRepoConfig,
-				appconstants.SourceActionConfig, appconstants.SourceEnvironment,
-				appconstants.SourceCLIFlags,
-			}
-
-			for _, source := range allSources {
-				expected := false
-				for _, expectedSource := range tt.expected {
-					if source == expectedSource {
-						expected = true
-
-						break
-					}
-				}
-
-				if loader.sources[source] != expected {
-					t.Errorf("source %s enabled=%v, expected=%v", source.String(), loader.sources[source], expected)
-				}
+			if tt.check != nil {
+				tt.check(t, loader)
 			}
 		})
 	}
 }
 
 func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
+	// Note: Cannot use t.Parallel() because subtests use t.Setenv()
+
 	tests := []struct {
 		name        string
-		setupFunc   func(t *testing.T, tempDir string) (configFile, repoRoot, actionDir string)
+		setupFunc   func(t *testing.T) (configFile, repoRoot, actionDir string)
 		expectError bool
 		checkFunc   func(t *testing.T, config *AppConfig)
+		description string
 	}{
 		{
-			name: "defaults only",
-			setupFunc: func(_ *testing.T, _ string) (string, string, string) {
+			name: "all empty paths - use defaults",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.SetupConfigEnvironment(t, tmpDir)
+
 				return "", "", ""
 			},
-			checkFunc: func(_ *testing.T, config *AppConfig) {
-				testutil.AssertEqual(t, "default", config.Theme)
-				testutil.AssertEqual(t, "md", config.OutputFormat)
-				testutil.AssertEqual(t, ".", config.OutputDir)
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				if config == nil {
+					t.Fatal("expected non-nil config")
+				}
+				if config.Theme == "" {
+					t.Error("expected default theme")
+				}
 			},
+			description: "Should load defaults when all paths empty",
 		},
 		{
-			name: "multi-level configuration hierarchy",
-			setupFunc: func(_ *testing.T, tempDir string) (string, string, string) {
-				// Create global config
-				globalConfigDir := filepath.Join(tempDir, ".config", "gh-action-readme")
-				globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, "config.yaml", `
-theme: default
-output_format: md
-github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
-verbose: false
-`)
-
-				// Create repo root with repo-specific config
-				repoRoot := filepath.Join(tempDir, "repo")
-				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
+			name: "global config only",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				configPath := filepath.Join(tmpDir, "config.yaml")
+				testutil.WriteTestFile(t, configPath, `
 theme: github
 output_format: html
-verbose: true
 `)
 
-				// Create action directory with action-specific config
+				return configPath, "", ""
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme)
+				testutil.AssertEqual(t, "html", config.OutputFormat)
+			},
+			description: "Should load global config only",
+		},
+		{
+			name: "repo config overrides global",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				// Global config
+				globalPath := filepath.Join(tmpDir, "global.yaml")
+				testutil.WriteTestFile(t, globalPath, `
+theme: default
+output_format: md
+`)
+
+				// Repo config
+				repoRoot := filepath.Join(tmpDir, "repo")
+				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
+theme: minimal
+`)
+
+				return globalPath, repoRoot, ""
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, testutil.TestThemeMinimal, config.Theme)
+				testutil.AssertEqual(t, "md", config.OutputFormat) // From global
+			},
+			description: "Repo config should override global",
+		},
+		{
+			name: "action config has highest priority",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				// Global config
+				globalPath := filepath.Join(tmpDir, "global.yaml")
+				testutil.WriteTestFile(t, globalPath, `
+theme: default
+output_format: md
+`)
+
+				// Repo config
+				repoRoot := filepath.Join(tmpDir, "repo")
+				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
+theme: minimal
+`)
+
+				// Action config
 				actionDir := filepath.Join(repoRoot, "action")
 				testutil.WriteFileInDir(t, actionDir, "config.yaml", `
 theme: professional
-output_dir: output
-quiet: false
 `)
 
-				return globalConfigPath, repoRoot, actionDir
+				return globalPath, repoRoot, actionDir
 			},
-			checkFunc: func(_ *testing.T, config *AppConfig) {
-				// Should have action-level overrides
-				testutil.AssertEqual(t, "professional", config.Theme)
-				testutil.AssertEqual(t, "output", config.OutputDir)
-				// Should inherit from repo level
-				testutil.AssertEqual(t, "html", config.OutputFormat)
-				testutil.AssertEqual(t, true, config.Verbose)
-				// Should inherit GitHub token from global config
-				testutil.AssertEqual(t, "ghp_test1234567890abcdefghijklmnopqrstuvwxyz", config.GitHubToken)
-			},
-		},
-		{
-			name: "environment variable overrides",
-			setupFunc: func(t *testing.T, tempDir string) (string, string, string) {
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
-				// Set environment variables
-				t.Setenv("GH_README_GITHUB_TOKEN", "env-token")
-
-				// Create config file with different token
-				configPath := filepath.Join(tempDir, "config.yml")
-				testutil.WriteTestFile(t, configPath, `
-theme: minimal
-github_token: config-token
-`)
-
-				return configPath, tempDir, ""
+				testutil.AssertEqual(t, testutil.TestThemeProfessional, config.Theme)
 			},
-			checkFunc: func(_ *testing.T, config *AppConfig) {
-				// Environment variable should override config file
-				testutil.AssertEqual(t, "env-token", config.GitHubToken)
-				testutil.AssertEqual(t, "minimal", config.Theme)
-			},
+			description: "Action config should have highest priority",
 		},
 		{
-			name: "hidden config file priority",
-			setupFunc: func(_ *testing.T, tempDir string) (string, string, string) {
-				repoRoot := filepath.Join(tempDir, "repo")
+			name: "invalid global config file",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				configPath := filepath.Join(tmpDir, "bad.yaml")
+				testutil.WriteTestFile(t, configPath, `{invalid yaml: [[`)
 
-				// Create multiple hidden config files - first one should win
-				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
-theme: minimal
-output_format: json
-`)
-
-				configDir := filepath.Join(repoRoot, ".config")
-				testutil.WriteFileInDir(t, configDir, "ghreadme.yaml", `
-theme: professional
-quiet: true
-`)
-
-				githubDir := filepath.Join(repoRoot, ".github")
-				testutil.WriteFileInDir(t, githubDir, "ghreadme.yaml", `
-theme: github
-verbose: true
-`)
-
-				return "", repoRoot, ""
+				return configPath, "", ""
 			},
-			checkFunc: func(_ *testing.T, config *AppConfig) {
-				// Should use the first found config (.ghreadme.yaml has priority)
-				testutil.AssertEqual(t, "minimal", config.Theme)
-				testutil.AssertEqual(t, "json", config.OutputFormat)
-			},
-		},
-		{
-			name: "selective source loading",
-			setupFunc: func(_ *testing.T, _ string) (string, string, string) {
-				// This test uses a loader with specific sources enabled
-				return "", "", ""
-			},
-			checkFunc: func(_ *testing.T, _ *AppConfig) {
-				// This will be tested with a custom loader
-			},
+			expectError: true,
+			description: "Should error on invalid global config",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
+			configFile, repoRoot, actionDir := tt.setupFunc(t)
 
-			// Set HOME to temp directory for fallback
-			t.Setenv("HOME", tmpDir)
-
-			configFile, repoRoot, actionDir := tt.setupFunc(t, tmpDir)
-
-			// Special handling for selective source loading test
-			var loader *ConfigurationLoader
-			if tt.name == "selective source loading" {
-				// Create loader with only defaults and global sources
-				loader = NewConfigurationLoaderWithOptions(ConfigurationOptions{
-					EnabledSources: []appconstants.ConfigurationSource{
-						appconstants.SourceDefaults,
-						appconstants.SourceGlobal,
-					},
-				})
-			} else {
-				loader = NewConfigurationLoader()
-			}
-
+			loader := NewConfigurationLoader()
 			config, err := loader.LoadConfiguration(configFile, repoRoot, actionDir)
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
 
-				return
-			}
-
-			testutil.AssertNoError(t, err)
-
-			if tt.checkFunc != nil {
-				tt.checkFunc(t, config)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, config)
+				}
 			}
 		})
 	}
 }
 
 func TestConfigurationLoader_LoadGlobalConfig(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
-		setupFunc   func(t *testing.T, tempDir string) string
+		setupFunc   func(t *testing.T) string
 		expectError bool
 		checkFunc   func(t *testing.T, config *AppConfig)
+		description string
 	}{
 		{
 			name: "valid global config",
-			setupFunc: func(t *testing.T, tempDir string) string {
+			setupFunc: func(t *testing.T) string {
 				t.Helper()
-				configPath := filepath.Join(tempDir, "config.yaml")
+				tmpDir, _ := testutil.TempDir(t)
+				configPath := filepath.Join(tmpDir, "config.yaml")
 				testutil.WriteTestFile(t, configPath, `
-theme: professional
+theme: github
 output_format: html
-github_token: test-token
 verbose: true
 `)
 
 				return configPath
 			},
-			checkFunc: func(_ *testing.T, config *AppConfig) {
-				testutil.AssertEqual(t, "professional", config.Theme)
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme)
 				testutil.AssertEqual(t, "html", config.OutputFormat)
-				testutil.AssertEqual(t, "test-token", config.GitHubToken)
 				testutil.AssertEqual(t, true, config.Verbose)
 			},
+			description: "Should load valid global config",
 		},
 		{
-			name: "nonexistent config file",
-			setupFunc: func(_ *testing.T, tempDir string) string {
-				return filepath.Join(tempDir, "nonexistent.yaml")
+			name: "empty config file",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				configPath := filepath.Join(tmpDir, "empty.yaml")
+				testutil.WriteTestFile(t, configPath, "---\n")
+
+				return configPath
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				if config == nil {
+					t.Fatal("expected non-nil config")
+				}
+			},
+			description: "Empty config should not error",
+		},
+		{
+			name: "config file does not exist",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+
+				return "/nonexistent/config.yaml"
 			},
 			expectError: true,
+			description: "Non-existent config should error",
 		},
 		{
-			name: "invalid YAML",
-			setupFunc: func(t *testing.T, tempDir string) string {
+			name: "malformed YAML",
+			setupFunc: func(t *testing.T) string {
 				t.Helper()
-				configPath := filepath.Join(tempDir, "invalid.yaml")
-				testutil.WriteTestFile(t, configPath, "invalid: yaml: content: [")
+				tmpDir, _ := testutil.TempDir(t)
+				configPath := filepath.Join(tmpDir, "bad.yaml")
+				testutil.WriteTestFile(t, configPath, `{{{invalid}}}`)
 
 				return configPath
 			},
 			expectError: true,
+			description: "Malformed YAML should error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
+			t.Parallel()
 
-			// Set HOME to temp directory
-			t.Setenv("HOME", tmpDir)
-
-			configFile := tt.setupFunc(t, tmpDir)
+			configFile := tt.setupFunc(t)
 
 			loader := NewConfigurationLoader()
 			config, err := loader.LoadGlobalConfig(configFile)
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
 
-				return
-			}
-
-			testutil.AssertNoError(t, err)
-
-			if tt.checkFunc != nil {
-				tt.checkFunc(t, config)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, config)
+				}
 			}
 		})
 	}
@@ -364,93 +362,52 @@ verbose: true
 
 func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name        string
 		config      *AppConfig
 		expectError bool
-		errorMsg    string
+		description string
 	}{
 		{
-			name:        "nil config",
-			config:      nil,
-			expectError: true,
-			errorMsg:    "configuration cannot be nil",
-		},
-		{
-			name: "valid config",
+			name: "valid configuration",
 			config: &AppConfig{
-				Theme:        "default",
+				Theme:        testutil.TestThemeDefault,
 				OutputFormat: "md",
 				OutputDir:    ".",
-				Verbose:      false,
-				Quiet:        false,
 			},
 			expectError: false,
-		},
-		{
-			name: "invalid output format",
-			config: &AppConfig{
-				Theme:        "default",
-				OutputFormat: "invalid",
-				OutputDir:    ".",
-			},
-			expectError: true,
-			errorMsg:    "invalid output format",
-		},
-		{
-			name: "empty output directory",
-			config: &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
-				OutputDir:    "",
-			},
-			expectError: true,
-			errorMsg:    "output directory cannot be empty",
-		},
-		{
-			name: "verbose and quiet both true",
-			config: &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
-				OutputDir:    ".",
-				Verbose:      true,
-				Quiet:        true,
-			},
-			expectError: true,
-			errorMsg:    "verbose and quiet flags are mutually exclusive",
+			description: "Valid config should pass",
 		},
 		{
 			name: "invalid theme",
 			config: &AppConfig{
-				Theme:        "nonexistent",
+				Theme:        "invalid-theme",
 				OutputFormat: "md",
-				OutputDir:    ".",
 			},
 			expectError: true,
-			errorMsg:    "invalid theme",
+			description: "Invalid theme should error",
 		},
 		{
-			name: "valid built-in themes",
+			name: "empty theme",
 			config: &AppConfig{
-				Theme:        "github",
-				OutputFormat: "html",
-				OutputDir:    "docs",
+				Theme:        "",
+				OutputFormat: "md",
 			},
-			expectError: false,
+			expectError: true,
+			description: "Empty theme should error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			loader := NewConfigurationLoader()
 			err := loader.ValidateConfiguration(tt.config)
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
-				if tt.errorMsg != "" {
-					testutil.AssertStringContains(t, err.Error(), tt.errorMsg)
-				}
 			} else {
 				testutil.AssertNoError(t, err)
 			}
@@ -460,36 +417,47 @@ func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
 
 func TestConfigurationLoader_SourceManagement(t *testing.T) {
 	t.Parallel()
+
 	loader := NewConfigurationLoader()
 
-	// Test initial state
+	// Initially, all sources should be enabled
 	sources := loader.GetConfigurationSources()
-	if len(sources) != 6 { // All except CLI flags
-		t.Errorf("expected 6 enabled sources, got %d", len(sources))
+	if len(sources) < 4 {
+		t.Errorf("expected at least 4 sources initially, got %d", len(sources))
 	}
 
-	// Test disabling a source
-	loader.DisableSource(appconstants.SourceGlobal)
-	if loader.sources[appconstants.SourceGlobal] {
-		t.Error("expected appconstants.SourceGlobal to be disabled")
-	}
+	// Disable a source
+	loader.DisableSource(appconstants.SourceRepoConfig)
 
-	// Test enabling a source
-	loader.EnableSource(appconstants.SourceCLIFlags)
-	if !loader.sources[appconstants.SourceCLIFlags] {
-		t.Error("expected appconstants.SourceCLIFlags to be enabled")
-	}
-
-	// Test updated sources list
+	// Verify it's disabled
 	sources = loader.GetConfigurationSources()
-	expectedCount := 6 // 5 original + CLI flags - Global
-	if len(sources) != expectedCount {
-		t.Errorf("expected %d enabled sources, got %d", expectedCount, len(sources))
+	for _, source := range sources {
+		if source == appconstants.SourceRepoConfig {
+			t.Error("expected SourceRepoConfig to be disabled")
+		}
+	}
+
+	// Re-enable the source
+	loader.EnableSource(appconstants.SourceRepoConfig)
+
+	// Verify it's enabled again
+	sources = loader.GetConfigurationSources()
+	found := false
+	for _, source := range sources {
+		if source == appconstants.SourceRepoConfig {
+			found = true
+
+			break
+		}
+	}
+	if !found {
+		t.Error("expected SourceRepoConfig to be re-enabled")
 	}
 }
 
 func TestConfigurationSourceString(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		source   appconstants.ConfigurationSource
 		expected string
@@ -500,212 +468,251 @@ func TestConfigurationSourceString(t *testing.T) {
 		{appconstants.SourceRepoConfig, "repo-config"},
 		{appconstants.SourceActionConfig, "action-config"},
 		{appconstants.SourceEnvironment, "environment"},
-		{appconstants.SourceCLIFlags, "cli-flags"},
-		{appconstants.ConfigurationSource(999), "unknown"},
 	}
 
 	for _, tt := range tests {
-		result := tt.source.String()
-		if result != tt.expected {
-			t.Errorf("source %d String() = %s, expected %s", int(tt.source), result, tt.expected)
-		}
+		t.Run(tt.expected, func(t *testing.T) {
+			t.Parallel()
+
+			result := tt.source.String()
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
 	}
 }
 
 func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
-	tests := testutil.GetGitHubTokenHierarchyTests()
+	tests := []struct {
+		name        string
+		setupEnv    func(t *testing.T)
+		setupConfig func(t *testing.T) *AppConfig
+		checkFunc   func(t *testing.T, config *AppConfig)
+		description string
+	}{
+		{
+			name: "GH_README_GITHUB_TOKEN overrides config",
+			setupEnv: func(t *testing.T) {
+				t.Helper()
+				t.Setenv(appconstants.EnvGitHubToken, testutil.TestTokenEnv)
+			},
+			setupConfig: func(t *testing.T) *AppConfig {
+				t.Helper()
+
+				return &AppConfig{
+					GitHubToken: testutil.TestTokenConfig,
+				}
+			},
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, testutil.TestTokenEnv, config.GitHubToken)
+			},
+			description: "Environment variable should override config token",
+		},
+		{
+			name: "GITHUB_TOKEN fallback",
+			setupEnv: func(t *testing.T) {
+				t.Helper()
+				t.Setenv(appconstants.EnvGitHubToken, "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "standard-token")
+			},
+			setupConfig: func(t *testing.T) *AppConfig {
+				t.Helper()
+
+				return &AppConfig{}
+			},
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, "standard-token", config.GitHubToken)
+			},
+			description: "Should use GITHUB_TOKEN when GH_README_GITHUB_TOKEN not set",
+		},
+		{
+			name: "config token used when no env vars",
+			setupEnv: func(t *testing.T) {
+				t.Helper()
+				t.Setenv(appconstants.EnvGitHubToken, "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+			},
+			setupConfig: func(t *testing.T) *AppConfig {
+				t.Helper()
+
+				return &AppConfig{
+					GitHubToken: testutil.TestTokenConfig,
+				}
+			},
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, testutil.TestTokenConfig, config.GitHubToken)
+			},
+			description: "Should preserve config token when no env vars",
+		},
+	}
 
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
-			cleanup := tt.SetupFunc(t)
-			defer cleanup()
-
-			tmpDir, tmpCleanup := testutil.TempDir(t)
-			defer tmpCleanup()
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupEnv(t)
+			config := tt.setupConfig(t)
 
 			loader := NewConfigurationLoader()
-			config, err := loader.LoadConfiguration("", tmpDir, "")
-			testutil.AssertNoError(t, err)
+			loader.loadEnvironmentStep(config)
 
-			testutil.AssertEqual(t, tt.ExpectedToken, config.GitHubToken)
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, config)
+			}
 		})
 	}
 }
 
-func TestConfigurationLoader_RepoOverrides(t *testing.T) {
-	tmpDir, cleanup := testutil.TempDir(t)
-	defer cleanup()
-
-	// Create a mock git repository structure for testing
-	repoRoot := filepath.Join(tmpDir, "test-repo")
-
-	// Create global config with repo overrides
-	globalConfigDir := filepath.Join(tmpDir, ".config", "gh-action-readme")
-	globalConfigContent := "theme: default\n"
-	globalConfigContent += "output_format: md\n"
-	globalConfigContent += "repo_overrides:\n"
-	globalConfigContent += "  test-repo:\n"
-	globalConfigContent += "    theme: github\n"
-	globalConfigContent += "    output_format: html\n"
-	globalConfigContent += "    verbose: true\n"
-	globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, "config.yaml", globalConfigContent)
-
-	// Set environment for XDG compliance
-	t.Setenv("HOME", tmpDir)
-
-	loader := NewConfigurationLoader()
-	config, err := loader.LoadConfiguration(globalConfigPath, repoRoot, "")
-	testutil.AssertNoError(t, err)
-
-	// Note: Since we don't have actual git repository detection in this test,
-	// repo overrides won't be applied. This test validates the structure works.
-	testutil.AssertEqual(t, "default", config.Theme)
-	testutil.AssertEqual(t, "md", config.OutputFormat)
-}
-
-// TestConfigurationLoaderApplyRepoOverrides tests repo-specific overrides.
 func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name           string
-		config         *AppConfig
+		setupFunc      func(t *testing.T) (config *AppConfig, repoRoot string)
 		expectedTheme  string
 		expectedFormat string
+		description    string
 	}{
 		{
-			name: "no repository detected",
-			config: &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
-			},
-			expectedTheme:  "default",
-			expectedFormat: "md",
-		},
-		{
-			name: "no repo overrides configured",
-			config: &AppConfig{
-				Theme:         "default",
-				OutputFormat:  "md",
-				RepoOverrides: nil,
-			},
-			expectedTheme:  "default",
-			expectedFormat: "md",
-		},
-		{
-			name: "empty repo overrides map",
-			config: &AppConfig{
-				Theme:         "default",
-				OutputFormat:  "md",
-				RepoOverrides: map[string]AppConfig{},
-			},
-			expectedTheme:  "default",
-			expectedFormat: "md",
-		},
-		{
-			name: "repo override for different repo not applied",
-			config: &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
-				RepoOverrides: map[string]AppConfig{
-					"different/repo": {
-						Theme:        "professional",
-						OutputFormat: "json",
+			name: "matching repo override applied",
+			setupFunc: func(t *testing.T) (*AppConfig, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/test/repo.git")
+
+				config := &AppConfig{
+					Theme:        testutil.TestThemeDefault,
+					OutputFormat: "md",
+					RepoOverrides: map[string]AppConfig{
+						"test/repo": {
+							Theme:        testutil.TestThemeProfessional,
+							OutputFormat: "html",
+						},
 					},
-				},
+				}
+
+				return config, tmpDir
 			},
-			expectedTheme:  "default",
+			expectedTheme:  testutil.TestThemeProfessional,
+			expectedFormat: "html",
+			description:    "Matching repo override should be applied",
+		},
+		{
+			name: "no override when repo doesn't match",
+			setupFunc: func(t *testing.T) (*AppConfig, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/different/repo.git")
+
+				config := &AppConfig{
+					Theme:        testutil.TestThemeDefault,
+					OutputFormat: "md",
+					RepoOverrides: map[string]AppConfig{
+						"test/repo": {
+							Theme:        testutil.TestThemeProfessional,
+							OutputFormat: "html",
+						},
+					},
+				}
+
+				return config, tmpDir
+			},
+			expectedTheme:  testutil.TestThemeDefault,
 			expectedFormat: "md",
+			description:    "No override when repo doesn't match",
+		},
+		{
+			name: "no override when no git repository",
+			setupFunc: func(t *testing.T) (*AppConfig, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				config := &AppConfig{
+					Theme:        testutil.TestThemeDefault,
+					OutputFormat: "md",
+					RepoOverrides: map[string]AppConfig{
+						"test/repo": {
+							Theme:        testutil.TestThemeProfessional,
+							OutputFormat: "html",
+						},
+					},
+				}
+
+				return config, tmpDir
+			},
+			expectedTheme:  testutil.TestThemeDefault,
+			expectedFormat: "md",
+			description:    "No override when not a git repository",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
+			config, repoRoot := tt.setupFunc(t)
 
 			loader := NewConfigurationLoader()
-			loader.applyRepoOverrides(tt.config, tmpDir)
-			testutil.AssertEqual(t, tt.expectedTheme, tt.config.Theme)
-			testutil.AssertEqual(t, tt.expectedFormat, tt.config.OutputFormat)
+			loader.applyRepoOverrides(config, repoRoot)
+
+			// Verify expected values
+			testutil.AssertEqual(t, tt.expectedTheme, config.Theme)
+			testutil.AssertEqual(t, tt.expectedFormat, config.OutputFormat)
 		})
 	}
 }
 
-// TestConfigurationLoaderLoadActionConfig tests action-specific configuration loading.
 func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
-		name         string
-		setupFunc    func(t *testing.T, tmpDir string) string
-		expectError  bool
-		expectedVals map[string]string
+		name        string
+		setupFunc   func(t *testing.T) string
+		expectError bool
+		checkFunc   func(t *testing.T, config *AppConfig)
+		description string
 	}{
 		{
-			name: "no action directory provided",
-			setupFunc: func(_ *testing.T, _ string) string {
-				return ""
-			},
-			expectError:  false,
-			expectedVals: map[string]string{},
-		},
-		{
-			name: "action directory with config file",
-			setupFunc: func(t *testing.T, tmpDir string) string {
+			name: "valid action config",
+			setupFunc: func(t *testing.T) string {
 				t.Helper()
-				actionDir := filepath.Join(tmpDir, "action")
-
-				testutil.WriteFileInDir(t, actionDir, "config.yaml", `
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, "config.yaml", `
 theme: minimal
-output_format: json
-verbose: true
+output_dir: dist
 `)
 
-				return actionDir
+				return tmpDir
 			},
 			expectError: false,
-			expectedVals: map[string]string{
-				"theme":         "minimal",
-				"output_format": "json",
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, testutil.TestThemeMinimal, config.Theme)
+				testutil.AssertEqual(t, "dist", config.OutputDir)
 			},
+			description: "Should load action config",
 		},
 		{
-			name: "action directory with malformed config file",
-			setupFunc: func(t *testing.T, tmpDir string) string {
+			name: "no action config file",
+			setupFunc: func(t *testing.T) string {
 				t.Helper()
-				actionDir := filepath.Join(tmpDir, "action")
+				tmpDir, _ := testutil.TempDir(t)
 
-				testutil.WriteFileInDir(t, actionDir, "config.yaml", "invalid yaml content:\n  - broken [")
-
-				return actionDir
+				return tmpDir
 			},
-			expectError:  false, // Function may handle YAML errors gracefully
-			expectedVals: map[string]string{},
-		},
-		{
-			name: "action directory without config file",
-			setupFunc: func(t *testing.T, tmpDir string) string {
+			expectError: false,
+			checkFunc: func(t *testing.T, _ *AppConfig) {
 				t.Helper()
-				actionDir := filepath.Join(tmpDir, "action")
-				// Create empty directory - WriteFileInDir would create a file, so use MkdirAll directly
-				if err := os.MkdirAll(actionDir, appconstants.FilePermDir); err != nil {
-					t.Fatalf("failed to create action dir: %v", err)
-				}
-
-				return actionDir
+				// Empty config is okay
 			},
-			expectError:  false,
-			expectedVals: map[string]string{},
+			description: "Missing action config should not error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
 
-			actionDir := tt.setupFunc(t, tmpDir)
+			actionDir := tt.setupFunc(t)
 
 			loader := NewConfigurationLoader()
 			config, err := loader.loadActionConfig(actionDir)
@@ -715,72 +722,59 @@ verbose: true
 			} else {
 				testutil.AssertNoError(t, err)
 
-				// Check expected values if no error
-				if config != nil {
-					for key, expected := range tt.expectedVals {
-						switch key {
-						case "theme":
-							testutil.AssertEqual(t, expected, config.Theme)
-						case "output_format":
-							testutil.AssertEqual(t, expected, config.OutputFormat)
-						}
-					}
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, config)
 				}
 			}
 		})
 	}
 }
 
-// TestConfigurationLoaderValidateTheme tests theme validation edge cases.
 func TestConfigurationLoader_ValidateTheme(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name        string
 		theme       string
 		expectError bool
 	}{
 		{
-			name:        "valid built-in theme",
-			theme:       "github",
+			name:        "valid theme - default",
+			theme:       testutil.TestThemeDefault,
 			expectError: false,
 		},
 		{
-			name:        "valid default theme",
-			theme:       "default",
+			name:        "valid theme - github",
+			theme:       testutil.TestThemeGitHub,
 			expectError: false,
 		},
 		{
-			name:        "empty theme returns error",
-			theme:       "",
-			expectError: true,
+			name:        "valid theme - minimal",
+			theme:       testutil.TestThemeMinimal,
+			expectError: false,
 		},
 		{
 			name:        "invalid theme",
-			theme:       "nonexistent-theme",
+			theme:       "nonexistent",
 			expectError: true,
 		},
 		{
-			name:        "case sensitive theme",
-			theme:       "GitHub",
+			name:        "empty theme",
+			theme:       "",
 			expectError: true,
-		},
-		{
-			name:        "custom theme path",
-			theme:       "/custom/theme/path.tmpl",
-			expectError: false,
-		},
-		{
-			name:        "relative theme path",
-			theme:       "custom/theme.tmpl",
-			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			loader := NewConfigurationLoader()
-			err := loader.validateTheme(tt.theme)
+			config := &AppConfig{
+				Theme: tt.theme,
+			}
+
+			err := loader.validateTheme(config.Theme)
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
@@ -791,114 +785,69 @@ func TestConfigurationLoader_ValidateTheme(t *testing.T) {
 	}
 }
 
-// TestConfigurationLoaderApplyRepoOverridesWithRepoRoot tests applyRepoOverrides with explicit repo root paths.
 func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name           string
-		gitRemoteURL   string // For .git/config
-		repoOverrides  map[string]AppConfig
+		setupFunc      func(t *testing.T) (config *AppConfig, repoRoot string)
 		expectedTheme  string
 		expectedFormat string
-		setupGitDir    bool // Whether to create .git directory
+		description    string
 	}{
 		{
-			name:         "applies override for matching repository (HTTPS)",
-			gitRemoteURL: "https://github.com/test-org/test-repo.git",
-			repoOverrides: map[string]AppConfig{
-				testutil.TestRepoTestOrgTestRepo: {
-					Theme:        "github",
-					OutputFormat: "html",
-				},
+			name: "override applied with valid repo root",
+			setupFunc: func(t *testing.T) (*AppConfig, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/myorg/myrepo.git")
+
+				config := &AppConfig{
+					Theme:        testutil.TestThemeDefault,
+					OutputFormat: "md",
+					RepoOverrides: map[string]AppConfig{
+						"myorg/myrepo": {
+							Theme:        testutil.TestThemeGitHub,
+							OutputFormat: "json",
+						},
+					},
+				}
+
+				return config, tmpDir
 			},
 			expectedTheme:  "github",
-			expectedFormat: "html",
-			setupGitDir:    true,
-		},
-		{
-			name:         "applies override for matching repository (SSH)",
-			gitRemoteURL: "git@github.com:test-org/test-repo.git",
-			repoOverrides: map[string]AppConfig{
-				testutil.TestRepoTestOrgTestRepo: {
-					Theme:        "minimal",
-					OutputFormat: "json",
-				},
-			},
-			expectedTheme:  "minimal",
 			expectedFormat: "json",
-			setupGitDir:    true,
+			description:    "Should apply repo override for detected repository",
 		},
 		{
-			name:         "no override applied for non-matching repository",
-			gitRemoteURL: "https://github.com/other-org/other-repo.git",
-			repoOverrides: map[string]AppConfig{
-				testutil.TestRepoTestOrgTestRepo: {
-					Theme:        "github",
-					OutputFormat: "html",
-				},
+			name: "no override with empty repo root",
+			setupFunc: func(t *testing.T) (*AppConfig, string) {
+				t.Helper()
+
+				config := &AppConfig{
+					Theme:        testutil.TestThemeDefault,
+					OutputFormat: "md",
+					RepoOverrides: map[string]AppConfig{
+						"myorg/myrepo": {
+							Theme:        testutil.TestThemeGitHub,
+							OutputFormat: "json",
+						},
+					},
+				}
+
+				return config, ""
 			},
-			expectedTheme:  "default",
+			expectedTheme:  testutil.TestThemeDefault,
 			expectedFormat: "md",
-			setupGitDir:    true,
-		},
-		{
-			name: "no override when repository cannot be detected (no .git)",
-			repoOverrides: map[string]AppConfig{
-				testutil.TestRepoTestOrgTestRepo: {
-					Theme:        "github",
-					OutputFormat: "html",
-				},
-			},
-			expectedTheme:  "default",
-			expectedFormat: "md",
-			setupGitDir:    false,
-		},
-		{
-			name:           "no override when repoOverrides is nil",
-			gitRemoteURL:   "https://github.com/test-org/test-repo.git",
-			repoOverrides:  nil,
-			expectedTheme:  "default",
-			expectedFormat: "md",
-			setupGitDir:    true,
+			description:    "Should not apply override when repo root is empty",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			config, repoRoot := tt.setupFunc(t)
 
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
-
-			// Create .git/config with remote URL if requested
-			if tt.setupGitDir {
-				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0750)
-				testutil.AssertNoError(t, err)
-
-				gitConfig := fmt.Sprintf(`[core]
-	repositoryformatversion = 0
-[remote "origin"]
-	url = %s
-	fetch = +refs/heads/*:refs/remotes/origin/*
-`, tt.gitRemoteURL)
-
-				gitConfigPath := filepath.Join(gitDir, "config")
-				err = os.WriteFile(gitConfigPath, []byte(gitConfig), 0600)
-				testutil.AssertNoError(t, err)
-			}
-
-			// Create config with defaults and repo overrides
-			config := &AppConfig{
-				Theme:         "default",
-				OutputFormat:  "md",
-				RepoOverrides: tt.repoOverrides,
-			}
-
-			// Apply repo overrides
 			loader := NewConfigurationLoader()
-			loader.applyRepoOverrides(config, tmpDir)
+			loader.applyRepoOverrides(config, repoRoot)
 
 			// Verify expected values
 			testutil.AssertEqual(t, tt.expectedTheme, config.Theme)

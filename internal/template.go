@@ -13,7 +13,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
-	"github.com/ivuorinen/gh-action-readme/templates_embed"
+	templatesembed "github.com/ivuorinen/gh-action-readme/templates_embed"
 )
 
 // TemplateOptions defines options for rendering templates.
@@ -289,7 +289,7 @@ func analyzeDependencies(actionPath string, config *AppConfig, gitInfo git.RepoI
 
 // RenderReadme renders a README using a Go template and the parsed action.yml data.
 func RenderReadme(action any, opts TemplateOptions) (string, error) {
-	tmplContent, err := templates_embed.ReadTemplate(opts.TemplatePath)
+	tmplContent, err := templatesembed.ReadTemplate(opts.TemplatePath)
 	if err != nil {
 		return "", err
 	}
@@ -301,11 +301,11 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 		}
 		var head, foot string
 		if opts.HeaderPath != "" {
-			h, _ := templates_embed.ReadTemplate(opts.HeaderPath)
+			h, _ := templatesembed.ReadTemplate(opts.HeaderPath)
 			head = string(h)
 		}
 		if opts.FooterPath != "" {
-			f, _ := templates_embed.ReadTemplate(opts.FooterPath)
+			f, _ := templatesembed.ReadTemplate(opts.FooterPath)
 			foot = string(f)
 		}
 		// Wrap template output in header/footer

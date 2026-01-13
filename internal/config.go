@@ -16,7 +16,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
-	"github.com/ivuorinen/gh-action-readme/templates_embed"
+	templatesembed "github.com/ivuorinen/gh-action-readme/templates_embed"
 )
 
 // AppConfig represents the application configuration that can be used at multiple levels.
@@ -149,7 +149,7 @@ func resolveTemplatePath(templatePath string) string {
 	}
 
 	// Check if template is available in embedded filesystem first
-	if templates_embed.IsEmbeddedTemplateAvailable(templatePath) {
+	if templatesembed.IsEmbeddedTemplateAvailable(templatePath) {
 		// Return a special marker to indicate this should use embedded templates
 		// The actual template loading will handle embedded vs filesystem
 		return templatePath

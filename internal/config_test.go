@@ -22,7 +22,7 @@ func TestInitConfig(t *testing.T) {
 			configFile: "",
 			setupFunc:  nil,
 			expected: &AppConfig{
-				Theme:        "default",
+				Theme:        testutil.TestThemeDefault,
 				OutputFormat: "md",
 				OutputDir:    ".",
 				Template:     "templates/readme.tmpl",
@@ -38,10 +38,10 @@ func TestInitConfig(t *testing.T) {
 			setupFunc: func(t *testing.T, tempDir string) {
 				t.Helper()
 				configPath := filepath.Join(tempDir, testutil.TestFileCustomConfig)
-				testutil.WriteTestFile(t, configPath, testutil.MustReadFixture("professional-config.yml"))
+				testutil.WriteTestFile(t, configPath, testutil.MustReadFixture(testutil.TestFixtureProfessionalConfig))
 			},
 			expected: &AppConfig{
-				Theme:        "professional",
+				Theme:        testutil.TestThemeProfessional,
 				OutputFormat: "html",
 				OutputDir:    "docs",
 				Template:     "custom-template.tmpl",
@@ -154,12 +154,12 @@ output_dir: output
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				// Should have action-level overrides
-				testutil.AssertEqual(t, "professional", config.Theme)
+				testutil.AssertEqual(t, testutil.TestThemeProfessional, config.Theme)
 				testutil.AssertEqual(t, "output", config.OutputDir)
 				// Should inherit from repo level
 				testutil.AssertEqual(t, "html", config.OutputFormat)
 				// Should inherit GitHub token from global config
-				testutil.AssertEqual(t, "ghp_test1234567890abcdefghijklmnopqrstuvwxyz", config.GitHubToken)
+				testutil.AssertEqual(t, testutil.TestTokenStd, config.GitHubToken)
 			},
 		},
 		{
@@ -183,7 +183,7 @@ github_token: config-token
 				t.Helper()
 				// Environment variable should override config file
 				testutil.AssertEqual(t, "env-token", config.GitHubToken)
-				testutil.AssertEqual(t, "minimal", config.Theme)
+				testutil.AssertEqual(t, testutil.TestThemeMinimal, config.Theme)
 			},
 		},
 		{
@@ -205,7 +205,7 @@ verbose: true
 			},
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
-				testutil.AssertEqual(t, "github", config.Theme)
+				testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme)
 				testutil.AssertEqual(t, true, config.Verbose)
 			},
 		},
@@ -236,7 +236,7 @@ verbose: true
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				// Should use the first found config (.ghreadme.yaml has priority)
-				testutil.AssertEqual(t, "minimal", config.Theme)
+				testutil.AssertEqual(t, testutil.TestThemeMinimal, config.Theme)
 				testutil.AssertEqual(t, "json", config.OutputFormat)
 			},
 		},
@@ -335,7 +335,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 	testutil.AssertNoError(t, err)
 
 	// Should have default values
-	testutil.AssertEqual(t, "default", config.Theme)
+	testutil.AssertEqual(t, testutil.TestThemeDefault, config.Theme)
 	testutil.AssertEqual(t, "md", config.OutputFormat)
 	testutil.AssertEqual(t, ".", config.OutputDir)
 }
@@ -351,35 +351,35 @@ func TestResolveThemeTemplate(t *testing.T) {
 	}{
 		{
 			name:         "default theme",
-			theme:        "default",
+			theme:        testutil.TestThemeDefault,
 			expectError:  false,
 			shouldExist:  true,
 			expectedPath: "templates/readme.tmpl",
 		},
 		{
 			name:         "github theme",
-			theme:        "github",
+			theme:        testutil.TestThemeGitHub,
 			expectError:  false,
 			shouldExist:  true,
 			expectedPath: "templates/themes/github/readme.tmpl",
 		},
 		{
 			name:         "gitlab theme",
-			theme:        "gitlab",
+			theme:        testutil.TestThemeGitLab,
 			expectError:  false,
 			shouldExist:  true,
 			expectedPath: "templates/themes/gitlab/readme.tmpl",
 		},
 		{
 			name:         "minimal theme",
-			theme:        "minimal",
+			theme:        testutil.TestThemeMinimal,
 			expectError:  false,
 			shouldExist:  true,
 			expectedPath: "templates/themes/minimal/readme.tmpl",
 		},
 		{
 			name:         "professional theme",
-			theme:        "professional",
+			theme:        testutil.TestThemeProfessional,
 			expectError:  false,
 			shouldExist:  true,
 			expectedPath: "templates/themes/professional/readme.tmpl",
@@ -465,8 +465,7 @@ verbose: true
 `)
 
 	// Set HOME and XDG_CONFIG_HOME to temp directory
-	t.Setenv("HOME", tmpDir)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, testutil.TestDirDotConfig))
+	testutil.SetupConfigEnvironment(t, tmpDir)
 
 	// Use the specific config file path instead of relying on XDG discovery
 	configPath := filepath.Join(
@@ -479,11 +478,11 @@ verbose: true
 	testutil.AssertNoError(t, err)
 
 	// Should have merged values
-	testutil.AssertEqual(t, "github", config.Theme)               // from repo config
-	testutil.AssertEqual(t, "html", config.OutputFormat)          // from repo config
-	testutil.AssertEqual(t, true, config.Verbose)                 // from repo config
-	testutil.AssertEqual(t, "base-token", config.GitHubToken)     // from global config
-	testutil.AssertEqual(t, "schemas/schema.json", config.Schema) // default value
+	testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme) // from repo config
+	testutil.AssertEqual(t, "html", config.OutputFormat)            // from repo config
+	testutil.AssertEqual(t, true, config.Verbose)                   // from repo config
+	testutil.AssertEqual(t, "base-token", config.GitHubToken)       // from global config
+	testutil.AssertEqual(t, "schemas/schema.json", config.Schema)   // default value
 }
 
 // TestGetGitHubToken tests GitHub token resolution with different priority levels.
@@ -917,6 +916,519 @@ func TestMergeSecurityFields(t *testing.T) {
 			if tt.dst.GitHubToken != tt.want.GitHubToken {
 				t.Errorf("GitHubToken = %q, want %q",
 					tt.dst.GitHubToken, tt.want.GitHubToken)
+			}
+		})
+	}
+}
+
+// TestNewGitHubClient_EdgeCases tests GitHub client initialization edge cases.
+func TestNewGitHubClient_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		token       string
+		expectError bool
+		description string
+	}{
+		{
+			name:        "valid classic GitHub token",
+			token:       "ghp_1234567890abcdefghijklmnopqrstuvwxyzABCD",
+			expectError: false,
+			description: "Should create client with valid classic token",
+		},
+		{
+			name:        "valid fine-grained PAT",
+			token:       "github_pat_11AAAAAA0AAAAaAaaAaaaAaa_AaAAaAAaAAAaAAAAAaAAaAAaAaAAaAAAAaAAAAAAAAaAAaAAaAaaAA",
+			expectError: false,
+			description: "Should create client with fine-grained token",
+		},
+		{
+			name:        "empty token",
+			token:       "",
+			expectError: false,
+			description: "Should create client without authentication",
+		},
+		{
+			name:        "short token",
+			token:       "ghp_short",
+			expectError: false,
+			description: "Should create client even with unusual token format",
+		},
+		{
+			name:        "token with special characters",
+			token:       "test-token_123",
+			expectError: false,
+			description: "Should handle tokens with various characters",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, err := NewGitHubClient(tt.token)
+
+			if tt.expectError {
+				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
+
+				if client == nil {
+					t.Error("expected non-nil client")
+				}
+
+				if client != nil {
+					if client.Client == nil {
+						t.Error("expected non-nil GitHub client")
+					}
+					if client.Token != tt.token {
+						t.Errorf("expected token %q, got %q", tt.token, client.Token)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestResolveTemplatePath_EdgeCases tests template path resolution edge cases.
+func TestResolveTemplatePath_EdgeCases(t *testing.T) {
+	// Note: Cannot use t.Parallel() because one subtest uses t.Chdir()
+
+	tests := []struct {
+		name        string
+		setupFunc   func(t *testing.T) (templatePath string, cleanup func())
+		checkFunc   func(t *testing.T, result string)
+		description string
+	}{
+		{
+			name: "absolute path - return as-is",
+			setupFunc: func(t *testing.T) (string, func()) {
+				t.Helper()
+				tmpDir, cleanup := testutil.TempDir(t)
+				absPath := filepath.Join(tmpDir, "template.tmpl")
+				testutil.WriteTestFile(t, absPath, "test template")
+
+				return absPath, cleanup
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if !filepath.IsAbs(result) {
+					t.Errorf("expected absolute path, got: %s", result)
+				}
+			},
+			description: "Absolute paths should be returned unchanged",
+		},
+		{
+			name: "embedded template - available",
+			setupFunc: func(t *testing.T) (string, func()) {
+				t.Helper()
+				// Use a path we know is embedded
+				return "readme.tmpl", func() {}
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if result != "readme.tmpl" {
+					t.Errorf("expected 'readme.tmpl', got: %s", result)
+				}
+			},
+			description: "Embedded templates should return original path",
+		},
+		{
+			name: "embedded template with templates/ prefix",
+			setupFunc: func(t *testing.T) (string, func()) {
+				t.Helper()
+
+				return "templates/readme.tmpl", func() {}
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if result != "templates/readme.tmpl" {
+					t.Errorf("expected 'templates/readme.tmpl', got: %s", result)
+				}
+			},
+			description: "Embedded templates with prefix should return original path",
+		},
+		{
+			name: "filesystem template - exists in current dir",
+			setupFunc: func(t *testing.T) (string, func()) {
+				t.Helper()
+				tmpDir, cleanup := testutil.TempDir(t)
+				// Create template in current directory
+				templateName := "custom-template.tmpl"
+				templatePath := filepath.Join(tmpDir, templateName)
+				testutil.WriteTestFile(t, templatePath, "custom template")
+
+				// Change to tmpDir
+				t.Chdir(tmpDir)
+
+				return templateName, cleanup
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if result == "" {
+					t.Error("expected non-empty result")
+				}
+			},
+			description: "Templates in current directory should be found",
+		},
+		{
+			name: "non-existent template - fallback to original path",
+			setupFunc: func(t *testing.T) (string, func()) {
+				t.Helper()
+
+				return "nonexistent-template.tmpl", func() {}
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if result != "nonexistent-template.tmpl" {
+					t.Errorf("expected original path, got: %s", result)
+				}
+			},
+			description: "Non-existent templates should return original path",
+		},
+		{
+			name: "empty path",
+			setupFunc: func(t *testing.T) (string, func()) {
+				t.Helper()
+
+				return "", func() {}
+			},
+			checkFunc: func(t *testing.T, _ string) {
+				t.Helper()
+				// Empty path may return binary directory or empty string
+				// depending on whether GetBinaryDir succeeds
+				// Just verify it doesn't crash
+			},
+			description: "Empty path should not crash",
+		},
+		{
+			name: "relative path with subdirectory",
+			setupFunc: func(t *testing.T) (string, func()) {
+				t.Helper()
+
+				return "themes/github/readme.tmpl", func() {}
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				// Should return the path (either embedded or fallback)
+				if result == "" {
+					t.Error("expected non-empty result")
+				}
+			},
+			description: "Relative paths with subdirectories should be resolved",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Note: Cannot use t.Parallel() because one subtest uses t.Chdir()
+
+			templatePath, cleanup := tt.setupFunc(t)
+			defer cleanup()
+
+			result := resolveTemplatePath(templatePath)
+
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestDetectRepositoryName_EdgeCases tests repository name detection edge cases.
+func TestDetectRepositoryName_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		setupFunc      func(t *testing.T) string
+		expectedResult string
+		description    string
+	}{
+		{
+			name: "empty repo root",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+
+				return ""
+			},
+			expectedResult: "",
+			description:    "Empty repo root should return empty string",
+		},
+		{
+			name: "non-existent directory",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+
+				return "/nonexistent/path/to/repo"
+			},
+			expectedResult: "",
+			description:    "Non-existent directory should return empty string",
+		},
+		{
+			name: "directory without git",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				return tmpDir
+			},
+			expectedResult: "",
+			description:    "Directory without .git should return empty string",
+		},
+		{
+			name: "valid git repository with GitHub remote",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.InitGitRepo(t, tmpDir)
+
+				// Add GitHub remote
+				configContent := `[remote "origin"]
+	url = https://github.com/testorg/testrepo.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+`
+				configPath := filepath.Join(tmpDir, ".git", "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectedResult: "testorg/testrepo",
+			description:    "Valid GitHub repo should return org/repo",
+		},
+		{
+			name: "git repository with SSH remote",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.InitGitRepo(t, tmpDir)
+
+				// Add SSH remote
+				configContent := `[remote "origin"]
+	url = git@github.com:sshorg/sshrepo.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+`
+				configPath := filepath.Join(tmpDir, ".git", "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectedResult: "sshorg/sshrepo",
+			description:    "SSH remote should be parsed correctly",
+		},
+		{
+			name: "git repository without remote",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.InitGitRepo(t, tmpDir)
+
+				return tmpDir
+			},
+			expectedResult: "",
+			description:    "Repository without remote should return empty string",
+		},
+		{
+			name: "git repository with non-GitHub remote",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.InitGitRepo(t, tmpDir)
+
+				// Add GitLab remote
+				configContent := `[remote "origin"]
+	url = https://gitlab.com/glorg/glrepo.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+`
+				configPath := filepath.Join(tmpDir, ".git", "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectedResult: "",
+			description:    "Non-GitHub remote should return empty string",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repoRoot := tt.setupFunc(t)
+			result := DetectRepositoryName(repoRoot)
+
+			if result != tt.expectedResult {
+				t.Errorf("DetectRepositoryName() = %q, want %q (test: %s)",
+					result, tt.expectedResult, tt.description)
+			}
+		})
+	}
+}
+
+// TestLoadConfiguration_EdgeCases tests configuration loading edge cases.
+func TestLoadConfiguration_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupFunc   func(t *testing.T) (configFile, repoRoot, currentDir string)
+		expectError bool
+		checkFunc   func(t *testing.T, config *AppConfig)
+		description string
+	}{
+		{
+			name: "empty config file path with defaults",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.SetupConfigEnvironment(t, tmpDir)
+
+				return "", tmpDir, tmpDir
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				if config == nil {
+					t.Fatal("expected non-nil config")
+				}
+				// Should have default values
+				if config.Theme == "" {
+					t.Error("expected non-empty theme (default)")
+				}
+			},
+			description: "Empty config file should load defaults",
+		},
+		{
+			name: "all paths empty",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				t.Setenv("HOME", tmpDir)
+
+				return "", "", ""
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				if config == nil {
+					t.Fatal("expected non-nil config")
+				}
+			},
+			description: "All empty paths should still return config",
+		},
+		{
+			name: "config file with minimal values",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				configPath := filepath.Join(tmpDir, "config.yaml")
+				testutil.WriteTestFile(t, configPath, "theme: minimal\n")
+
+				return configPath, tmpDir, tmpDir
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				testutil.AssertEqual(t, testutil.TestThemeMinimal, config.Theme)
+			},
+			description: "Minimal config should merge with defaults",
+		},
+		{
+			name: "invalid config file path",
+			setupFunc: func(t *testing.T) (string, string, string) {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+
+				return filepath.Join(tmpDir, "nonexistent.yaml"), tmpDir, tmpDir
+			},
+			expectError: true,
+			description: "Invalid config file path should error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configFile, repoRoot, currentDir := tt.setupFunc(t)
+
+			config, err := LoadConfiguration(configFile, repoRoot, currentDir)
+
+			if tt.expectError {
+				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
+
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, config)
+				}
+			}
+		})
+	}
+}
+
+// TestInitConfig_EdgeCases tests config initialization edge cases.
+func TestInitConfig_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupFunc   func(t *testing.T) string
+		expectError bool
+		checkFunc   func(t *testing.T, config *AppConfig)
+		description string
+	}{
+		{
+			name: "empty config file path - use default",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				testutil.SetupConfigEnvironment(t, tmpDir)
+
+				return ""
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				if config == nil {
+					t.Fatal("expected non-nil config")
+				}
+				// Should have default values
+				testutil.AssertEqual(t, testutil.TestThemeDefault, config.Theme)
+			},
+			description: "Empty path should use default config",
+		},
+		{
+			name: "config file with empty values",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir, _ := testutil.TempDir(t)
+				configPath := filepath.Join(tmpDir, "empty.yaml")
+				testutil.WriteTestFile(t, configPath, "---\n")
+
+				return configPath
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, config *AppConfig) {
+				t.Helper()
+				// Should still have default values filled in
+				if config.Theme == "" {
+					t.Error("expected non-empty theme from defaults")
+				}
+			},
+			description: "Empty config should be filled with defaults",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPath := tt.setupFunc(t)
+
+			config, err := InitConfig(configPath)
+
+			if tt.expectError {
+				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
+
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, config)
+				}
 			}
 		})
 	}

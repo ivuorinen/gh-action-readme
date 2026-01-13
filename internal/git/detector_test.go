@@ -1,7 +1,6 @@
 package git
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -26,10 +25,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 
 				// Create subdirectory to test from
 				subDir := filepath.Join(tmpDir, "subdir", "nested")
-				err := os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
-				if err != nil {
-					t.Fatalf("failed to create subdirectory: %v", err)
-				}
+				testutil.CreateTestDir(t, subDir)
 
 				return subDir
 			},
@@ -55,10 +51,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 				t.Helper()
 				// Create subdirectory without .git
 				subDir := filepath.Join(tmpDir, "subdir")
-				err := os.MkdirAll(subDir, 0750) // #nosec G301 -- test directory permissions
-				if err != nil {
-					t.Fatalf("failed to create subdirectory: %v", err)
-				}
+				testutil.CreateTestDir(t, subDir)
 
 				return subDir
 			},
@@ -155,11 +148,7 @@ func TestDetectGitRepository(t *testing.T) {
 			name: "SSH remote URL",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
-				if err != nil {
-					t.Fatalf("failed to create .git directory: %v", err)
-				}
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
 
 				configContent := `[remote "origin"]
 	url = git@github.com:owner/repo.git
@@ -193,11 +182,7 @@ func TestDetectGitRepository(t *testing.T) {
 			name: "git repository without origin remote",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				gitDir := filepath.Join(tmpDir, ".git")
-				err := os.MkdirAll(gitDir, 0750) // #nosec G301 -- test directory permissions
-				if err != nil {
-					t.Fatalf("failed to create .git directory: %v", err)
-				}
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
 
 				configContent := `[core]
 	repositoryformatversion = 0
@@ -426,6 +411,512 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 
 			result := tt.repoInfo.GenerateUsesStatement(tt.actionName, tt.version)
 			testutil.AssertEqual(t, tt.expected, result)
+		})
+	}
+}
+
+// TestGetDefaultBranch_Fallbacks tests branch detection fallback logic.
+func TestGetDefaultBranch_Fallbacks(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		setupFunc      func(t *testing.T, tmpDir string) string
+		expectedBranch string
+	}{
+		{
+			name: "git config with main branch",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+				configContent := `[remote "origin"]
+	url = https://github.com/user/repo
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+`
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectedBranch: "main",
+		},
+		{
+			name: "git config with master branch - returns main fallback",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+				configContent := `[remote "origin"]
+	url = https://github.com/user/repo
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+`
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectedBranch: "main", // getDefaultBranch doesn't parse config, falls back to "main"
+		},
+		{
+			name: "git config with develop branch - returns main fallback",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+				configContent := `[remote "origin"]
+	url = https://github.com/user/repo
+[branch "develop"]
+	remote = origin
+	merge = refs/heads/develop
+`
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectedBranch: "main", // getDefaultBranch doesn't parse config, falls back to "main"
+		},
+		{
+			name: "no git config - returns main fallback",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				_ = testutil.SetupGitDirectory(t, tmpDir)
+
+				return tmpDir
+			},
+			expectedBranch: "main", // Falls back to "main" when git command fails
+		},
+		{
+			name: "malformed git config - returns main fallback",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+				configContent := `[branch this is malformed`
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectedBranch: "main", // Falls back to "main" when git command fails
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			repoDir := tt.setupFunc(t, tmpDir)
+			branch := getDefaultBranch(repoDir)
+
+			testutil.AssertEqual(t, tt.expectedBranch, branch)
+		})
+	}
+}
+
+// TestGetRemoteURL_AllSources tests all remote URL detection methods.
+func TestGetRemoteURL_AllSources(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		setupFunc   func(t *testing.T, tmpDir string) string
+		expectError bool
+		expectedURL string
+	}{
+		{
+			name: "remote from git config - https",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+				configContent := `[remote "origin"]
+	url = https://github.com/test/repo.git
+`
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectError: false,
+			expectedURL: "https://github.com/test/repo.git",
+		},
+		{
+			name: "remote from git config - ssh",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+				configContent := `[remote "origin"]
+	url = git@github.com:user/repo.git
+`
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectError: false,
+			expectedURL: "git@github.com:user/repo.git",
+		},
+		{
+			name: "multiple remotes - origin takes precedence",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+				configContent := `[remote "upstream"]
+	url = https://github.com/upstream/repo
+[remote "origin"]
+	url = https://github.com/origin/repo
+`
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+
+				return tmpDir
+			},
+			expectError: false,
+			expectedURL: "https://github.com/origin/repo",
+		},
+		{
+			name: "no remote configured",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				_ = testutil.SetupGitDirectory(t, tmpDir)
+
+				return tmpDir
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			repoDir := tt.setupFunc(t, tmpDir)
+			url, err := getRemoteURL(repoDir)
+
+			if tt.expectError {
+				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
+				testutil.AssertEqual(t, tt.expectedURL, url)
+			}
+		})
+	}
+}
+
+// TestGetRemoteURLFromConfig_EdgeCases tests git config parsing with edge cases.
+func TestGetRemoteURLFromConfig_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		configContent string
+		expectError   bool
+		expectedURL   string
+		description   string
+	}{
+		{
+			name: "standard git config",
+			configContent: `[remote "origin"]
+	url = https://github.com/user/repo
+`,
+			expectError: false,
+			expectedURL: "https://github.com/user/repo",
+			description: "Standard git config",
+		},
+		{
+			name: "config with comments",
+			configContent: `# This is a comment
+[remote "origin"]
+	# Another comment
+	url = https://github.com/user/repo
+	fetch = +refs/heads/*:refs/remotes/origin/*
+`,
+			expectError: false,
+			expectedURL: "https://github.com/user/repo",
+			description: "Config with comments should be parsed",
+		},
+		{
+			name:          "empty config",
+			configContent: ``,
+			expectError:   true,
+			description:   "Empty config",
+		},
+		{
+			name: "incomplete section",
+			configContent: `[remote "origin"
+	url = https://github.com/user/repo
+`,
+			expectError: true,
+			description: "Malformed section",
+		},
+		{
+			name: "url with spaces",
+			configContent: `[remote "origin"]
+	url = https://github.com/user name/repo name
+`,
+			expectError: false,
+			expectedURL: "https://github.com/user name/repo name",
+			description: "URL with spaces should be preserved",
+		},
+		{
+			name: "multiple origin sections - first wins",
+			configContent: `[remote "origin"]
+	url = https://github.com/first/repo
+[remote "origin"]
+	url = https://github.com/second/repo
+`,
+			expectError: false,
+			expectedURL: "https://github.com/first/repo",
+			description: "First origin section takes precedence",
+		},
+		{
+			name: "ssh url format",
+			configContent: `[remote "origin"]
+	url = git@gitlab.com:user/repo.git
+`,
+			expectError: false,
+			expectedURL: "git@gitlab.com:user/repo.git",
+			description: "SSH URL format",
+		},
+		{
+			name: "url with trailing whitespace",
+			configContent: `[remote "origin"]
+	url = https://github.com/user/repo
+`,
+			expectError: false,
+			expectedURL: "https://github.com/user/repo",
+			description: "Trailing whitespace should be trimmed",
+		},
+		{
+			name: "config without url field",
+			configContent: `[remote "origin"]
+	fetch = +refs/heads/*:refs/remotes/origin/*
+`,
+			expectError: true,
+			description: "Remote without URL",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			gitDir := testutil.SetupGitDirectory(t, tmpDir)
+
+			if tt.configContent != "" {
+				configPath := filepath.Join(gitDir, "config")
+				testutil.WriteTestFile(t, configPath, tt.configContent)
+			}
+
+			url, err := getRemoteURLFromConfig(tmpDir)
+
+			if tt.expectError {
+				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
+				testutil.AssertEqual(t, tt.expectedURL, url)
+			}
+		})
+	}
+}
+
+// TestFindRepositoryRoot_EdgeCases tests additional edge cases for repository root detection.
+func TestFindRepositoryRoot_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		setupFunc   func(t *testing.T, tmpDir string) string
+		expectError bool
+		checkFunc   func(t *testing.T, tmpDir, repoRoot string)
+	}{
+		{
+			name: "deeply nested subdirectory",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				testutil.SetupGitDirectory(t, tmpDir)
+
+				deepPath := filepath.Join(tmpDir, "a", "b", "c", "d", "e")
+				testutil.CreateTestDir(t, deepPath)
+
+				return deepPath
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, tmpDir, repoRoot string) {
+				t.Helper()
+				testutil.AssertEqual(t, tmpDir, repoRoot)
+			},
+		},
+		{
+			name: "git worktree with .git file",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				gitFile := filepath.Join(tmpDir, ".git")
+				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/worktree")
+
+				return tmpDir
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, tmpDir, repoRoot string) {
+				t.Helper()
+				testutil.AssertEqual(t, tmpDir, repoRoot)
+			},
+		},
+		{
+			name: "current directory is repo root",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				testutil.SetupGitDirectory(t, tmpDir)
+
+				return tmpDir
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, tmpDir, repoRoot string) {
+				t.Helper()
+				testutil.AssertEqual(t, tmpDir, repoRoot)
+			},
+		},
+		{
+			name: "path with spaces",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				testutil.SetupGitDirectory(t, tmpDir)
+
+				spacePath := filepath.Join(tmpDir, "path with spaces")
+				testutil.CreateTestDir(t, spacePath)
+
+				return spacePath
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, tmpDir, repoRoot string) {
+				t.Helper()
+				testutil.AssertEqual(t, tmpDir, repoRoot)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			testDir := tt.setupFunc(t, tmpDir)
+			repoRoot, err := FindRepositoryRoot(testDir)
+
+			if tt.expectError {
+				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
+				tt.checkFunc(t, tmpDir, repoRoot)
+			}
+		})
+	}
+}
+
+// TestParseGitHubURL_EdgeCases tests additional URL parsing edge cases.
+func TestParseGitHubURL_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		remoteURL    string
+		expectedOrg  string
+		expectedRepo string
+		description  string
+	}{
+		{
+			name:         "gitlab https url",
+			remoteURL:    "https://gitlab.com/owner/repo.git",
+			expectedOrg:  "",
+			expectedRepo: "",
+			description:  "Non-GitHub URLs return empty",
+		},
+		{
+			name:         "github url with subgroups",
+			remoteURL:    "https://github.com/org/subgroup/repo.git",
+			expectedOrg:  "org",
+			expectedRepo: "subgroup", // Regex only captures first two path segments
+			description:  "GitHub URLs with subpaths only capture org/subgroup",
+		},
+		{
+			name:         "ssh url without git suffix",
+			remoteURL:    "git@github.com:owner/repo",
+			expectedOrg:  "owner",
+			expectedRepo: "repo",
+			description:  "SSH URL without .git suffix",
+		},
+		{
+			name:         "url with trailing slash",
+			remoteURL:    "https://github.com/owner/repo/",
+			expectedOrg:  "owner",
+			expectedRepo: "repo",
+			description:  "Handles trailing slash",
+		},
+		{
+			name:         "url with query parameters",
+			remoteURL:    "https://github.com/owner/repo?param=value",
+			expectedOrg:  "owner",
+			expectedRepo: "repo?param=value", // Regex doesn't strip query params
+			description:  "Query parameters are not stripped by regex",
+		},
+		{
+			name:         "malformed ssh url",
+			remoteURL:    "git@github.com/owner/repo.git",
+			expectedOrg:  "owner",
+			expectedRepo: "repo", // Actually matches the pattern
+			description:  "Malformed SSH URL still matches pattern",
+		},
+		{
+			name:         "url with username",
+			remoteURL:    "https://user@github.com/owner/repo.git",
+			expectedOrg:  "owner",
+			expectedRepo: "repo",
+			description:  "Handles URL with username",
+		},
+		{
+			name:         "github enterprise url",
+			remoteURL:    "https://github.company.com/owner/repo.git",
+			expectedOrg:  "",
+			expectedRepo: "",
+			description:  "GitHub Enterprise URLs return empty (not github.com)",
+		},
+		{
+			name:         "short ssh format",
+			remoteURL:    "github.com:owner/repo.git",
+			expectedOrg:  "owner",
+			expectedRepo: "repo", // Actually matches the pattern with ':'
+			description:  "Short SSH format matches the regex pattern",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			org, repo := parseGitHubURL(tt.remoteURL)
+
+			testutil.AssertEqual(t, tt.expectedOrg, org)
+			testutil.AssertEqual(t, tt.expectedRepo, repo)
 		})
 	}
 }
