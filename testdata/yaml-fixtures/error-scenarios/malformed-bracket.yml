@@ -1,0 +1,4 @@
+name: Test Action
+description: Test
+invalid-yaml: [
+  - item

@@ -381,19 +381,13 @@ const (
 	TestMsgFileContentMismatch = "file content mismatch in %s"
 )
 
-// Malformed YAML test content for reducing string duplication in error scenario tests.
+// Malformed YAML fixture paths for reducing string duplication in error scenario tests.
 const (
-	// TestYAMLMalformedBracket has unclosed bracket for testing YAML parse errors.
-	TestYAMLMalformedBracket = `name: Test Action
-description: Test
-invalid-yaml: [
-  - item`
+	// TestFixtureMalformedBracket has unclosed bracket for testing YAML parse errors.
+	TestFixtureMalformedBracket = "error-scenarios/malformed-bracket.yml"
 
-	// TestYAMLMalformedIndentation has invalid indentation for testing YAML parse errors.
-	TestYAMLMalformedIndentation = `name: Test Action
-  description: Test
-    runs:
-  using: composite`
+	// TestFixtureMalformedIndentation has invalid indentation for testing YAML parse errors.
+	TestFixtureMalformedIndentation = "error-scenarios/malformed-indentation.yml"
 )
 
 // Additional assertion message formats for reducing string duplication in tests.
