@@ -117,10 +117,10 @@ func RunMapValidationTests(t *testing.T, tests []MapValidationTestCase) {
 
 // StringSliceTestCase represents a test case for string slice operations.
 type StringSliceTestCase struct {
-	Name string
-	Input  []string
-	Want   []string
-	Fn     func([]string) []string
+	Name  string
+	Input []string
+	Want  []string
+	Fn    func([]string) []string
 }
 
 // RunStringSliceTests runs tests on string slice functions.
@@ -148,5 +148,6 @@ func slicesEqual(a, b []string) bool {
 			return false
 		}
 	}
+
 	return true
 }

@@ -30,12 +30,7 @@ func validatePinnedUpdateSuccess(t *testing.T, actionPath string, validateBackup
 func validatePinnedUpdateRollback(t *testing.T, actionPath, originalContent string) {
 	t.Helper()
 
-	currentContent, err := os.ReadFile(actionPath) // #nosec G304 -- test file path
-	testutil.AssertNoError(t, err)
-
-	if string(currentContent) != originalContent {
-		t.Error("rollback failed, file was modified")
-	}
+	testutil.ValidateRollback(t, actionPath, originalContent)
 
 	// Backup should be removed after rollback
 	backupPath := actionPath + appconstants.BackupExtension

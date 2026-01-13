@@ -10,6 +10,49 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// testOutputMethod is a generic helper for testing output methods that follow the same pattern.
+func testOutputMethod(t *testing.T, testMessage, expectedEmoji string, methodFunc func(*ColoredOutput, string)) {
+	t.Helper()
+
+	tests := []struct {
+		name      string
+		quiet     bool
+		message   string
+		wantEmpty bool
+	}{
+		{
+			name:      "message displayed",
+			quiet:     false,
+			message:   testMessage,
+			wantEmpty: false,
+		},
+		{
+			name:      testutil.TestMsgQuietSuppressOutput,
+			quiet:     true,
+			message:   testMessage,
+			wantEmpty: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
+
+			captured := testutil.CaptureStdout(func() {
+				methodFunc(output, tt.message)
+			})
+
+			if tt.wantEmpty && captured != "" {
+				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
+			}
+
+			if !tt.wantEmpty && !strings.Contains(captured, expectedEmoji) {
+				t.Errorf("Output missing %s emoji: %q", expectedEmoji, captured)
+			}
+		})
+	}
+}
+
 // TestNewColoredOutput tests colored output creation.
 func TestNewColoredOutput(t *testing.T) {
 	tests := []struct {
@@ -165,43 +208,9 @@ func TestError(t *testing.T) {
 
 // TestWarning tests warning message output.
 func TestWarning(t *testing.T) {
-	tests := []struct {
-		name      string
-		quiet     bool
-		message   string
-		wantEmpty bool
-	}{
-		{
-			name:      "warning message displayed",
-			quiet:     false,
-			message:   "Deprecated feature",
-			wantEmpty: false,
-		},
-		{
-			name:      testutil.TestMsgQuietSuppressOutput,
-			quiet:     true,
-			message:   "Deprecated feature",
-			wantEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
-
-			captured := testutil.CaptureStdout(func() {
-				output.Warning(tt.message)
-			})
-
-			if tt.wantEmpty && captured != "" {
-				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
-			}
-
-			if !tt.wantEmpty && !strings.Contains(captured, "⚠️") {
-				t.Errorf("Output missing warning emoji: %q", captured)
-			}
-		})
-	}
+	testOutputMethod(t, "Deprecated feature", "⚠️", func(o *ColoredOutput, msg string) {
+		o.Warning(msg)
+	})
 }
 
 // TestInfo tests info message output.
@@ -247,43 +256,9 @@ func TestInfo(t *testing.T) {
 
 // TestProgress tests progress message output.
 func TestProgress(t *testing.T) {
-	tests := []struct {
-		name      string
-		quiet     bool
-		message   string
-		wantEmpty bool
-	}{
-		{
-			name:      "progress message displayed",
-			quiet:     false,
-			message:   "Loading data...",
-			wantEmpty: false,
-		},
-		{
-			name:      testutil.TestMsgQuietSuppressOutput,
-			quiet:     true,
-			message:   "Loading data...",
-			wantEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := &ColoredOutput{Quiet: tt.quiet, NoColor: true}
-
-			captured := testutil.CaptureStdout(func() {
-				output.Progress(tt.message)
-			})
-
-			if tt.wantEmpty && captured != "" {
-				t.Errorf(testutil.TestMsgNoOutputInQuiet, captured)
-			}
-
-			if !tt.wantEmpty && !strings.Contains(captured, "🔄") {
-				t.Errorf("Output missing progress emoji: %q", captured)
-			}
-		})
-	}
+	testOutputMethod(t, "Loading data...", "🔄", func(o *ColoredOutput, msg string) {
+		o.Progress(msg)
+	})
 }
 
 // TestBold tests bold text output.
