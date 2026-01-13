@@ -77,7 +77,7 @@ func getSharedTestBinary(t *testing.T) string {
 		// Create a shared temporary directory that will be cleaned up in TestMain
 		// Note: Cannot use t.TempDir() here because we need the directory to persist
 		// across all tests and be cleaned up only at the end in TestMain
-		tmpDir, err := os.MkdirTemp("", "testutil.TestBinaryName-shared-test-*") //nolint:usetesting
+		tmpDir, err := os.MkdirTemp("", testutil.TestBinaryName+"-shared-test-*") //nolint:usetesting
 		if err != nil {
 			errSharedBinary = err
 
@@ -1317,17 +1317,14 @@ func TestProgressBarIntegration(t *testing.T) {
 
 			// Verify operation completed successfully (files were generated)
 			if strings.Contains(tt.cmd[0], "gen") {
-				patterns := []string{
-					filepath.Join(tmpDir, testutil.TestPatternREADME),
-					filepath.Join(tmpDir, testutil.TestPatternREADMEAll),
-					filepath.Join(tmpDir, testutil.TestPatternHTML),
-				}
-
 				var foundFiles []string
-				for _, pattern := range patterns {
-					files, _ := filepath.Glob(pattern)
-					foundFiles = append(foundFiles, files...)
-				}
+
+				// Use findFilesRecursive for recursive patterns
+				readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
+				foundFiles = append(foundFiles, readmeFiles...)
+
+				htmlFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternHTML)
+				foundFiles = append(foundFiles, htmlFiles...)
 
 				if len(foundFiles) == 0 {
 					t.Logf("No documentation files found, but progress indicators were present")

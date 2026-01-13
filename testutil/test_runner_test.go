@@ -60,6 +60,8 @@ func TestRunErrorTests(t *testing.T) {
 func TestContains(t *testing.T) {
 	t.Parallel()
 
+	const testString = "hello world"
+
 	tests := []struct {
 		name   string
 		s      string
@@ -68,9 +70,9 @@ func TestContains(t *testing.T) {
 	}{
 		{"empty substring", "hello", "", true},
 		{"exact match", "test", "test", true},
-		{"substring at start", "hello world", "hello", true},
-		{"substring at end", "hello world", "world", true},
-		{"substring in middle", "hello world", "lo wo", true},
+		{"substring at start", testString, "hello", true},
+		{"substring at end", testString, "world", true},
+		{"substring in middle", testString, "lo wo", true},
 		{"not found", "hello", "goodbye", false},
 		{"longer substring", "hi", "hello", false},
 	}

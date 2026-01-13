@@ -502,7 +502,12 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string
 
 	// Handle absolute paths - allow them as-is (user's explicit choice)
 	if filepath.IsAbs(filename) {
-		return filepath.Clean(filename), nil
+		cleaned := filepath.Clean(filename)
+		if cleaned != filename {
+			return "", fmt.Errorf("absolute path contains extraneous components: %s", filename)
+		}
+
+		return cleaned, nil
 	}
 
 	// For relative paths, join with output directory
