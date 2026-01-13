@@ -72,18 +72,7 @@ func TestGetEmbeddedTemplate(t *testing.T) {
 
 			content, err := GetEmbeddedTemplate(tt.templatePath)
 
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				if len(content) == 0 {
-					t.Errorf("expected non-empty content")
-				}
-			}
+			assertTemplateLoaded(t, content, err, tt.expectError, 1)
 		})
 	}
 }
@@ -204,18 +193,7 @@ func TestReadTemplate(t *testing.T) {
 
 			content, err := ReadTemplate(tt.templatePath)
 
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error but got none for path %q", tt.templatePath)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error for path %q: %v", tt.templatePath, err)
-				}
-				if len(content) == 0 {
-					t.Errorf("expected non-empty content for path %q", tt.templatePath)
-				}
-			}
+			assertTemplateLoaded(t, content, err, tt.expectError, 1)
 		})
 	}
 }

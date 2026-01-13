@@ -529,25 +529,7 @@ func TestValidateVariables_InvalidFormats(t *testing.T) {
 			result := &ValidationResult{Valid: true}
 			validator.validateVariables(variables, result)
 
-			if tt.expectError {
-				found := false
-				for _, err := range result.Errors {
-					if strings.Contains(err.Message, tt.errorMsg) {
-						found = true
-
-						break
-					}
-				}
-				if !found {
-					t.Errorf("expected error containing %q for variable %s", tt.errorMsg, tt.varName)
-				}
-			} else {
-				for _, err := range result.Errors {
-					if strings.Contains(err.Field, "variables") {
-						t.Errorf("unexpected error for valid variable: %s", err.Message)
-					}
-				}
-			}
+			assertValidationError(t, result, "variables", tt.expectError, tt.errorMsg)
 		})
 	}
 }
@@ -588,25 +570,7 @@ func TestValidateOutputDir_Paths(t *testing.T) {
 			result := &ValidationResult{Valid: true}
 			validator.validateOutputDir(tt.outputDir, result)
 
-			if tt.expectError {
-				found := false
-				for _, err := range result.Errors {
-					if strings.Contains(err.Message, tt.errorMsg) {
-						found = true
-
-						break
-					}
-				}
-				if !found {
-					t.Errorf("expected error containing %q", tt.errorMsg)
-				}
-			} else {
-				for _, err := range result.Errors {
-					if strings.Contains(err.Field, "output") {
-						t.Errorf("unexpected error for valid path: %s", err.Message)
-					}
-				}
-			}
+			assertValidationError(t, result, "output_dir", tt.expectError, tt.errorMsg)
 		})
 	}
 }
