@@ -15,7 +15,7 @@ import (
 func SetupGitDirectory(t *testing.T, tmpDir string) string {
 	t.Helper()
 	gitDir := filepath.Join(tmpDir, appconstants.DirGit)
-	err := os.MkdirAll(gitDir, 0750)
+	err := os.MkdirAll(gitDir, appconstants.FilePermDir)
 	AssertNoError(t, err)
 
 	return gitDir
@@ -26,7 +26,7 @@ func SetupGitDirectory(t *testing.T, tmpDir string) string {
 // Used in git detector tests to reduce duplication.
 func SetupGitConfig(t *testing.T, gitDir, remoteURL string) {
 	t.Helper()
-	configPath := filepath.Join(gitDir, "config")
+	configPath := filepath.Join(gitDir, TestCmdConfig)
 	config := fmt.Sprintf(`[remote "origin"]
 	url = %s
 	fetch = +refs/heads/*:refs/remotes/origin/*
@@ -48,7 +48,7 @@ func CreateGitConfigWithRemote(t *testing.T, gitDir, remoteURL, branchName strin
 	merge = refs/heads/%s
 `, remoteURL, branchName, branchName)
 
-	configPath := filepath.Join(gitDir, "config")
+	configPath := filepath.Join(gitDir, TestCmdConfig)
 	WriteTestFile(t, configPath, configContent)
 
 	return configPath
@@ -67,7 +67,7 @@ func WriteGitConfigFile(t *testing.T, baseDir, configContent string) string {
 	gitDir := filepath.Join(baseDir, appconstants.DirGit)
 	CreateTestDir(t, gitDir)
 
-	configPath := filepath.Join(gitDir, "config")
+	configPath := filepath.Join(gitDir, TestCmdConfig)
 	WriteTestFile(t, configPath, configContent)
 
 	return configPath

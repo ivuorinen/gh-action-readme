@@ -213,7 +213,7 @@ func parseGitHubURL(url string) (organization, repository string) {
 			repo := matches[2]
 
 			// Remove .git suffix if present
-			repo = strings.TrimSuffix(repo, ".git")
+			repo = strings.TrimSuffix(repo, appconstants.DirGit)
 
 			return org, repo
 		}
