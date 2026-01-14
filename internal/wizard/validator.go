@@ -206,7 +206,13 @@ func (v *ConfigValidator) validateVersion(version string, result *ValidationResu
 
 // validateTheme validates the theme field.
 func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) {
-	validThemes := []string{"default", "github", "gitlab", "minimal", "professional"}
+	validThemes := []string{
+		appconstants.ThemeDefault,
+		appconstants.ThemeGitHub,
+		appconstants.ThemeGitLab,
+		appconstants.ThemeMinimal,
+		appconstants.ThemeProfessional,
+	}
 
 	found := false
 	for _, validTheme := range validThemes {
@@ -392,9 +398,9 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 	}
 
 	validRunners := []string{
-		"ubuntu-latest", "ubuntu-22.04", "ubuntu-20.04",
-		"windows-latest", "windows-2022", "windows-2019",
-		"macos-latest", "macos-13", "macos-12", "macos-11",
+		appconstants.RunnerUbuntuLatest, "ubuntu-22.04", "ubuntu-20.04",
+		appconstants.RunnerWindowsLatest, "windows-2022", "windows-2019",
+		appconstants.RunnerMacosLatest, "macos-13", "macos-12", "macos-11",
 	}
 
 	for _, runner := range runsOn {

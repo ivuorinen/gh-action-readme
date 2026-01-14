@@ -59,7 +59,7 @@ type DetectedSettings struct {
 func (d *ProjectDetector) DetectProjectSettings() (*DetectedSettings, error) {
 	settings := &DetectedSettings{
 		SuggestedPermissions: make(map[string]string),
-		SuggestedRunsOn:      []string{"ubuntu-latest"},
+		SuggestedRunsOn:      []string{appconstants.RunnerUbuntuLatest},
 	}
 
 	// Detect repository information
@@ -497,15 +497,19 @@ func (d *ProjectDetector) suggestTheme(settings *DetectedSettings) {
 
 // suggestRunsOn suggests appropriate runners based on language/framework.
 func (d *ProjectDetector) suggestRunsOn(settings *DetectedSettings) {
-	if len(settings.SuggestedRunsOn) != 1 || settings.SuggestedRunsOn[0] != "ubuntu-latest" {
+	if len(settings.SuggestedRunsOn) != 1 || settings.SuggestedRunsOn[0] != appconstants.RunnerUbuntuLatest {
 		return
 	}
 
 	switch settings.Language {
 	case appconstants.LangJavaScriptTypeScript:
-		settings.SuggestedRunsOn = []string{"ubuntu-latest", "windows-latest", "macos-latest"}
+		settings.SuggestedRunsOn = []string{
+			appconstants.RunnerUbuntuLatest,
+			appconstants.RunnerWindowsLatest,
+			appconstants.RunnerMacosLatest,
+		}
 	case appconstants.LangGo, appconstants.LangPython:
-		settings.SuggestedRunsOn = []string{"ubuntu-latest"}
+		settings.SuggestedRunsOn = []string{appconstants.RunnerUbuntuLatest}
 	}
 }
 

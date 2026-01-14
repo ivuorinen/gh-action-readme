@@ -233,7 +233,7 @@ func DefaultAppConfig() *AppConfig {
 
 		// Workflow Requirements
 		Permissions: map[string]string{},
-		RunsOn:      []string{"ubuntu-latest"},
+		RunsOn:      []string{appconstants.RunnerUbuntuLatest},
 
 		// Features
 		AnalyzeDependencies: false,
