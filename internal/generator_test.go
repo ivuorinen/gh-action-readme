@@ -1245,6 +1245,27 @@ func (c *testCapturedOutput) FormatContextualError(err *apperrors.ContextualErro
 	return ""
 }
 
+// verifyReportResultsOutput checks expected vs actual output message counts.
+func verifyReportResultsOutput(t *testing.T, output *testCapturedOutput, wantBold, wantError bool) {
+	t.Helper()
+
+	// Verify Bold message
+	gotBold := len(output.BoldMessages) > 0
+	if wantBold && !gotBold {
+		t.Error("expected Bold message, got none")
+	} else if !wantBold && gotBold {
+		t.Errorf("expected no Bold messages, got %d", len(output.BoldMessages))
+	}
+
+	// Verify Error messages
+	gotError := len(output.ErrorMessages) > 0
+	if wantError && !gotError {
+		t.Error("expected Error messages, got none")
+	} else if !wantError && gotError {
+		t.Errorf("expected no Error messages, got %d", len(output.ErrorMessages))
+	}
+}
+
 // TestGeneratorReportResultsOutput tests reportResults output in non-quiet mode.
 func TestGeneratorReportResultsOutput(t *testing.T) {
 	t.Parallel()
@@ -1310,27 +1331,7 @@ func TestGeneratorReportResultsOutput(t *testing.T) {
 			gen := NewGeneratorWithDependencies(config, output, nil)
 			gen.reportResults(tt.successCount, tt.errors)
 
-			// Verify Bold message
-			if tt.wantBold {
-				if len(output.BoldMessages) == 0 {
-					t.Error("expected Bold message, got none")
-				}
-			} else {
-				if len(output.BoldMessages) > 0 {
-					t.Errorf("expected no Bold messages, got %d", len(output.BoldMessages))
-				}
-			}
-
-			// Verify Error messages
-			if tt.wantError {
-				if len(output.ErrorMessages) == 0 {
-					t.Error("expected Error messages, got none")
-				}
-			} else {
-				if len(output.ErrorMessages) > 0 {
-					t.Errorf("expected no Error messages, got %d", len(output.ErrorMessages))
-				}
-			}
+			verifyReportResultsOutput(t, output, tt.wantBold, tt.wantError)
 		})
 	}
 }

@@ -135,7 +135,7 @@ func TestRunTemplatePathTest_Helper(t *testing.T) {
 					t.Fatalf("failed to write template: %v", err)
 				}
 
-				return templatePath, func() {}
+				return templatePath, func() { /* Cleanup handled by t.TempDir() */ }
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
@@ -149,7 +149,7 @@ func TestRunTemplatePathTest_Helper(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 
-				return "templates/readme.tmpl", func() {}
+				return "templates/readme.tmpl", func() { /* No cleanup needed for relative path test */ }
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
@@ -163,7 +163,7 @@ func TestRunTemplatePathTest_Helper(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 
-				return "test/path.tmpl", func() {}
+				return "test/path.tmpl", func() { /* No cleanup needed for nil checkFunc test */ }
 			},
 			checkFunc: nil, // No validation
 		},

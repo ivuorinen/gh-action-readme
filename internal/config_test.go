@@ -1128,7 +1128,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 				// Use a path we know is embedded
-				return testutil.TestTemplateReadme, func() {}
+				return testutil.TestTemplateReadme, func() { /* No cleanup needed for embedded templates */ }
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
@@ -1143,7 +1143,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 
-				return testutil.TestTemplateWithPrefix, func() {}
+				return testutil.TestTemplateWithPrefix, func() { /* No cleanup needed for embedded templates */ }
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
@@ -1181,7 +1181,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 
-				return "nonexistent-template.tmpl", func() {}
+				return "nonexistent-template.tmpl", func() { /* No cleanup needed for non-existent template test */ }
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
@@ -1196,7 +1196,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 
-				return "", func() {}
+				return "", func() { /* No cleanup needed for empty path test */ }
 			},
 			checkFunc: func(t *testing.T, _ string) {
 				t.Helper()
@@ -1211,7 +1211,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 
-				return "themes/github/readme.tmpl", func() {}
+				return "themes/github/readme.tmpl", func() { /* No cleanup needed for relative path test */ }
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()

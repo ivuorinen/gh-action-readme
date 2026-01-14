@@ -13,6 +13,11 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	envGoTestSubprocess = "GO_TEST_SUBPROCESS"
+	envTestType         = "TEST_TYPE"
+)
+
 // verifyExitCode checks that the command exited with the expected exit code.
 func verifyExitCode(t *testing.T, err error, expectedExit int) {
 	t.Helper()
@@ -37,8 +42,8 @@ func execSubprocessTest(t *testing.T, testType string) (string, error) {
 	//nolint:gosec // Controlled test arguments
 	cmd := exec.Command(os.Args[0], "-test.run=^TestErrorHandlerIntegration$")
 	cmd.Env = append(os.Environ(),
-		"GO_TEST_SUBPROCESS=1",
-		"TEST_TYPE="+testType,
+		envGoTestSubprocess+"=1",
+		envTestType+"="+testType,
 	)
 
 	stderr, err := cmd.StderrPipe()
@@ -76,7 +81,7 @@ func TestErrorHandlerIntegration(t *testing.T) {
 	t.Parallel()
 
 	// Check if this is the subprocess
-	if os.Getenv("GO_TEST_SUBPROCESS") == "1" {
+	if os.Getenv(envGoTestSubprocess) == "1" {
 		runSubprocessTest()
 
 		return
@@ -154,7 +159,7 @@ func TestErrorHandlerIntegration(t *testing.T) {
 
 // runSubprocessTest executes the actual error handler call based on TEST_TYPE.
 func runSubprocessTest() {
-	testType := os.Getenv("TEST_TYPE")
+	testType := os.Getenv(envTestType)
 	output := internal.NewColoredOutput(false) // quiet=false
 	handler := internal.NewErrorHandler(output)
 
@@ -216,7 +221,7 @@ func TestErrorHandlerAllErrorCodes(t *testing.T) {
 	t.Parallel()
 
 	// Check if this is the subprocess
-	if os.Getenv("GO_TEST_SUBPROCESS") == "1" {
+	if os.Getenv(envGoTestSubprocess) == "1" {
 		runErrorCodeTest()
 
 		return
@@ -299,7 +304,7 @@ func runErrorCodeTest() {
 func TestErrorHandlerWithComplexContext(t *testing.T) {
 	t.Parallel()
 
-	if os.Getenv("GO_TEST_SUBPROCESS") == "1" {
+	if os.Getenv(envGoTestSubprocess) == "1" {
 		runComplexContextTest()
 
 		return

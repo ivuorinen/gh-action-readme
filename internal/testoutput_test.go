@@ -10,6 +10,8 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 )
 
+const testFormatString = "test %s %d"
+
 func TestNullOutput(t *testing.T) {
 	t.Parallel()
 
@@ -119,9 +121,9 @@ func TestNullOutputEdgeCases(t *testing.T) {
 	no.Printf(unicode)
 
 	// Test with format strings and nil args
-	no.Printf("test %s %d", nil, nil)
-	no.Success("test %s %d", nil, nil)
-	no.Error("test %s %d", nil, nil)
+	no.Printf(testFormatString, nil, nil)
+	no.Success(testFormatString, nil, nil)
+	no.Error(testFormatString, nil, nil)
 
 	// Test with multiple args
 	no.Success("test", "arg1", "arg2", "arg3")
