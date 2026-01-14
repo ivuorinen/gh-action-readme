@@ -36,7 +36,7 @@ func testMockHTTPClientConfiguredResponse(t *testing.T) {
 	t.Helper()
 	client := createMockHTTPClientWithResponse("GET https://api.github.com/test", 200, `{"test": "response"}`)
 
-	req := createTestRequest(t, "GET", "https://api.github.com/test")
+	req := createTestRequest(t, "GET", ""+TestURLGitHubAPI+"test")
 	resp := executeRequest(t, client, req)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -51,7 +51,7 @@ func testMockHTTPClientUnconfiguredEndpoints(t *testing.T) {
 		Responses: make(map[string]*http.Response),
 	}
 
-	req := createTestRequest(t, "GET", "https://api.github.com/nonexistent")
+	req := createTestRequest(t, "GET", ""+TestURLGitHubAPI+"nonexistent")
 	resp := executeRequest(t, client, req)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -65,13 +65,13 @@ func testMockHTTPClientRequestTracking(t *testing.T) {
 		Responses: make(map[string]*http.Response),
 	}
 
-	req1 := createTestRequest(t, "GET", "https://api.github.com/test1")
-	req2 := createTestRequest(t, "POST", "https://api.github.com/test2")
+	req1 := createTestRequest(t, "GET", ""+TestURLGitHubAPI+"test1")
+	req2 := createTestRequest(t, "POST", ""+TestURLGitHubAPI+"test2")
 
 	executeAndCloseResponse(client, req1)
 	executeAndCloseResponse(client, req2)
 
-	validateRequestTracking(t, client, 2, "https://api.github.com/test1", "POST")
+	validateRequestTracking(t, client, 2, ""+TestURLGitHubAPI+"test1", "POST")
 }
 
 // createMockHTTPClientWithResponse creates a mock HTTP client with a single configured response.
@@ -216,7 +216,7 @@ func TestMockTransport(t *testing.T) {
 
 	transport := &MockTransport{Client: client}
 
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/test", nil)
+	req, err := http.NewRequest(http.MethodGet, ""+TestURLGitHubAPI+"test", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -441,7 +441,7 @@ func TestCreateCompositeAction(t *testing.T) {
 		name := "Composite Test"
 		description := "A composite action"
 		steps := []string{
-			"actions/checkout@v4",
+			TestActionCheckoutV4,
 			"actions/setup-node@v4",
 		}
 

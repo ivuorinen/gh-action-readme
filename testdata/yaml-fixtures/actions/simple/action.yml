@@ -1,0 +1,11 @@
+name: Test Action
+description: Test Description
+inputs:
+  test-input:
+    description: Test input
+    required: true
+runs:
+  using: composite
+  steps:
+    - run: echo "test"
+      shell: bash

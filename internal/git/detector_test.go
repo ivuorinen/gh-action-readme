@@ -341,7 +341,7 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 			},
 			actionName: "",
 			version:    "v3",
-			expected:   "actions/checkout@v3",
+			expected:   testutil.TestActionCheckoutV3,
 		},
 		{
 			name: "repository-level action with same name",
@@ -351,7 +351,7 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 			},
 			actionName: "checkout",
 			version:    "v3",
-			expected:   "actions/checkout@v3",
+			expected:   testutil.TestActionCheckoutV3,
 		},
 		{
 			name: "subdirectory action",

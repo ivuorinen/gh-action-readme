@@ -118,7 +118,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 				},
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "actions/setup-node@v3",
+					OldUses:    testutil.TestActionSetupNodeV3,
 					NewUses:    "actions/setup-node@1a4e6d7c9f8e5b2a3c4d5e6f7a8b9c0d1e2f3a4b # v4.0.0",
 					CommitSHA:  "1a4e6d7c9f8e5b2a3c4d5e6f7a8b9c0d1e2f3a4b",
 					Version:    "v4.0.0",
@@ -752,7 +752,7 @@ func TestApplyPinnedUpdatesGroupedByFile(t *testing.T) {
 		},
 		{
 			FilePath: action2Path,
-			OldUses:  "actions/setup-node@v3",
+			OldUses:  testutil.TestActionSetupNodeV3,
 			NewUses:  "actions/setup-node@def456 # v4.0.0",
 		},
 	}

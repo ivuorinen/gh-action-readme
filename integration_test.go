@@ -214,7 +214,7 @@ func setupDependencyAnalysisWorkflow(t *testing.T, tmpDir string) {
 		"Complex Workflow",
 		"A composite action with multiple dependencies for testing",
 		[]string{
-			"actions/checkout@v4",
+			testutil.TestActionCheckoutV4,
 			"actions/setup-node@v4",
 			"actions/cache@v3",
 			"actions/upload-artifact@v3",

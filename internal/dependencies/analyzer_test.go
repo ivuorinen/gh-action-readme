@@ -40,7 +40,7 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 			expectError:  false,
 			expectDeps:   true,
 			expectedLen:  5, // 3 action dependencies + 2 shell script dependencies
-			expectedDeps: []string{"actions/checkout@v4", "actions/setup-node@v4", "actions/setup-python@v4"},
+			expectedDeps: []string{testutil.TestActionCheckoutV4, "actions/setup-node@v4", "actions/setup-python@v4"},
 		},
 		{
 			name:        "docker action - no step dependencies",
@@ -134,7 +134,7 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 	}{
 		{
 			name:            "semantic version",
-			uses:            "actions/checkout@v4",
+			uses:            testutil.TestActionCheckoutV4,
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
 			expectedVersion: "v4",

@@ -596,12 +596,12 @@ func TestValidatePinnedUpdate(t *testing.T) {
 	defer cleanup()
 
 	actionPath := filepath.Join(tmpDir, "action.yml")
-	testContent := "uses: actions/checkout@v3"
+	testContent := "uses: " + TestActionCheckoutV3
 	WriteTestFile(t, actionPath, testContent)
 
 	t.Run("validates without backup", func(t *testing.T) {
 		ValidatePinnedUpdate(t, actionPath, false, func(content string) error {
-			if !strings.Contains(content, "actions/checkout@v3") {
+			if !strings.Contains(content, TestActionCheckoutV3) {
 				return errors.New("content does not contain expected string")
 			}
 
@@ -615,7 +615,7 @@ func TestValidatePinnedUpdate(t *testing.T) {
 		WriteTestFile(t, backupPath, testContent)
 
 		ValidatePinnedUpdate(t, actionPath, true, func(content string) error {
-			if !strings.Contains(content, "actions/checkout@v3") {
+			if !strings.Contains(content, TestActionCheckoutV3) {
 				return errors.New("content does not contain expected string")
 			}
 
@@ -636,7 +636,7 @@ func TestValidateRollback(t *testing.T) {
 	defer cleanup()
 
 	actionPath := filepath.Join(tmpDir, "action.yml")
-	originalContent := "uses: actions/checkout@v3"
+	originalContent := "uses: " + TestActionCheckoutV3
 	WriteTestFile(t, actionPath, originalContent)
 
 	t.Run("validates successful rollback", func(t *testing.T) {

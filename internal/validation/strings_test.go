@@ -72,7 +72,7 @@ func TestFormatUsesStatement(t *testing.T) {
 			org:     "actions",
 			repo:    "checkout",
 			version: "v3",
-			want:    "actions/checkout@v3",
+			want:    testutil.TestActionCheckoutV3,
 		},
 		{
 			name:    "without version defaults to v1",

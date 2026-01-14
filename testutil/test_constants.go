@@ -80,6 +80,8 @@ const (
 	TestFixtureGlobalConfig                = "configs/global/default.yml"
 	TestFixtureProfessionalConfig          = "professional-config.yml"
 	TestFixtureRepoConfig                  = "repo-config.yml"
+	TestFixtureActionSimple                = "actions/simple/action.yml"
+	TestFixtureActionMinimal               = "actions/minimal/action.yml"
 )
 
 // Dependency update test constants for reducing string duplication in updater_test.go.
@@ -149,6 +151,7 @@ const (
 	TestVersionPlain    = "1.2.3"
 	TestCaseNameEmpty   = "empty string"
 	TestBranchMain      = "main"
+	TestGitRefMain      = "refs/heads/main"
 )
 
 // Wizard test constants.
@@ -208,6 +211,7 @@ const (
 const (
 	TestTmpDir                     = "/tmp"
 	TestTmpActionFile              = "/tmp/action.yml"
+	TestPathTempAction             = "/tmp/test-action/action.yml"
 	TestErrorScenarioOldDeps       = "error-scenarios/action-with-old-deps.yml"
 	TestErrorScenarioInvalidYAML   = "error-scenarios/invalid-yaml-syntax.yml"
 	TestErrorScenarioMissingFields = "error-scenarios/missing-required-fields.yml"
@@ -245,9 +249,11 @@ const (
 
 // Test URLs and paths - moved from appconstants.
 const (
-	TestURLHelp = "https://example.com/help"
-	TestKeyFile = "file"
-	TestKeyPath = "path"
+	TestURLHelp      = "https://example.com/help"
+	TestURLGitHubAPI = "https://api.github.com/"
+	TestURLGitHub    = "https://github.com/"
+	TestKeyFile      = "file"
+	TestKeyPath      = "path"
 )
 
 // Test repository and organization values - moved from appconstants.
@@ -260,6 +266,8 @@ const (
 const (
 	TestActionCheckoutV3  = "actions/checkout@v3"
 	TestActionCheckoutSHA = "692973e3d937129bcbf40652eb9f2f61becf3332"
+	TestActionSetupNodeV3 = "actions/setup-node@v3"
+	TestActionSetupGoV4   = "actions/setup-go@v4"
 )
 
 // Test paths and output - moved from appconstants.
@@ -367,6 +375,12 @@ const (
 
 	// TestErrDiscoveredNonRecursive is used for non-recursive discovery tests.
 	TestErrDiscoveredNonRecursive = "DiscoverActionFiles() non-recursive returned %d files, want %d"
+
+	// TestErrMsgParseActionYAML is used when action.yml parsing fails.
+	TestErrMsgParseActionYAML = "failed to parse action.yml"
+
+	// TestErrMsgInvalidConfig is used when configuration is invalid.
+	TestErrMsgInvalidConfig = "invalid configuration"
 )
 
 // Assertion message formats for reducing string duplication in tests.

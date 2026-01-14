@@ -1244,7 +1244,7 @@ func TestShowPendingUpdates(t *testing.T) {
 				{
 					FilePath:   "/tmp/workflow.yml",
 					OldUses:    "actions/setup-node@v2",
-					NewUses:    "actions/setup-node@v3",
+					NewUses:    testutil.TestActionSetupNodeV3,
 					UpdateType: "major",
 				},
 			},
