@@ -353,7 +353,7 @@ func TestSetupTestTemplates(t *testing.T) {
 	}
 
 	// Verify theme directories exist
-	themes := []string{"github", "gitlab", "minimal", "professional"}
+	themes := []string{TestThemeGitHub, TestThemeGitLab, TestThemeMinimal, TestThemeProfessional}
 	for _, theme := range themes {
 		themeDir := filepath.Join(templatesDir, "themes", theme)
 		if _, err := os.Stat(themeDir); os.IsNotExist(err) {
@@ -361,7 +361,7 @@ func TestSetupTestTemplates(t *testing.T) {
 		}
 
 		// Verify theme template file exists
-		templateFile := filepath.Join(themeDir, "readme.tmpl")
+		templateFile := filepath.Join(themeDir, TestTemplateReadme)
 		if _, err := os.Stat(templateFile); os.IsNotExist(err) {
 			t.Errorf("template file for theme %s was not created", theme)
 		}
@@ -378,7 +378,7 @@ func TestSetupTestTemplates(t *testing.T) {
 	}
 
 	// Verify default template exists
-	defaultTemplate := filepath.Join(templatesDir, "readme.tmpl")
+	defaultTemplate := filepath.Join(templatesDir, TestTemplateReadme)
 	if _, err := os.Stat(defaultTemplate); os.IsNotExist(err) {
 		t.Error("default template was not created")
 	}
@@ -544,7 +544,7 @@ func createFullOverrides() *TestAppConfig {
 // createPartialOverrides creates a partial set of test overrides.
 func createPartialOverrides() *TestAppConfig {
 	return &TestAppConfig{
-		Theme:   "professional",
+		Theme:   TestThemeProfessional,
 		Verbose: true,
 	}
 }
@@ -585,7 +585,7 @@ func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
 // validatePartialOverrides validates partially overridden values.
 func validatePartialOverrides(t *testing.T, config *TestAppConfig) {
 	t.Helper()
-	validateStringField(t, config.Theme, "professional", "theme")
+	validateStringField(t, config.Theme, TestThemeProfessional, "theme")
 	validateBoolField(t, config.Verbose, true, "verbose")
 }
 

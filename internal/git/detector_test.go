@@ -431,7 +431,7 @@ func TestGetDefaultBranch_Fallbacks(t *testing.T) {
 				gitDir := testutil.SetupGitDirectory(t, tmpDir)
 
 				configContent := `[remote "origin"]
-	url = https://github.com/user/repo
+	url = ` + testutil.TestURLGitHubUserRepo + `
 	fetch = +refs/heads/*:refs/remotes/origin/*
 [branch "main"]
 	remote = origin
@@ -451,7 +451,7 @@ func TestGetDefaultBranch_Fallbacks(t *testing.T) {
 				gitDir := testutil.SetupGitDirectory(t, tmpDir)
 
 				configContent := `[remote "origin"]
-	url = https://github.com/user/repo
+	url = ` + testutil.TestURLGitHubUserRepo + `
 [branch "master"]
 	remote = origin
 	merge = refs/heads/master
@@ -470,7 +470,7 @@ func TestGetDefaultBranch_Fallbacks(t *testing.T) {
 				gitDir := testutil.SetupGitDirectory(t, tmpDir)
 
 				configContent := `[remote "origin"]
-	url = https://github.com/user/repo
+	url = ` + testutil.TestURLGitHubUserRepo + `
 [branch "develop"]
 	remote = origin
 	merge = refs/heads/develop
@@ -632,10 +632,10 @@ func TestGetRemoteURLFromConfig_EdgeCases(t *testing.T) {
 		{
 			name: "standard git config",
 			configContent: `[remote "origin"]
-	url = https://github.com/user/repo
+	url = ` + testutil.TestURLGitHubUserRepo + `
 `,
 			expectError: false,
-			expectedURL: "https://github.com/user/repo",
+			expectedURL: testutil.TestURLGitHubUserRepo,
 			description: "Standard git config",
 		},
 		{
@@ -643,11 +643,11 @@ func TestGetRemoteURLFromConfig_EdgeCases(t *testing.T) {
 			configContent: `# This is a comment
 [remote "origin"]
 	# Another comment
-	url = https://github.com/user/repo
+	url = ` + testutil.TestURLGitHubUserRepo + `
 	fetch = +refs/heads/*:refs/remotes/origin/*
 `,
 			expectError: false,
-			expectedURL: "https://github.com/user/repo",
+			expectedURL: testutil.TestURLGitHubUserRepo,
 			description: "Config with comments should be parsed",
 		},
 		{
@@ -659,7 +659,7 @@ func TestGetRemoteURLFromConfig_EdgeCases(t *testing.T) {
 		{
 			name: "incomplete section",
 			configContent: `[remote "origin"
-	url = https://github.com/user/repo
+	url = ` + testutil.TestURLGitHubUserRepo + `
 `,
 			expectError: true,
 			description: "Malformed section",
@@ -696,10 +696,10 @@ func TestGetRemoteURLFromConfig_EdgeCases(t *testing.T) {
 		{
 			name: "url with trailing whitespace",
 			configContent: `[remote "origin"]
-	url = https://github.com/user/repo
+	url = ` + testutil.TestURLGitHubUserRepo + `
 `,
 			expectError: false,
-			expectedURL: "https://github.com/user/repo",
+			expectedURL: testutil.TestURLGitHubUserRepo,
 			description: "Trailing whitespace should be trimmed",
 		},
 		{

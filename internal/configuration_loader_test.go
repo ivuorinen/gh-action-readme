@@ -134,7 +134,7 @@ func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				if config == nil {
-					t.Fatal("expected non-nil config")
+					t.Fatal(testutil.TestMsgExpectedNonNilConfig)
 				}
 				if config.Theme == "" {
 					t.Error("expected default theme")
@@ -147,7 +147,7 @@ func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, string, string) {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
-				configPath := filepath.Join(tmpDir, "config.yaml")
+				configPath := filepath.Join(tmpDir, testutil.TestFileConfigYAML)
 				testutil.WriteTestFile(t, configPath, `
 theme: github
 output_format: html
@@ -211,7 +211,7 @@ output_format: md
 
 				// Action config
 				actionDir := filepath.Join(repoRoot, "action")
-				testutil.WriteFileInDir(t, actionDir, "config.yaml",
+				testutil.WriteFileInDir(t, actionDir, testutil.TestFileConfigYAML,
 					string(testutil.MustReadFixture(testutil.TestConfigProfessionalSimple)))
 
 				return globalPath, repoRoot, actionDir
@@ -273,7 +273,7 @@ func TestConfigurationLoader_LoadGlobalConfig(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
-				configPath := filepath.Join(tmpDir, "config.yaml")
+				configPath := filepath.Join(tmpDir, testutil.TestFileConfigYAML)
 				testutil.WriteTestFile(t, configPath, `
 theme: github
 output_format: html
@@ -305,7 +305,7 @@ verbose: true
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				if config == nil {
-					t.Fatal("expected non-nil config")
+					t.Fatal(testutil.TestMsgExpectedNonNilConfig)
 				}
 			},
 			description: "Empty config should not error",
@@ -581,7 +581,7 @@ func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 					Theme:        testutil.TestThemeDefault,
 					OutputFormat: "md",
 					RepoOverrides: map[string]AppConfig{
-						"test/repo": {
+						testutil.TestRepoTestRepo: {
 							Theme:        testutil.TestThemeProfessional,
 							OutputFormat: "html",
 						},
@@ -606,7 +606,7 @@ func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 					Theme:        testutil.TestThemeDefault,
 					OutputFormat: "md",
 					RepoOverrides: map[string]AppConfig{
-						"test/repo": {
+						testutil.TestRepoTestRepo: {
 							Theme:        testutil.TestThemeProfessional,
 							OutputFormat: "html",
 						},
@@ -629,7 +629,7 @@ func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 					Theme:        testutil.TestThemeDefault,
 					OutputFormat: "md",
 					RepoOverrides: map[string]AppConfig{
-						"test/repo": {
+						testutil.TestRepoTestRepo: {
 							Theme:        testutil.TestThemeProfessional,
 							OutputFormat: "html",
 						},
@@ -673,7 +673,7 @@ func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
-				testutil.WriteFileInDir(t, tmpDir, "config.yaml",
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFileConfigYAML,
 					string(testutil.MustReadFixture(testutil.TestConfigMinimalDist)))
 
 				return tmpDir

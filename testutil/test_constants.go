@@ -152,6 +152,16 @@ const (
 	TestErrUnexpected     = "unexpected error: %v"
 	TestErrNonEmptyAction = "expected non-empty action content"
 	TestErrStatusCode     = "expected status 200, got %d"
+
+	// Common test assertion format strings for reducing duplication.
+	TestMsgGotWant           = "got %v, want %v"                // Used in test runners and assertions
+	TestErrNoErrorGotNone    = "expected error but got none"    // Used in error validation helpers
+	TestMsgFailedReadFile    = "failed to read file %s: %v"     // Used in file assertion helpers
+	TestMsgFileContent       = "File content:\n%s"              // Used in file content logging
+	TestMsgExpectedNonEmpty  = "expected non-empty result"      // Used for non-empty result assertions
+	TestMsgFailedReadOutput  = "Failed to read output file: %v" // Used for output file read errors
+	TestMsgExpected1InfoCall = "expected 1 Info call, got %d"   // Used in logger mock tests
+	TestMsgExportConfigError = "ExportConfig() error = %v"      // Used in config export tests
 )
 
 // Validation test constants.
@@ -203,6 +213,7 @@ const (
 	TestErrPathTraversal         = "path traversal"
 	TestInvalidYAMLPrefix        = "invalid: [yaml"
 	TestLangJavaScriptTypeScript = "JavaScript/TypeScript"
+	TestMsgExpectedNonNilConfig  = "expected non-nil config"
 )
 
 // Test commands - moved from appconstants for better separation.
@@ -258,11 +269,12 @@ const (
 
 // Test URLs and paths - moved from appconstants.
 const (
-	TestURLHelp      = "https://example.com/help"
-	TestURLGitHubAPI = "https://api.github.com/"
-	TestURLGitHub    = "https://github.com/"
-	TestKeyFile      = "file"
-	TestKeyPath      = "path"
+	TestURLHelp           = "https://example.com/help"
+	TestURLGitHubAPI      = "https://api.github.com/"
+	TestURLGitHub         = "https://github.com/"
+	TestURLGitHubUserRepo = "https://github.com/user/repo"
+	TestKeyFile           = "file"
+	TestKeyPath           = "path"
 )
 
 // Test repository and organization values - moved from appconstants.
@@ -302,6 +314,7 @@ const (
 // Test repository names - moved from appconstants.
 const (
 	TestRepoTestOrgTestRepo = "test-org/test-repo"
+	TestRepoTestRepo        = "test/repo"
 )
 
 // Integration test directory and file names - moved from appconstants.
@@ -441,6 +454,27 @@ const (
 
 	// TestMsgInvalidVariableName is a common validation error for variable names.
 	TestMsgInvalidVariableName = "Invalid variable name"
+)
+
+// Template helper test constants for reducing string duplication in template tests.
+const (
+	// Test organization and repository names for template data tests.
+	TestOrgName  = "test-org"
+	TestRepoName = "test-repo"
+	MyOrgName    = "my-org"
+	MyRepoName   = "my-repo"
+	RepoName     = "repo"
+
+	// Config test organization and repository names for RepoOverrides tests.
+	OrgName         = "org"
+	ExistingOrgName = "existing"
+	NewOrgName      = "new"
+	OrgRepo         = "org/repo"
+	ExistingRepo    = "existing/repo"
+	NewRepo         = "new/repo"
+
+	// Analyzer fixture path for template helper tests.
+	AnalyzerFixturePath = "../../testdata/analyzer/"
 )
 
 // Config fixture path constants for reducing string duplication.

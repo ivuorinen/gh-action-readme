@@ -1,6 +1,10 @@
 package templatesembed
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
+)
 
 // assertTemplateLoaded validates template loading results.
 // This helper reduces cognitive complexity in embed tests by centralizing
@@ -10,7 +14,7 @@ func assertTemplateLoaded(t *testing.T, content []byte, err error, expectError b
 
 	if expectError {
 		if err == nil {
-			t.Error("expected error but got none")
+			t.Error(testutil.TestErrNoErrorGotNone)
 		}
 
 		return
@@ -18,7 +22,7 @@ func assertTemplateLoaded(t *testing.T, content []byte, err error, expectError b
 
 	// Success case
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(testutil.TestErrUnexpected, err)
 	}
 
 	if len(content) < minContentLength {

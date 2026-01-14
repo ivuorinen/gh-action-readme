@@ -21,7 +21,7 @@ func TestRenderReadme(t *testing.T) {
 			"foo": {Description: "Foo input", Required: true},
 		},
 	}
-	tmpl := filepath.Join(tmpDir, "templates", "readme.tmpl")
+	tmpl := filepath.Join(tmpDir, "templates", testutil.TestTemplateReadme)
 	opts := TemplateOptions{TemplatePath: tmpl, Format: "md"}
 	out, err := RenderReadme(action, opts)
 	if err != nil {

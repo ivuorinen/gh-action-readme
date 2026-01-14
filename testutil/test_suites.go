@@ -819,7 +819,7 @@ func ValidateActionFixture(t *testing.T, fixture *ActionFixture) {
 func TestAllThemes(t *testing.T, testFunc func(*testing.T, string)) {
 	t.Helper()
 
-	themes := []string{"default", "github", "minimal", "professional"}
+	themes := []string{TestThemeDefault, TestThemeGitHub, TestThemeMinimal, TestThemeProfessional}
 
 	for _, theme := range themes {
 		theme := theme // capture loop variable
@@ -989,7 +989,7 @@ func getExpectedFilename(outputFormat string) string {
 // CreateGeneratorTestCases creates test cases for generator testing.
 func CreateGeneratorTestCases() []GeneratorTestCase {
 	validFixtures := GetValidFixtures()
-	themes := []string{"default", "github", "minimal", "professional"}
+	themes := []string{TestThemeDefault, TestThemeGitHub, TestThemeMinimal, TestThemeProfessional}
 	formats := []string{
 		appconstants.OutputFormatMarkdown,
 		appconstants.OutputFormatHTML,

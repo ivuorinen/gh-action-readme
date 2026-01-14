@@ -228,8 +228,8 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 			Badges:      badges,
 			Sections:    sections,
 			Links: map[string]string{
-				"action.yml": "./action.yml",
-				"repository": "https://github.com/your-org/" + action.Name,
+				appconstants.ActionFileNameYML: "./" + appconstants.ActionFileNameYML,
+				"repository":                   "https://github.com/your-org/" + action.Name,
 			},
 		},
 		Examples: examples,

@@ -75,7 +75,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 					FilePath:   "", // Will be set by test
 					OldUses:    testutil.TestCheckoutV4OldUses,
 					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
+					CommitSHA:  testutil.TestActionCheckoutSHA,
 					Version:    testutil.TestVersionV417,
 					UpdateType: "patch",
 					LineNumber: 0,
@@ -93,7 +93,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 					FilePath:   "", // Will be set by test
 					OldUses:    testutil.TestCheckoutV4OldUses,
 					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
+					CommitSHA:  testutil.TestActionCheckoutSHA,
 					Version:    testutil.TestVersionV417,
 					UpdateType: "patch",
 					LineNumber: 0,
@@ -111,7 +111,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 					FilePath:   "", // Will be set by test
 					OldUses:    testutil.TestCheckoutV4OldUses,
 					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
+					CommitSHA:  testutil.TestActionCheckoutSHA,
 					Version:    testutil.TestVersionV417,
 					UpdateType: "patch",
 					LineNumber: 0,
@@ -138,7 +138,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 					FilePath:   "", // Will be set by test
 					OldUses:    testutil.TestCheckoutV4OldUses,
 					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
+					CommitSHA:  testutil.TestActionCheckoutSHA,
 					Version:    testutil.TestVersionV417,
 					UpdateType: "patch",
 					LineNumber: 0,
@@ -156,7 +156,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 					FilePath:   "", // Will be set by test
 					OldUses:    testutil.TestCheckoutPinnedV417,
 					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  "692973e3d937129bcbf40652eb9f2f61becf3332",
+					CommitSHA:  testutil.TestActionCheckoutSHA,
 					Version:    testutil.TestVersionV417,
 					UpdateType: "none",
 					LineNumber: 0,

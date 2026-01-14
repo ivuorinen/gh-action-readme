@@ -765,7 +765,7 @@ func TestWalkFuncErrorHandling(t *testing.T) {
 	testErr := filepath.SkipDir
 	err = walker.walkFunc(tmpDir, info, testErr)
 	if err != testErr {
-		t.Errorf("walkFunc() should propagate error, got %v, want %v", err, testErr)
+		t.Errorf("walkFunc() should propagate error, "+testutil.TestMsgGotWant, err, testErr)
 	}
 }
 

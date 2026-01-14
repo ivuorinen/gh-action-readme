@@ -155,7 +155,7 @@ func TestFocusedInterfacesSimpleLogger(t *testing.T) {
 
 	// Verify the expected calls were made
 	if len(mockLogger.InfoCalls) != 1 {
-		t.Errorf("expected 1 Info call, got %d", len(mockLogger.InfoCalls))
+		t.Errorf(testutil.TestMsgExpected1InfoCall, len(mockLogger.InfoCalls))
 	}
 	if len(mockLogger.SuccessCalls) != 1 {
 		t.Errorf("expected 1 Success call, got %d", len(mockLogger.SuccessCalls))
@@ -184,7 +184,7 @@ func TestFocusedInterfacesSimpleLoggerWithFailure(t *testing.T) {
 
 	// Verify the expected calls were made
 	if len(mockLogger.InfoCalls) != 1 {
-		t.Errorf("expected 1 Info call, got %d", len(mockLogger.InfoCalls))
+		t.Errorf(testutil.TestMsgExpected1InfoCall, len(mockLogger.InfoCalls))
 	}
 	if len(mockLogger.SuccessCalls) != 0 {
 		t.Errorf("expected 0 Success calls, got %d", len(mockLogger.SuccessCalls))
@@ -290,7 +290,7 @@ func TestFocusedInterfacesCompositeOutputWriter(t *testing.T) {
 	// Verify that the composite writer uses both message logging and progress reporting
 	// Should have called Info and Success for overall status
 	if len(mockLogger.InfoCalls) != 1 {
-		t.Errorf("expected 1 Info call, got %d", len(mockLogger.InfoCalls))
+		t.Errorf(testutil.TestMsgExpected1InfoCall, len(mockLogger.InfoCalls))
 	}
 	if len(mockLogger.SuccessCalls) != 1 {
 		t.Errorf("expected 1 Success call, got %d", len(mockLogger.SuccessCalls))

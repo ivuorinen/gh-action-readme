@@ -165,11 +165,11 @@ func (w *ConfigWizard) getAvailableThemes() []struct {
 		name string
 		desc string
 	}{
-		{"default", "Original simple template"},
-		{"github", "GitHub-style with badges and collapsible sections"},
-		{"gitlab", "GitLab-focused with CI/CD examples"},
-		{"minimal", "Clean and concise documentation"},
-		{"professional", "Comprehensive with troubleshooting and ToC"},
+		{appconstants.ThemeDefault, "Original simple template"},
+		{appconstants.ThemeGitHub, "GitHub-style with badges and collapsible sections"},
+		{appconstants.ThemeGitLab, "GitLab-focused with CI/CD examples"},
+		{appconstants.ThemeMinimal, "Clean and concise documentation"},
+		{appconstants.ThemeProfessional, "Comprehensive with troubleshooting and ToC"},
 	}
 }
 
@@ -374,7 +374,7 @@ func (w *ConfigWizard) findActionFiles(dir string) []string {
 	var actionFiles []string
 
 	// Check for action.yml and action.yaml using validated path
-	for _, filename := range []string{"action.yml", "action.yaml"} {
+	for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
 		actionPath := filepath.Join(cleanDir, filename)
 		if _, err := os.Stat(actionPath); err == nil {
 			actionFiles = append(actionFiles, actionPath)

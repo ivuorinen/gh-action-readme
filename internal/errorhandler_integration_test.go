@@ -10,7 +10,52 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
+
+// verifyExitCode checks that the command exited with the expected exit code.
+func verifyExitCode(t *testing.T, err error, expectedExit int) {
+	t.Helper()
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr.ExitCode() != expectedExit {
+			t.Errorf("expected exit code %d, got %d", expectedExit, exitErr.ExitCode())
+		}
+
+		return
+	}
+	if err != nil {
+		t.Fatalf(testutil.TestErrUnexpected, err)
+	}
+	if expectedExit != 0 {
+		t.Errorf("expected exit code %d, but process exited successfully", expectedExit)
+	}
+}
+
+// execSubprocessTest spawns a subprocess and returns its stderr output and error.
+func execSubprocessTest(t *testing.T, testType string) (string, error) {
+	t.Helper()
+	//nolint:gosec // Controlled test arguments
+	cmd := exec.Command(os.Args[0], "-test.run=^TestErrorHandlerIntegration$")
+	cmd.Env = append(os.Environ(),
+		"GO_TEST_SUBPROCESS=1",
+		"TEST_TYPE="+testType,
+	)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		t.Fatalf("failed to get stderr pipe: %v", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("failed to start subprocess: %v", err)
+	}
+
+	stderrOutput := make([]byte, 4096)
+	n, _ := stderr.Read(stderrOutput)
+	stderrStr := string(stderrOutput[:n])
+
+	return stderrStr, cmd.Wait()
+}
 
 // TestErrorHandlerIntegration tests error handler methods that call os.Exit()
 // using subprocess pattern.
@@ -90,44 +135,9 @@ func TestErrorHandlerIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Spawn subprocess
-			//nolint:gosec // Controlled test arguments
-			cmd := exec.Command(os.Args[0], "-test.run=^TestErrorHandlerIntegration$")
-			cmd.Env = append(os.Environ(),
-				"GO_TEST_SUBPROCESS=1",
-				"TEST_TYPE="+tt.testType,
-			)
+			stderrStr, err := execSubprocessTest(t, tt.testType)
+			verifyExitCode(t, err, tt.expectedExit)
 
-			// Capture stderr
-			stderr, err := cmd.StderrPipe()
-			if err != nil {
-				t.Fatalf("failed to get stderr pipe: %v", err)
-			}
-
-			if err := cmd.Start(); err != nil {
-				t.Fatalf("failed to start subprocess: %v", err)
-			}
-
-			// Read stderr
-			stderrOutput := make([]byte, 4096)
-			n, _ := stderr.Read(stderrOutput)
-			stderrStr := string(stderrOutput[:n])
-
-			// Wait for process
-			err = cmd.Wait()
-
-			// Verify exit code
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				if exitErr.ExitCode() != tt.expectedExit {
-					t.Errorf("expected exit code %d, got %d", tt.expectedExit, exitErr.ExitCode())
-				}
-			} else if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			} else if tt.expectedExit != 0 {
-				t.Errorf("expected exit code %d, but process exited successfully", tt.expectedExit)
-			}
-
-			// Verify stderr contains expected message
 			if !strings.Contains(strings.ToLower(stderrStr), strings.ToLower(tt.expectedStderr)) {
 				t.Errorf("stderr missing expected text %q, got: %s", tt.expectedStderr, stderrStr)
 			}
@@ -253,7 +263,7 @@ func TestErrorHandlerAllErrorCodes(t *testing.T) {
 					t.Errorf("expected exit code %d, got %d", appconstants.ExitCodeError, exitErr.ExitCode())
 				}
 			} else if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+				t.Fatalf(testutil.TestErrUnexpected, err)
 			} else {
 				t.Error("expected non-zero exit code")
 			}

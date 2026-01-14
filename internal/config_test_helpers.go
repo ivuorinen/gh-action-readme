@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v74/github"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // assertGitHubClient validates GitHub client creation results.
@@ -16,7 +18,7 @@ func assertGitHubClient(t *testing.T, client *github.Client, err error, expectEr
 
 	if expectError {
 		if err == nil {
-			t.Error("expected error but got none")
+			t.Error(testutil.TestErrNoErrorGotNone)
 		}
 		if client != nil {
 			t.Error("expected nil client on error")
@@ -27,7 +29,7 @@ func assertGitHubClient(t *testing.T, client *github.Client, err error, expectEr
 
 	// Success case
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(testutil.TestErrUnexpected, err)
 	}
 	if client == nil {
 		t.Error("expected non-nil client")

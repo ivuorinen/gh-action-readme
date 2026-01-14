@@ -917,7 +917,7 @@ func ValidatePinnedUpdate(t *testing.T, filePath string, requireBackup bool, val
 	// Read and validate file content
 	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
 	if err != nil {
-		t.Fatalf("failed to read file %s: %v", filePath, err)
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
 	}
 
 	if validator != nil {
@@ -948,12 +948,12 @@ func AssertFileContains(t *testing.T, filePath, expectedSubstring string) {
 
 	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
 	if err != nil {
-		t.Fatalf("failed to read file %s: %v", filePath, err)
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
 	}
 
 	if !strings.Contains(string(content), expectedSubstring) {
 		t.Errorf("file %s does not contain expected substring: %q", filePath, expectedSubstring)
-		t.Logf("File content:\n%s", string(content))
+		t.Logf(TestMsgFileContent, string(content))
 	}
 }
 
@@ -963,12 +963,12 @@ func AssertFileNotContains(t *testing.T, filePath, unexpectedSubstring string) {
 
 	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
 	if err != nil {
-		t.Fatalf("failed to read file %s: %v", filePath, err)
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
 	}
 
 	if strings.Contains(string(content), unexpectedSubstring) {
 		t.Errorf("file %s should not contain substring: %q", filePath, unexpectedSubstring)
-		t.Logf("File content:\n%s", string(content))
+		t.Logf(TestMsgFileContent, string(content))
 	}
 }
 
@@ -988,7 +988,7 @@ func AssertFileContentEquals(t *testing.T, filePath, expectedContent string) {
 
 	actualContent, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
 	if err != nil {
-		t.Fatalf("failed to read file %s: %v", filePath, err)
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
 	}
 
 	actual := strings.TrimSpace(string(actualContent))
@@ -1005,7 +1005,7 @@ func AssertFileContentEquals(t *testing.T, filePath, expectedContent string) {
 func WriteActionFile(t *testing.T, dir, content string) string {
 	t.Helper()
 
-	actionPath := filepath.Join(dir, "action.yml")
+	actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
 	WriteTestFile(t, actionPath, content)
 
 	return actionPath

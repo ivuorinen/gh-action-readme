@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 const testVersion = "v4.1.1"
@@ -595,7 +597,7 @@ func TestValidatePinnedUpdate(t *testing.T) {
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
-	actionPath := filepath.Join(tmpDir, "action.yml")
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	testContent := "uses: " + TestActionCheckoutV3
 	WriteTestFile(t, actionPath, testContent)
 
@@ -635,7 +637,7 @@ func TestValidateRollback(t *testing.T) {
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
-	actionPath := filepath.Join(tmpDir, "action.yml")
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	originalContent := "uses: " + TestActionCheckoutV3
 	WriteTestFile(t, actionPath, originalContent)
 

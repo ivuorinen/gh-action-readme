@@ -426,7 +426,7 @@ func SetupTestTemplates(t *testing.T, dir string) {
 	themesDir := filepath.Join(templatesDir, "themes")
 
 	// Create directories
-	for _, theme := range []string{"github", "gitlab", "minimal", "professional"} {
+	for _, theme := range []string{TestThemeGitHub, TestThemeGitLab, TestThemeMinimal, TestThemeProfessional} {
 		themeDir := filepath.Join(themesDir, theme)
 		// #nosec G301 -- test directory permissions
 		if err := os.MkdirAll(themeDir, appconstants.FilePermDir); err != nil {

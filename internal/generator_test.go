@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -18,6 +19,18 @@ func defaultTestConfig() *AppConfig {
 		OutputFormat: appconstants.OutputFormatMarkdown,
 		OutputDir:    ".",
 		Quiet:        true,
+	}
+}
+
+// assertActionFiles verifies that all files are valid action files.
+func assertActionFiles(t *testing.T, files []string) {
+	t.Helper()
+	for _, file := range files {
+		testutil.AssertFileExists(t, file)
+		if !strings.HasSuffix(file, appconstants.ActionFileNameYML) &&
+			!strings.HasSuffix(file, appconstants.ActionFileNameYAML) {
+			t.Errorf("discovered file is not an action file: %s", file)
+		}
 	}
 }
 
@@ -162,15 +175,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			testutil.AssertNoError(t, err)
 			testutil.AssertEqual(t, tt.expectedLen, len(files))
 
-			// Verify all returned files exist and are action files
-			for _, file := range files {
-				testutil.AssertFileExists(t, file)
-
-				if !strings.HasSuffix(file, appconstants.ActionFileNameYML) &&
-					!strings.HasSuffix(file, appconstants.ActionFileNameYAML) {
-					t.Errorf("discovered file is not an action file: %s", file)
-				}
-			}
+			assertActionFiles(t, files)
 		})
 	}
 }
@@ -483,7 +488,7 @@ func TestGeneratorProcessBatch(t *testing.T) {
 			}
 
 			if err != nil {
-				t.Errorf("unexpected error: %v", err)
+				t.Errorf(testutil.TestErrUnexpected, err)
 
 				return
 			}
@@ -617,7 +622,13 @@ func TestGeneratorCreateDependencyAnalyzer(t *testing.T) {
 
 func TestGeneratorWithDifferentThemes(t *testing.T) {
 	t.Parallel()
-	themes := []string{"default", appconstants.ThemeGitHub, "gitlab", "minimal", "professional"}
+	themes := []string{
+		appconstants.ThemeDefault,
+		appconstants.ThemeGitHub,
+		appconstants.ThemeGitLab,
+		appconstants.ThemeMinimal,
+		appconstants.ThemeProfessional,
+	}
 
 	for _, theme := range themes {
 		t.Run("theme_"+theme, func(t *testing.T) {
@@ -638,7 +649,7 @@ func TestGeneratorWithDifferentThemes(t *testing.T) {
 			generator := NewGenerator(config)
 
 			if err := generator.GenerateFromFile(actionPath); err != nil {
-				t.Errorf("unexpected error: %v", err)
+				t.Errorf(testutil.TestErrUnexpected, err)
 
 				return
 			}
@@ -1209,6 +1220,117 @@ func TestGeneratorReportResultsEdgeCases(t *testing.T) {
 			}()
 
 			gen.reportResults(tt.successCount, tt.errors)
+		})
+	}
+}
+
+// testCapturedOutput wraps testutil.CapturedOutput for reportResults testing.
+type testCapturedOutput struct {
+	*testutil.CapturedOutput
+}
+
+// ErrorWithSuggestions wraps the testutil version to match interface signature.
+func (c *testCapturedOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
+	if err != nil {
+		c.ErrorMessages = append(c.ErrorMessages, err.Error())
+	}
+}
+
+// FormatContextualError wraps the testutil version to match interface signature.
+func (c *testCapturedOutput) FormatContextualError(err *apperrors.ContextualError) string {
+	if err != nil {
+		return err.Error()
+	}
+
+	return ""
+}
+
+// TestGeneratorReportResultsOutput tests reportResults output in non-quiet mode.
+func TestGeneratorReportResultsOutput(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		quiet        bool
+		verbose      bool
+		successCount int
+		errors       []string
+		wantBold     bool
+		wantError    bool
+	}{
+		{
+			name:         "quiet mode - no output",
+			quiet:        true,
+			verbose:      false,
+			successCount: 5,
+			errors:       []string{"error1"},
+			wantBold:     false,
+			wantError:    false,
+		},
+		{
+			name:         "non-quiet, no errors",
+			quiet:        false,
+			verbose:      false,
+			successCount: 5,
+			errors:       []string{},
+			wantBold:     true,
+			wantError:    false,
+		},
+		{
+			name:         "non-quiet, verbose, with errors",
+			quiet:        false,
+			verbose:      true,
+			successCount: 3,
+			errors:       []string{"error1", "error2"},
+			wantBold:     true,
+			wantError:    true,
+		},
+		{
+			name:         "non-quiet, non-verbose, with errors",
+			quiet:        false,
+			verbose:      false,
+			successCount: 2,
+			errors:       []string{"error1"},
+			wantBold:     true,
+			wantError:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			output := &testCapturedOutput{
+				CapturedOutput: &testutil.CapturedOutput{},
+			}
+			config := DefaultAppConfig()
+			config.Quiet = tt.quiet
+			config.Verbose = tt.verbose
+
+			gen := NewGeneratorWithDependencies(config, output, nil)
+			gen.reportResults(tt.successCount, tt.errors)
+
+			// Verify Bold message
+			if tt.wantBold {
+				if len(output.BoldMessages) == 0 {
+					t.Error("expected Bold message, got none")
+				}
+			} else {
+				if len(output.BoldMessages) > 0 {
+					t.Errorf("expected no Bold messages, got %d", len(output.BoldMessages))
+				}
+			}
+
+			// Verify Error messages
+			if tt.wantError {
+				if len(output.ErrorMessages) == 0 {
+					t.Error("expected Error messages, got none")
+				}
+			} else {
+				if len(output.ErrorMessages) > 0 {
+					t.Errorf("expected no Error messages, got %d", len(output.ErrorMessages))
+				}
+			}
 		})
 	}
 }

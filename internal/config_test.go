@@ -25,7 +25,7 @@ func TestInitConfig(t *testing.T) {
 				Theme:        testutil.TestThemeDefault,
 				OutputFormat: "md",
 				OutputDir:    ".",
-				Template:     "templates/readme.tmpl",
+				Template:     testutil.TestTemplateWithPrefix,
 				Schema:       "schemas/schema.json",
 				Verbose:      false,
 				Quiet:        false,
@@ -339,7 +339,7 @@ func TestResolveThemeTemplate(t *testing.T) {
 			theme:        testutil.TestThemeDefault,
 			expectError:  false,
 			shouldExist:  true,
-			expectedPath: "templates/readme.tmpl",
+			expectedPath: testutil.TestTemplateWithPrefix,
 		},
 		{
 			name:         "github theme",
@@ -883,6 +883,75 @@ func TestMergeSecurityFields(t *testing.T) {
 				GitHubToken: "ghp_new_token",
 			},
 		},
+		{
+			name: "allow tokens - merge repo overrides into nil dst",
+			dst: &AppConfig{
+				RepoOverrides: nil,
+			},
+			src: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.OrgRepo: {Organization: testutil.OrgName, Repository: testutil.RepoName},
+				},
+			},
+			allowTokens: true,
+			want: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.OrgRepo: {Organization: testutil.OrgName, Repository: testutil.RepoName},
+				},
+			},
+		},
+		{
+			name: "allow tokens - merge repo overrides into existing dst",
+			dst: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.ExistingRepo: {Organization: testutil.ExistingOrgName, Repository: testutil.RepoName},
+				},
+			},
+			src: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.NewRepo: {Organization: testutil.NewOrgName, Repository: testutil.RepoName},
+				},
+			},
+			allowTokens: true,
+			want: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.ExistingRepo: {Organization: testutil.ExistingOrgName, Repository: testutil.RepoName},
+					testutil.NewRepo:      {Organization: testutil.NewOrgName, Repository: testutil.RepoName},
+				},
+			},
+		},
+		{
+			name: "disallow tokens - do not merge repo overrides",
+			dst: &AppConfig{
+				RepoOverrides: nil,
+			},
+			src: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.OrgRepo: {Organization: testutil.OrgName, Repository: testutil.RepoName},
+				},
+			},
+			allowTokens: false,
+			want: &AppConfig{
+				RepoOverrides: nil,
+			},
+		},
+		{
+			name: "allow tokens - empty source repo overrides",
+			dst: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.ExistingRepo: {Organization: testutil.ExistingOrgName, Repository: testutil.RepoName},
+				},
+			},
+			src: &AppConfig{
+				RepoOverrides: map[string]AppConfig{},
+			},
+			allowTokens: true,
+			want: &AppConfig{
+				RepoOverrides: map[string]AppConfig{
+					testutil.ExistingRepo: {Organization: testutil.ExistingOrgName, Repository: testutil.RepoName},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -895,7 +964,59 @@ func TestMergeSecurityFields(t *testing.T) {
 				t.Errorf("GitHubToken = %q, want %q",
 					tt.dst.GitHubToken, tt.want.GitHubToken)
 			}
+
+			assertRepoOverrides(t, tt.dst.RepoOverrides, tt.want.RepoOverrides)
 		})
+	}
+}
+
+// assertRepoOverrides validates that RepoOverrides match expectations.
+func assertRepoOverrides(t *testing.T, got, want map[string]AppConfig) {
+	t.Helper()
+
+	if want == nil {
+		if got != nil {
+			t.Errorf("RepoOverrides = %v, want nil", got)
+		}
+
+		return
+	}
+
+	if got == nil {
+		t.Error("RepoOverrides is nil, want non-nil")
+
+		return
+	}
+
+	for key, wantVal := range want {
+		gotVal, exists := got[key]
+		if !exists {
+			t.Errorf("RepoOverrides missing key %q", key)
+		} else if gotVal.Organization != wantVal.Organization ||
+			gotVal.Repository != wantVal.Repository {
+			t.Errorf("RepoOverrides[%q] = %+v, want %+v",
+				key, gotVal, wantVal)
+		}
+	}
+
+	if len(got) != len(want) {
+		t.Errorf("RepoOverrides length = %d, want %d", len(got), len(want))
+	}
+}
+
+// assertGitHubClientValid checks that a GitHub client is properly initialized.
+func assertGitHubClientValid(t *testing.T, client *GitHubClient, expectedToken string) {
+	t.Helper()
+	if client == nil {
+		t.Error("expected non-nil client")
+
+		return
+	}
+	if client.Client == nil {
+		t.Error("expected non-nil GitHub client")
+	}
+	if client.Token != expectedToken {
+		t.Errorf("expected token %q, got %q", expectedToken, client.Token)
 	}
 }
 
@@ -949,23 +1070,28 @@ func TestNewGitHubClient_EdgeCases(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
-			} else {
-				testutil.AssertNoError(t, err)
 
-				if client == nil {
-					t.Error("expected non-nil client")
-				}
-
-				if client != nil {
-					if client.Client == nil {
-						t.Error("expected non-nil GitHub client")
-					}
-					if client.Token != tt.token {
-						t.Errorf("expected token %q, got %q", tt.token, client.Token)
-					}
-				}
+				return
 			}
+
+			testutil.AssertNoError(t, err)
+			assertGitHubClientValid(t, client, tt.token)
 		})
+	}
+}
+
+// runTemplatePathTest runs a template path test with setup and validation.
+func runTemplatePathTest(
+	t *testing.T,
+	setupFunc func(*testing.T) (string, func()),
+	checkFunc func(*testing.T, string),
+) {
+	t.Helper()
+	templatePath, cleanup := setupFunc(t)
+	defer cleanup()
+	result := resolveTemplatePath(templatePath)
+	if checkFunc != nil {
+		checkFunc(t, result)
 	}
 }
 
@@ -1002,12 +1128,12 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 				// Use a path we know is embedded
-				return "readme.tmpl", func() {}
+				return testutil.TestTemplateReadme, func() {}
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
-				if result != "readme.tmpl" {
-					t.Errorf("expected 'readme.tmpl', got: %s", result)
+				if result != testutil.TestTemplateReadme {
+					t.Errorf("expected %q, got: %s", testutil.TestTemplateReadme, result)
 				}
 			},
 			description: "Embedded templates should return original path",
@@ -1017,12 +1143,12 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 
-				return "templates/readme.tmpl", func() {}
+				return testutil.TestTemplateWithPrefix, func() {}
 			},
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
-				if result != "templates/readme.tmpl" {
-					t.Errorf("expected 'templates/readme.tmpl', got: %s", result)
+				if result != testutil.TestTemplateWithPrefix {
+					t.Errorf("expected %q, got: %s", testutil.TestTemplateWithPrefix, result)
 				}
 			},
 			description: "Embedded templates with prefix should return original path",
@@ -1045,7 +1171,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 			checkFunc: func(t *testing.T, result string) {
 				t.Helper()
 				if result == "" {
-					t.Error("expected non-empty result")
+					t.Error(testutil.TestMsgExpectedNonEmpty)
 				}
 			},
 			description: "Templates in current directory should be found",
@@ -1091,7 +1217,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 				t.Helper()
 				// Should return the path (either embedded or fallback)
 				if result == "" {
-					t.Error("expected non-empty result")
+					t.Error(testutil.TestMsgExpectedNonEmpty)
 				}
 			},
 			description: "Relative paths with subdirectories should be resolved",
@@ -1101,15 +1227,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Note: Cannot use t.Parallel() because one subtest uses t.Chdir()
-
-			templatePath, cleanup := tt.setupFunc(t)
-			defer cleanup()
-
-			result := resolveTemplatePath(templatePath)
-
-			if tt.checkFunc != nil {
-				tt.checkFunc(t, result)
-			}
+			runTemplatePathTest(t, tt.setupFunc, tt.checkFunc)
 		})
 	}
 }
@@ -1266,7 +1384,7 @@ func TestLoadConfiguration_EdgeCases(t *testing.T) {
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				if config == nil {
-					t.Fatal("expected non-nil config")
+					t.Fatal(testutil.TestMsgExpectedNonNilConfig)
 				}
 				// Should have default values
 				if config.Theme == "" {
@@ -1288,7 +1406,7 @@ func TestLoadConfiguration_EdgeCases(t *testing.T) {
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				if config == nil {
-					t.Fatal("expected non-nil config")
+					t.Fatal(testutil.TestMsgExpectedNonNilConfig)
 				}
 			},
 			description: "All empty paths should still return config",
@@ -1298,7 +1416,7 @@ func TestLoadConfiguration_EdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, string, string) {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
-				configPath := filepath.Join(tmpDir, "config.yaml")
+				configPath := filepath.Join(tmpDir, testutil.TestFileConfigYAML)
 				testutil.WriteTestFile(t, configPath, "theme: minimal\n")
 
 				return configPath, tmpDir, tmpDir
@@ -1364,7 +1482,7 @@ func TestInitConfig_EdgeCases(t *testing.T) {
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				if config == nil {
-					t.Fatal("expected non-nil config")
+					t.Fatal(testutil.TestMsgExpectedNonNilConfig)
 				}
 				// Should have default values
 				testutil.AssertEqual(t, testutil.TestThemeDefault, config.Theme)

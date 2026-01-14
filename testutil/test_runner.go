@@ -40,7 +40,7 @@ func RunBoolTests(t *testing.T, tests []BoolTestCase, fn func(string) bool) {
 			t.Parallel()
 			got := fn(tt.Input)
 			if got != tt.Want {
-				t.Errorf("got %v, want %v", got, tt.Want)
+				t.Errorf(TestMsgGotWant, got, tt.Want)
 			}
 		})
 	}
@@ -132,7 +132,7 @@ func RunStringSliceTests(t *testing.T, tests []StringSliceTestCase) {
 			t.Parallel()
 			got := tt.Fn(tt.Input)
 			if !slicesEqual(got, tt.Want) {
-				t.Errorf("got %v, want %v", got, tt.Want)
+				t.Errorf(TestMsgGotWant, got, tt.Want)
 			}
 		})
 	}
