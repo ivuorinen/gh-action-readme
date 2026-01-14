@@ -34,6 +34,26 @@ func SetupGitConfig(t *testing.T, gitDir, remoteURL string) {
 	WriteTestFile(t, configPath, config)
 }
 
+// CreateGitConfigWithRemote creates a git config file with remote and branch configuration.
+// Consolidates 6+ duplicated git config setups in detector_test.go.
+// Returns the path to the created config file.
+func CreateGitConfigWithRemote(t *testing.T, gitDir, remoteURL, branchName string) string {
+	t.Helper()
+
+	configContent := fmt.Sprintf(`[remote "origin"]
+	url = %s
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "%s"]
+	remote = origin
+	merge = refs/heads/%s
+`, remoteURL, branchName, branchName)
+
+	configPath := filepath.Join(gitDir, "config")
+	WriteTestFile(t, configPath, configContent)
+
+	return configPath
+}
+
 // WriteGitConfigFile creates a .git directory and writes a config file.
 // Returns the path to the config file for further assertions.
 // This is a convenience wrapper combining SetupGitDirectory + file writing.

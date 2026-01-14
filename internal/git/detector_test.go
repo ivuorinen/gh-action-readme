@@ -429,16 +429,7 @@ func TestGetDefaultBranch_Fallbacks(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[remote "origin"]
-	url = ` + testutil.TestURLGitHubUserRepo + `
-	fetch = +refs/heads/*:refs/remotes/origin/*
-[branch "main"]
-	remote = origin
-	merge = refs/heads/main
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
+				testutil.CreateGitConfigWithRemote(t, gitDir, testutil.TestURLGitHubUserRepo, "main")
 
 				return tmpDir
 			},
@@ -449,15 +440,7 @@ func TestGetDefaultBranch_Fallbacks(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[remote "origin"]
-	url = ` + testutil.TestURLGitHubUserRepo + `
-[branch "master"]
-	remote = origin
-	merge = refs/heads/master
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
+				testutil.CreateGitConfigWithRemote(t, gitDir, testutil.TestURLGitHubUserRepo, "master")
 
 				return tmpDir
 			},
@@ -468,15 +451,7 @@ func TestGetDefaultBranch_Fallbacks(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[remote "origin"]
-	url = ` + testutil.TestURLGitHubUserRepo + `
-[branch "develop"]
-	remote = origin
-	merge = refs/heads/develop
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
+				testutil.CreateGitConfigWithRemote(t, gitDir, testutil.TestURLGitHubUserRepo, "develop")
 
 				return tmpDir
 			},

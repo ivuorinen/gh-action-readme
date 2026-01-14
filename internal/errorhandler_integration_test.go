@@ -57,6 +57,19 @@ func execSubprocessTest(t *testing.T, testType string) (string, error) {
 	return stderrStr, cmd.Wait()
 }
 
+// runSubprocessErrorTest executes a subprocess test and verifies exit code and stderr.
+// Consolidates 15 duplicated test loops.
+func runSubprocessErrorTest(t *testing.T, testType string, expectedExit int, expectedStderr string) {
+	t.Helper()
+
+	stderrStr, err := execSubprocessTest(t, testType)
+	verifyExitCode(t, err, expectedExit)
+
+	if !strings.Contains(strings.ToLower(stderrStr), strings.ToLower(expectedStderr)) {
+		t.Errorf("stderr missing expected text %q, got: %s", expectedStderr, stderrStr)
+	}
+}
+
 // TestErrorHandlerIntegration tests error handler methods that call os.Exit()
 // using subprocess pattern.
 func TestErrorHandlerIntegration(t *testing.T) {
@@ -134,13 +147,7 @@ func TestErrorHandlerIntegration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
-			stderrStr, err := execSubprocessTest(t, tt.testType)
-			verifyExitCode(t, err, tt.expectedExit)
-
-			if !strings.Contains(strings.ToLower(stderrStr), strings.ToLower(tt.expectedStderr)) {
-				t.Errorf("stderr missing expected text %q, got: %s", tt.expectedStderr, stderrStr)
-			}
+			runSubprocessErrorTest(t, tt.testType, tt.expectedExit, tt.expectedStderr)
 		})
 	}
 }

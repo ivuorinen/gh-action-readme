@@ -281,12 +281,7 @@ func TestShowParseErrors(t *testing.T) {
 
 			gen.showParseErrors(tt.errors)
 
-			if len(output.BoldMessages) != tt.wantBold {
-				t.Errorf("showParseErrors() bold messages = %d, want %d", len(output.BoldMessages), tt.wantBold)
-			}
-			if len(output.ErrorMessages) != tt.wantError {
-				t.Errorf("showParseErrors() error messages = %d, want %d", len(output.ErrorMessages), tt.wantError)
-			}
+			testutil.AssertMessageCounts(t, tt.name, output.CapturedOutput, 0, tt.wantError, 0, tt.wantBold)
 
 			if tt.wantContains != "" && !output.ContainsError(tt.wantContains) {
 				t.Errorf(

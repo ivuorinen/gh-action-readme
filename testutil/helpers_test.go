@@ -6,52 +6,6 @@ import (
 	"testing"
 )
 
-// TestContextHelpers tests the context map factory functions.
-func TestContextHelpers(t *testing.T) {
-	t.Parallel()
-
-	t.Run("ContextWithPath", func(t *testing.T) {
-		t.Parallel()
-		result := ContextWithPath("/test/path")
-		if result["path"] != "/test/path" {
-			t.Errorf("ContextWithPath() path = %v, want /test/path", result["path"])
-		}
-		if len(result) != 1 {
-			t.Errorf("ContextWithPath() len = %v, want 1", len(result))
-		}
-	})
-
-	t.Run("ContextWithError", func(t *testing.T) {
-		t.Parallel()
-		result := ContextWithError("test error")
-		if result["error"] != "test error" {
-			t.Errorf("ContextWithError() error = %v, want test error", result["error"])
-		}
-		if len(result) != 1 {
-			t.Errorf("ContextWithError() len = %v, want 1", len(result))
-		}
-	})
-
-	t.Run("ContextWithStatusCode", func(t *testing.T) {
-		t.Parallel()
-		result := ContextWithStatusCode("404")
-		if result["status_code"] != "404" {
-			t.Errorf("ContextWithStatusCode() status_code = %v, want 404", result["status_code"])
-		}
-		if len(result) != 1 {
-			t.Errorf("ContextWithStatusCode() len = %v, want 1", len(result))
-		}
-	})
-
-	t.Run("EmptyContext", func(t *testing.T) {
-		t.Parallel()
-		result := EmptyContext()
-		if len(result) != 0 {
-			t.Errorf("EmptyContext() len = %v, want 0", len(result))
-		}
-	})
-}
-
 // TestGitHelpers tests the git setup helper functions.
 func TestGitHelpers(t *testing.T) {
 	t.Parallel()

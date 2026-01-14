@@ -4,30 +4,34 @@ import "testing"
 
 const testErrorMessage = "test error"
 
-func TestContextWithPath(t *testing.T) {
+func TestContextHelpers(t *testing.T) {
 	t.Parallel()
 
-	result := ContextWithPath("/test/path")
-	if result["path"] != "/test/path" {
-		t.Errorf("expected path='/test/path', got '%s'", result["path"])
+	tests := []struct {
+		name        string
+		key         string
+		value       string
+		contextFunc func(string) map[string]string
+	}{
+		{"ContextWithPath", TestKeyPath, "/test/path", ContextWithPath},
+		{"ContextWithError", "error", testErrorMessage, ContextWithError},
+		{"ContextWithStatusCode", "status_code", "404", ContextWithStatusCode},
+		{"ContextWithLine", "line", "42", ContextWithLine},
+		{"ContextWithMissingFields", "missing_fields", "field1,field2", ContextWithMissingFields},
+		{"ContextWithDirectory", "directory", "/test/dir", ContextWithDirectory},
+		{"ContextWithConfigPath", "config_path", "/config.yaml", ContextWithConfigPath},
+		{"ContextWithCommand", "command", TestCmdGen, ContextWithCommand},
 	}
-}
 
-func TestContextWithError(t *testing.T) {
-	t.Parallel()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	result := ContextWithError(testErrorMessage)
-	if result["error"] != testErrorMessage {
-		t.Errorf("expected error='%s', got '%s'", testErrorMessage, result["error"])
-	}
-}
-
-func TestContextWithStatusCode(t *testing.T) {
-	t.Parallel()
-
-	result := ContextWithStatusCode("404")
-	if result["status_code"] != "404" {
-		t.Errorf("expected status_code='404', got '%s'", result["status_code"])
+			result := tt.contextFunc(tt.value)
+			if result[tt.key] != tt.value {
+				t.Errorf("expected %s='%s', got '%s'", tt.key, tt.value, result[tt.key])
+			}
+		})
 	}
 }
 
@@ -37,51 +41,6 @@ func TestEmptyContext(t *testing.T) {
 	result := EmptyContext()
 	if len(result) != 0 {
 		t.Errorf("expected empty context, got %d entries", len(result))
-	}
-}
-
-func TestContextWithLine(t *testing.T) {
-	t.Parallel()
-
-	result := ContextWithLine("25")
-	if result["line"] != "25" {
-		t.Errorf("expected line='25', got '%s'", result["line"])
-	}
-}
-
-func TestContextWithMissingFields(t *testing.T) {
-	t.Parallel()
-
-	result := ContextWithMissingFields("name, description")
-	if result["missing_fields"] != "name, description" {
-		t.Errorf("expected missing_fields='name, description', got '%s'", result["missing_fields"])
-	}
-}
-
-func TestContextWithDirectory(t *testing.T) {
-	t.Parallel()
-
-	result := ContextWithDirectory("/project")
-	if result["directory"] != "/project" {
-		t.Errorf("expected directory='/project', got '%s'", result["directory"])
-	}
-}
-
-func TestContextWithConfigPath(t *testing.T) {
-	t.Parallel()
-
-	result := ContextWithConfigPath("~/.config/app/config.yaml")
-	if result["config_path"] != "~/.config/app/config.yaml" {
-		t.Errorf("expected config_path='~/.config/app/config.yaml', got '%s'", result["config_path"])
-	}
-}
-
-func TestContextWithCommand(t *testing.T) {
-	t.Parallel()
-
-	result := ContextWithCommand("gh-action-readme")
-	if result["command"] != "gh-action-readme" {
-		t.Errorf("expected command='gh-action-readme', got '%s'", result["command"])
 	}
 }
 
