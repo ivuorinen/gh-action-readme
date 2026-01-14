@@ -178,9 +178,8 @@ output_format: md
 
 				// Repo config
 				repoRoot := filepath.Join(tmpDir, "repo")
-				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
-theme: minimal
-`)
+				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml",
+					string(testutil.MustReadFixture(testutil.TestConfigMinimalSimple)))
 
 				return globalPath, repoRoot, ""
 			},
@@ -207,15 +206,13 @@ output_format: md
 
 				// Repo config
 				repoRoot := filepath.Join(tmpDir, "repo")
-				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml", `
-theme: minimal
-`)
+				testutil.WriteFileInDir(t, repoRoot, ".ghreadme.yaml",
+					string(testutil.MustReadFixture(testutil.TestConfigMinimalSimple)))
 
 				// Action config
 				actionDir := filepath.Join(repoRoot, "action")
-				testutil.WriteFileInDir(t, actionDir, "config.yaml", `
-theme: professional
-`)
+				testutil.WriteFileInDir(t, actionDir, "config.yaml",
+					string(testutil.MustReadFixture(testutil.TestConfigProfessionalSimple)))
 
 				return globalPath, repoRoot, actionDir
 			},
@@ -676,10 +673,8 @@ func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
-				testutil.WriteFileInDir(t, tmpDir, "config.yaml", `
-theme: minimal
-output_dir: dist
-`)
+				testutil.WriteFileInDir(t, tmpDir, "config.yaml",
+					string(testutil.MustReadFixture(testutil.TestConfigMinimalDist)))
 
 				return tmpDir
 			},

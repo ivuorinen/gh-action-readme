@@ -1,0 +1,4 @@
+theme: github
+output_format: html
+verbose: true
+schema: custom-schema.json

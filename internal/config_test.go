@@ -129,25 +129,18 @@ func TestLoadConfiguration(t *testing.T) {
 
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
-				globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML, `
-theme: default
-output_format: md
-github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz
-`)
+				globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML,
+					string(testutil.MustReadFixture(testutil.TestConfigGlobalDefault)))
 
 				// Create repo root with repo-specific config
 				repoRoot := filepath.Join(tempDir, "repo")
-				testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML, `
-theme: github
-output_format: html
-`)
+				testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML,
+					string(testutil.MustReadFixture(testutil.TestConfigRepoSimple)))
 
 				// Create current directory with action-specific config
 				currentDir := filepath.Join(repoRoot, "action")
-				testutil.WriteFileInDir(t, currentDir, testutil.TestFileConfigYAML, `
-theme: professional
-output_dir: output
-`)
+				testutil.WriteFileInDir(t, currentDir, testutil.TestFileConfigYAML,
+					string(testutil.MustReadFixture(testutil.TestConfigActionSimple)))
 
 				return globalConfigPath, repoRoot, currentDir
 			},
@@ -196,10 +189,8 @@ github_token: config-token
 
 				// Create XDG-compliant config
 				configDir := filepath.Join(xdgConfigHome, testutil.TestBinaryName)
-				configPath := testutil.WriteFileInDir(t, configDir, testutil.TestFileConfigYAML, `
-theme: github
-verbose: true
-`)
+				configPath := testutil.WriteFileInDir(t, configDir, testutil.TestFileConfigYAML,
+					string(testutil.MustReadFixture(testutil.TestConfigGitHubVerbose)))
 
 				return configPath, tempDir, tempDir
 			},
@@ -216,20 +207,14 @@ verbose: true
 				repoRoot := filepath.Join(tempDir, "repo")
 
 				// Create multiple hidden config files
-				testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML, `
-theme: minimal
-output_format: json
-`)
+				testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML,
+					string(testutil.MustReadFixture(testutil.TestConfigMinimalTheme)))
 
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestDirDotConfig, "ghreadme.yaml"), `
-theme: professional
-quiet: true
-`)
+				testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestDirDotConfig, "ghreadme.yaml"),
+					string(testutil.MustReadFixture(testutil.TestConfigProfessionalQuiet)))
 
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, ".github", "ghreadme.yaml"), `
-theme: github
-verbose: true
-`)
+				testutil.WriteTestFile(t, filepath.Join(repoRoot, ".github", "ghreadme.yaml"),
+					string(testutil.MustReadFixture(testutil.TestConfigGitHubVerbose)))
 
 				return "", repoRoot, repoRoot
 			},
@@ -450,19 +435,12 @@ func TestConfigMerging(t *testing.T) {
 	// Test config merging by creating config files and seeing the result
 
 	globalConfigDir := filepath.Join(tmpDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
-	testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML, `
-theme: default
-output_format: md
-github_token: base-token
-verbose: false
-`)
+	testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML,
+		string(testutil.MustReadFixture(testutil.TestConfigGlobalBaseToken)))
 
 	repoRoot := filepath.Join(tmpDir, "repo")
-	testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML, `
-theme: github
-output_format: html
-verbose: true
-`)
+	testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML,
+		string(testutil.MustReadFixture(testutil.TestConfigRepoVerbose)))
 
 	// Set HOME and XDG_CONFIG_HOME to temp directory
 	testutil.SetupConfigEnvironment(t, tmpDir)

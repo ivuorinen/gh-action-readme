@@ -252,24 +252,16 @@ func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 
 	// Global configuration (lowest priority)
 	globalConfigDir := testutil.CreateTestSubdir(t, configHome, testutil.TestBinaryName)
-	globalConfig := `theme: default
-output_format: md
-verbose: false
-github_token: ghp_test1234567890abcdefghijklmnopqrstuvwxyz`
+	globalConfig := string(testutil.MustReadFixture(testutil.TestConfigGlobalDefault))
 	testutil.WriteTestFile(t, filepath.Join(globalConfigDir, testutil.TestPathConfigYML), globalConfig)
 
 	// Repository configuration (medium priority)
-	repoConfig := `theme: github
-output_format: html
-verbose: true
-schema: custom-schema.json`
+	repoConfig := string(testutil.MustReadFixture(testutil.TestConfigRepoGitHub))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGHActionReadme), repoConfig)
 
 	// Action-specific configuration (higher priority)
 	githubDir := testutil.CreateTestSubdir(t, tmpDir, testutil.TestDirDotGitHub)
-	actionConfig := `theme: professional
-template: custom-template.tmpl
-output_dir: docs`
+	actionConfig := string(testutil.MustReadFixture(testutil.TestConfigActionProfessional))
 	testutil.WriteTestFile(t, filepath.Join(githubDir, testutil.TestFileGHActionReadme), actionConfig)
 
 	// Environment variables (highest priority before CLI flags)
@@ -290,9 +282,7 @@ func setupTemplateErrorScenario(t *testing.T, tmpDir string) {
 	templatesDir := testutil.CreateTestSubdir(t, tmpDir, "templates")
 
 	// Create invalid template
-	brokenTemplate := `# {{ .Name }
-{{ .InvalidField }}
-{{ range .NonExistentField }}`
+	brokenTemplate := string(testutil.MustReadFixture(testutil.TestTemplateBroken))
 	testutil.WriteTestFile(t, filepath.Join(templatesDir, "broken.tmpl"), brokenTemplate)
 }
 
@@ -304,14 +294,11 @@ func setupConfigurationErrorScenario(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
 
 	// Create invalid configuration files
-	invalidConfig := `theme: [invalid yaml structure
-output_format: "missing quote
-verbose: not_a_boolean`
+	invalidConfig := string(testutil.MustReadFixture(testutil.TestConfigInvalidMalformed))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGHActionReadme), invalidConfig)
 
 	// Create configuration with missing required fields
-	incompleteConfig := `unknown_field: value
-invalid_theme: nonexistent`
+	incompleteConfig := string(testutil.MustReadFixture(testutil.TestConfigInvalidIncomplete))
 	configDir := testutil.CreateTestSubdir(t, tmpDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
 	testutil.WriteTestFile(t, filepath.Join(configDir, testutil.TestPathConfigYML), incompleteConfig)
 
@@ -348,8 +335,7 @@ func setupServiceIntegrationErrorScenario(t *testing.T, tmpDir string) {
 	testutil.CreateActionSubdir(t, tmpDir, "actions/valid", testutil.TestFixtureCompositeBasic)
 
 	// Broken configuration
-	brokenConfig := `theme: nonexistent_theme
-template: /path/to/nonexistent/template.tmpl`
+	brokenConfig := string(testutil.MustReadFixture(testutil.TestConfigInvalidTheme))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGHActionReadme), brokenConfig)
 }
 

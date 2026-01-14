@@ -419,3 +419,30 @@ const (
 	// TestMsgInvalidVariableName is a common validation error for variable names.
 	TestMsgInvalidVariableName = "Invalid variable name"
 )
+
+// Config fixture path constants for reducing string duplication.
+const (
+	// Global configs.
+	TestConfigGlobalDefault = "configs/global-config-default.yml"
+	//nolint:gosec // G101: False positive - this is a test fixture path, not a credential
+	TestConfigGlobalBaseToken    = "configs/global-base-token.yml"
+	TestConfigRepoGitHub         = "configs/repo-config-github.yml"
+	TestConfigRepoSimple         = "configs/repo-config-simple.yml"
+	TestConfigActionProfessional = "configs/action-config-professional.yml"
+	TestConfigActionSimple       = "configs/action-config-simple.yml"
+	TestConfigRepoVerbose        = "configs/repo-config-verbose.yml"
+	TestConfigGitHubVerbose      = "configs/github-verbose-simple.yml"
+	TestConfigProfessionalQuiet  = "configs/professional-quiet.yml"
+	TestConfigMinimalTheme       = "configs/config-minimal-theme.yml"
+	TestConfigMinimalSimple      = "configs/minimal-simple.yml"
+	TestConfigProfessionalSimple = "configs/professional-simple.yml"
+	TestConfigMinimalDist        = "configs/minimal-dist.yml"
+
+	// Invalid/error configs.
+	TestConfigInvalidMalformed  = "configs/invalid-config-malformed.yml"
+	TestConfigInvalidIncomplete = "configs/invalid-config-incomplete.yml"
+	TestConfigInvalidTheme      = "configs/invalid-config-nonexistent-theme.yml"
+
+	// Template fixtures.
+	TestTemplateBroken = "template-fixtures/broken-template.tmpl"
+)
