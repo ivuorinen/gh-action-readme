@@ -410,3 +410,12 @@ const (
 	// TestConfigMinimal is a minimal JSON config with version.
 	TestConfigMinimal = `{"version": "1.0.0"}`
 )
+
+// Validation message constants for reducing string duplication in validation tests.
+const (
+	// TestMsgCannotBeEmpty is a common validation error message.
+	TestMsgCannotBeEmpty = "cannot be empty"
+
+	// TestMsgInvalidVariableName is a common validation error for variable names.
+	TestMsgInvalidVariableName = "Invalid variable name"
+)

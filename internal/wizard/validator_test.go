@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // newTestValidator creates a ConfigValidator for testing with quiet output.
@@ -283,7 +284,7 @@ func TestDisplayValidationResult(t *testing.T) {
 			result: &ValidationResult{
 				Valid: false,
 				Errors: []ValidationError{
-					{Field: "organization", Message: "cannot be empty", Value: ""},
+					{Field: "organization", Message: testutil.TestMsgCannotBeEmpty, Value: ""},
 					{Field: "repository", Message: "invalid format", Value: "test"},
 				},
 				Warnings:    []ValidationWarning{},
@@ -310,7 +311,7 @@ func TestDisplayValidationResult(t *testing.T) {
 			result: &ValidationResult{
 				Valid: false,
 				Errors: []ValidationError{
-					{Field: "organization", Message: "cannot be empty", Value: ""},
+					{Field: "organization", Message: testutil.TestMsgCannotBeEmpty, Value: ""},
 				},
 				Warnings: []ValidationWarning{
 					{Field: "github_token", Message: "should be stored securely"},
@@ -325,7 +326,7 @@ func TestDisplayValidationResult(t *testing.T) {
 			result: &ValidationResult{
 				Valid: false,
 				Errors: []ValidationError{
-					{Field: "organization", Message: "cannot be empty", Value: ""},
+					{Field: "organization", Message: testutil.TestMsgCannotBeEmpty, Value: ""},
 				},
 				Warnings: []ValidationWarning{},
 				Suggestions: []string{
@@ -489,31 +490,31 @@ func TestValidateVariables_InvalidFormats(t *testing.T) {
 			name:        "starts with number",
 			varName:     "1_VAR",
 			expectError: true,
-			errorMsg:    "Invalid variable name",
+			errorMsg:    testutil.TestMsgInvalidVariableName,
 		},
 		{
 			name:        "contains hyphen",
 			varName:     "MY-VAR",
 			expectError: true,
-			errorMsg:    "Invalid variable name",
+			errorMsg:    testutil.TestMsgInvalidVariableName,
 		},
 		{
 			name:        "contains space",
 			varName:     "MY VAR",
 			expectError: true,
-			errorMsg:    "Invalid variable name",
+			errorMsg:    testutil.TestMsgInvalidVariableName,
 		},
 		{
 			name:        "contains special characters",
 			varName:     "MY_VAR!",
 			expectError: true,
-			errorMsg:    "Invalid variable name",
+			errorMsg:    testutil.TestMsgInvalidVariableName,
 		},
 		{
 			name:        "empty variable name",
 			varName:     "",
 			expectError: true,
-			errorMsg:    "Invalid variable name",
+			errorMsg:    testutil.TestMsgInvalidVariableName,
 		},
 	}
 
@@ -558,7 +559,7 @@ func TestValidateOutputDir_Paths(t *testing.T) {
 			name:        "empty path",
 			outputDir:   "",
 			expectError: true,
-			errorMsg:    "cannot be empty",
+			errorMsg:    testutil.TestMsgCannotBeEmpty,
 		},
 	}
 

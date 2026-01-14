@@ -3,6 +3,7 @@ package internal
 import (
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
@@ -359,7 +360,7 @@ func TestShowFileIssues(t *testing.T) {
 			wantInfo:     1, // Just file name
 			wantError:    0,
 			wantWarning:  0,
-			wantContains: "action.yml",
+			wantContains: appconstants.ActionFileNameYML,
 		},
 	}
 

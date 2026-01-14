@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -271,7 +272,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 			}
 
 			// Create temporary action file
-			actionPath = filepath.Join(ctx.TempDir, "action.yml")
+			actionPath = filepath.Join(ctx.TempDir, appconstants.ActionFileNameYML)
 			testutil.WriteTestFile(t, actionPath, fixture.Content)
 		}
 
