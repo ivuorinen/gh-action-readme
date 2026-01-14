@@ -4,6 +4,172 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **gh-action-readme** - CLI tool for GitHub Actions documentation generation
 
+## ⚠️ Code Quality Anti-Patterns - DO NOT REPEAT
+
+**CRITICAL:** The following patterns have caused quality issues in the past. These mistakes must not be repeated:
+
+### 🚫 High Cognitive Complexity
+
+#### Never write functions with cognitive complexity > 15
+
+**Bad - Repeated Mistakes:**
+
+- Nested conditionals in test assertions
+- Complex error checking logic duplicated across tests
+- Deep nesting in validation functions
+
+**Always:**
+
+- Extract complex logic into helper functions
+- Create test helper functions for repeated assertion patterns
+- Keep functions focused on a single responsibility
+- Break down complex conditions into smaller, testable pieces
+
+**Example:**
+Instead of 19 lines of nested error checking, create a helper:
+
+```go
+// ❌ BAD - High complexity
+func TestValidation(t *testing.T) {
+    if result.HasErrors {
+        found := false
+        for _, err := range result.Errors {
+            if strings.Contains(err.Message, expected) {
+                found = true
+                break
+            }
+        }
+        if !found {
+            t.Errorf("error not found")
+        }
+    } else {
+        // more nesting...
+    }
+}
+
+// ✅ GOOD - Use helper
+func TestValidation(t *testing.T) {
+    assertValidationError(t, result, "field", true, "expected message")
+}
+```
+
+### 🚫 Duplicate String Literals
+
+#### Never repeat string literals across test files
+
+**Bad - Repeated Mistakes:**
+
+- File paths like `"/tmp/action.yml"` repeated 22 times
+- Action references like `"actions/checkout@v3"` duplicated
+- Error messages and test scenarios hardcoded everywhere
+
+**Always:**
+
+- Use constants from `appconstants/` for production strings
+- Use constants from `testutil/test_constants.go` for test-only strings
+- Add new constants when you see duplication (>2 uses)
+
+**Red Flag Patterns:**
+
+- Same string literal in multiple test files
+- Same file path repeated in different tests
+- Same error message in multiple assertions
+
+### 🚫 Inline YAML and Config Data in Tests
+
+#### Never embed YAML or config data directly in test code
+
+**Bad - Repeated Mistakes:**
+
+- Inline YAML strings with backticks in test functions
+- Config data hardcoded in test setup
+- Template content embedded in test files
+
+**Always:**
+
+- Create fixture files in `testdata/yaml-fixtures/`
+- Use `testutil.MustReadFixture()` to load fixtures
+- Add constants to `testutil/test_constants.go` for fixture paths
+- Reuse fixtures across multiple tests
+
+**Example:**
+
+```go
+// ❌ BAD - Inline YAML
+testConfig := `
+theme: default
+output_format: md
+`
+
+// ✅ GOOD - Use fixture
+testConfig := string(testutil.MustReadFixture(testutil.TestConfigDefault))
+```
+
+**Fixture Organization:**
+
+- `testdata/yaml-fixtures/configs/` - Config files
+- `testdata/yaml-fixtures/actions/` - Action files
+- `testdata/yaml-fixtures/template-fixtures/` - Template files
+
+### 🚫 Co-Authored-By Lines in Commits
+
+#### Never add Co-Authored-By or similar bylines to commit messages
+
+**Bad - Repeated Mistakes:**
+
+- Adding `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>` to commits
+- Including attribution lines at end of commit messages
+- Adding signature or generated-by lines
+
+**Always:**
+
+- Write clean commit messages following conventional commits format
+- Omit any co-author, attribution, or signature lines
+- Focus commit message on what changed and why
+
+**Example:**
+
+```text
+❌ BAD:
+refactor: move inline YAML to fixtures
+
+Benefits:
+- Improved maintainability
+- Better separation
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+
+✅ GOOD:
+refactor: move inline YAML to fixtures for better test maintainability
+
+- Created 16 new config fixtures
+- Replaced 19 inline YAML instances
+- All tests passing with no regressions
+```
+
+**When user says "no bylines":**
+
+- This means: Remove ALL attribution/co-author lines
+- Do NOT argue or explain why they might be useful
+- Just comply immediately and recommit without bylines
+
+### ✅ Prevention Mechanisms
+
+**Before writing ANY code:**
+
+1. Check `testutil/test_constants.go` for existing constants
+2. Check `testdata/yaml-fixtures/` for existing fixtures
+3. Consider if your function will exceed complexity limits
+4. Plan helper functions for complex logic upfront
+
+**Before committing:**
+
+1. Run `make lint` - catches complexity and duplication
+2. Pre-commit hooks will catch most issues
+3. SonarCloud will flag remaining issues in PR
+
+**Remember:** It's easier to write clean code initially than to refactor after quality issues are raised.
+
 ## 🛡️ Quality Standards
 
 This project enforces strict quality gates aligned with [SonarCloud "Sonar way"](https://docs.sonarsource.com/sonarqube-cloud/standards/managing-quality-gates/):
