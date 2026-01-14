@@ -1,0 +1,6 @@
+# permissions:
+name: Test Action
+description: Test action with empty permissions block
+runs:
+  using: composite
+  steps: []

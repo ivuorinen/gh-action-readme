@@ -1,0 +1,8 @@
+# permissions:
+#   contents: read
+#   issues: write
+name: Test Action
+description: Test action with permissions in object format (no dash)
+runs:
+  using: composite
+  steps: []

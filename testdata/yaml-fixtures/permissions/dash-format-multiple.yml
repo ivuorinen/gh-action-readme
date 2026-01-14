@@ -1,0 +1,9 @@
+# permissions:
+#   - contents: read
+#   - issues: write
+#   - pull-requests: write
+name: Test Action
+description: Test action with multiple permissions in dash format
+runs:
+  using: composite
+  steps: []

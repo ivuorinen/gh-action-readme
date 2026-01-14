@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+# permissions:
+#   - contents: read  # Required for checking out repository
+name: Test Action
+description: Test action with single permission in dash format
+runs:
+  using: composite
+  steps: []

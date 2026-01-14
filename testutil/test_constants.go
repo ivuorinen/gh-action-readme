@@ -82,6 +82,15 @@ const (
 	TestFixtureRepoConfig                  = "repo-config.yml"
 	TestFixtureActionSimple                = "actions/simple/action.yml"
 	TestFixtureActionMinimal               = "actions/minimal/action.yml"
+
+	// Permission test fixtures for parser tests.
+	TestFixturePermissionsDashSingle     = "permissions/dash-format-single.yml"
+	TestFixturePermissionsDashMultiple   = "permissions/dash-format-multiple.yml"
+	TestFixturePermissionsObject         = "permissions/object-format.yml"
+	TestFixturePermissionsInlineComments = "permissions/inline-comments.yml"
+	TestFixturePermissionsMixed          = "permissions/mixed-format.yml"
+	TestFixturePermissionsEmpty          = "permissions/empty-block.yml"
+	TestFixturePermissionsNone           = "permissions/no-permissions.yml"
 )
 
 // Dependency update test constants for reducing string duplication in updater_test.go.
