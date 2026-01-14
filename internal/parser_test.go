@@ -260,23 +260,16 @@ func TestParsePermissionsFromComments(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "single permission with dash format",
-			content: `# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
-# permissions:
-#   - contents: read  # Required for checking out repository
-name: Test Action`,
+			name:    "single permission with dash format",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsDashSingle)),
 			want: map[string]string{
 				"contents": "read",
 			},
 			wantErr: false,
 		},
 		{
-			name: "multiple permissions",
-			content: `# permissions:
-#   - contents: read
-#   - issues: write
-#   - pull-requests: write
-name: Test Action`,
+			name:    "multiple permissions",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsDashMultiple)),
 			want: map[string]string{
 				"contents":      "read",
 				"issues":        "write",
@@ -285,11 +278,8 @@ name: Test Action`,
 			wantErr: false,
 		},
 		{
-			name: "permissions without dash",
-			content: `# permissions:
-#   contents: read
-#   issues: write
-name: Test Action`,
+			name:    "permissions without dash",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsObject)),
 			want: map[string]string{
 				"contents": "read",
 				"issues":   "write",
@@ -297,18 +287,14 @@ name: Test Action`,
 			wantErr: false,
 		},
 		{
-			name: "no permissions block",
-			content: `# Just a comment
-name: Test Action`,
+			name:    "no permissions block",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsNone)),
 			want:    map[string]string{},
 			wantErr: false,
 		},
 		{
-			name: "permissions with inline comments",
-			content: `# permissions:
-#   - contents: read  # Needed for checkout
-#   - issues: write   # To create issues
-name: Test Action`,
+			name:    "permissions with inline comments",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsInlineComments)),
 			want: map[string]string{
 				"contents": "read",
 				"issues":   "write",
@@ -316,18 +302,14 @@ name: Test Action`,
 			wantErr: false,
 		},
 		{
-			name: "empty permissions block",
-			content: `# permissions:
-name: Test Action`,
+			name:    "empty permissions block",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsEmpty)),
 			want:    map[string]string{},
 			wantErr: false,
 		},
 		{
-			name: "permissions with mixed formats",
-			content: `# permissions:
-#   - contents: read
-#   issues: write
-name: Test Action`,
+			name:    "permissions with mixed formats",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsMixed)),
 			want: map[string]string{
 				"contents": "read",
 				"issues":   "write",
