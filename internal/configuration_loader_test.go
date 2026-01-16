@@ -337,22 +337,15 @@ verbose: true
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			configFile := tt.setupFunc(t)
-
-			loader := NewConfigurationLoader()
-			config, err := loader.LoadGlobalConfig(configFile)
-
-			if tt.expectError {
-				testutil.AssertError(t, err)
-			} else {
-				testutil.AssertNoError(t, err)
-
-				if tt.checkFunc != nil {
-					tt.checkFunc(t, config)
-				}
-			}
+			runConfigLoaderTest(t, configLoaderTestCase{
+				name:        tt.name,
+				setupFunc:   tt.setupFunc,
+				expectError: tt.expectError,
+				checkFunc:   tt.checkFunc,
+				description: tt.description,
+			}, func(loader *ConfigurationLoader, path string) (*AppConfig, error) {
+				return loader.LoadGlobalConfig(path)
+			})
 		})
 	}
 }
@@ -562,63 +555,27 @@ func TestConfigurationLoaderEnvironmentOverrides(t *testing.T) {
 }
 
 func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
-	tests := []struct {
-		name           string
-		setupFunc      func(t *testing.T) (config *AppConfig, repoRoot string)
-		expectedTheme  string
-		expectedFormat string
-		description    string
-	}{
-		{
-			name: "matching repo override applied",
-			setupFunc: func(t *testing.T) (*AppConfig, string) {
-				t.Helper()
-				tmpDir, _ := testutil.TempDir(t)
-
-				testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/test/repo.git")
-
-				config := &AppConfig{
-					Theme:        testutil.TestThemeDefault,
-					OutputFormat: "md",
-					RepoOverrides: map[string]AppConfig{
-						testutil.TestRepoTestRepo: {
-							Theme:        testutil.TestThemeProfessional,
-							OutputFormat: "html",
-						},
-					},
-				}
-
-				return config, tmpDir
-			},
-			expectedTheme:  testutil.TestThemeProfessional,
-			expectedFormat: "html",
-			description:    "Matching repo override should be applied",
-		},
-		{
-			name: "no override when repo doesn't match",
-			setupFunc: func(t *testing.T) (*AppConfig, string) {
-				t.Helper()
-				tmpDir, _ := testutil.TempDir(t)
-
-				testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/different/repo.git")
-
-				config := &AppConfig{
-					Theme:        testutil.TestThemeDefault,
-					OutputFormat: "md",
-					RepoOverrides: map[string]AppConfig{
-						testutil.TestRepoTestRepo: {
-							Theme:        testutil.TestThemeProfessional,
-							OutputFormat: "html",
-						},
-					},
-				}
-
-				return config, tmpDir
-			},
-			expectedTheme:  testutil.TestThemeDefault,
-			expectedFormat: "md",
-			description:    "No override when repo doesn't match",
-		},
+	tests := []repoOverrideTestCase{
+		createRepoOverrideTestCase(
+			"matching repo override applied",
+			"https://github.com/test/repo.git",
+			testutil.TestRepoTestRepo,
+			testutil.TestThemeProfessional,
+			"html",
+			testutil.TestThemeProfessional,
+			"html",
+			"Matching repo override should be applied",
+		),
+		createRepoOverrideTestCase(
+			"no override when repo doesn't match",
+			"https://github.com/different/repo.git",
+			testutil.TestRepoTestRepo,
+			testutil.TestThemeProfessional,
+			"html",
+			testutil.TestThemeDefault,
+			"md",
+			"No override when repo doesn't match",
+		),
 		{
 			name: "no override when no git repository",
 			setupFunc: func(t *testing.T) (*AppConfig, string) {
@@ -646,14 +603,7 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, repoRoot := tt.setupFunc(t)
-
-			loader := NewConfigurationLoader()
-			loader.applyRepoOverrides(config, repoRoot)
-
-			// Verify expected values
-			testutil.AssertEqual(t, tt.expectedTheme, config.Theme)
-			testutil.AssertEqual(t, tt.expectedFormat, config.OutputFormat)
+			runRepoOverrideTest(t, tt)
 		})
 	}
 }
@@ -705,22 +655,15 @@ func TestConfigurationLoaderLoadActionConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			actionDir := tt.setupFunc(t)
-
-			loader := NewConfigurationLoader()
-			config, err := loader.loadActionConfig(actionDir)
-
-			if tt.expectError {
-				testutil.AssertError(t, err)
-			} else {
-				testutil.AssertNoError(t, err)
-
-				if tt.checkFunc != nil {
-					tt.checkFunc(t, config)
-				}
-			}
+			runConfigLoaderTest(t, configLoaderTestCase{
+				name:        tt.name,
+				setupFunc:   tt.setupFunc,
+				expectError: tt.expectError,
+				checkFunc:   tt.checkFunc,
+				description: tt.description,
+			}, func(loader *ConfigurationLoader, path string) (*AppConfig, error) {
+				return loader.loadActionConfig(path)
+			})
 		})
 	}
 }
@@ -781,38 +724,17 @@ func TestConfigurationLoaderValidateTheme(t *testing.T) {
 }
 
 func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
-	tests := []struct {
-		name           string
-		setupFunc      func(t *testing.T) (config *AppConfig, repoRoot string)
-		expectedTheme  string
-		expectedFormat string
-		description    string
-	}{
-		{
-			name: "override applied with valid repo root",
-			setupFunc: func(t *testing.T) (*AppConfig, string) {
-				t.Helper()
-				tmpDir, _ := testutil.TempDir(t)
-
-				testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/myorg/myrepo.git")
-
-				config := &AppConfig{
-					Theme:        testutil.TestThemeDefault,
-					OutputFormat: "md",
-					RepoOverrides: map[string]AppConfig{
-						"myorg/myrepo": {
-							Theme:        testutil.TestThemeGitHub,
-							OutputFormat: "json",
-						},
-					},
-				}
-
-				return config, tmpDir
-			},
-			expectedTheme:  "github",
-			expectedFormat: "json",
-			description:    "Should apply repo override for detected repository",
-		},
+	tests := []repoOverrideTestCase{
+		createRepoOverrideTestCase(
+			"override applied with valid repo root",
+			"https://github.com/myorg/myrepo.git",
+			"myorg/myrepo",
+			testutil.TestThemeGitHub,
+			"json",
+			"github",
+			"json",
+			"Should apply repo override for detected repository",
+		),
 		{
 			name: "no override with empty repo root",
 			setupFunc: func(t *testing.T) (*AppConfig, string) {
@@ -839,14 +761,7 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, repoRoot := tt.setupFunc(t)
-
-			loader := NewConfigurationLoader()
-			loader.applyRepoOverrides(config, repoRoot)
-
-			// Verify expected values
-			testutil.AssertEqual(t, tt.expectedTheme, config.Theme)
-			testutil.AssertEqual(t, tt.expectedFormat, config.OutputFormat)
+			runRepoOverrideTest(t, tt)
 		})
 	}
 }
