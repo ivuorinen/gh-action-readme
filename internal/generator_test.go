@@ -448,10 +448,8 @@ func TestGeneratorProcessBatch(t *testing.T) {
 			expectFiles: 0,
 		},
 		{
-			name: "nonexistent files",
-			setupFunc: func(_ *testing.T, tmpDir string) []string {
-				return []string{filepath.Join(tmpDir, "nonexistent.yml")}
-			},
+			name:        "nonexistent files",
+			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
 			expectError: true,
 		},
 	}
@@ -533,10 +531,8 @@ func TestGeneratorValidateFiles(t *testing.T) {
 			expectError: true, // Validation should fail for invalid runtime configuration
 		},
 		{
-			name: "nonexistent files",
-			setupFunc: func(_ *testing.T, tmpDir string) []string {
-				return []string{filepath.Join(tmpDir, "nonexistent.yml")}
-			},
+			name:        "nonexistent files",
+			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
 			expectError: true,
 		},
 	}

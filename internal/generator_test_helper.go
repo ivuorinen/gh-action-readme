@@ -143,3 +143,11 @@ func createMultiActionSetup(dirNames, fixtures []string) func(t *testing.T, tmpD
 		return files
 	}
 }
+
+// setupNonexistentFiles returns a setupFunc that creates paths to nonexistent files.
+// This is used in multiple tests to verify error handling for missing files.
+func setupNonexistentFiles(filename string) func(*testing.T, string) []string {
+	return func(_ *testing.T, tmpDir string) []string {
+		return []string{filepath.Join(tmpDir, filename)}
+	}
+}
