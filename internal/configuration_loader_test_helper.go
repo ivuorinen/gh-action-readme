@@ -30,40 +30,43 @@ func runRepoOverrideTest(t *testing.T, tc repoOverrideTestCase) {
 	testutil.AssertEqual(t, tc.expectedFormat, config.OutputFormat)
 }
 
+// repoOverrideTestParams holds parameters for creating repo override test cases.
+type repoOverrideTestParams struct {
+	name, remoteURL, overrideKey  string
+	overrideTheme, overrideFormat string
+	expectedTheme, expectedFormat string
+	description                   string
+}
+
 // createRepoOverrideTestCase creates a repo override test case with git repo setup.
 // This helper reduces duplication when creating test cases that need git repositories.
-func createRepoOverrideTestCase(
-	name, remoteURL, overrideKey string,
-	overrideTheme, overrideFormat string,
-	expectedTheme, expectedFormat string,
-	description string,
-) repoOverrideTestCase {
+func createRepoOverrideTestCase(params repoOverrideTestParams) repoOverrideTestCase {
 	return repoOverrideTestCase{
-		name: name,
+		name: params.name,
 		setupFunc: func(t *testing.T) (*AppConfig, string) {
 			t.Helper()
 			tmpDir, _ := testutil.TempDir(t)
 
-			if remoteURL != "" {
-				testutil.CreateGitRepoWithRemote(t, tmpDir, remoteURL)
+			if params.remoteURL != "" {
+				testutil.CreateGitRepoWithRemote(t, tmpDir, params.remoteURL)
 			}
 
 			config := &AppConfig{
 				Theme:        testutil.TestThemeDefault,
 				OutputFormat: "md",
 				RepoOverrides: map[string]AppConfig{
-					overrideKey: {
-						Theme:        overrideTheme,
-						OutputFormat: overrideFormat,
+					params.overrideKey: {
+						Theme:        params.overrideTheme,
+						OutputFormat: params.overrideFormat,
 					},
 				},
 			}
 
 			return config, tmpDir
 		},
-		expectedTheme:  expectedTheme,
-		expectedFormat: expectedFormat,
-		description:    description,
+		expectedTheme:  params.expectedTheme,
+		expectedFormat: params.expectedFormat,
+		description:    params.description,
 	}
 }
 

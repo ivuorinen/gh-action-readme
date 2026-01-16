@@ -126,7 +126,7 @@ func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
 
 // createMultiActionSetup creates a setupFunc for batch processing tests with multiple actions.
 // It generates separate directories for each action and writes the specified fixtures.
-func createMultiActionSetup(dirNames []string, fixtures []string) func(t *testing.T, tmpDir string) []string {
+func createMultiActionSetup(dirNames, fixtures []string) func(t *testing.T, tmpDir string) []string {
 	return func(t *testing.T, tmpDir string) []string {
 		t.Helper()
 

@@ -17,25 +17,28 @@ type validationSummaryTestCase struct {
 	wantInfo    int
 }
 
+// validationSummaryParams holds parameters for creating validation summary test cases.
+type validationSummaryParams struct {
+	name                                                         string
+	totalFiles, validFiles, totalIssues, resultCount, errorCount int
+	wantWarning, wantError, wantInfo                             int
+}
+
 // createValidationSummaryTest creates a validation summary test case with defaults.
 // Default values: wantBold=1, wantSuccess=1, wantWarning=0, wantError=0, wantInfo=0
 // Only provide the fields that differ from defaults.
-func createValidationSummaryTest(
-	name string,
-	totalFiles, validFiles, totalIssues, resultCount, errorCount int,
-	wantWarning, wantError, wantInfo int,
-) validationSummaryTestCase {
+func createValidationSummaryTest(params validationSummaryParams) validationSummaryTestCase {
 	return validationSummaryTestCase{
-		name:        name,
-		totalFiles:  totalFiles,
-		validFiles:  validFiles,
-		totalIssues: totalIssues,
-		resultCount: resultCount,
-		errorCount:  errorCount,
+		name:        params.name,
+		totalFiles:  params.totalFiles,
+		validFiles:  params.validFiles,
+		totalIssues: params.totalIssues,
+		resultCount: params.resultCount,
+		errorCount:  params.errorCount,
 		wantBold:    1, // Always 1
 		wantSuccess: 1, // Always 1
-		wantWarning: wantWarning,
-		wantError:   wantError,
-		wantInfo:    wantInfo,
+		wantWarning: params.wantWarning,
+		wantError:   params.wantError,
+		wantInfo:    params.wantInfo,
 	}
 }

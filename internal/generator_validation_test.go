@@ -141,31 +141,61 @@ func assertMessageCounts(t *testing.T, output *capturedOutput, want messageCount
 // TestShowValidationSummary tests the validation summary display function.
 func TestShowValidationSummary(t *testing.T) {
 	tests := []validationSummaryTestCase{
-		createValidationSummaryTest(
-			"all valid files",
-			3, 3, 0, 3, 0, // totalFiles, validFiles, totalIssues, resultCount, errorCount
-			0, 0, 0, // wantWarning, wantError, wantInfo
-		),
-		createValidationSummaryTest(
-			"some files with issues",
-			3, 1, 5, 3, 0,
-			1, 0, 1, // Files with issues, no errors, total issues
-		),
-		createValidationSummaryTest(
-			"parse errors present",
-			5, 2, 3, 3, 2,
-			1, 1, 1, // Files with issues, parse errors, total issues
-		),
-		createValidationSummaryTest(
-			"only parse errors",
-			2, 0, 0, 0, 2,
-			0, 1, 0, // No warnings, parse errors, no info
-		),
-		createValidationSummaryTest(
-			"zero files",
-			0, 0, 0, 0, 0,
-			0, 0, 0, // All zeros
-		),
+		createValidationSummaryTest(validationSummaryParams{
+			name:        "all valid files",
+			totalFiles:  3,
+			validFiles:  3,
+			totalIssues: 0,
+			resultCount: 3,
+			errorCount:  0,
+			wantWarning: 0,
+			wantError:   0,
+			wantInfo:    0,
+		}),
+		createValidationSummaryTest(validationSummaryParams{
+			name:        "some files with issues",
+			totalFiles:  3,
+			validFiles:  1,
+			totalIssues: 5,
+			resultCount: 3,
+			errorCount:  0,
+			wantWarning: 1,
+			wantError:   0,
+			wantInfo:    1,
+		}),
+		createValidationSummaryTest(validationSummaryParams{
+			name:        "parse errors present",
+			totalFiles:  5,
+			validFiles:  2,
+			totalIssues: 3,
+			resultCount: 3,
+			errorCount:  2,
+			wantWarning: 1,
+			wantError:   1,
+			wantInfo:    1,
+		}),
+		createValidationSummaryTest(validationSummaryParams{
+			name:        "only parse errors",
+			totalFiles:  2,
+			validFiles:  0,
+			totalIssues: 0,
+			resultCount: 0,
+			errorCount:  2,
+			wantWarning: 0,
+			wantError:   1,
+			wantInfo:    0,
+		}),
+		createValidationSummaryTest(validationSummaryParams{
+			name:        "zero files",
+			totalFiles:  0,
+			validFiles:  0,
+			totalIssues: 0,
+			resultCount: 0,
+			errorCount:  0,
+			wantWarning: 0,
+			wantError:   0,
+			wantInfo:    0,
+		}),
 	}
 
 	for _, tt := range tests {

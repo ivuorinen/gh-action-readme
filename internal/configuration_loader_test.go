@@ -556,26 +556,26 @@ func TestConfigurationLoaderEnvironmentOverrides(t *testing.T) {
 
 func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 	tests := []repoOverrideTestCase{
-		createRepoOverrideTestCase(
-			"matching repo override applied",
-			"https://github.com/test/repo.git",
-			testutil.TestRepoTestRepo,
-			testutil.TestThemeProfessional,
-			"html",
-			testutil.TestThemeProfessional,
-			"html",
-			"Matching repo override should be applied",
-		),
-		createRepoOverrideTestCase(
-			"no override when repo doesn't match",
-			"https://github.com/different/repo.git",
-			testutil.TestRepoTestRepo,
-			testutil.TestThemeProfessional,
-			"html",
-			testutil.TestThemeDefault,
-			"md",
-			"No override when repo doesn't match",
-		),
+		createRepoOverrideTestCase(repoOverrideTestParams{
+			name:           "matching repo override applied",
+			remoteURL:      "https://github.com/test/repo.git",
+			overrideKey:    testutil.TestRepoTestRepo,
+			overrideTheme:  testutil.TestThemeProfessional,
+			overrideFormat: "html",
+			expectedTheme:  testutil.TestThemeProfessional,
+			expectedFormat: "html",
+			description:    "Matching repo override should be applied",
+		}),
+		createRepoOverrideTestCase(repoOverrideTestParams{
+			name:           "no override when repo doesn't match",
+			remoteURL:      "https://github.com/different/repo.git",
+			overrideKey:    testutil.TestRepoTestRepo,
+			overrideTheme:  testutil.TestThemeProfessional,
+			overrideFormat: "html",
+			expectedTheme:  testutil.TestThemeDefault,
+			expectedFormat: "md",
+			description:    "No override when repo doesn't match",
+		}),
 		{
 			name: "no override when no git repository",
 			setupFunc: func(t *testing.T) (*AppConfig, string) {
@@ -725,16 +725,16 @@ func TestConfigurationLoaderValidateTheme(t *testing.T) {
 
 func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 	tests := []repoOverrideTestCase{
-		createRepoOverrideTestCase(
-			"override applied with valid repo root",
-			"https://github.com/myorg/myrepo.git",
-			"myorg/myrepo",
-			testutil.TestThemeGitHub,
-			"json",
-			"github",
-			"json",
-			"Should apply repo override for detected repository",
-		),
+		createRepoOverrideTestCase(repoOverrideTestParams{
+			name:           "override applied with valid repo root",
+			remoteURL:      "https://github.com/myorg/myrepo.git",
+			overrideKey:    "myorg/myrepo",
+			overrideTheme:  testutil.TestThemeGitHub,
+			overrideFormat: "json",
+			expectedTheme:  "github",
+			expectedFormat: "json",
+			description:    "Should apply repo override for detected repository",
+		}),
 		{
 			name: "no override with empty repo root",
 			setupFunc: func(t *testing.T) (*AppConfig, string) {
