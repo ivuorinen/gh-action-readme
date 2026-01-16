@@ -1088,94 +1088,17 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 
 // TestGeneratorGenerateHTMLErrorPaths tests HTML generation error handling.
 func TestGeneratorGenerateHTMLErrorPaths(t *testing.T) {
-	t.Parallel()
-
-	tmpDir := t.TempDir()
-
-	// Create a valid action
-	action := &ActionYML{
-		Name:        testutil.TestActionName,
-		Description: testutil.TestActionDesc,
-		Runs:        map[string]any{"using": "composite"},
-	}
-
-	config := DefaultAppConfig()
-	config.Quiet = true
-	gen := NewGenerator(config)
-
-	// Test with valid directory
-	err := gen.generateHTML(action, tmpDir, filepath.Join(tmpDir, appconstants.ActionFileNameYML))
-	if err != nil {
-		t.Errorf("generateHTML() unexpected error = %v", err)
-	}
-
-	// Verify HTML file was created
-	// HTML filename is based on action.Name + ".html"
-	htmlPath := filepath.Join(tmpDir, "Test Action.html")
-	if _, err := os.Stat(htmlPath); os.IsNotExist(err) {
-		t.Error("Expected Test Action.html to be created")
-	}
+	testHTMLGeneration(t)
 }
 
 // TestGeneratorGenerateJSONErrorPaths tests JSON generation error handling.
 func TestGeneratorGenerateJSONErrorPaths(t *testing.T) {
-	t.Parallel()
-
-	tmpDir := t.TempDir()
-
-	// Create a valid action
-	action := &ActionYML{
-		Name:        testutil.TestActionName,
-		Description: testutil.TestActionDesc,
-		Runs:        map[string]any{"using": "composite"},
-	}
-
-	config := DefaultAppConfig()
-	config.Quiet = true
-	gen := NewGenerator(config)
-
-	// Test with valid directory
-	err := gen.generateJSON(action, tmpDir)
-	if err != nil {
-		t.Errorf("generateJSON() unexpected error = %v", err)
-	}
-
-	// Verify JSON file was created
-	// JSON filename is appconstants.ActionDocsJSON = "action-docs.json"
-	jsonPath := filepath.Join(tmpDir, "action-docs.json")
-	if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
-		t.Error("Expected action-docs.json to be created")
-	}
+	testJSONGeneration(t)
 }
 
 // TestGeneratorGenerateASCIIDocErrorPaths tests AsciiDoc generation error handling.
 func TestGeneratorGenerateASCIIDocErrorPaths(t *testing.T) {
-	t.Parallel()
-
-	tmpDir := t.TempDir()
-
-	// Create a valid action
-	action := &ActionYML{
-		Name:        testutil.TestActionName,
-		Description: testutil.TestActionDesc,
-		Runs:        map[string]any{"using": "composite"},
-	}
-
-	config := DefaultAppConfig()
-	config.Quiet = true
-	gen := NewGenerator(config)
-
-	// Test with valid directory
-	err := gen.generateASCIIDoc(action, tmpDir, filepath.Join(tmpDir, appconstants.ActionFileNameYML))
-	if err != nil {
-		t.Errorf("generateASCIIDoc() unexpected error = %v", err)
-	}
-
-	// Verify AsciiDoc file was created
-	adocPath := filepath.Join(tmpDir, "README.adoc")
-	if _, err := os.Stat(adocPath); os.IsNotExist(err) {
-		t.Error("Expected README.adoc to be created")
-	}
+	testASCIIDocGeneration(t)
 }
 
 // TestGeneratorReportResultsEdgeCases tests result reporting edge cases.
