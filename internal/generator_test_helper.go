@@ -9,8 +9,14 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-// testHTMLGeneration tests HTML generation creates the expected output file.
-func testHTMLGeneration(t *testing.T) {
+// testFormatGeneration is a generic helper for testing format generation methods.
+// It consolidates the common pattern across HTML, JSON, and AsciiDoc generation tests.
+func testFormatGeneration(
+	t *testing.T,
+	generateFunc func(*Generator, *ActionYML, string, string) error,
+	expectedFile, formatName string,
+	needsActionPath bool,
+) {
 	t.Helper()
 	t.Parallel()
 
@@ -18,49 +24,65 @@ func testHTMLGeneration(t *testing.T) {
 	action := createTestAction()
 	gen := createQuietGenerator()
 
-	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-	err := gen.generateHTML(action, tmpDir, actionPath)
-	if err != nil {
-		t.Errorf("generateHTML() unexpected error = %v", err)
+	var err error
+	if needsActionPath {
+		actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+		err = generateFunc(gen, action, tmpDir, actionPath)
+	} else {
+		// For JSON which doesn't need actionPath
+		err = generateFunc(gen, action, tmpDir, "")
 	}
 
-	// HTML filename is based on action.Name + ".html"
-	verifyFileExists(t, filepath.Join(tmpDir, "Test Action.html"), "Test Action.html")
+	if err != nil {
+		t.Errorf("%s generation unexpected error = %v", formatName, err)
+	}
+
+	verifyFileExists(t, filepath.Join(tmpDir, expectedFile), expectedFile)
+}
+
+// testHTMLGeneration tests HTML generation creates the expected output file.
+func testHTMLGeneration(t *testing.T) {
+	t.Helper()
+
+	testFormatGeneration(
+		t,
+		func(g *Generator, a *ActionYML, out, path string) error {
+			return g.generateHTML(a, out, path)
+		},
+		"Test Action.html",
+		"HTML",
+		true, // needs actionPath
+	)
 }
 
 // testJSONGeneration tests JSON generation creates the expected output file.
 func testJSONGeneration(t *testing.T) {
 	t.Helper()
-	t.Parallel()
 
-	tmpDir := t.TempDir()
-	action := createTestAction()
-	gen := createQuietGenerator()
-
-	err := gen.generateJSON(action, tmpDir)
-	if err != nil {
-		t.Errorf("generateJSON() unexpected error = %v", err)
-	}
-
-	verifyFileExists(t, filepath.Join(tmpDir, "action-docs.json"), "action-docs.json")
+	testFormatGeneration(
+		t,
+		func(g *Generator, a *ActionYML, out, _ string) error {
+			return g.generateJSON(a, out)
+		},
+		"action-docs.json",
+		"JSON",
+		false, // doesn't need actionPath
+	)
 }
 
 // testASCIIDocGeneration tests AsciiDoc generation creates the expected output file.
 func testASCIIDocGeneration(t *testing.T) {
 	t.Helper()
-	t.Parallel()
 
-	tmpDir := t.TempDir()
-	action := createTestAction()
-	gen := createQuietGenerator()
-
-	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-	err := gen.generateASCIIDoc(action, tmpDir, actionPath)
-	if err != nil {
-		t.Errorf("generateASCIIDoc() unexpected error = %v", err)
-	}
-
-	verifyFileExists(t, filepath.Join(tmpDir, "README.adoc"), "README.adoc")
+	testFormatGeneration(
+		t,
+		func(g *Generator, a *ActionYML, out, path string) error {
+			return g.generateASCIIDoc(a, out, path)
+		},
+		"README.adoc",
+		"AsciiDoc",
+		true, // needs actionPath
+	)
 }
 
 // createTestAction creates a basic test action for generator tests.
