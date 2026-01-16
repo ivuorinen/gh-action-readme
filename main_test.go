@@ -1473,40 +1473,25 @@ func TestGenHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "generates HTML output",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "generates HTML output",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, testFormatHTML)
 			},
 		},
 		{
-			name: "generates JSON output",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "generates JSON output",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, testFormatJSON)
 			},
 		},
 		{
-			name: "generates with theme override",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "generates with theme override",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set("theme", testThemeGitHub)
 			},
@@ -1532,14 +1517,9 @@ func TestGenHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "processes action with custom output file",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "processes action with custom output file",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set("output", "custom-readme.md")
 			},

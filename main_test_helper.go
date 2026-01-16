@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ivuorinen/gh-action-readme/internal"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // testSimpleHandler is a helper for testing simple command handlers that:
@@ -56,4 +57,18 @@ func testSimpleVoidHandler(
 	// Execute handler (should not panic)
 	cmd := &cobra.Command{}
 	handlerFunc(cmd, []string{})
+}
+
+// setupWithSingleFixture is a helper for test setup functions that:
+// - Write a single action fixture to tmpDir
+// - Return []string{tmpDir} for test processing
+//
+// This reduces duplication in genHandler tests where many cases follow the same pattern.
+func setupWithSingleFixture(fixturePath string) func(*testing.T, string) []string {
+	return func(t *testing.T, tmpDir string) []string {
+		t.Helper()
+		testutil.WriteActionFixture(t, tmpDir, fixturePath)
+
+		return []string{tmpDir}
+	}
 }
