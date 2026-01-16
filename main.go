@@ -2,11 +2,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/schollz/progressbar/v3"
@@ -34,6 +33,37 @@ var (
 	verbose      bool
 	quiet        bool
 )
+
+// InputReader interface for reading user input (enables testing).
+type InputReader interface {
+	ReadLine() (string, error)
+}
+
+// StdinReader reads from actual stdin.
+type StdinReader struct{}
+
+func (r *StdinReader) ReadLine() (string, error) {
+	var response string
+	_, err := fmt.Scanln(&response)
+
+	return strings.TrimSpace(response), err
+}
+
+// TestInputReader allows injecting test responses for testing.
+type TestInputReader struct {
+	responses []string
+	index     int
+}
+
+func (r *TestInputReader) ReadLine() (string, error) {
+	if r.index >= len(r.responses) {
+		return "", errors.New("no more test responses")
+	}
+	response := r.responses[r.index]
+	r.index++
+
+	return response, nil
+}
 
 // Helper functions to reduce duplication.
 
@@ -89,13 +119,52 @@ func createAnalyzer(generator *internal.Generator, output *internal.ColoredOutpu
 	return helpers.CreateAnalyzer(generator, output)
 }
 
+// wrapHandlerWithErrorHandling converts error-returning handler to Cobra handler.
+// This allows handlers to return errors for testing while maintaining Cobra compatibility.
+func wrapHandlerWithErrorHandling(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) {
+	return func(cmd *cobra.Command, args []string) {
+		// Ensure globalConfig is initialized (important for testing)
+		if globalConfig == nil {
+			globalConfig = internal.DefaultAppConfig()
+		}
+
+		if err := handler(cmd, args); err != nil {
+			output := createOutputManager(globalConfig.Quiet)
+			output.Error(err.Error())
+			os.Exit(1)
+		}
+	}
+}
+
+// wrapError wraps an error with a message constant.
+// This is a helper to reduce duplication of the fmt.Errorf("%s: %w", msg, err) pattern.
+func wrapError(msgConstant string, err error) error {
+	return fmt.Errorf("%s: %w", msgConstant, err)
+}
+
+// handleNoFilesFoundError handles errors where no action files are found, showing a warning instead of failing.
+// Returns nil if the error is about no files found (after showing warning), otherwise returns the original error.
+func handleNoFilesFoundError(err error, output *internal.ColoredOutput) error {
+	if err == nil {
+		return nil
+	}
+
+	if strings.Contains(err.Error(), appconstants.ErrNoActionFilesFound) {
+		output.Warning(appconstants.ErrNoActionFilesFound)
+
+		return nil
+	}
+
+	return err
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "gh-action-readme",
 		Short: "Auto-generate beautiful README and HTML documentation for GitHub Actions.",
 		Long: `gh-action-readme is a CLI tool for parsing one or many action.yml files and ` +
 			`generating informative, modern, and customizable documentation.`,
-		PersistentPreRun: initConfig,
+		PersistentPreRunE: initConfig,
 	}
 
 	// Global flags
@@ -141,14 +210,14 @@ func main() {
 	}
 }
 
-func initConfig(_ *cobra.Command, _ []string) {
+func initConfig(_ *cobra.Command, _ []string) error {
 	var err error
 
 	// Use ConfigurationLoader for loading global configuration
 	loader := internal.NewConfigurationLoader()
 	globalConfig, err = loader.LoadGlobalConfig(configFile)
 	if err != nil {
-		log.Fatalf("Failed to initialize configuration: %v", err)
+		return fmt.Errorf("failed to initialize configuration: %w", err)
 	}
 
 	// Override with command line flags
@@ -159,6 +228,8 @@ func initConfig(_ *cobra.Command, _ []string) {
 		globalConfig.Quiet = true
 		globalConfig.Verbose = false // quiet overrides verbose
 	}
+
+	return nil
 }
 
 func newGenCmd() *cobra.Command {
@@ -175,10 +246,15 @@ Examples:
 	gh-action-readme gen -f html --output custom.html testdata/action/
 	gh-action-readme gen --output docs/action1.html testdata/action1/`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  genHandler,
+		Run:  wrapHandlerWithErrorHandling(genHandler),
 	}
 
-	cmd.Flags().StringP(appconstants.FlagOutputFormat, "f", "md", "output format: md, html, json, asciidoc")
+	cmd.Flags().StringP(
+		appconstants.FlagOutputFormat,
+		"f",
+		appconstants.OutputFormatMarkdown,
+		"output format: md, html, json, asciidoc",
+	)
 	cmd.Flags().StringP(appconstants.FlagOutputDir, "o", ".", "output directory")
 	cmd.Flags().StringP(appconstants.FlagOutput, "", "", "custom output filename (overrides default naming)")
 	cmd.Flags().StringP(appconstants.ConfigKeyTheme, "t", "", "template theme: github, gitlab, minimal, professional")
@@ -196,7 +272,7 @@ func newValidateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate",
 		Short: "Validate action.yml files and optionally autofill missing fields.",
-		Run:   validateHandler,
+		Run:   wrapHandlerWithErrorHandling(validateHandler),
 	}
 }
 
@@ -208,9 +284,9 @@ func newSchemaCmd() *cobra.Command {
 	}
 }
 
-func genHandler(cmd *cobra.Command, args []string) {
-	output := createOutputManager(globalConfig.Quiet)
-
+// resolveAndValidateTargetPath resolves the target path from arguments or current directory,
+// validates it exists, and returns the absolute path and file info.
+func resolveAndValidateTargetPath(args []string) (string, os.FileInfo, error) {
 	// Determine target path from arguments or current directory
 	var targetPath string
 	if len(args) > 0 {
@@ -219,23 +295,35 @@ func genHandler(cmd *cobra.Command, args []string) {
 		var err error
 		targetPath, err = helpers.GetCurrentDir()
 		if err != nil {
-			output.Error(appconstants.ErrErrorGettingCurrentDir, err)
-			os.Exit(1)
+			return "", nil, wrapError(appconstants.ErrErrorGettingCurrentDir, err)
 		}
 	}
 
 	// Resolve target path to absolute path
 	absTargetPath, err := filepath.Abs(targetPath)
 	if err != nil {
-		output.Error("Error resolving path %s: %v", targetPath, err)
-		os.Exit(1)
+		return "", nil, fmt.Errorf("error resolving path %s: %w", targetPath, err)
 	}
 
 	// Check if target exists
 	info, err := os.Stat(absTargetPath)
 	if err != nil {
-		output.Error("Path does not exist: %s", targetPath)
-		os.Exit(1)
+		return "", nil, fmt.Errorf("path does not exist: %s", targetPath)
+	}
+
+	return absTargetPath, info, nil
+}
+
+func genHandler(cmd *cobra.Command, args []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
+	// Resolve and validate target path
+	absTargetPath, info, err := resolveAndValidateTargetPath(args)
+	if err != nil {
+		return err
 	}
 
 	var workingDir string
@@ -260,46 +348,46 @@ func genHandler(cmd *cobra.Command, args []string) {
 			"documentation generation",
 		)
 		if err != nil {
-			os.Exit(1)
+			return fmt.Errorf(appconstants.ErrFailedToDiscoverActionFiles, err)
 		}
 	} else {
 		// Target is a file - validate it's an action file
 		lowerPath := strings.ToLower(absTargetPath)
 		if !strings.HasSuffix(lowerPath, ".yml") && !strings.HasSuffix(lowerPath, ".yaml") {
-			output.Error("File must be a YAML file (.yml or .yaml): %s", targetPath)
-			os.Exit(1)
+			return fmt.Errorf("file must be a YAML file (.yml or .yaml): %s", absTargetPath)
 		}
 		workingDir = filepath.Dir(absTargetPath)
 		actionFiles = []string{absTargetPath}
 	}
 
 	repoRoot := helpers.FindGitRepoRoot(workingDir)
-	config := loadGenConfig(repoRoot, workingDir)
+	config, err := loadGenConfig(repoRoot, workingDir)
+	if err != nil {
+		return err
+	}
 	applyGlobalFlags(config)
 	applyCommandFlags(cmd, config)
 
 	generator := internal.NewGenerator(config)
 	logConfigInfo(generator, config, repoRoot)
 
-	processActionFiles(generator, actionFiles)
+	return processActionFiles(generator, actionFiles)
 }
 
 // loadGenConfig loads multi-level configuration using ConfigurationLoader.
-func loadGenConfig(repoRoot, currentDir string) *internal.AppConfig {
+func loadGenConfig(repoRoot, currentDir string) (*internal.AppConfig, error) {
 	loader := internal.NewConfigurationLoader()
 	config, err := loader.LoadConfiguration(configFile, repoRoot, currentDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("error loading configuration: %w", err)
 	}
 
 	// Validate the loaded configuration
 	if err := loader.ValidateConfiguration(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Configuration validation error: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("configuration validation error: %w", err)
 	}
 
-	return config
+	return config, nil
 }
 
 // applyGlobalFlags applies global verbose/quiet flags.
@@ -320,7 +408,7 @@ func applyCommandFlags(cmd *cobra.Command, config *internal.AppConfig) {
 	outputFilename, _ := cmd.Flags().GetString(appconstants.FlagOutput)
 	theme, _ := cmd.Flags().GetString(appconstants.ConfigKeyTheme)
 
-	if outputFormat != "md" {
+	if outputFormat != appconstants.OutputFormatMarkdown {
 		config.OutputFormat = outputFormat
 	}
 	if outputDir != "." {
@@ -345,18 +433,23 @@ func logConfigInfo(generator *internal.Generator, config *internal.AppConfig, re
 }
 
 // processActionFiles processes discovered files.
-func processActionFiles(generator *internal.Generator, actionFiles []string) {
+func processActionFiles(generator *internal.Generator, actionFiles []string) error {
 	if err := generator.ProcessBatch(actionFiles); err != nil {
-		generator.Output.Error("Error during generation: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("error during generation: %w", err)
 	}
+
+	return nil
 }
 
-func validateHandler(_ *cobra.Command, _ []string) {
+func validateHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		_, errorHandler := setupOutputAndErrorHandling()
-		errorHandler.HandleSimpleError("Unable to determine current directory", err)
+		return fmt.Errorf("unable to determine current directory: %w", err)
 	}
 
 	generator := internal.NewGenerator(globalConfig)
@@ -367,23 +460,17 @@ func validateHandler(_ *cobra.Command, _ []string) {
 		"validation",
 	) // Recursive for validation
 	if err != nil {
-		os.Exit(1)
+		return fmt.Errorf(appconstants.ErrFailedToDiscoverActionFiles, err)
 	}
 
 	// Validate the discovered files
 	if err := generator.ValidateFiles(actionFiles); err != nil {
-		generator.Output.ErrorWithContext(
-			appconstants.ErrCodeValidation,
-			"validation failed",
-			map[string]string{
-				"files_count":                strconv.Itoa(len(actionFiles)),
-				appconstants.ContextKeyError: err.Error(),
-			},
-		)
-		os.Exit(1)
+		return fmt.Errorf("validation failed for %d files: %w", len(actionFiles), err)
 	}
 
 	generator.Output.Success("\nAll validations passed successfully!")
+
+	return nil
 }
 
 func schemaHandler(_ *cobra.Command, _ []string) {
@@ -417,14 +504,14 @@ func newConfigCmd() *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "init",
 		Short: "Initialize default configuration file",
-		Run:   configInitHandler,
+		Run:   wrapHandlerWithErrorHandling(configInitHandler),
 	})
 
 	initCmd := &cobra.Command{
 		Use:   "wizard",
 		Short: "Interactive configuration wizard",
 		Long:  "Launch an interactive wizard to set up your configuration step by step",
-		Run:   configWizardHandler,
+		Run:   wrapHandlerWithErrorHandling(configWizardHandler),
 	}
 	initCmd.Flags().String(appconstants.FlagFormat, "yaml", "Export format: yaml, json, toml")
 	initCmd.Flags().String(appconstants.FlagOutput, "", "Output path (default: XDG config directory)")
@@ -445,31 +532,36 @@ func newConfigCmd() *cobra.Command {
 	return cmd
 }
 
-func configInitHandler(_ *cobra.Command, _ []string) {
+func configInitHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 
 	// Check if config already exists
 	configPath, err := internal.GetConfigPath()
 	if err != nil {
-		output.Error("Failed to get config path: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to get config path: %w", err)
 	}
 
 	if _, err := os.Stat(configPath); err == nil {
 		output.Warning("Configuration file already exists at: %s", configPath)
 		output.Info("Use 'gh-action-readme config show' to view current configuration")
 
-		return
+		return nil
 	}
 
 	// Create default config
 	if err := internal.WriteDefaultConfig(); err != nil {
-		output.Error("Failed to write default configuration: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to write default configuration: %w", err)
 	}
 
 	output.Success("Created default configuration at: %s", configPath)
 	output.Info("Edit this file to customize your settings")
+
+	return nil
 }
 
 func configShowHandler(_ *cobra.Command, _ []string) {
@@ -521,19 +613,19 @@ func newDepsCmd() *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "list",
 		Short: "List all dependencies in action files",
-		Run:   depsListHandler,
+		Run:   wrapHandlerWithErrorHandling(depsListHandler),
 	})
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "security",
 		Short: "Analyze dependency security (pinned vs floating versions)",
-		Run:   depsSecurityHandler,
+		Run:   wrapHandlerWithErrorHandling(depsSecurityHandler),
 	})
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "outdated",
 		Short: "Check for outdated dependencies",
-		Run:   depsOutdatedHandler,
+		Run:   wrapHandlerWithErrorHandling(depsOutdatedHandler),
 	})
 
 	cmd.AddCommand(&cobra.Command{
@@ -546,18 +638,18 @@ func newDepsCmd() *cobra.Command {
 		Use:   "upgrade",
 		Short: "Upgrade dependencies with interactive or CI mode",
 		Long:  "Upgrade dependencies to latest versions. Use --ci for automated pinned updates.",
-		Run:   depsUpgradeHandler,
+		Run:   wrapHandlerWithErrorHandling(depsUpgradeHandler),
 	}
-	upgradeCmd.Flags().Bool("ci", false, "CI/CD mode: automatically pin all updates to commit SHAs")
+	upgradeCmd.Flags().Bool(appconstants.FlagCI, false, "CI/CD mode: automatically pin all updates to commit SHAs")
 	upgradeCmd.Flags().Bool(appconstants.InputAll, false, "Update all outdated dependencies without prompts")
 	upgradeCmd.Flags().Bool(appconstants.InputDryRun, false, "Show what would be updated without making changes")
 	cmd.AddCommand(upgradeCmd)
 
 	pinCmd := &cobra.Command{
-		Use:   "pin",
+		Use:   appconstants.CommandPin,
 		Short: "Pin floating versions to specific commits",
 		Long:  "Convert floating versions (like @v4) to pinned commit SHAs with version comments.",
-		Run:   depsUpgradeHandler, // Uses same handler with different flags
+		Run:   wrapHandlerWithErrorHandling(depsUpgradeHandler), // Uses same handler with different flags
 	}
 	pinCmd.Flags().Bool(appconstants.InputAll, false, "Pin all floating dependencies")
 	pinCmd.Flags().Bool(appconstants.InputDryRun, false, "Show what would be pinned without making changes")
@@ -576,30 +668,34 @@ func newCacheCmd() *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "clear",
 		Short: "Clear the dependency cache",
-		Run:   cacheClearHandler,
+		Run:   wrapHandlerWithErrorHandling(cacheClearHandler),
 	})
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "stats",
 		Short: "Show cache statistics",
-		Run:   cacheStatsHandler,
+		Run:   wrapHandlerWithErrorHandling(cacheStatsHandler),
 	})
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "path",
 		Short: "Show cache directory path",
-		Run:   cachePathHandler,
+		Run:   wrapHandlerWithErrorHandling(cachePathHandler),
 	})
 
 	return cmd
 }
 
-func depsListHandler(_ *cobra.Command, _ []string) {
+func depsListHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output.Error(appconstants.ErrErrorGettingCurrentDir, err)
-		os.Exit(1)
+		return wrapError(appconstants.ErrErrorGettingCurrentDir, err)
 	}
 
 	generator := internal.NewGenerator(globalConfig)
@@ -609,11 +705,8 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 		globalConfig.IgnoredDirectories,
 		"dependency listing",
 	)
-	if err != nil {
-		// For deps list, we can continue if no files found (show warning instead of error)
-		output.Warning(appconstants.ErrNoActionFilesFound)
-
-		return
+	if err := handleNoFilesFoundError(err, output); err != nil {
+		return err
 	}
 
 	analyzer := createAnalyzer(generator, output)
@@ -622,6 +715,8 @@ func depsListHandler(_ *cobra.Command, _ []string) {
 	if totalDeps > 0 {
 		output.Bold("\nTotal dependencies: %d", totalDeps)
 	}
+
+	return nil
 }
 
 // analyzeDependencies analyzes and displays dependencies.
@@ -678,12 +773,17 @@ func analyzeActionFileDeps(output *internal.ColoredOutput, actionFile string, an
 	return len(deps)
 }
 
-func depsSecurityHandler(_ *cobra.Command, _ []string) {
-	output, errorHandler := setupOutputAndErrorHandling()
+func depsSecurityHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
+	output := createOutputManager(globalConfig.Quiet)
 
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		errorHandler.HandleSimpleError("Failed to get current directory", err)
+		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
 	generator := internal.NewGenerator(globalConfig)
@@ -694,16 +794,23 @@ func depsSecurityHandler(_ *cobra.Command, _ []string) {
 		"security analysis",
 	)
 	if err != nil {
-		os.Exit(1)
+		return fmt.Errorf(appconstants.ErrFailedToDiscoverActionFiles, err)
 	}
 
 	analyzer := createAnalyzer(generator, output)
 	if analyzer == nil {
-		return
+		output.Warning(
+			"⚠️  Analyzer disabled: GitHub token not configured. " +
+				"Use GITHUB_TOKEN or GH_README_GITHUB_TOKEN environment variable.",
+		)
+
+		return nil // Analyzer can be nil if token isn't configured, gracefully handle
 	}
 
 	pinnedCount, floatingDeps := analyzeSecurityDeps(output, actionFiles, analyzer)
 	displaySecuritySummary(output, currentDir, pinnedCount, floatingDeps)
+
+	return nil
 }
 
 // analyzeSecurityDeps analyzes dependencies for security issues.
@@ -781,12 +888,16 @@ func displayFloatingDeps(output *internal.ColoredOutput, currentDir string, floa
 	}
 }
 
-func depsOutdatedHandler(_ *cobra.Command, _ []string) {
+func depsOutdatedHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output.Error(appconstants.ErrErrorGettingCurrentDir, err)
-		os.Exit(1)
+		return wrapError(appconstants.ErrErrorGettingCurrentDir, err)
 	}
 
 	generator := internal.NewGenerator(globalConfig)
@@ -796,24 +907,23 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) {
 		globalConfig.IgnoredDirectories,
 		"outdated dependency analysis",
 	)
-	if err != nil {
-		// For deps outdated, we can continue if no files found (show warning instead of error)
-		output.Warning(appconstants.ErrNoActionFilesFound)
-
-		return
+	if err := handleNoFilesFoundError(err, output); err != nil {
+		return err
 	}
 
 	analyzer := createAnalyzer(generator, output)
-	if analyzer == nil {
-		return
+	if !validateGitHubToken(output) {
+		return nil // Not an error, just no token available
 	}
 
-	if !validateGitHubToken(output) {
-		return
+	if analyzer == nil {
+		return nil // Analyzer can be nil if token isn't configured, gracefully handle
 	}
 
 	allOutdated := checkAllOutdated(output, actionFiles, analyzer)
 	displayOutdatedResults(output, allOutdated)
+
+	return nil
 }
 
 // validateGitHubToken checks if GitHub token is available.
@@ -884,25 +994,30 @@ func displayOutdatedResults(output *internal.ColoredOutput, allOutdated []depend
 	output.Info("\nRun 'gh-action-readme deps upgrade' to update dependencies")
 }
 
-func depsUpgradeHandler(cmd *cobra.Command, _ []string) {
+func depsUpgradeHandler(cmd *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
-		output.Error(appconstants.ErrErrorGettingCurrentDir, err)
-		os.Exit(1)
+		return wrapError(appconstants.ErrErrorGettingCurrentDir, err)
 	}
 
 	// Setup and validation
-	analyzer, actionFiles := setupDepsUpgrade(output, currentDir)
-	if analyzer == nil || len(actionFiles) == 0 {
-		return
+	analyzer, actionFiles, err := setupDepsUpgrade(output, currentDir, nil)
+	if err != nil {
+		// setupDepsUpgrade returns descriptive errors, so just pass them through
+		return err
 	}
 
 	// Parse flags and show mode
-	ciMode, _ := cmd.Flags().GetBool("ci")
+	ciMode, _ := cmd.Flags().GetBool(appconstants.FlagCI)
 	allFlag, _ := cmd.Flags().GetBool(appconstants.InputAll)
 	dryRun, _ := cmd.Flags().GetBool(appconstants.InputDryRun)
-	isPinCmd := cmd.Use == "pin"
+	isPinCmd := cmd.Use == appconstants.CommandPin
 
 	showUpgradeMode(output, ciMode, isPinCmd)
 
@@ -911,47 +1026,57 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) {
 	if len(allUpdates) == 0 {
 		output.Success("✅ No updates needed - all dependencies are current and pinned!")
 
-		return
+		return nil
 	}
 
 	// Show and apply updates
 	showPendingUpdates(output, allUpdates, currentDir)
 	if !dryRun {
-		applyUpdates(output, analyzer, allUpdates, ciMode || allFlag)
+		if err := applyUpdates(output, analyzer, allUpdates, ciMode || allFlag, nil); err != nil {
+			return err
+		}
 	} else {
 		output.Info("\n🔍 Dry run complete - no changes made")
 	}
+
+	return nil
 }
 
 // setupDepsUpgrade handles initial setup and validation for dependency upgrades.
-func setupDepsUpgrade(output *internal.ColoredOutput, currentDir string) (*dependencies.Analyzer, []string) {
-	generator := internal.NewGenerator(globalConfig)
-	actionFiles, err := generator.DiscoverActionFiles(currentDir, true, globalConfig.IgnoredDirectories)
+// The config parameter allows injection for testing (pass nil to use globalConfig).
+func setupDepsUpgrade(
+	_ *internal.ColoredOutput,
+	currentDir string,
+	config *internal.AppConfig,
+) (*dependencies.Analyzer, []string, error) {
+	// Default to globalConfig if not provided (backward compatible)
+	if config == nil {
+		if globalConfig == nil {
+			globalConfig = internal.DefaultAppConfig()
+		}
+		config = globalConfig
+	}
+
+	generator := internal.NewGenerator(config)
+	actionFiles, err := generator.DiscoverActionFiles(currentDir, true, config.IgnoredDirectories)
 	if err != nil {
-		output.Error("Error discovering action files: %v", err)
-		os.Exit(1)
+		return nil, nil, fmt.Errorf("error discovering action files: %w", err)
 	}
 
 	if len(actionFiles) == 0 {
-		output.Warning("No action files found")
-
-		return nil, nil
+		return nil, nil, errors.New(appconstants.ErrNoActionFilesFound)
 	}
 
 	analyzer, err := generator.CreateDependencyAnalyzer()
 	if err != nil {
-		output.Warning(appconstants.ErrCouldNotCreateDependencyAnalyzer, err)
-
-		return nil, nil
+		return nil, nil, fmt.Errorf("could not create dependency analyzer: %w", err)
 	}
 
-	if globalConfig.GitHubToken == "" {
-		output.Warning("No GitHub token found. Set GITHUB_TOKEN environment variable")
-
-		return nil, nil
+	if config.GitHubToken == "" {
+		return nil, nil, errors.New("no GitHub token found, set GITHUB_TOKEN environment variable")
 	}
 
-	return analyzer, actionFiles
+	return analyzer, actionFiles, nil
 }
 
 // showUpgradeMode displays the current upgrade mode to the user.
@@ -1024,37 +1149,46 @@ func showPendingUpdates(
 }
 
 // applyUpdates applies the collected updates either automatically or interactively.
+// The reader parameter allows injection of input for testing (pass nil to use stdin).
 func applyUpdates(
 	output *internal.ColoredOutput,
 	analyzer *dependencies.Analyzer,
 	allUpdates []dependencies.PinnedUpdate,
 	automatic bool,
-) {
+	reader InputReader,
+) error {
+	// Default to stdin if not provided
+	if reader == nil {
+		reader = &StdinReader{}
+	}
+
 	if automatic {
 		output.Info("\n🚀 Applying updates...")
 		if err := analyzer.ApplyPinnedUpdates(allUpdates); err != nil {
-			output.Error(appconstants.ErrFailedToApplyUpdates, err)
-			os.Exit(1)
+			return fmt.Errorf(appconstants.ErrFailedToApplyUpdatesWrapped, err)
 		}
 		output.Success("✅ Successfully updated %d dependencies with pinned commit SHAs", len(allUpdates))
 	} else {
 		// Interactive mode
 		output.Info("\n❓ This will modify your action.yml files. Continue? (y/N): ")
-		var response string
-		_, _ = fmt.Scanln(&response) // User input, scan error not critical
+		response, err := reader.ReadLine()
+		if err != nil {
+			return fmt.Errorf("failed to read response: %w", err)
+		}
 		if strings.ToLower(response) != "y" && strings.ToLower(response) != appconstants.InputYes {
 			output.Info("Canceled")
 
-			return
+			return nil
 		}
 
 		output.Info("🚀 Applying updates...")
 		if err := analyzer.ApplyPinnedUpdates(allUpdates); err != nil {
-			output.Error(appconstants.ErrFailedToApplyUpdates, err)
-			os.Exit(1)
+			return fmt.Errorf(appconstants.ErrFailedToApplyUpdatesWrapped, err)
 		}
 		output.Success("✅ Successfully updated %d dependencies", len(allUpdates))
 	}
+
+	return nil
 }
 
 func depsGraphHandler(_ *cobra.Command, _ []string) {
@@ -1064,39 +1198,48 @@ func depsGraphHandler(_ *cobra.Command, _ []string) {
 	output.Printf("This feature is not yet implemented\n")
 }
 
-func cacheClearHandler(_ *cobra.Command, _ []string) {
+func cacheClearHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 	output.Info("Clearing dependency cache...")
 
 	// Create a cache instance
 	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
 	if err != nil {
-		output.Error(appconstants.ErrFailedToAccessCache, err)
-		os.Exit(1)
+		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
 
 	if err := cacheInstance.Clear(); err != nil {
-		output.Error("Failed to clear cache: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to clear cache: %w", err)
 	}
 
 	output.Success("Cache cleared successfully")
+
+	return nil
 }
 
-func cacheStatsHandler(_ *cobra.Command, _ []string) {
+func cacheStatsHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 
 	// Create a cache instance
 	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
 	if err != nil {
-		output.Error(appconstants.ErrFailedToAccessCache, err)
-		os.Exit(1)
+		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
 
 	stats := cacheInstance.Stats()
 
 	output.Bold("Cache Statistics:")
-	output.Printf("Cache location: %s\n", stats["cache_dir"])
+	output.Printf("Cache location: %s\n", stats[appconstants.CacheStatsKeyDir])
 	output.Printf("Total entries: %d\n", stats["total_entries"])
 	output.Printf("Expired entries: %d\n", stats["expired_count"])
 
@@ -1107,20 +1250,26 @@ func cacheStatsHandler(_ *cobra.Command, _ []string) {
 	}
 	sizeStr := formatSize(totalSize)
 	output.Printf("Total size: %s\n", sizeStr)
+
+	return nil
 }
 
-func cachePathHandler(_ *cobra.Command, _ []string) {
+func cachePathHandler(_ *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 
 	// Create a cache instance
 	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
 	if err != nil {
-		output.Error(appconstants.ErrFailedToAccessCache, err)
-		os.Exit(1)
+		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
 
 	stats := cacheInstance.Stats()
-	cachePath, ok := stats["cache_dir"].(string)
+	cachePath, ok := stats[appconstants.CacheStatsKeyDir].(string)
 	if !ok {
 		cachePath = appconstants.ScopeUnknown
 	}
@@ -1134,17 +1283,23 @@ func cachePathHandler(_ *cobra.Command, _ []string) {
 	} else if os.IsNotExist(err) {
 		output.Warning("Directory does not exist (will be created on first use)")
 	}
+
+	return nil
 }
 
-func configWizardHandler(cmd *cobra.Command, _ []string) {
+func configWizardHandler(cmd *cobra.Command, _ []string) error {
+	// Ensure globalConfig is initialized
+	if globalConfig == nil {
+		globalConfig = internal.DefaultAppConfig()
+	}
+
 	output := createOutputManager(globalConfig.Quiet)
 
 	// Create and run the wizard
 	configWizard := wizard.NewConfigWizard(output)
 	config, err := configWizard.Run()
 	if err != nil {
-		output.Error("Wizard failed: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("wizard failed: %w", err)
 	}
 
 	// Get export format and output path
@@ -1159,8 +1314,7 @@ func configWizardHandler(cmd *cobra.Command, _ []string) {
 		exportFormat := resolveExportFormat(format)
 		defaultPath, err := exporter.GetDefaultOutputPath(exportFormat)
 		if err != nil {
-			output.Error("Failed to get default output path: %v", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to get default output path: %w", err)
 		}
 		outputPath = defaultPath
 	}
@@ -1169,10 +1323,11 @@ func configWizardHandler(cmd *cobra.Command, _ []string) {
 	exportFormat := resolveExportFormat(format)
 
 	if err := exporter.ExportConfig(config, exportFormat, outputPath); err != nil {
-		output.Error("Failed to export configuration: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to export configuration: %w", err)
 	}
 
 	output.Info("\n🎉 Configuration wizard completed successfully!")
 	output.Info("You can now use 'gh-action-readme gen' to generate documentation.")
+
+	return nil
 }

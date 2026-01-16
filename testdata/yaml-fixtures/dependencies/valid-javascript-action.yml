@@ -1,0 +1,5 @@
+name: Test Action
+description: Test JavaScript action
+runs:
+  using: node20
+  main: index.js

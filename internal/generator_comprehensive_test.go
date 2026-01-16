@@ -5,12 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-// TestGenerator_ComprehensiveGeneration demonstrates the new table-driven testing framework
+// TestGeneratorComprehensiveGeneration demonstrates the new table-driven testing framework
 // by testing generation across all fixtures, themes, and formats systematically.
-func TestGenerator_ComprehensiveGeneration(t *testing.T) {
+func TestGeneratorComprehensiveGeneration(t *testing.T) {
 	t.Parallel()
 	// Create test cases using the new helper functions
 	cases := testutil.CreateGeneratorTestCases()
@@ -32,8 +33,8 @@ func TestGenerator_ComprehensiveGeneration(t *testing.T) {
 	testutil.RunGeneratorTests(t, filteredCases)
 }
 
-// TestGenerator_AllValidFixtures tests generation with all valid fixtures.
-func TestGenerator_AllValidFixtures(t *testing.T) {
+// TestGeneratorAllValidFixtures tests generation with all valid fixtures.
+func TestGeneratorAllValidFixtures(t *testing.T) {
 	t.Parallel()
 	validFixtures := testutil.GetValidFixtures()
 
@@ -64,8 +65,8 @@ func TestGenerator_AllValidFixtures(t *testing.T) {
 	}
 }
 
-// TestGenerator_AllInvalidFixtures tests that invalid fixtures produce expected errors.
-func TestGenerator_AllInvalidFixtures(t *testing.T) {
+// TestGeneratorAllInvalidFixtures tests that invalid fixtures produce expected errors.
+func TestGeneratorAllInvalidFixtures(t *testing.T) {
 	t.Parallel()
 	invalidFixtures := testutil.GetInvalidFixtures()
 
@@ -106,8 +107,8 @@ func TestGenerator_AllInvalidFixtures(t *testing.T) {
 	}
 }
 
-// TestGenerator_AllThemes demonstrates theme testing using helper functions.
-func TestGenerator_AllThemes(t *testing.T) {
+// TestGeneratorAllThemes demonstrates theme testing using helper functions.
+func TestGeneratorAllThemes(t *testing.T) {
 	t.Parallel()
 	// Use the helper function to test all themes
 	testutil.TestAllThemes(t, func(t *testing.T, theme string) {
@@ -129,8 +130,8 @@ func TestGenerator_AllThemes(t *testing.T) {
 	})
 }
 
-// TestGenerator_AllFormats demonstrates format testing using helper functions.
-func TestGenerator_AllFormats(t *testing.T) {
+// TestGeneratorAllFormats demonstrates format testing using helper functions.
+func TestGeneratorAllFormats(t *testing.T) {
 	t.Parallel()
 	// Use the helper function to test all formats
 	testutil.TestAllFormats(t, func(t *testing.T, format string) {
@@ -152,8 +153,8 @@ func TestGenerator_AllFormats(t *testing.T) {
 	})
 }
 
-// TestGenerator_ByActionType demonstrates testing by action type.
-func TestGenerator_ByActionType(t *testing.T) {
+// TestGeneratorByActionType demonstrates testing by action type.
+func TestGeneratorByActionType(t *testing.T) {
 	t.Parallel()
 	actionTypes := []testutil.ActionType{
 		testutil.ActionTypeJavaScript,
@@ -190,8 +191,8 @@ func TestGenerator_ByActionType(t *testing.T) {
 	}
 }
 
-// TestGenerator_WithMockEnvironment demonstrates testing with a complete mock environment.
-func TestGenerator_WithMockEnvironment(t *testing.T) {
+// TestGeneratorWithMockEnvironment demonstrates testing with a complete mock environment.
+func TestGeneratorWithMockEnvironment(t *testing.T) {
 	t.Parallel()
 	// Create a complete test environment
 	envConfig := &testutil.EnvironmentConfig{
@@ -227,8 +228,8 @@ func TestGenerator_WithMockEnvironment(t *testing.T) {
 	testutil.AssertNoError(t, err)
 }
 
-// TestGenerator_FixtureValidation demonstrates fixture validation.
-func TestGenerator_FixtureValidation(t *testing.T) {
+// TestGeneratorFixtureValidation demonstrates fixture validation.
+func TestGeneratorFixtureValidation(t *testing.T) {
 	t.Parallel()
 	// Test that all valid fixtures pass validation
 	validFixtures := testutil.GetValidFixtures()
@@ -271,7 +272,7 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 			}
 
 			// Create temporary action file
-			actionPath = filepath.Join(ctx.TempDir, "action.yml")
+			actionPath = filepath.Join(ctx.TempDir, appconstants.ActionFileNameYML)
 			testutil.WriteTestFile(t, actionPath, fixture.Content)
 		}
 

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -69,17 +70,19 @@ func MockGitHubClient(responses map[string]string) *github.Client {
 		}
 	}
 
-	client := github.NewClient(&http.Client{Transport: &mockTransport{client: mockClient}})
+	client := github.NewClient(&http.Client{Transport: &MockTransport{Client: mockClient}})
 
 	return client
 }
 
-type mockTransport struct {
-	client *MockHTTPClient
+// MockTransport implements http.RoundTripper for testing HTTP clients.
+type MockTransport struct {
+	Client *MockHTTPClient
 }
 
-func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return t.client.Do(req)
+// RoundTrip implements http.RoundTripper interface.
+func (t *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return t.Client.Do(req)
 }
 
 // TempDir creates a temporary directory for testing and returns cleanup function.
@@ -165,6 +168,17 @@ func WriteTestFile(t *testing.T, path, content string) {
 	}
 }
 
+// WriteFileInDir writes a file with the given filename in the specified directory.
+// This is a convenience wrapper that combines filepath.Join + WriteTestFile.
+// Eliminates the pattern: path := filepath.Join(dir, filename); WriteTestFile(t, path, content).
+func WriteFileInDir(t *testing.T, dir, filename, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, filename)
+	WriteTestFile(t, path, content)
+
+	return path
+}
+
 // WriteActionFixture writes an action fixture to a standard action.yml file.
 func WriteActionFixture(t *testing.T, dir, fixturePath string) string {
 	t.Helper()
@@ -185,10 +199,108 @@ func WriteActionFixtureAs(t *testing.T, dir, filename, fixturePath string) strin
 	return actionPath
 }
 
+// CreateActionInTempDir creates a temporary directory with an action.yml file.
+// This is a convenience wrapper for the common pattern of t.TempDir() + WriteTestFile.
+// Returns the temp directory path and the full path to the action.yml file.
+//
+// Example:
+//
+//	tmpDir, actionPath := testutil.CreateActionInTempDir(t, "name: Test")
+func CreateActionInTempDir(t *testing.T, yamlContent string) (tmpDir, actionPath string) {
+	t.Helper()
+
+	tmpDir = t.TempDir()
+	actionPath = filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	WriteTestFile(t, actionPath, yamlContent)
+
+	return tmpDir, actionPath
+}
+
+// CreateNestedAction creates a nested action directory structure with an action.yml file.
+// This is useful for testing monorepo scenarios with multiple actions in subdirectories.
+// Returns the subdirectory path and the full path to the action.yml file.
+//
+// Example:
+//
+//	dirPath, actionPath := testutil.CreateNestedAction(t, tmpDir, "actions/build", "name: Build")
+func CreateNestedAction(t *testing.T, baseDir, subdir, yamlContent string) (dirPath, actionPath string) {
+	t.Helper()
+
+	dirPath = filepath.Join(baseDir, subdir)
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(dirPath, appconstants.FilePermDir); err != nil {
+		t.Fatalf("failed to create nested directory %s: %v", subdir, err)
+	}
+
+	actionPath = filepath.Join(dirPath, appconstants.ActionFileNameYML)
+	WriteTestFile(t, actionPath, yamlContent)
+
+	return dirPath, actionPath
+}
+
+// CreateTestSubdir creates a subdirectory within the base directory.
+// This is useful for test setup that needs directory structures without action files.
+// Returns the full path to the created subdirectory.
+//
+// Example:
+//
+//	subdir := testutil.CreateTestSubdir(t, tmpDir, ".config", "gh-action-readme")
+//	// Creates tmpDir/.config/gh-action-readme
+func CreateTestSubdir(t *testing.T, baseDir string, subdirs ...string) string {
+	t.Helper()
+
+	pathParts := append([]string{baseDir}, subdirs...)
+	fullPath := filepath.Join(pathParts...)
+
+	// #nosec G301 -- test directory permissions
+	if err := os.MkdirAll(fullPath, appconstants.FilePermDir); err != nil {
+		t.Fatalf("failed to create test subdirectory %s: %v", fullPath, err)
+	}
+
+	return fullPath
+}
+
+// CreateTestDir creates a directory with test-appropriate permissions (0750).
+// Automatically fails the test if directory creation fails.
+// This is a convenience wrapper to reduce the 30+ instances of:
+//
+//	if err := os.MkdirAll(dir, 0750); err != nil { t.Fatalf(...) }
+//
+// Example:
+//
+//	testutil.CreateTestDir(t, filepath.Join(tmpDir, ".git"))
+func CreateTestDir(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0750); err != nil { // #nosec G301 -- test directory permissions
+		t.Fatalf("failed to create directory %s: %v", path, err)
+	}
+}
+
+// RunBinaryCommand executes the built binary with arguments in the given directory.
+// Returns the combined output (stdout + stderr) and error for verification in tests.
+// This helper consolidates the common pattern of running subprocess commands in integration tests.
+//
+// Example:
+//
+//	output, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, "gen", "--theme", "github")
+//	testutil.AssertNoError(t, err)
+//	if !strings.Contains(output, "Generated") {
+//	    t.Error("expected success message in output")
+//	}
+func RunBinaryCommand(t *testing.T, binaryPath, dir string, args ...string) (output string, err error) {
+	t.Helper()
+
+	cmd := exec.Command(binaryPath, args...) // #nosec G204 -- controlled test input
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+
+	return string(out), err
+}
+
 // CreateConfigDir creates a standard .config/gh-action-readme directory.
 func CreateConfigDir(t *testing.T, baseDir string) string {
 	t.Helper()
-	configDir := filepath.Join(baseDir, appconstants.TestDirConfigGhActionReadme)
+	configDir := filepath.Join(baseDir, TestDirConfigGhActionReadme)
 	// #nosec G301 -- test directory permissions
 	if err := os.MkdirAll(configDir, appconstants.FilePermDir); err != nil {
 		t.Fatalf("failed to create config dir: %v", err)
@@ -203,6 +315,45 @@ func WriteConfigFile(t *testing.T, baseDir, content string) string {
 	configDir := CreateConfigDir(t, baseDir)
 	configPath := filepath.Join(configDir, appconstants.ConfigFileNameFull)
 	WriteTestFile(t, configPath, content)
+
+	return configPath
+}
+
+// SetupConfigEnvironment sets up HOME and XDG_CONFIG_HOME environment variables for testing.
+// This is commonly needed for config hierarchy tests.
+//
+// Example:
+//
+//	testutil.SetupConfigEnvironment(t, tmpDir)
+func SetupConfigEnvironment(t *testing.T, tmpDir string) {
+	t.Helper()
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, TestDirDotConfig))
+}
+
+// CreateGitRepoWithRemote initializes a git repository and sets up a remote.
+// Returns the path to the git config file for further customization if needed.
+//
+// Example:
+//
+//	testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/user/repo.git")
+func CreateGitRepoWithRemote(t *testing.T, tmpDir, remoteURL string) string {
+	t.Helper()
+
+	InitGitRepo(t, tmpDir)
+
+	gitDir := filepath.Join(tmpDir, ".git")
+	configPath := filepath.Join(gitDir, "config")
+
+	configContent := fmt.Sprintf(`[remote "origin"]
+	url = %s
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+`, remoteURL)
+
+	WriteTestFile(t, configPath, configContent)
 
 	return configPath
 }
@@ -242,86 +393,6 @@ func AssertFileNotExists(t *testing.T, path string) {
 	// err != nil && os.IsNotExist(err) - this is the success case
 }
 
-// MockColoredOutput captures output for testing.
-type MockColoredOutput struct {
-	Messages []string
-	Errors   []string
-	Quiet    bool
-}
-
-// NewMockColoredOutput creates a new mock colored output.
-func NewMockColoredOutput(quiet bool) *MockColoredOutput {
-	return &MockColoredOutput{Quiet: quiet}
-}
-
-// Info captures info messages.
-func (m *MockColoredOutput) Info(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("INFO: "+format, args...))
-	}
-}
-
-// Success captures success messages.
-func (m *MockColoredOutput) Success(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("SUCCESS: "+format, args...))
-	}
-}
-
-// Warning captures warning messages.
-func (m *MockColoredOutput) Warning(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("WARNING: "+format, args...))
-	}
-}
-
-// Error captures error messages.
-func (m *MockColoredOutput) Error(format string, args ...any) {
-	m.Errors = append(m.Errors, fmt.Sprintf("ERROR: "+format, args...))
-}
-
-// Bold captures bold messages.
-func (m *MockColoredOutput) Bold(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf("BOLD: "+format, args...))
-	}
-}
-
-// Printf captures printf messages.
-func (m *MockColoredOutput) Printf(format string, args ...any) {
-	if !m.Quiet {
-		m.Messages = append(m.Messages, fmt.Sprintf(format, args...))
-	}
-}
-
-// Reset clears all captured messages.
-func (m *MockColoredOutput) Reset() {
-	m.Messages = nil
-	m.Errors = nil
-}
-
-// HasMessage checks if a message contains the given substring.
-func (m *MockColoredOutput) HasMessage(substring string) bool {
-	for _, msg := range m.Messages {
-		if strings.Contains(msg, substring) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// HasError checks if an error contains the given substring.
-func (m *MockColoredOutput) HasError(substring string) bool {
-	for _, err := range m.Errors {
-		if strings.Contains(err, substring) {
-			return true
-		}
-	}
-
-	return false
-}
-
 // CreateTestAction creates a test action.yml file content.
 func CreateTestAction(name, description string, inputs map[string]string) string {
 	var inputsYAML bytes.Buffer
@@ -355,7 +426,7 @@ func SetupTestTemplates(t *testing.T, dir string) {
 	themesDir := filepath.Join(templatesDir, "themes")
 
 	// Create directories
-	for _, theme := range []string{"github", "gitlab", "minimal", "professional"} {
+	for _, theme := range []string{TestThemeGitHub, TestThemeGitLab, TestThemeMinimal, TestThemeProfessional} {
 		themeDir := filepath.Join(themesDir, theme)
 		// #nosec G301 -- test directory permissions
 		if err := os.MkdirAll(themeDir, appconstants.FilePermDir); err != nil {
@@ -599,4 +670,123 @@ func ErrCreateDir(name string) string {
 // ErrDiscoverActionFiles returns the error format string for DiscoverActionFiles failures.
 func ErrDiscoverActionFiles() string {
 	return "DiscoverActionFiles() error = %v"
+}
+
+// InitGitRepo initializes a git repository in the given directory.
+// It runs git init and creates an initial commit.
+func InitGitRepo(t *testing.T, dir string) {
+	t.Helper()
+
+	// Initialize git repo
+	cmd := exec.Command(appconstants.GitCommand, "init") // #nosec G204 -- test helper with controlled input
+	cmd.Dir = dir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to initialize git repo: %v", err)
+	}
+
+	// Configure git user for commits
+	configCmds := [][]string{
+		{appconstants.GitCommand, "config", "user.name", "Test User"},
+		{appconstants.GitCommand, "config", "user.email", "test@example.com"},
+	}
+
+	for _, args := range configCmds {
+		cmd := exec.Command(args[0], args[1:]...) // #nosec G204 -- test helper
+		cmd.Dir = dir
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("Failed to configure git: %v", err)
+		}
+	}
+
+	// Create an initial commit
+	readmePath := filepath.Join(dir, appconstants.ReadmeMarkdown)
+	if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), appconstants.FilePermDefault); err != nil {
+		t.Fatalf("Failed to create README: %v", err)
+	}
+
+	addCmd := exec.Command(appconstants.GitCommand, "add", appconstants.ReadmeMarkdown) // #nosec G204 -- test helper
+	addCmd.Dir = dir
+	if err := addCmd.Run(); err != nil {
+		t.Fatalf("Failed to add file to git: %v", err)
+	}
+
+	commitCmd := exec.Command(appconstants.GitCommand, "commit", "-m", "Initial commit") // #nosec G204 -- test helper
+	commitCmd.Dir = dir
+	if err := commitCmd.Run(); err != nil {
+		t.Fatalf("Failed to create initial commit: %v", err)
+	}
+}
+
+// CaptureStdout captures stdout output during function execution.
+// Useful for testing functions that write to os.Stdout.
+func CaptureStdout(f func()) string {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	f()
+
+	_ = w.Close() // Ignore error in test helper
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r) // Ignore error in test helper
+
+	return buf.String()
+}
+
+// CaptureStderr captures stderr output during function execution.
+// Useful for testing functions that write to os.Stderr.
+func CaptureStderr(f func()) string {
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	f()
+
+	_ = w.Close() // Ignore error in test helper
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r) // Ignore error in test helper
+
+	return buf.String()
+}
+
+// OutputStreams holds both stdout and stderr capture results.
+type OutputStreams struct {
+	Stdout string
+	Stderr string
+}
+
+// CaptureOutputStreams captures both stdout and stderr during function execution.
+// Returns a struct with both outputs for convenience.
+func CaptureOutputStreams(f func()) *OutputStreams {
+	return &OutputStreams{
+		Stdout: CaptureStdout(f),
+		Stderr: CaptureStderr(f),
+	}
+}
+
+// CreateTempActionFile creates a temporary action.yml file with content.
+// Returns the file path. File is automatically cleaned up by t.TempDir().
+// Used to eliminate duplication in parser tests (4 occurrences).
+func CreateTempActionFile(t *testing.T, content string) string {
+	t.Helper()
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), TestActionFilePattern)
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		_ = tmpFile.Close()
+		t.Fatalf("failed to write temp file: %v", err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
+
+	return tmpFile.Name()
 }

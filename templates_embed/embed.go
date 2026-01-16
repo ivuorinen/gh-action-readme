@@ -1,9 +1,7 @@
-// Package templates_embed provides embedded template filesystem functionality for gh-action-readme.
+// Package templatesembed provides embedded template filesystem functionality for gh-action-readme.
 // This package contains all template files embedded in the binary using Go's embed directive,
 // making templates available regardless of working directory or filesystem location.
-//
-//nolint:revive // Package name with underscore is intentional for clarity
-package templates_embed
+package templatesembed
 
 import (
 	"embed"

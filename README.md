@@ -11,6 +11,13 @@
 [![Go Vulnerability Check](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/security.yml)
 [![CodeQL](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml/badge.svg)](https://github.com/ivuorinen/gh-action-readme/actions/workflows/codeql.yml)
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ivuorinen_gh-action-readme&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ivuorinen_gh-action-readme)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ivuorinen_gh-action-readme&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ivuorinen_gh-action-readme)
+[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=ivuorinen_gh-action-readme&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ivuorinen_gh-action-readme)
+
+[![Reliability](https://sonarcloud.io/api/project_badges/measure?project=ivuorinen_gh-action-readme&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ivuorinen_gh-action-readme)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ivuorinen_gh-action-readme&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ivuorinen_gh-action-readme)
+
 </div>
 
 > **The definitive CLI tool for generating beautiful documentation from GitHub Actions `action.yml` files**
@@ -27,6 +34,28 @@ Transform your GitHub Actions into professional documentation with multiple them
 - 🔧 **Developer Friendly** - Template customization, batch operations
 - 📁 **Flexible Targeting** - Directory/file arguments, custom output filenames
 - 🛡️ **Thread Safe** - Race condition protection, concurrent processing ready
+
+## 🛡️ Quality Gates
+
+This project enforces quality standards aligned with [SonarCloud "Sonar way"](https://docs.sonarsource.com/sonarqube-cloud/standards/managing-quality-gates/):
+
+| Metric                 | Threshold           |
+| ---------------------- | ------------------- |
+| Code Coverage          | ≥ 80% (new code)    |
+| Duplicated Lines       | ≤ 3% (new code)     |
+| Security Rating        | A (no issues)       |
+| Reliability Rating     | A (no bugs)         |
+| Maintainability Rating | A (tech debt ≤ 5%)  |
+
+**Local Development Checks:**
+
+```bash
+make lint                 # Run all linters (gosec, dupl, gocyclo, etc.)
+make test-coverage-check  # Verify coverage threshold
+make security             # Security scans (gosec, trivy, gitleaks)
+```
+
+Local linting enforces additional standards including cyclomatic complexity ≤ 10 and line length ≤ 120 characters.
 
 ## 🚀 Quick Start
 

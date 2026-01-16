@@ -3,16 +3,38 @@ package dependencies
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
+// validateFilePath ensures a file path is safe to read.
+// Returns an error if the path contains traversal attempts.
+func validateFilePath(path string) error {
+	cleanPath := filepath.Clean(path)
+
+	// Check for ".." components in cleaned path
+	for _, component := range strings.Split(filepath.ToSlash(cleanPath), "/") {
+		if component == ".." {
+			return fmt.Errorf("invalid file path: traversal detected in %q", path)
+		}
+	}
+
+	return nil
+}
+
 // parseCompositeActionFromFile reads and parses a composite action file.
 func (a *Analyzer) parseCompositeActionFromFile(actionPath string) (*ActionWithComposite, error) {
+	// Validate path before reading
+	if err := validateFilePath(actionPath); err != nil {
+		return nil, err
+	}
+
 	// Read the file
-	data, err := os.ReadFile(actionPath) // #nosec G304 -- action path from function parameter
+	data, err := os.ReadFile(actionPath) // #nosec G304 -- path validated above
 	if err != nil {
 		return nil, fmt.Errorf("failed to read action file %s: %w", actionPath, err)
 	}

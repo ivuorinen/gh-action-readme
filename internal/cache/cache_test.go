@@ -69,7 +69,7 @@ func TestNewCache(t *testing.T) {
 	}
 }
 
-func TestCache_SetAndGet(t *testing.T) {
+func TestCacheSetAndGet(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -84,9 +84,9 @@ func TestCache_SetAndGet(t *testing.T) {
 	}{
 		{
 			name:     "string value",
-			key:      "test-key",
-			value:    "test-value",
-			expected: "test-value",
+			key:      testutil.CacheTestKey,
+			value:    testutil.CacheTestValue,
+			expected: testutil.CacheTestValue,
 		},
 		{
 			name:     "struct value",
@@ -121,7 +121,7 @@ func TestCache_SetAndGet(t *testing.T) {
 	}
 }
 
-func TestCache_TTL(t *testing.T) {
+func TestCacheTTL(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -150,7 +150,7 @@ func TestCache_TTL(t *testing.T) {
 	}
 }
 
-func TestCache_GetOrSet(t *testing.T) {
+func TestCacheGetOrSet(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -180,7 +180,7 @@ func TestCache_GetOrSet(t *testing.T) {
 	testutil.AssertEqual(t, 1, callCount)                // Getter not called again
 }
 
-func TestCache_GetOrSetError(t *testing.T) {
+func TestCacheGetOrSetError(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -207,7 +207,7 @@ func TestCache_GetOrSetError(t *testing.T) {
 	}
 }
 
-func TestCache_ConcurrentAccess(t *testing.T) {
+func TestCacheConcurrentAccess(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -257,7 +257,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 }
 
-func TestCache_Persistence(t *testing.T) {
+func TestCachePersistence(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -282,7 +282,7 @@ func TestCache_Persistence(t *testing.T) {
 	testutil.AssertEqual(t, "persistent-value", value)
 }
 
-func TestCache_Clear(t *testing.T) {
+func TestCacheClear(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -290,12 +290,12 @@ func TestCache_Clear(t *testing.T) {
 	defer testutil.CleanupCache(t, cache)()
 
 	// Add some data
-	_ = cache.Set("key1", "value1")
-	_ = cache.Set("key2", "value2")
+	_ = cache.Set(testutil.CacheTestKey1, testutil.CacheTestValue1)
+	_ = cache.Set(testutil.CacheTestKey2, "value2")
 
 	// Verify data exists
-	_, exists1 := cache.Get("key1")
-	_, exists2 := cache.Get("key2")
+	_, exists1 := cache.Get(testutil.CacheTestKey1)
+	_, exists2 := cache.Get(testutil.CacheTestKey2)
 	if !exists1 || !exists2 {
 		t.Fatal("expected test data to exist before clear")
 	}
@@ -305,14 +305,14 @@ func TestCache_Clear(t *testing.T) {
 	testutil.AssertNoError(t, err)
 
 	// Verify data is gone
-	_, exists1 = cache.Get("key1")
-	_, exists2 = cache.Get("key2")
+	_, exists1 = cache.Get(testutil.CacheTestKey1)
+	_, exists2 = cache.Get(testutil.CacheTestKey2)
 	if exists1 || exists2 {
 		t.Error("expected data to be cleared")
 	}
 }
 
-func TestCache_Delete(t *testing.T) {
+func TestCacheDelete(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -320,22 +320,22 @@ func TestCache_Delete(t *testing.T) {
 	defer testutil.CleanupCache(t, cache)()
 
 	// Add some data
-	_ = cache.Set("key1", "value1")
-	_ = cache.Set("key2", "value2")
+	_ = cache.Set(testutil.CacheTestKey1, testutil.CacheTestValue1)
+	_ = cache.Set(testutil.CacheTestKey2, "value2")
 	_ = cache.Set("key3", "value3")
 
 	// Verify data exists
-	_, exists := cache.Get("key1")
+	_, exists := cache.Get(testutil.CacheTestKey1)
 	if !exists {
 		t.Fatal("expected key1 to exist before delete")
 	}
 
 	// Delete specific key
-	cache.Delete("key1")
+	cache.Delete(testutil.CacheTestKey1)
 
 	// Verify deleted key is gone but others remain
-	_, exists1 := cache.Get("key1")
-	_, exists2 := cache.Get("key2")
+	_, exists1 := cache.Get(testutil.CacheTestKey1)
+	_, exists2 := cache.Get(testutil.CacheTestKey2)
 	_, exists3 := cache.Get("key3")
 
 	if exists1 {
@@ -349,7 +349,7 @@ func TestCache_Delete(t *testing.T) {
 	cache.Delete("nonexistent")
 }
 
-func TestCache_Stats(t *testing.T) {
+func TestCacheStats(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -360,8 +360,8 @@ func TestCache_Stats(t *testing.T) {
 	_ = cache.Clear()
 
 	// Add some data
-	_ = cache.Set("key1", "value1")
-	_ = cache.Set("key2", "larger-value-with-more-content")
+	_ = cache.Set(testutil.CacheTestKey1, testutil.CacheTestValue1)
+	_ = cache.Set(testutil.CacheTestKey2, "larger-value-with-more-content")
 
 	stats := cache.Stats()
 
@@ -397,7 +397,7 @@ func TestCache_Stats(t *testing.T) {
 	}
 }
 
-func TestCache_CleanupExpiredEntries(t *testing.T) {
+func TestCacheCleanupExpiredEntries(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -434,7 +434,7 @@ func TestCache_CleanupExpiredEntries(t *testing.T) {
 	}
 }
 
-func TestCache_ErrorHandling(t *testing.T) {
+func TestCacheErrorHandling(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T) *Cache
@@ -472,7 +472,7 @@ func TestCache_ErrorHandling(t *testing.T) {
 	}
 }
 
-func TestCache_AsyncSaveErrorHandling(t *testing.T) {
+func TestCacheAsyncSaveErrorHandling(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -481,7 +481,7 @@ func TestCache_AsyncSaveErrorHandling(t *testing.T) {
 
 	// This tests our new saveToDiskAsync error handling
 	// Set a value to trigger async save
-	err := cache.Set("test-key", "test-value")
+	err := cache.Set(testutil.CacheTestKey, testutil.CacheTestValue)
 	testutil.AssertNoError(t, err)
 
 	// Give some time for async save to complete
@@ -490,14 +490,14 @@ func TestCache_AsyncSaveErrorHandling(t *testing.T) {
 	// The async save should have completed without panicking
 	// We can't easily test the error logging without capturing logs,
 	// but we can verify the cache still works
-	value, exists := cache.Get("test-key")
+	value, exists := cache.Get(testutil.CacheTestKey)
 	if !exists {
 		t.Error("expected value to exist after async save")
 	}
-	testutil.AssertEqual(t, "test-value", value)
+	testutil.AssertEqual(t, testutil.CacheTestValue, value)
 }
 
-func TestCache_EstimateSize(t *testing.T) {
+func TestCacheEstimateSize(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
@@ -525,9 +525,9 @@ func TestCache_EstimateSize(t *testing.T) {
 		{
 			name: "struct",
 			value: map[string]any{
-				"key1": "value1",
-				"key2": 42,
-				"key3": []string{"a", "b", "c"},
+				testutil.CacheTestKey1: testutil.CacheTestValue1,
+				testutil.CacheTestKey2: 42,
+				"key3":                 []string{"a", "b", "c"},
 			},
 			minSize: 30,
 			maxSize: 200,

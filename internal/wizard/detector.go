@@ -59,7 +59,7 @@ type DetectedSettings struct {
 func (d *ProjectDetector) DetectProjectSettings() (*DetectedSettings, error) {
 	settings := &DetectedSettings{
 		SuggestedPermissions: make(map[string]string),
-		SuggestedRunsOn:      []string{"ubuntu-latest"},
+		SuggestedRunsOn:      []string{appconstants.RunnerUbuntuLatest},
 	}
 
 	// Detect repository information
@@ -223,26 +223,69 @@ func (d *ProjectDetector) findActionFiles(dir string, recursive bool) ([]string,
 }
 
 // findActionFilesRecursive discovers action files recursively using filepath.Walk.
+//
+
 func (d *ProjectDetector) findActionFilesRecursive(dir string) ([]string, error) {
+	// Validate directory path
+	if err := validateDirectoryPath(dir); err != nil {
+		return nil, err
+	}
+
 	var actionFiles []string
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
-			return filepath.SkipDir // Skip errors by skipping this directory
+			return filepath.SkipDir
 		}
 
-		if info.IsDir() {
-			return d.handleDirectory(info)
-		}
-
-		if d.isActionFile(info.Name()) {
-			actionFiles = append(actionFiles, path)
-		}
-
-		return nil
+		return d.processWalkDirEntry(path, entry, &actionFiles)
 	})
 
 	return actionFiles, err
+}
+
+// validateDirectoryPath checks for path traversal attempts.
+func validateDirectoryPath(dir string) error {
+	cleanDir := filepath.Clean(dir)
+
+	// Check for ".." as a path component, not substring
+	for _, component := range strings.Split(filepath.ToSlash(cleanDir), "/") {
+		if component == ".." {
+			return fmt.Errorf("invalid directory path: traversal detected in %q", dir)
+		}
+	}
+
+	return nil
+}
+
+// processWalkDirEntry processes a single entry during directory walking.
+func (d *ProjectDetector) processWalkDirEntry(path string, entry os.DirEntry, actionFiles *[]string) error {
+	// Check for symlinks - skip them
+	if entry.Type()&os.ModeSymlink != 0 {
+		return nil // Skip all symlinks
+	}
+
+	// Handle directories
+	if entry.IsDir() {
+		return d.handleDirectoryEntry(entry)
+	}
+
+	// Check if it's an action file
+	if d.isActionFile(entry.Name()) {
+		*actionFiles = append(*actionFiles, path)
+	}
+
+	return nil
+}
+
+// handleDirectoryEntry decides whether to skip a directory during walk.
+func (d *ProjectDetector) handleDirectoryEntry(entry os.DirEntry) error {
+	info, err := entry.Info()
+	if err != nil {
+		return filepath.SkipDir
+	}
+
+	return d.handleDirectory(info)
 }
 
 // handleDirectory decides whether to skip a directory during recursive search.
@@ -257,16 +300,7 @@ func (d *ProjectDetector) handleDirectory(info os.FileInfo) error {
 
 // findActionFilesInDirectory finds action files only in the specified directory.
 func (d *ProjectDetector) findActionFilesInDirectory(dir string) ([]string, error) {
-	var actionFiles []string
-
-	for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
-		actionPath := filepath.Join(dir, filename)
-		if _, err := os.Stat(actionPath); err == nil {
-			actionFiles = append(actionFiles, actionPath)
-		}
-	}
-
-	return actionFiles, nil
+	return internal.DiscoverActionFilesNonRecursive(dir), nil
 }
 
 // isActionFile checks if a filename is an action file.
@@ -454,15 +488,19 @@ func (d *ProjectDetector) suggestTheme(settings *DetectedSettings) {
 
 // suggestRunsOn suggests appropriate runners based on language/framework.
 func (d *ProjectDetector) suggestRunsOn(settings *DetectedSettings) {
-	if len(settings.SuggestedRunsOn) != 1 || settings.SuggestedRunsOn[0] != "ubuntu-latest" {
+	if len(settings.SuggestedRunsOn) != 1 || settings.SuggestedRunsOn[0] != appconstants.RunnerUbuntuLatest {
 		return
 	}
 
 	switch settings.Language {
 	case appconstants.LangJavaScriptTypeScript:
-		settings.SuggestedRunsOn = []string{"ubuntu-latest", "windows-latest", "macos-latest"}
+		settings.SuggestedRunsOn = []string{
+			appconstants.RunnerUbuntuLatest,
+			appconstants.RunnerWindowsLatest,
+			appconstants.RunnerMacosLatest,
+		}
 	case appconstants.LangGo, appconstants.LangPython:
-		settings.SuggestedRunsOn = []string{"ubuntu-latest"}
+		settings.SuggestedRunsOn = []string{appconstants.RunnerUbuntuLatest}
 	}
 }
 

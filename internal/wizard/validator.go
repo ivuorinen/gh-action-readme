@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -32,6 +33,22 @@ type ValidationWarning struct {
 	Field   string
 	Message string
 	Value   string
+}
+
+// validPermissionsMap defines valid GitHub Actions permissions and their allowed values.
+var validPermissionsMap = map[string][]string{
+	"actions":             {"read", "write"},
+	"checks":              {"read", "write"},
+	"contents":            {"read", "write"},
+	"deployments":         {"read", "write"},
+	"id-token":            {"write"},
+	"issues":              {"read", "write"},
+	"discussions":         {"read", "write"},
+	"packages":            {"read", "write"},
+	"pull-requests":       {"read", "write"},
+	"repository-projects": {"read", "write"},
+	"security-events":     {"read", "write"},
+	"statuses":            {"read", "write"},
 }
 
 // ConfigValidator handles configuration validation with immediate feedback.
@@ -139,50 +156,38 @@ func (v *ConfigValidator) DisplayValidationResult(result *ValidationResult) {
 
 // validateOrganization validates the organization field.
 func (v *ConfigValidator) validateOrganization(org string, result *ValidationResult) {
-	if org == "" {
-		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "organization",
-			Message: "Organization is empty - will use auto-detected value",
-			Value:   org,
-		})
-
-		return
-	}
-
-	// GitHub username/organization rules
-	if !v.isValidGitHubName(org) {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "organization",
-			Message: "Invalid organization name format",
-			Value:   org,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Organization names can only contain alphanumeric characters and hyphens")
-	}
+	v.validateFieldWithEmptyCheck(
+		"organization",
+		org,
+		v.isValidGitHubName,
+		"Organization is empty - will use auto-detected value",
+		"Invalid organization name format",
+		"Organization names can only contain alphanumeric characters and hyphens",
+		result,
+	)
 }
 
 // validateRepository validates the repository field.
 func (v *ConfigValidator) validateRepository(repo string, result *ValidationResult) {
-	if repo == "" {
-		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "repository",
-			Message: "Repository is empty - will use auto-detected value",
-			Value:   repo,
-		})
+	v.validateFieldWithEmptyCheck(
+		"repository",
+		repo,
+		v.isValidGitHubName,
+		"Repository is empty - will use auto-detected value",
+		"Invalid repository name format",
+		"Repository names can only contain alphanumeric characters, hyphens, and underscores",
+		result,
+	)
+}
 
-		return
-	}
-
-	// GitHub repository name rules
-	if !v.isValidGitHubName(repo) {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "repository",
-			Message: "Invalid repository name format",
-			Value:   repo,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Repository names can only contain alphanumeric characters, hyphens, and underscores")
-	}
+// addWarningWithSuggestion is a helper to add a warning and suggestion together.
+func addWarningWithSuggestion(result *ValidationResult, field, message, value, suggestion string) {
+	result.Warnings = append(result.Warnings, ValidationWarning{
+		Field:   field,
+		Message: message,
+		Value:   value,
+	})
+	result.Suggestions = append(result.Suggestions, suggestion)
 }
 
 // validateVersion validates the version field.
@@ -194,62 +199,32 @@ func (v *ConfigValidator) validateVersion(version string, result *ValidationResu
 
 	// Check if it follows semantic versioning
 	if !v.isValidSemanticVersion(version) {
-		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "version",
-			Message: "Version does not follow semantic versioning (x.y.z)",
-			Value:   version,
-		})
-		result.Suggestions = append(result.Suggestions,
+		addWarningWithSuggestion(result,
+			"version",
+			"Version does not follow semantic versioning (x.y.z)",
+			version,
 			"Consider using semantic versioning format (e.g., 1.0.0)")
 	}
 }
 
 // validateTheme validates the theme field.
 func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) {
-	validThemes := []string{"default", "github", "gitlab", "minimal", "professional"}
-
-	found := false
-	for _, validTheme := range validThemes {
-		if theme == validTheme {
-			found = true
-
-			break
-		}
+	validThemes := []string{
+		appconstants.ThemeDefault,
+		appconstants.ThemeGitHub,
+		appconstants.ThemeGitLab,
+		appconstants.ThemeMinimal,
+		appconstants.ThemeProfessional,
 	}
 
-	if !found {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "theme",
-			Message: "Invalid theme",
-			Value:   theme,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Valid themes: "+strings.Join(validThemes, ", "))
-	}
+	v.validateFieldInList("theme", theme, validThemes, "Invalid theme", result)
 }
 
 // validateOutputFormat validates the output format field.
 func (v *ConfigValidator) validateOutputFormat(format string, result *ValidationResult) {
-	validFormats := []string{"md", "html", "json", "asciidoc"}
+	validFormats := appconstants.GetSupportedOutputFormats()
 
-	found := false
-	for _, validFormat := range validFormats {
-		if format == validFormat {
-			found = true
-
-			break
-		}
-	}
-
-	if !found {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "output_format",
-			Message: "Invalid output format",
-			Value:   format,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Valid formats: "+strings.Join(validFormats, ", "))
-	}
+	v.validateFieldInList("output_format", format, validFormats, "Invalid output format", result)
 }
 
 // validateOutputDir validates the output directory field.
@@ -270,24 +245,20 @@ func (v *ConfigValidator) validateOutputDir(dir string, result *ValidationResult
 		parent := filepath.Dir(dir)
 		if parent != "." {
 			if _, err := os.Stat(parent); os.IsNotExist(err) {
-				result.Warnings = append(result.Warnings, ValidationWarning{
-					Field:   "output_dir",
-					Message: "Parent directory does not exist",
-					Value:   dir,
-				})
-				result.Suggestions = append(result.Suggestions,
+				addWarningWithSuggestion(result,
+					"output_dir",
+					"Parent directory does not exist",
+					dir,
 					"Ensure the parent directory exists or will be created")
 			}
 		}
 	} else {
 		// Absolute path - check if it exists
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			result.Warnings = append(result.Warnings, ValidationWarning{
-				Field:   "output_dir",
-				Message: "Directory does not exist",
-				Value:   dir,
-			})
-			result.Suggestions = append(result.Suggestions,
+			addWarningWithSuggestion(result,
+				"output_dir",
+				"Directory does not exist",
+				dir,
 				"Directory will be created if it doesn't exist")
 		}
 	}
@@ -321,30 +292,32 @@ func (v *ConfigValidator) validateGitHubToken(token string, result *ValidationRe
 		"Consider using GITHUB_TOKEN environment variable instead")
 }
 
+// validatePermissionValue validates a single permission value and updates the result.
+func (v *ConfigValidator) validatePermissionValue(
+	permission, value string,
+	validValues []string,
+	result *ValidationResult,
+) {
+	if !v.isValueInList(value, validValues) {
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "permissions." + permission,
+			Message: "Invalid permission value",
+			Value:   value,
+		})
+		result.Suggestions = append(result.Suggestions,
+			fmt.Sprintf("Valid values for %s: %s", permission, strings.Join(validValues, ", ")))
+	}
+}
+
 // validatePermissions validates the permissions field.
 func (v *ConfigValidator) validatePermissions(permissions map[string]string, result *ValidationResult) {
 	if len(permissions) == 0 {
 		return
 	}
 
-	validPermissions := map[string][]string{
-		"actions":             {"read", "write"},
-		"checks":              {"read", "write"},
-		"contents":            {"read", "write"},
-		"deployments":         {"read", "write"},
-		"id-token":            {"write"},
-		"issues":              {"read", "write"},
-		"discussions":         {"read", "write"},
-		"packages":            {"read", "write"},
-		"pull-requests":       {"read", "write"},
-		"repository-projects": {"read", "write"},
-		"security-events":     {"read", "write"},
-		"statuses":            {"read", "write"},
-	}
-
 	for permission, value := range permissions {
 		// Check if permission is valid
-		validValues, permissionExists := validPermissions[permission]
+		validValues, permissionExists := validPermissionsMap[permission]
 		if !permissionExists {
 			result.Warnings = append(result.Warnings, ValidationWarning{
 				Field:   "permissions",
@@ -356,24 +329,7 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		}
 
 		// Check if value is valid
-		validValue := false
-		for _, validVal := range validValues {
-			if value == validVal {
-				validValue = true
-
-				break
-			}
-		}
-
-		if !validValue {
-			result.Errors = append(result.Errors, ValidationError{
-				Field:   "permissions",
-				Message: "Invalid value for permission " + permission,
-				Value:   value,
-			})
-			result.Suggestions = append(result.Suggestions,
-				fmt.Sprintf("Valid values for %s: %s", permission, strings.Join(validValues, ", ")))
-		}
+		v.validatePermissionValue(permission, value, validValues, result)
 	}
 }
 
@@ -392,31 +348,22 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 	}
 
 	validRunners := []string{
-		"ubuntu-latest", "ubuntu-22.04", "ubuntu-20.04",
-		"windows-latest", "windows-2022", "windows-2019",
-		"macos-latest", "macos-13", "macos-12", "macos-11",
+		appconstants.RunnerUbuntuLatest, "ubuntu-22.04", "ubuntu-20.04",
+		appconstants.RunnerWindowsLatest, "windows-2022", "windows-2019",
+		appconstants.RunnerMacosLatest, "macos-13", "macos-12", "macos-11",
 	}
 
 	for _, runner := range runsOn {
 		// Check if it's a GitHub-hosted runner
-		isValid := false
-		for _, validRunner := range validRunners {
-			if runner == validRunner {
-				isValid = true
-
-				break
-			}
-		}
+		isValid := v.isValueInList(runner, validRunners)
 
 		// If not a standard runner, it might be self-hosted
 		if !isValid {
 			if !strings.HasPrefix(runner, "self-hosted") {
-				result.Warnings = append(result.Warnings, ValidationWarning{
-					Field:   "runs_on",
-					Message: "Unknown runner: " + runner,
-					Value:   runner,
-				})
-				result.Suggestions = append(result.Suggestions,
+				addWarningWithSuggestion(result,
+					"runs_on",
+					"Unknown runner: "+runner,
+					runner,
 					"Ensure the runner is available in your GitHub organization")
 			}
 		}
@@ -455,6 +402,11 @@ func (v *ConfigValidator) validateVariables(variables map[string]string, result 
 				"Variable names should contain only letters, numbers, and underscores")
 		}
 	}
+}
+
+// isValueInList checks if a value exists in a list of valid options.
+func (v *ConfigValidator) isValueInList(value string, validOptions []string) bool {
+	return slices.Contains(validOptions, value)
 }
 
 // isValidGitHubName checks if a name follows GitHub naming rules.

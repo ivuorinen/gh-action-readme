@@ -2,6 +2,20 @@
 # yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
 version: "2"
 
+# golangci-lint configuration
+# Aligned with SonarCloud "Sonar way" quality gate
+# https://docs.sonarsource.com/sonarqube-cloud/standards/managing-quality-gates/
+#
+# Key alignments:
+# - gosec: Aligns with Security Rating A requirement (no vulnerabilities)
+# - gocyclo (min: 10): Stricter than SonarCloud (not enforced)
+# - dupl: Aligns with duplicated lines density <= 3%
+# - lll (120 chars): Stricter than SonarCloud (not enforced)
+# - Code coverage: See Makefile target 'test-coverage-check' (>= 60%, goal: 80% for new code)
+#
+# SonarCloud focuses on new code (last 30 days), local linting checks entire codebase
+# Local standards are intentionally stricter in some areas (complexity, line length)
+
 run:
   timeout: 5m
   go: "1.24"

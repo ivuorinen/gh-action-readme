@@ -267,24 +267,22 @@ func (e *ConfigExporter) writeWorkflowSection(file *os.File, config *internal.Ap
 
 // writePermissionsSection writes the permissions section.
 func (e *ConfigExporter) writePermissionsSection(file *os.File, config *internal.AppConfig) {
-	if len(config.Permissions) == 0 {
-		return
-	}
-
-	_, _ = fmt.Fprintf(file, "\n[permissions]\n")
-	for key, value := range config.Permissions {
-		_, _ = fmt.Fprintf(file, appconstants.FormatEnvVar, key, value)
-	}
+	e.writeMapSection(file, "[permissions]", config.Permissions)
 }
 
 // writeVariablesSection writes the variables section.
 func (e *ConfigExporter) writeVariablesSection(file *os.File, config *internal.AppConfig) {
-	if len(config.Variables) == 0 {
+	e.writeMapSection(file, "[variables]", config.Variables)
+}
+
+// writeMapSection writes a TOML section with key-value pairs from a map.
+func (e *ConfigExporter) writeMapSection(file *os.File, sectionName string, data map[string]string) {
+	if len(data) == 0 {
 		return
 	}
 
-	_, _ = fmt.Fprintf(file, "\n[variables]\n")
-	for key, value := range config.Variables {
+	_, _ = fmt.Fprintf(file, "\n%s\n", sectionName)
+	for key, value := range data {
 		_, _ = fmt.Fprintf(file, appconstants.FormatEnvVar, key, value)
 	}
 }

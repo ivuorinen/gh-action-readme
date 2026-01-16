@@ -1,0 +1,5 @@
+name: Empty Action
+description: Minimal action with no steps for edge case testing
+runs:
+  using: composite
+  steps: []

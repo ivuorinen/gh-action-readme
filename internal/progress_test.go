@@ -1,12 +1,13 @@
 package internal
 
 import (
+	"io"
 	"testing"
 
 	"github.com/schollz/progressbar/v3"
 )
 
-func TestProgressBarManager_CreateProgressBar(t *testing.T) {
+func TestProgressBarManagerCreateProgressBar(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
@@ -64,7 +65,7 @@ func TestProgressBarManager_CreateProgressBar(t *testing.T) {
 	}
 }
 
-func TestProgressBarManager_CreateProgressBarForFiles(t *testing.T) {
+func TestProgressBarManagerCreateProgressBarForFiles(t *testing.T) {
 	t.Parallel()
 	pm := NewProgressBarManager(false)
 	files := []string{"file1.yml", "file2.yml", "file3.yml"}
@@ -76,33 +77,44 @@ func TestProgressBarManager_CreateProgressBarForFiles(t *testing.T) {
 	}
 }
 
-func TestProgressBarManager_FinishProgressBar(t *testing.T) {
+func TestProgressBarManagerNilSafeOperations(t *testing.T) {
 	t.Parallel()
-	// Use quiet mode to avoid cluttering test output
-	pm := NewProgressBarManager(true)
 
-	// Test with nil bar (should not panic)
-	pm.FinishProgressBar(nil)
+	tests := []struct {
+		name      string
+		operation func(*ProgressBarManager, *progressbar.ProgressBar)
+	}{
+		{
+			name: "FinishProgressBar handles nil",
+			operation: func(pm *ProgressBarManager, bar *progressbar.ProgressBar) {
+				pm.FinishProgressBar(bar)
+			},
+		},
+		{
+			name: "UpdateProgressBar handles nil",
+			operation: func(pm *ProgressBarManager, bar *progressbar.ProgressBar) {
+				pm.UpdateProgressBar(bar)
+			},
+		},
+	}
 
-	// Test with actual bar (will be nil in quiet mode)
-	bar := pm.CreateProgressBar("Test", 5)
-	pm.FinishProgressBar(bar) // Should handle nil gracefully
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Use quiet mode to avoid cluttering test output
+			pm := NewProgressBarManager(true)
+
+			// Should not panic with nil
+			tt.operation(pm, nil)
+
+			// Should not panic with actual bar (will be nil in quiet mode)
+			bar := pm.CreateProgressBar("Test", 5)
+			tt.operation(pm, bar)
+		})
+	}
 }
 
-func TestProgressBarManager_UpdateProgressBar(t *testing.T) {
-	t.Parallel()
-	// Use quiet mode to avoid cluttering test output
-	pm := NewProgressBarManager(true)
-
-	// Test with nil bar (should not panic)
-	pm.UpdateProgressBar(nil)
-
-	// Test with actual bar (will be nil in quiet mode)
-	bar := pm.CreateProgressBar("Test", 5)
-	pm.UpdateProgressBar(bar) // Should handle nil gracefully
-}
-
-func TestProgressBarManager_ProcessWithProgressBar(t *testing.T) {
+func TestProgressBarManagerProcessWithProgressBar(t *testing.T) {
 	t.Parallel()
 	// Use NullProgressManager to avoid cluttering test output
 	pm := NewNullProgressManager()
@@ -126,7 +138,7 @@ func TestProgressBarManager_ProcessWithProgressBar(t *testing.T) {
 	}
 }
 
-func TestProgressBarManager_ProcessWithProgressBar_QuietMode(t *testing.T) {
+func TestProgressBarManagerProcessWithProgressBarQuietMode(t *testing.T) {
 	t.Parallel()
 	pm := NewProgressBarManager(true) // quiet mode
 	items := []string{"item1", "item2"}
@@ -144,5 +156,34 @@ func TestProgressBarManager_ProcessWithProgressBar_QuietMode(t *testing.T) {
 
 	if len(processedItems) != len(items) {
 		t.Errorf("expected %d processed items, got %d", len(items), len(processedItems))
+	}
+}
+
+// TestProgressBarManagerFinishProgressBarWithNewline tests finishing with newline.
+func TestProgressBarManagerFinishProgressBarWithNewline(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		bar  *progressbar.ProgressBar
+	}{
+		{
+			name: "with valid progress bar",
+			bar:  progressbar.NewOptions(10, progressbar.OptionSetWriter(io.Discard)),
+		},
+		{
+			name: "with nil progress bar",
+			bar:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			pm := NewProgressBarManager(false)
+			// Should not panic
+			pm.FinishProgressBarWithNewline(tt.bar)
+		})
 	}
 }

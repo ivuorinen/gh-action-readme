@@ -1,0 +1,4 @@
+description: Test action
+runs:
+  using: composite
+  steps: []

@@ -1,0 +1,7 @@
+name: Test Action
+description: Test action
+runs:
+  using: composite
+  steps:
+  - name: Test
+    uses: actions/checkout@v4

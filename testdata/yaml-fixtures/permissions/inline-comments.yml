@@ -1,0 +1,8 @@
+# permissions:
+#   - contents: read  # Needed for checkout
+#   - issues: write   # To create issues
+name: Test Action
+description: Test action with permissions with inline comments
+runs:
+  using: composite
+  steps: []

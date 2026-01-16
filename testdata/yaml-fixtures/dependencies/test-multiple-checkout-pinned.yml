@@ -1,0 +1,9 @@
+name: Test
+description: Test
+runs:
+  using: composite
+  steps:
+  - uses: actions/checkout@abc123 # v4.1.1
+  - run: echo "test"
+    shell: bash
+  - uses: actions/checkout@abc123 # v4.1.1

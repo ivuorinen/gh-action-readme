@@ -1,0 +1,8 @@
+# permissions:
+#   - contents: read
+#   issues: write
+name: Test Action
+description: Test action with mixed permission formats
+runs:
+  using: composite
+  steps: []

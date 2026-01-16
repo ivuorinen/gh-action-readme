@@ -1,0 +1,4 @@
+theme: default
+output_format: md
+github_token: base-token
+verbose: false

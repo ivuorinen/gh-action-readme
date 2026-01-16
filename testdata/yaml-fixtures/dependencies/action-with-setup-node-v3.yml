@@ -1,0 +1,7 @@
+name: Action 2
+description: Second action
+runs:
+  using: composite
+  steps:
+  - name: Setup Node
+    uses: actions/setup-node@v3

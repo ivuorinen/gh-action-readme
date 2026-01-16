@@ -1,0 +1,10 @@
+name: Test
+description: Test
+runs:
+  using: composite
+  steps:
+  # Comment about checkout
+  - name: Checkout
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 0

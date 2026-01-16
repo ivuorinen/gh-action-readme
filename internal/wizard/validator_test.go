@@ -6,10 +6,46 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal"
 )
 
-func TestConfigValidator_ValidateConfig(t *testing.T) {
+// newTestValidator creates a ConfigValidator for testing with quiet output.
+// Reduces duplication across validator tests.
+func newTestValidator() *ConfigValidator {
+	output := internal.NewColoredOutput(true)
+
+	return NewConfigValidator(output)
+}
+
+// validationTestCase defines a test case for string validation methods.
+type validationTestCase struct {
+	name  string
+	input string
+	want  bool
+}
+
+// runValidationTests is a generic helper for testing validator methods that take a string and return bool.
+// This eliminates duplication across isValidGitHubName, isValidSemanticVersion, isValidGitHubToken, etc.
+func runValidationTests(
+	t *testing.T,
+	tests []validationTestCase,
+	validatorFunc func(string) bool,
+	funcName string,
+) {
+	t.Helper()
 	t.Parallel()
-	output := internal.NewColoredOutput(true) // quiet mode for testing
-	validator := NewConfigValidator(output)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := validatorFunc(tt.input)
+			if got != tt.want {
+				t.Errorf("%s(%q) = %v, want %v", funcName, tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConfigValidatorValidateConfig(t *testing.T) {
+	t.Parallel()
+	validator := newTestValidator()
 
 	tests := []struct {
 		name           string
@@ -93,10 +129,9 @@ func TestConfigValidator_ValidateConfig(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_ValidateField(t *testing.T) {
+func TestConfigValidatorValidateField(t *testing.T) {
 	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+	validator := newTestValidator()
 
 	tests := []struct {
 		name        string
@@ -128,16 +163,10 @@ func TestConfigValidator_ValidateField(t *testing.T) {
 	}
 }
 
-func TestConfigValidator_isValidGitHubName(t *testing.T) {
-	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+func TestConfigValidatorIsValidGitHubName(t *testing.T) {
+	validator := newTestValidator()
 
-	tests := []struct {
-		name  string
-		input string
-		want  bool
-	}{
+	tests := []validationTestCase{
 		{"valid name", "test-org", true},
 		{"valid name with numbers", "test123", true},
 		{"valid name with underscore", "test_org", true},
@@ -149,27 +178,13 @@ func TestConfigValidator_isValidGitHubName(t *testing.T) {
 		{"very long name", "this-is-a-very-long-organization-name-that-exceeds-the-limit", false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := validator.isValidGitHubName(tt.input)
-			if got != tt.want {
-				t.Errorf("isValidGitHubName(%q) = %v, want %v", tt.input, got, tt.want)
-			}
-		})
-	}
+	runValidationTests(t, tests, validator.isValidGitHubName, "isValidGitHubName")
 }
 
-func TestConfigValidator_isValidSemanticVersion(t *testing.T) {
-	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+func TestConfigValidatorIsValidSemanticVersion(t *testing.T) {
+	validator := newTestValidator()
 
-	tests := []struct {
-		name  string
-		input string
-		want  bool
-	}{
+	tests := []validationTestCase{
 		{"valid version", "1.0.0", true},
 		{"valid version with pre-release", "1.0.0-alpha", true},
 		{"valid version with build", "1.0.0+build.1", true},
@@ -180,27 +195,13 @@ func TestConfigValidator_isValidSemanticVersion(t *testing.T) {
 		{"empty version", "", false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := validator.isValidSemanticVersion(tt.input)
-			if got != tt.want {
-				t.Errorf("isValidSemanticVersion(%q) = %v, want %v", tt.input, got, tt.want)
-			}
-		})
-	}
+	runValidationTests(t, tests, validator.isValidSemanticVersion, "isValidSemanticVersion")
 }
 
-func TestConfigValidator_isValidGitHubToken(t *testing.T) {
-	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+func TestConfigValidatorIsValidGitHubToken(t *testing.T) {
+	validator := newTestValidator()
 
-	tests := []struct {
-		name  string
-		input string
-		want  bool
-	}{
+	tests := []validationTestCase{
 		{"classic token", "ghp_1234567890abcdef1234567890abcdef12345678", true},
 		{"fine-grained token", "github_pat_1234567890abcdef", true},
 		{"app token", "ghs_1234567890abcdef", true},
@@ -211,27 +212,13 @@ func TestConfigValidator_isValidGitHubToken(t *testing.T) {
 		{"empty token", "", false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := validator.isValidGitHubToken(tt.input)
-			if got != tt.want {
-				t.Errorf("isValidGitHubToken(%q) = %v, want %v", tt.input, got, tt.want)
-			}
-		})
-	}
+	runValidationTests(t, tests, validator.isValidGitHubToken, "isValidGitHubToken")
 }
 
-func TestConfigValidator_isValidVariableName(t *testing.T) {
-	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	validator := NewConfigValidator(output)
+func TestConfigValidatorIsValidVariableName(t *testing.T) {
+	validator := newTestValidator()
 
-	tests := []struct {
-		name  string
-		input string
-		want  bool
-	}{
+	tests := []validationTestCase{
 		{"valid name", "MY_VAR", true},
 		{"valid name with underscore", "_MY_VAR", true},
 		{"valid name lowercase", "my_var", true},
@@ -243,13 +230,5 @@ func TestConfigValidator_isValidVariableName(t *testing.T) {
 		{"empty name", "", false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := validator.isValidVariableName(tt.input)
-			if got != tt.want {
-				t.Errorf("isValidVariableName(%q) = %v, want %v", tt.input, got, tt.want)
-			}
-		})
-	}
+	runValidationTests(t, tests, validator.isValidVariableName, "isValidVariableName")
 }

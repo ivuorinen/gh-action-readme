@@ -1,0 +1,6 @@
+# Just a comment
+name: Test Action
+description: Test action with no permissions block
+runs:
+  using: composite
+  steps: []

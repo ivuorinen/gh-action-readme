@@ -141,7 +141,7 @@ func (w *ConfigWizard) configureThemeSelection() {
 // configureOutputFormat handles output format selection.
 func (w *ConfigWizard) configureOutputFormat() {
 	w.output.Info("\nAvailable output formats:")
-	formats := []string{"md", "html", "json", "asciidoc"}
+	formats := appconstants.GetSupportedOutputFormats()
 
 	w.displayFormatOptions(formats)
 
@@ -165,11 +165,11 @@ func (w *ConfigWizard) getAvailableThemes() []struct {
 		name string
 		desc string
 	}{
-		{"default", "Original simple template"},
-		{"github", "GitHub-style with badges and collapsible sections"},
-		{"gitlab", "GitLab-focused with CI/CD examples"},
-		{"minimal", "Clean and concise documentation"},
-		{"professional", "Comprehensive with troubleshooting and ToC"},
+		{appconstants.ThemeDefault, "Original simple template"},
+		{appconstants.ThemeGitHub, "GitHub-style with badges and collapsible sections"},
+		{appconstants.ThemeGitLab, "GitLab-focused with CI/CD examples"},
+		{appconstants.ThemeMinimal, "Clean and concise documentation"},
+		{appconstants.ThemeProfessional, "Comprehensive with troubleshooting and ToC"},
 	}
 }
 
@@ -357,15 +357,20 @@ func (w *ConfigWizard) promptYesNo(prompt string, defaultValue bool) bool {
 
 // findActionFiles discovers action files in the given directory.
 func (w *ConfigWizard) findActionFiles(dir string) []string {
-	var actionFiles []string
-
-	// Check for action.yml and action.yaml
-	for _, filename := range []string{"action.yml", "action.yaml"} {
-		actionPath := filepath.Join(dir, filename)
-		if _, err := os.Stat(actionPath); err == nil {
-			actionFiles = append(actionFiles, actionPath)
+	// Check for path traversal attempts in the raw input before cleaning
+	for _, component := range strings.Split(filepath.ToSlash(dir), "/") {
+		if component == ".." {
+			return []string{} // Return empty for invalid paths
 		}
 	}
 
-	return actionFiles
+	// Validate and clean the input path
+	cleanDir := filepath.Clean(dir)
+	// Verify Clean didn't change the path (indicates normalization/traversal)
+	if cleanDir != dir {
+		return []string{} // Return empty for paths with traversal
+	}
+
+	// Check for action.yml and action.yaml using validated path
+	return internal.DiscoverActionFilesNonRecursive(cleanDir)
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestConfigExporter_ExportConfig(t *testing.T) {
+func TestConfigExporterExportConfig(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true) // quiet mode for testing
 	exporter := NewConfigExporter(output)
@@ -62,11 +62,11 @@ func testYAMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 	return func(t *testing.T) {
 		t.Helper()
 		tempDir := t.TempDir()
-		outputPath := filepath.Join(tempDir, "config.yaml")
+		outputPath := filepath.Join(tempDir, testutil.TestFileConfigYAML)
 
 		err := exporter.ExportConfig(config, FormatYAML, outputPath)
 		if err != nil {
-			t.Fatalf("ExportConfig() error = %v", err)
+			t.Fatalf(testutil.TestMsgExportConfigError, err)
 		}
 
 		testutil.AssertFileExists(t, outputPath)
@@ -83,7 +83,7 @@ func testJSONExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 
 		err := exporter.ExportConfig(config, FormatJSON, outputPath)
 		if err != nil {
-			t.Fatalf("ExportConfig() error = %v", err)
+			t.Fatalf(testutil.TestMsgExportConfigError, err)
 		}
 
 		testutil.AssertFileExists(t, outputPath)
@@ -100,7 +100,7 @@ func testTOMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 
 		err := exporter.ExportConfig(config, FormatTOML, outputPath)
 		if err != nil {
-			t.Fatalf("ExportConfig() error = %v", err)
+			t.Fatalf(testutil.TestMsgExportConfigError, err)
 		}
 
 		testutil.AssertFileExists(t, outputPath)
@@ -113,7 +113,7 @@ func verifyYAMLContent(t *testing.T, outputPath string, expected *internal.AppCo
 	t.Helper()
 	data, err := os.ReadFile(outputPath) // #nosec G304 -- test output path
 	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
+		t.Fatalf(testutil.TestMsgFailedReadOutput, err)
 	}
 
 	var yamlConfig internal.AppConfig
@@ -134,7 +134,7 @@ func verifyJSONContent(t *testing.T, outputPath string, expected *internal.AppCo
 	t.Helper()
 	data, err := os.ReadFile(outputPath) // #nosec G304 -- test output path
 	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
+		t.Fatalf(testutil.TestMsgFailedReadOutput, err)
 	}
 
 	var jsonConfig internal.AppConfig
@@ -155,7 +155,7 @@ func verifyTOMLContent(t *testing.T, outputPath string) {
 	t.Helper()
 	data, err := os.ReadFile(outputPath) // #nosec G304 -- test output path
 	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
+		t.Fatalf(testutil.TestMsgFailedReadOutput, err)
 	}
 
 	content := string(data)
@@ -167,7 +167,7 @@ func verifyTOMLContent(t *testing.T, outputPath string) {
 	}
 }
 
-func TestConfigExporter_sanitizeConfig(t *testing.T) {
+func TestConfigExporterSanitizeConfig(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
@@ -201,7 +201,7 @@ func TestConfigExporter_sanitizeConfig(t *testing.T) {
 	}
 }
 
-func TestConfigExporter_GetSupportedFormats(t *testing.T) {
+func TestConfigExporterGetSupportedFormats(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
@@ -226,7 +226,7 @@ func TestConfigExporter_GetSupportedFormats(t *testing.T) {
 	}
 }
 
-func TestConfigExporter_GetDefaultOutputPath(t *testing.T) {
+func TestConfigExporterGetDefaultOutputPath(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)
 	exporter := NewConfigExporter(output)
@@ -235,7 +235,7 @@ func TestConfigExporter_GetDefaultOutputPath(t *testing.T) {
 		format   ExportFormat
 		expected string
 	}{
-		{FormatYAML, "config.yaml"},
+		{FormatYAML, testutil.TestFileConfigYAML},
 		{FormatJSON, "config.json"},
 		{FormatTOML, "config.toml"},
 	}

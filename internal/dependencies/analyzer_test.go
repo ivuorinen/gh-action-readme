@@ -16,7 +16,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
+func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -29,34 +29,34 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 	}{
 		{
 			name:        "simple action - no dependencies",
-			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureJavaScriptSimple),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:         "composite action with dependencies",
-			actionYML:    testutil.MustReadFixture(appconstants.TestFixtureCompositeWithDeps),
+			actionYML:    testutil.MustReadFixture(testutil.TestFixtureCompositeWithDeps),
 			expectError:  false,
 			expectDeps:   true,
 			expectedLen:  5, // 3 action dependencies + 2 shell script dependencies
-			expectedDeps: []string{"actions/checkout@v4", "actions/setup-node@v4", "actions/setup-python@v4"},
+			expectedDeps: []string{testutil.TestActionCheckoutV4, "actions/setup-node@v4", "actions/setup-python@v4"},
 		},
 		{
 			name:        "docker action - no step dependencies",
-			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureDockerBasic),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureDockerBasic),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
 		},
 		{
 			name:        "invalid action file",
-			actionYML:   testutil.MustReadFixture(appconstants.TestFixtureInvalidInvalidUsing),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 			expectError: true,
 		},
 		{
 			name:        "minimal action - no dependencies",
-			actionYML:   testutil.MustReadFixture("minimal-action.yml"),
+			actionYML:   testutil.MustReadFixture(testutil.TestFixtureMinimalAction),
 			expectError: false,
 			expectDeps:  false,
 			expectedLen: 0,
@@ -121,7 +121,7 @@ func TestAnalyzer_AnalyzeActionFile(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_ParseUsesStatement(t *testing.T) {
+func TestAnalyzerParseUsesStatement(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -134,7 +134,7 @@ func TestAnalyzer_ParseUsesStatement(t *testing.T) {
 	}{
 		{
 			name:            "semantic version",
-			uses:            "actions/checkout@v4",
+			uses:            testutil.TestActionCheckoutV4,
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
 			expectedVersion: "v4",
@@ -153,7 +153,7 @@ func TestAnalyzer_ParseUsesStatement(t *testing.T) {
 			uses:            "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
-			expectedVersion: "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+			expectedVersion: testutil.TestSHAForTesting,
 			expectedType:    CommitSHA,
 		},
 		{
@@ -182,7 +182,7 @@ func TestAnalyzer_ParseUsesStatement(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_VersionChecking(t *testing.T) {
+func TestAnalyzerVersionChecking(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -208,7 +208,7 @@ func TestAnalyzer_VersionChecking(t *testing.T) {
 		},
 		{
 			name:        "commit SHA full",
-			version:     "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+			version:     testutil.TestSHAForTesting,
 			isPinned:    true,
 			isCommitSHA: true,
 			isSemantic:  false,
@@ -253,7 +253,7 @@ func TestAnalyzer_VersionChecking(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_GetLatestVersion(t *testing.T) {
+func TestAnalyzerGetLatestVersion(t *testing.T) {
 	t.Parallel()
 
 	// Create mock GitHub client with test responses
@@ -278,15 +278,15 @@ func TestAnalyzer_GetLatestVersion(t *testing.T) {
 			name:            "valid repository",
 			owner:           "actions",
 			repo:            "checkout",
-			expectedVersion: "v4.1.1",
-			expectedSHA:     "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+			expectedVersion: testutil.TestVersionV4_1_1,
+			expectedSHA:     testutil.TestSHAForTesting,
 			expectError:     false,
 		},
 		{
 			name:            "another valid repository",
 			owner:           "actions",
 			repo:            "setup-node",
-			expectedVersion: "v4.0.0",
+			expectedVersion: testutil.TestVersionV4_0_0,
 			expectedSHA:     "1a4e6d7c9f8e5b2a3c4d5e6f7a8b9c0d1e2f3a4b",
 			expectError:     false,
 		},
@@ -311,7 +311,7 @@ func TestAnalyzer_GetLatestVersion(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_CheckOutdated(t *testing.T) {
+func TestAnalyzerCheckOutdated(t *testing.T) {
 	t.Parallel()
 
 	// Create mock GitHub client
@@ -327,8 +327,8 @@ func TestAnalyzer_CheckOutdated(t *testing.T) {
 	// Create test dependencies
 	dependencies := []Dependency{
 		{
-			Name:        "actions/checkout",
-			Uses:        "actions/checkout@v3",
+			Name:        testutil.TestActionCheckout,
+			Uses:        testutil.TestActionCheckoutV3,
 			Version:     "v3",
 			IsPinned:    false,
 			VersionType: SemanticVersion,
@@ -337,7 +337,7 @@ func TestAnalyzer_CheckOutdated(t *testing.T) {
 		{
 			Name:        "actions/setup-node",
 			Uses:        "actions/setup-node@v4.0.0",
-			Version:     "v4.0.0",
+			Version:     testutil.TestVersionV4_0_0,
 			IsPinned:    true,
 			VersionType: SemanticVersion,
 			Description: "Setup Node.js",
@@ -354,9 +354,9 @@ func TestAnalyzer_CheckOutdated(t *testing.T) {
 
 	found := false
 	for _, dep := range outdated {
-		if dep.Current.Name == "actions/checkout" && dep.Current.Version == "v3" {
+		if dep.Current.Name == testutil.TestActionCheckout && dep.Current.Version == "v3" {
 			found = true
-			if dep.LatestVersion != "v4.1.1" {
+			if dep.LatestVersion != testutil.TestVersionV4_1_1 {
 				t.Errorf("expected latest version v4.1.1, got %s", dep.LatestVersion)
 			}
 			if dep.UpdateType != "major" {
@@ -370,7 +370,7 @@ func TestAnalyzer_CheckOutdated(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_CompareVersions(t *testing.T) {
+func TestAnalyzerCompareVersions(t *testing.T) {
 	t.Parallel()
 
 	analyzer := &Analyzer{}
@@ -384,31 +384,31 @@ func TestAnalyzer_CompareVersions(t *testing.T) {
 		{
 			name:         "major version difference",
 			current:      "v3.0.0",
-			latest:       "v4.0.0",
+			latest:       testutil.TestVersionV4_0_0,
 			expectedType: "major",
 		},
 		{
 			name:         "minor version difference",
-			current:      "v4.0.0",
+			current:      testutil.TestVersionV4_0_0,
 			latest:       "v4.1.0",
 			expectedType: "minor",
 		},
 		{
 			name:         "patch version difference",
 			current:      "v4.1.0",
-			latest:       "v4.1.1",
+			latest:       testutil.TestVersionV4_1_1,
 			expectedType: "patch",
 		},
 		{
 			name:         "no difference",
-			current:      "v4.1.1",
-			latest:       "v4.1.1",
+			current:      testutil.TestVersionV4_1_1,
+			latest:       testutil.TestVersionV4_1_1,
 			expectedType: "none",
 		},
 		{
 			name:         "floating to specific",
 			current:      "v4",
-			latest:       "v4.1.1",
+			latest:       testutil.TestVersionV4_1_1,
 			expectedType: "patch",
 		},
 	}
@@ -423,14 +423,14 @@ func TestAnalyzer_CompareVersions(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
+func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	t.Parallel()
 
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
 	// Create a test action file with composite steps
-	actionContent := testutil.MustReadFixture(appconstants.TestFixtureTestCompositeAction)
+	actionContent := testutil.MustReadFixture(testutil.TestFixtureTestCompositeAction)
 
 	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 	testutil.WriteTestFile(t, actionPath, actionContent)
@@ -447,8 +447,8 @@ func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
 
 	// Create test dependency
 	dep := Dependency{
-		Name:        "actions/checkout",
-		Uses:        "actions/checkout@v3",
+		Name:        testutil.TestActionCheckout,
+		Uses:        testutil.TestActionCheckoutV3,
 		Version:     "v3",
 		IsPinned:    false,
 		VersionType: SemanticVersion,
@@ -459,21 +459,21 @@ func TestAnalyzer_GeneratePinnedUpdate(t *testing.T) {
 	update, err := analyzer.GeneratePinnedUpdate(
 		actionPath,
 		dep,
-		"v4.1.1",
-		"8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
+		testutil.TestVersionV4_1_1,
+		testutil.TestSHAForTesting,
 	)
 
 	testutil.AssertNoError(t, err)
 
 	// Verify update details
 	testutil.AssertEqual(t, actionPath, update.FilePath)
-	testutil.AssertEqual(t, "actions/checkout@v3", update.OldUses)
+	testutil.AssertEqual(t, testutil.TestActionCheckoutV3, update.OldUses)
 	testutil.AssertStringContains(t, update.NewUses, "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e")
 	testutil.AssertStringContains(t, update.NewUses, "# v4.1.1")
 	testutil.AssertEqual(t, "major", update.UpdateType)
 }
 
-func TestAnalyzer_WithCache(t *testing.T) {
+func TestAnalyzerWithCache(t *testing.T) {
 	t.Parallel()
 
 	// Test that caching works properly
@@ -499,7 +499,7 @@ func TestAnalyzer_WithCache(t *testing.T) {
 	testutil.AssertEqual(t, sha1, sha2)
 }
 
-func TestAnalyzer_RateLimitHandling(t *testing.T) {
+func TestAnalyzerRateLimitHandling(t *testing.T) {
 	t.Parallel()
 
 	// Create mock client that returns rate limit error
@@ -518,7 +518,7 @@ func TestAnalyzer_RateLimitHandling(t *testing.T) {
 		},
 	}
 
-	client := github.NewClient(&http.Client{Transport: &mockTransport{client: mockClient}})
+	client := github.NewClient(&http.Client{Transport: &testutil.MockTransport{Client: mockClient}})
 	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
 
 	analyzer := &Analyzer{
@@ -539,7 +539,7 @@ func TestAnalyzer_RateLimitHandling(t *testing.T) {
 	}
 }
 
-func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
+func TestAnalyzerWithoutGitHubClient(t *testing.T) {
 	t.Parallel()
 
 	// Test graceful degradation when GitHub client is not available
@@ -552,7 +552,7 @@ func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
 	defer cleanup()
 
 	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(appconstants.TestFixtureCompositeBasic))
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	deps, err := analyzer.AnalyzeActionFile(actionPath)
 
@@ -567,15 +567,6 @@ func TestAnalyzer_WithoutGitHubClient(t *testing.T) {
 			}
 		}
 	}
-}
-
-// mockTransport wraps our mock HTTP client for GitHub client.
-type mockTransport struct {
-	client *testutil.MockHTTPClient
-}
-
-func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return t.client.Do(req)
 }
 
 // TestNewAnalyzer tests the analyzer constructor.
@@ -650,6 +641,128 @@ func TestNewAnalyzer(t *testing.T) {
 			}
 			if analyzer.RepoInfo != tt.repoInfo {
 				t.Error("repo info not set correctly")
+			}
+		})
+	}
+}
+
+// TestNoOpCache tests the no-op cache implementation.
+func TestNoOpCache(t *testing.T) {
+	t.Parallel()
+
+	noc := NewNoOpCache()
+	if noc == nil {
+		t.Fatal("NewNoOpCache() returned nil")
+	}
+
+	// Test Get - should always return false
+	val, ok := noc.Get(testutil.CacheTestKey)
+	if ok {
+		t.Error("NoOpCache.Get() should return false")
+	}
+	if val != nil {
+		t.Error("NoOpCache.Get() should return nil value")
+	}
+
+	// Test Set - should not error
+	err := noc.Set(testutil.CacheTestKey, testutil.CacheTestValue)
+	if err != nil {
+		t.Errorf("NoOpCache.Set() returned error: %v", err)
+	}
+
+	// Test SetWithTTL - should not error
+	err = noc.SetWithTTL(testutil.CacheTestKey, testutil.CacheTestValue, time.Hour)
+	if err != nil {
+		t.Errorf("NoOpCache.SetWithTTL() returned error: %v", err)
+	}
+}
+
+// TestCacheAdapterSet tests the cache adapter Set method.
+func TestCacheAdapterSet(t *testing.T) {
+	t.Parallel()
+
+	c, err := cache.NewCache(cache.DefaultConfig())
+	if err != nil {
+		t.Fatalf("failed to create cache: %v", err)
+	}
+	defer testutil.CleanupCache(t, c)()
+
+	adapter := NewCacheAdapter(c)
+
+	// Test Set
+	err = adapter.Set(testutil.CacheTestKey, testutil.CacheTestValue)
+	if err != nil {
+		t.Errorf("CacheAdapter.Set() returned error: %v", err)
+	}
+
+	// Verify value was set
+	val, ok := adapter.Get(testutil.CacheTestKey)
+	if !ok {
+		t.Error("CacheAdapter.Get() should return true after Set")
+	}
+	if val != testutil.CacheTestValue {
+		t.Errorf("CacheAdapter.Get() = %v, want %q", val, testutil.CacheTestValue)
+	}
+}
+
+// TestIsCompositeAction tests composite action detection.
+func TestIsCompositeAction(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		fixture string
+		want    bool
+		wantErr bool
+	}{
+		{
+			name:    "composite action",
+			fixture: "composite-action.yml",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    "docker action",
+			fixture: "docker-action.yml",
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name:    "javascript action",
+			fixture: "javascript-action.yml",
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name:    "invalid yaml",
+			fixture: "invalid.yml",
+			want:    false,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Read fixture content using safe helper
+			yamlContent := testutil.MustReadAnalyzerFixture(tt.fixture)
+
+			// Create temp file with action YAML
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+			testutil.WriteTestFile(t, actionPath, yamlContent)
+
+			got, err := IsCompositeAction(actionPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IsCompositeAction() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+			if got != tt.want {
+				t.Errorf("IsCompositeAction() = %v, want %v", got, tt.want)
 			}
 		})
 	}

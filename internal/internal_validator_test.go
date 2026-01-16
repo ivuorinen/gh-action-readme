@@ -2,7 +2,7 @@ package internal
 
 import "testing"
 
-func TestValidateActionYML_Required(t *testing.T) {
+func TestValidateActionYMLRequired(t *testing.T) {
 	t.Parallel()
 
 	a := &ActionYML{
@@ -16,7 +16,7 @@ func TestValidateActionYML_Required(t *testing.T) {
 	}
 }
 
-func TestValidateActionYML_Valid(t *testing.T) {
+func TestValidateActionYMLValid(t *testing.T) {
 	t.Parallel()
 	a := &ActionYML{
 		Name:        "MyAction",

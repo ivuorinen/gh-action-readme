@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/goccy/go-yaml"
 
@@ -22,6 +23,27 @@ var fixtureCache = struct {
 	cache: make(map[string]string),
 }
 
+// validateFixtureFilename ensures filename is safe from path traversal.
+func validateFixtureFilename(filename string) error {
+	// Reject absolute paths
+	if filepath.IsAbs(filename) {
+		return fmt.Errorf("fixture filename must be relative, got: %s", filename)
+	}
+
+	// Clean the path and check for traversal attempts
+	cleaned := filepath.Clean(filename)
+	if cleaned != filename || strings.Contains(cleaned, "..") {
+		return fmt.Errorf("fixture filename contains invalid path components: %s", filename)
+	}
+
+	// Ensure filename doesn't start with .. (path traversal attempt)
+	if strings.HasPrefix(cleaned, "..") {
+		return fmt.Errorf("fixture filename cannot traverse directories: %s", filename)
+	}
+
+	return nil
+}
+
 // MustReadFixture reads a YAML fixture file from testdata/yaml-fixtures.
 func MustReadFixture(filename string) string {
 	return mustReadFixture(filename)
@@ -29,6 +51,11 @@ func MustReadFixture(filename string) string {
 
 // mustReadFixture reads a YAML fixture file from testdata/yaml-fixtures with caching.
 func mustReadFixture(filename string) string {
+	// Validate filename first (BEFORE cache lookup)
+	if err := validateFixtureFilename(filename); err != nil {
+		panic("invalid fixture filename: " + err.Error())
+	}
+
 	// Try to get from cache first (read lock)
 	fixtureCache.mu.RLock()
 	if content, exists := fixtureCache.cache[filename]; exists {
@@ -68,6 +95,33 @@ func mustReadFixture(filename string) string {
 	fixtureCache.cache[filename] = content
 
 	return content
+}
+
+// MustReadAnalyzerFixture reads a fixture file from testdata/analyzer.
+// This is for analyzer-specific test fixtures that aren't in yaml-fixtures.
+// Panics on error to simplify test code.
+func MustReadAnalyzerFixture(filename string) string {
+	// Validate filename first
+	if err := validateFixtureFilename(filename); err != nil {
+		panic("invalid fixture filename: " + err.Error())
+	}
+
+	// Get project root using runtime.Caller
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		panic(appconstants.ErrFailedToGetCurrentFilePath)
+	}
+
+	// Get the project root (go up from testutil/fixtures.go to project root)
+	projectRoot := filepath.Dir(filepath.Dir(currentFile))
+	fixturePath := filepath.Join(projectRoot, appconstants.DirTestdata, "analyzer", filename)
+
+	contentBytes, err := os.ReadFile(fixturePath) // #nosec G304 -- test fixture path from project structure
+	if err != nil {
+		panic("failed to read analyzer fixture " + filename + ": " + err.Error())
+	}
+
+	return string(contentBytes)
 }
 
 // ActionType represents the type of GitHub Action being tested.
@@ -786,7 +840,7 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 		return fmt.Errorf("failed to marshal default scenarios: %w", err)
 	}
 
-	if err := os.WriteFile(scenarioFile, data, 0600); err != nil {
+	if err := os.WriteFile(scenarioFile, data, appconstants.FilePermDefault); err != nil {
 		return fmt.Errorf("failed to write scenarios file: %w", err)
 	}
 
@@ -795,16 +849,20 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 }
 
 // Global fixture manager instance.
-var defaultFixtureManager *FixtureManager
+var (
+	defaultFixtureManager *FixtureManager
+	fixtureManagerOnce    sync.Once
+)
 
 // GetFixtureManager returns the global fixture manager instance.
+// Thread-safe singleton initialization using sync.Once.
 func GetFixtureManager() *FixtureManager {
-	if defaultFixtureManager == nil {
+	fixtureManagerOnce.Do(func() {
 		defaultFixtureManager = NewFixtureManager()
 		if err := defaultFixtureManager.LoadScenarios(); err != nil {
 			panic(fmt.Sprintf("failed to load test scenarios: %v", err))
 		}
-	}
+	})
 
 	return defaultFixtureManager
 }
@@ -839,4 +897,116 @@ func GetValidFixtures() []string {
 // GetInvalidFixtures returns all invalid fixtures using the global fixture manager.
 func GetInvalidFixtures() []string {
 	return GetFixtureManager().GetInvalidFixtures()
+}
+
+// Validation Helpers for Updater Tests
+
+// ValidatePinnedUpdate validates that a pinned dependency was correctly updated.
+// Checks that backup exists if requested and validates content with provided validator.
+func ValidatePinnedUpdate(t *testing.T, filePath string, requireBackup bool, validator func(content string) error) {
+	t.Helper()
+
+	// Check backup exists if required
+	if requireBackup {
+		backupPath := filePath + ".bak"
+		if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+			t.Errorf("backup file not created: %s", backupPath)
+		}
+	}
+
+	// Read and validate file content
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
+	}
+
+	if validator != nil {
+		if err := validator(string(content)); err != nil {
+			t.Errorf("validation failed for %s: %v", filePath, err)
+		}
+	}
+}
+
+// ValidateRollback validates that a file was successfully rolled back to original content.
+func ValidateRollback(t *testing.T, filePath, originalContent string) {
+	t.Helper()
+
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf("failed to read file after rollback %s: %v", filePath, err)
+	}
+
+	if string(content) != originalContent {
+		t.Errorf("rollback failed: content mismatch in %s", filePath)
+		t.Logf("Expected:\n%s\n\nGot:\n%s", originalContent, string(content))
+	}
+}
+
+// AssertFileContains checks that a file contains the expected substring.
+func AssertFileContains(t *testing.T, filePath, expectedSubstring string) {
+	t.Helper()
+
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
+	}
+
+	if !strings.Contains(string(content), expectedSubstring) {
+		t.Errorf("file %s does not contain expected substring: %q", filePath, expectedSubstring)
+		t.Logf(TestMsgFileContent, string(content))
+	}
+}
+
+// AssertFileNotContains checks that a file does NOT contain the given substring.
+func AssertFileNotContains(t *testing.T, filePath, unexpectedSubstring string) {
+	t.Helper()
+
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
+	}
+
+	if strings.Contains(string(content), unexpectedSubstring) {
+		t.Errorf("file %s should not contain substring: %q", filePath, unexpectedSubstring)
+		t.Logf(TestMsgFileContent, string(content))
+	}
+}
+
+// AssertBackupNotExists checks that a backup file does not exist.
+// Used to verify backup cleanup after successful operations.
+func AssertBackupNotExists(t *testing.T, filePath string) {
+	t.Helper()
+
+	backupPath := filePath + ".bak"
+	AssertFileNotExists(t, backupPath)
+}
+
+// AssertFileContentEquals compares file content with expected after trimming whitespace.
+// Useful for YAML file comparisons where formatting may vary slightly.
+func AssertFileContentEquals(t *testing.T, filePath, expectedContent string) {
+	t.Helper()
+
+	actualContent, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
+	if err != nil {
+		t.Fatalf(TestMsgFailedReadFile, filePath, err)
+	}
+
+	actual := strings.TrimSpace(string(actualContent))
+	expected := strings.TrimSpace(expectedContent)
+
+	if actual != expected {
+		t.Errorf("file content mismatch in %s\nGot:\n%s\n\nWant:\n%s",
+			filePath, actual, expected)
+	}
+}
+
+// WriteActionFile creates an action.yml file in the given directory.
+// Returns the full path to the created file.
+func WriteActionFile(t *testing.T, dir, content string) string {
+	t.Helper()
+
+	actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
+	WriteTestFile(t, actionPath, content)
+
+	return actionPath
 }

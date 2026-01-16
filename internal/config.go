@@ -16,7 +16,7 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
-	"github.com/ivuorinen/gh-action-readme/templates_embed"
+	templatesembed "github.com/ivuorinen/gh-action-readme/templates_embed"
 )
 
 // AppConfig represents the application configuration that can be used at multiple levels.
@@ -149,7 +149,7 @@ func resolveTemplatePath(templatePath string) string {
 	}
 
 	// Check if template is available in embedded filesystem first
-	if templates_embed.IsEmbeddedTemplateAvailable(templatePath) {
+	if templatesembed.IsEmbeddedTemplateAvailable(templatePath) {
 		// Return a special marker to indicate this should use embedded templates
 		// The actual template loading will handle embedded vs filesystem
 		return templatePath
@@ -233,7 +233,7 @@ func DefaultAppConfig() *AppConfig {
 
 		// Workflow Requirements
 		Permissions: map[string]string{},
-		RunsOn:      []string{"ubuntu-latest"},
+		RunsOn:      []string{appconstants.RunnerUbuntuLatest},
 
 		// Features
 		AnalyzeDependencies: false,
@@ -317,15 +317,17 @@ func mergeMapFields(dst *AppConfig, src *AppConfig) {
 }
 
 // mergeSliceFields merges slice fields from src to dst if non-empty.
+// copySliceIfNotEmpty copies src slice to dst if src is not empty.
+func copySliceIfNotEmpty(dst *[]string, src []string) {
+	if len(src) > 0 {
+		*dst = make([]string, len(src))
+		copy(*dst, src)
+	}
+}
+
 func mergeSliceFields(dst *AppConfig, src *AppConfig) {
-	if len(src.RunsOn) > 0 {
-		dst.RunsOn = make([]string, len(src.RunsOn))
-		copy(dst.RunsOn, src.RunsOn)
-	}
-	if len(src.IgnoredDirectories) > 0 {
-		dst.IgnoredDirectories = make([]string, len(src.IgnoredDirectories))
-		copy(dst.IgnoredDirectories, src.IgnoredDirectories)
-	}
+	copySliceIfNotEmpty(&dst.RunsOn, src.RunsOn)
+	copySliceIfNotEmpty(&dst.IgnoredDirectories, src.IgnoredDirectories)
 }
 
 // mergeBooleanFields merges boolean fields from src to dst if true.
@@ -407,6 +409,29 @@ func DetectRepositoryName(repoRoot string) string {
 	return info.GetRepositoryName()
 }
 
+// loadAndMergeConfig is a helper that loads config from a directory and merges it.
+// Returns nil if dir is empty (no-op). Returns error if loading fails.
+func loadAndMergeConfig(
+	config *AppConfig,
+	dir string,
+	loadFunc func(string) (*AppConfig, error),
+	errorFormat string,
+	allowTokens bool,
+) error {
+	if dir == "" {
+		return nil
+	}
+
+	loadedConfig, err := loadFunc(dir)
+	if err != nil {
+		return fmt.Errorf(errorFormat, err)
+	}
+
+	MergeConfigs(config, loadedConfig, allowTokens)
+
+	return nil
+}
+
 // LoadConfiguration loads configuration with multi-level hierarchy.
 func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, error) {
 	// 1. Start with defaults
@@ -428,21 +453,15 @@ func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, erro
 	}
 
 	// 4. Load repository root ghreadme.yaml
-	if repoRoot != "" {
-		repoConfig, err := LoadRepoConfig(repoRoot)
-		if err != nil {
-			return nil, fmt.Errorf(appconstants.ErrFailedToLoadRepoConfig, err)
-		}
-		MergeConfigs(config, repoConfig, false) // No tokens in repo config
+	if err := loadAndMergeConfig(config, repoRoot, LoadRepoConfig,
+		appconstants.ErrFailedToLoadRepoConfig, false); err != nil {
+		return nil, err
 	}
 
 	// 5. Load action-specific config.yaml
-	if actionDir != "" {
-		actionConfig, err := LoadActionConfig(actionDir)
-		if err != nil {
-			return nil, fmt.Errorf(appconstants.ErrFailedToLoadActionConfig, err)
-		}
-		MergeConfigs(config, actionConfig, false) // No tokens in action config
+	if err := loadAndMergeConfig(config, actionDir, LoadActionConfig,
+		appconstants.ErrFailedToLoadActionConfig, false); err != nil {
+		return nil, err
 	}
 
 	// 6. Apply environment variable overrides for GitHub token

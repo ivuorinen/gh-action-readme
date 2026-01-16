@@ -105,7 +105,7 @@ func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
 	}
 
 	// Validate output format
-	validFormats := []string{"md", "html", "json", "asciidoc"}
+	validFormats := appconstants.GetSupportedOutputFormats()
 	if !containsString(validFormats, config.OutputFormat) {
 		return fmt.Errorf("invalid output format '%s', must be one of: %s",
 			config.OutputFormat, strings.Join(validFormats, ", "))
@@ -196,34 +196,50 @@ func (cl *ConfigurationLoader) loadRepoOverrideStep(config *AppConfig, repoRoot 
 	cl.applyRepoOverrides(config, repoRoot)
 }
 
-// loadRepoConfigStep loads repository root configuration.
-func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot string) error {
-	if !cl.sources[appconstants.SourceRepoConfig] || repoRoot == "" {
+// loadConfigStep is a generic helper for loading and merging configuration from a specific source.
+func (cl *ConfigurationLoader) loadConfigStep(
+	config *AppConfig,
+	sourceName appconstants.ConfigurationSource,
+	dirPath string,
+	loadFunc func(string) (*AppConfig, error),
+	errorFormat string,
+	mergeTokens bool,
+) error {
+	if !cl.sources[sourceName] || dirPath == "" {
 		return nil
 	}
 
-	repoConfig, err := cl.loadRepoConfig(repoRoot)
+	loadedConfig, err := loadFunc(dirPath)
 	if err != nil {
-		return fmt.Errorf(appconstants.ErrFailedToLoadRepoConfig, err)
+		return fmt.Errorf(errorFormat, err)
 	}
-	cl.mergeConfigs(config, repoConfig, false) // No tokens in repo config
+	cl.mergeConfigs(config, loadedConfig, mergeTokens)
 
 	return nil
 }
 
+// loadRepoConfigStep loads repository root configuration.
+func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot string) error {
+	return cl.loadConfigStep(
+		config,
+		appconstants.SourceRepoConfig,
+		repoRoot,
+		cl.loadRepoConfig,
+		appconstants.ErrFailedToLoadRepoConfig,
+		false, // No tokens in repo config
+	)
+}
+
 // loadActionConfigStep loads action-specific configuration.
 func (cl *ConfigurationLoader) loadActionConfigStep(config *AppConfig, actionDir string) error {
-	if !cl.sources[appconstants.SourceActionConfig] || actionDir == "" {
-		return nil
-	}
-
-	actionConfig, err := cl.loadActionConfig(actionDir)
-	if err != nil {
-		return fmt.Errorf(appconstants.ErrFailedToLoadActionConfig, err)
-	}
-	cl.mergeConfigs(config, actionConfig, false) // No tokens in action config
-
-	return nil
+	return cl.loadConfigStep(
+		config,
+		appconstants.SourceActionConfig,
+		actionDir,
+		cl.loadActionConfig,
+		appconstants.ErrFailedToLoadActionConfig,
+		false, // No tokens in action config
+	)
 }
 
 // loadEnvironmentStep applies environment variable overrides.

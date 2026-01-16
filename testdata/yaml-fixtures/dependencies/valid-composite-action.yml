@@ -1,0 +1,5 @@
+name: Test Action
+description: Test composite action for minimal validation
+runs:
+  using: composite
+  steps: []  # Empty steps intentionally for edge case testing

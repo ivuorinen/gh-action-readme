@@ -1,0 +1,8 @@
+name: Test Action
+description: Test action for detection
+runs:
+  using: composite
+  steps:
+    - name: Test step
+      run: echo "test"
+      shell: bash

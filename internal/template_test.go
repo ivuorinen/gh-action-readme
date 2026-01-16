@@ -2,10 +2,12 @@ package internal
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // newTemplateData creates a TemplateData with common test values.
@@ -59,7 +61,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		},
 		{
 			name:       "single level subdirectory",
-			actionPath: appconstants.TestRepoBuildActionPath,
+			actionPath: testutil.TestRepoBuildActionPath,
 			repoRoot:   "/repo",
 			want:       "build",
 		},
@@ -71,7 +73,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		},
 		{
 			name:       "root action",
-			actionPath: appconstants.TestRepoActionPath,
+			actionPath: testutil.TestRepoActionPath,
 			repoRoot:   "/repo",
 			want:       "",
 		},
@@ -83,7 +85,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		},
 		{
 			name:       "empty repo root",
-			actionPath: appconstants.TestRepoActionPath,
+			actionPath: testutil.TestRepoActionPath,
 			repoRoot:   "",
 			want:       "",
 		},
@@ -138,7 +140,7 @@ func TestBuildUsesString(t *testing.T) {
 		{
 			name: "root action",
 			td: &TemplateData{
-				ActionPath: appconstants.TestRepoActionPath,
+				ActionPath: testutil.TestRepoActionPath,
 				RepoRoot:   "/repo",
 			},
 			org:     "ivuorinen",
@@ -149,7 +151,7 @@ func TestBuildUsesString(t *testing.T) {
 		{
 			name: "empty org",
 			td: &TemplateData{
-				ActionPath: appconstants.TestRepoBuildActionPath,
+				ActionPath: testutil.TestRepoBuildActionPath,
 				RepoRoot:   "/repo",
 			},
 			org:     "",
@@ -160,7 +162,7 @@ func TestBuildUsesString(t *testing.T) {
 		{
 			name: "empty repo",
 			td: &TemplateData{
-				ActionPath: appconstants.TestRepoBuildActionPath,
+				ActionPath: testutil.TestRepoBuildActionPath,
 				RepoRoot:   "/repo",
 			},
 			org:     "ivuorinen",
@@ -274,19 +276,19 @@ func TestGetGitUsesString(t *testing.T) {
 		{
 			name: "monorepo action with explicit version",
 			data: newTemplateData("Build Action", "v1.0.0", true, "main", "org", "actions",
-				appconstants.TestRepoBuildActionPath, "/repo"),
+				testutil.TestRepoBuildActionPath, "/repo"),
 			want: "org/actions/build@v1.0.0",
 		},
 		{
 			name: "root level action with default branch",
 			data: newTemplateData("My Action", "", true, "develop", "user", "my-action",
-				appconstants.TestRepoActionPath, "/repo"),
+				testutil.TestRepoActionPath, "/repo"),
 			want: "user/my-action@develop",
 		},
 		{
 			name: "action with use_default_branch disabled",
-			data: newTemplateData("Test Action", "", false, "main", "org", "test",
-				appconstants.TestRepoActionPath, "/repo"),
+			data: newTemplateData(testutil.TestActionName, "", false, "main", "org", "test",
+				testutil.TestRepoActionPath, "/repo"),
 			want: "org/test@v1",
 		},
 	}
@@ -330,12 +332,12 @@ func TestFormatVersion(t *testing.T) {
 		{
 			name:    "version without @",
 			version: "v1.2.3",
-			want:    appconstants.TestVersionV123,
+			want:    testutil.TestVersionV123,
 		},
 		{
 			name:    "version with @",
-			version: appconstants.TestVersionV123,
-			want:    appconstants.TestVersionV123,
+			version: testutil.TestVersionV123,
+			want:    testutil.TestVersionV123,
 		},
 		{
 			name:    "main branch",
@@ -382,7 +384,7 @@ func TestBuildTemplateData(t *testing.T) {
 		{
 			name: "basic action with config overrides",
 			action: &ActionYML{
-				Name:        "Test Action",
+				Name:        testutil.TestActionName,
 				Description: "Test description",
 			},
 			config: &AppConfig{
@@ -390,7 +392,7 @@ func TestBuildTemplateData(t *testing.T) {
 				Repository:   "testrepo",
 			},
 			repoRoot:   ".",
-			actionPath: "action.yml",
+			actionPath: appconstants.ActionFileNameYML,
 			wantOrg:    "testorg",
 			wantRepo:   "testrepo",
 		},
@@ -402,7 +404,7 @@ func TestBuildTemplateData(t *testing.T) {
 			},
 			config:     &AppConfig{},
 			repoRoot:   ".",
-			actionPath: "action.yml",
+			actionPath: appconstants.ActionFileNameYML,
 			wantOrg:    "",
 			wantRepo:   "",
 		},
@@ -469,6 +471,27 @@ func assertTemplateData(
 }
 
 // TestAnalyzeDependencies tests the analyzeDependencies function.
+// prepareTestActionFile prepares a test action file for analyzeDependencies tests.
+func prepareTestActionFile(t *testing.T, actionPath string) string {
+	t.Helper()
+
+	if strings.HasPrefix(actionPath, "../../testdata/analyzer/") &&
+		actionPath != "../../testdata/analyzer/nonexistent.yml" {
+		filename := filepath.Base(actionPath)
+		yamlContent := testutil.MustReadAnalyzerFixture(filename)
+
+		tmpDir := t.TempDir()
+		tmpPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+		tmpPath = testutil.ValidateTestPath(t, tmpPath, tmpDir)
+		testutil.WriteTestFile(t, tmpPath, yamlContent)
+
+		return tmpPath
+	}
+
+	// For nonexistent file test
+	return filepath.Join(t.TempDir(), "nonexistent.yml")
+}
+
 func TestAnalyzeDependencies(t *testing.T) {
 	t.Parallel()
 
@@ -508,18 +531,26 @@ func TestAnalyzeDependencies(t *testing.T) {
 			config:     &AppConfig{},
 			expectNil:  false, // Should gracefully handle errors and return empty slice
 		},
+		{
+			name:       "path traversal attempt",
+			actionPath: "../../etc/passwd",
+			config:     &AppConfig{},
+			expectNil:  false, // Returns empty slice for invalid paths
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			actionPath := prepareTestActionFile(t, tt.actionPath)
+
 			gitInfo := git.RepoInfo{
 				Organization: "testorg",
 				Repository:   "testrepo",
 			}
 
-			result := analyzeDependencies(tt.actionPath, tt.config, gitInfo)
+			result := analyzeDependencies(actionPath, tt.config, gitInfo)
 
 			if tt.expectNil && result != nil {
 				t.Errorf("analyzeDependencies() expected nil, got %v", result)

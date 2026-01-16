@@ -97,7 +97,7 @@ type TestResult struct {
 // MockSuite holds all configured mocks for a test.
 type MockSuite struct {
 	GitHubClient  *github.Client
-	ColoredOutput *MockColoredOutput
+	ColoredOutput *CapturedOutput
 	HTTPClient    *MockHTTPClient
 	Environment   map[string]string
 	TempDirs      []string
@@ -307,9 +307,7 @@ func createMockSuite(t *testing.T, config *MockConfig) *MockSuite {
 
 	// Set up colored output mock
 	if config.ColoredOutput {
-		suite.ColoredOutput = &MockColoredOutput{
-			Messages: make([]string, 0),
-		}
+		suite.ColoredOutput = &CapturedOutput{}
 	}
 
 	// Set up HTTP client mock
@@ -476,58 +474,57 @@ func validateCustom(t *testing.T, expected *ExpectedResult, result *TestResult) 
 
 // Helper functions for specific test types
 
-// RunActionTests executes action-related test cases.
-func RunActionTests(t *testing.T, cases []ActionTestCase) {
+// runTypedTestSuite is a helper to reduce duplication in test runner functions.
+// It converts typed test cases to TestCase and runs them in a suite.
+func runTypedTestSuite(t *testing.T, suiteName string, testCases []TestCase) {
 	t.Helper()
 
-	testCases := make([]TestCase, len(cases))
-	for i, actionCase := range cases {
-		testCases[i] = actionCase.TestCase
-	}
-
 	suite := TestSuite{
-		Name:     "Action Tests",
+		Name:     suiteName,
 		Cases:    testCases,
 		Parallel: true,
 	}
 
 	RunTestSuite(t, suite)
+}
+
+// extractTestCasesGeneric extracts TestCase slices from typed test case slices.
+// This helper reduces duplication across RunActionTests, RunGeneratorTests, and RunValidationTests.
+func extractTestCasesGeneric[T interface {
+	ActionTestCase | GeneratorTestCase | ValidationTestCase
+}](cases []T) []TestCase {
+	testCases := make([]TestCase, len(cases))
+	for i := range cases {
+		// Use type assertion to access TestCase field
+		switch c := any(cases[i]).(type) {
+		case ActionTestCase:
+			testCases[i] = c.TestCase
+		case GeneratorTestCase:
+			testCases[i] = c.TestCase
+		case ValidationTestCase:
+			testCases[i] = c.TestCase
+		}
+	}
+
+	return testCases
+}
+
+// RunActionTests executes action-related test cases.
+func RunActionTests(t *testing.T, cases []ActionTestCase) {
+	t.Helper()
+	runTypedTestSuite(t, "Action Tests", extractTestCasesGeneric(cases))
 }
 
 // RunGeneratorTests executes generator test cases.
 func RunGeneratorTests(t *testing.T, cases []GeneratorTestCase) {
 	t.Helper()
-
-	testCases := make([]TestCase, len(cases))
-	for i, genCase := range cases {
-		testCases[i] = genCase.TestCase
-	}
-
-	suite := TestSuite{
-		Name:     "Generator Tests",
-		Cases:    testCases,
-		Parallel: true,
-	}
-
-	RunTestSuite(t, suite)
+	runTypedTestSuite(t, "Generator Tests", extractTestCasesGeneric(cases))
 }
 
 // RunValidationTests executes validation test cases.
 func RunValidationTests(t *testing.T, cases []ValidationTestCase) {
 	t.Helper()
-
-	testCases := make([]TestCase, len(cases))
-	for i, valCase := range cases {
-		testCases[i] = valCase.TestCase
-	}
-
-	suite := TestSuite{
-		Name:     "Validation Tests",
-		Cases:    testCases,
-		Parallel: true,
-	}
-
-	RunTestSuite(t, suite)
+	runTypedTestSuite(t, "Validation Tests", extractTestCasesGeneric(cases))
 }
 
 // Utility functions
@@ -757,9 +754,7 @@ func CreateMockSuite(config *MockConfig) *MockSuite {
 
 	// Set up colored output mock
 	if config.ColoredOutput {
-		suite.ColoredOutput = &MockColoredOutput{
-			Messages: make([]string, 0),
-		}
+		suite.ColoredOutput = &CapturedOutput{}
 	}
 
 	// Set up HTTP client mock
@@ -823,7 +818,7 @@ func ValidateActionFixture(t *testing.T, fixture *ActionFixture) {
 func TestAllThemes(t *testing.T, testFunc func(*testing.T, string)) {
 	t.Helper()
 
-	themes := []string{"default", "github", "minimal", "professional"}
+	themes := []string{TestThemeDefault, TestThemeGitHub, TestThemeMinimal, TestThemeProfessional}
 
 	for _, theme := range themes {
 		theme := theme // capture loop variable
@@ -993,7 +988,7 @@ func getExpectedFilename(outputFormat string) string {
 // CreateGeneratorTestCases creates test cases for generator testing.
 func CreateGeneratorTestCases() []GeneratorTestCase {
 	validFixtures := GetValidFixtures()
-	themes := []string{"default", "github", "minimal", "professional"}
+	themes := []string{TestThemeDefault, TestThemeGitHub, TestThemeMinimal, TestThemeProfessional}
 	formats := []string{
 		appconstants.OutputFormatMarkdown,
 		appconstants.OutputFormatHTML,

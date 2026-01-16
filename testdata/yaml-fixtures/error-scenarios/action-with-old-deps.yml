@@ -1,0 +1,11 @@
+name: Action with Outdated Dependencies
+description: This action uses old versions of dependencies for testing outdated detection
+runs:
+  using: composite
+  steps:
+    - name: Checkout old version
+      uses: actions/checkout@v2
+    - name: Setup Node old version
+      uses: actions/setup-node@v2
+    - name: Cache old version
+      uses: actions/cache@v2

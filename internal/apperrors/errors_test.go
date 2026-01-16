@@ -92,7 +92,7 @@ func TestContextualErrorError(t *testing.T) {
 				Code:    appconstants.ErrCodeValidation,
 				Err:     errors.New("validation failed"),
 				Context: "validating action.yml",
-				Details: map[string]string{"file": "action.yml"},
+				Details: map[string]string{"file": appconstants.ActionFileNameYML},
 				Suggestions: []string{
 					"Check required fields",
 					"Validate YAML syntax",

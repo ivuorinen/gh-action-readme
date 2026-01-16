@@ -155,7 +155,11 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 
 // getDefaultBranch gets the default branch name.
 func getDefaultBranch(repoRoot string) string {
-	cmd := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	cmd := exec.Command(
+		appconstants.GitCommand,
+		"symbolic-ref",
+		"refs/remotes/origin/HEAD",
+	) // #nosec G204 -- controlled git command
 	cmd.Dir = repoRoot
 
 	output, err := cmd.Output()
@@ -209,7 +213,7 @@ func parseGitHubURL(url string) (organization, repository string) {
 			repo := matches[2]
 
 			// Remove .git suffix if present
-			repo = strings.TrimSuffix(repo, ".git")
+			repo = strings.TrimSuffix(repo, appconstants.DirGit)
 
 			return org, repo
 		}

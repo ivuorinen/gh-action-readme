@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -35,7 +36,7 @@ func testMockHTTPClientConfiguredResponse(t *testing.T) {
 	t.Helper()
 	client := createMockHTTPClientWithResponse("GET https://api.github.com/test", 200, `{"test": "response"}`)
 
-	req := createTestRequest(t, "GET", "https://api.github.com/test")
+	req := createTestRequest(t, "GET", ""+TestURLGitHubAPI+"test")
 	resp := executeRequest(t, client, req)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -50,7 +51,7 @@ func testMockHTTPClientUnconfiguredEndpoints(t *testing.T) {
 		Responses: make(map[string]*http.Response),
 	}
 
-	req := createTestRequest(t, "GET", "https://api.github.com/nonexistent")
+	req := createTestRequest(t, "GET", ""+TestURLGitHubAPI+"nonexistent")
 	resp := executeRequest(t, client, req)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -64,13 +65,13 @@ func testMockHTTPClientRequestTracking(t *testing.T) {
 		Responses: make(map[string]*http.Response),
 	}
 
-	req1 := createTestRequest(t, "GET", "https://api.github.com/test1")
-	req2 := createTestRequest(t, "POST", "https://api.github.com/test2")
+	req1 := createTestRequest(t, "GET", ""+TestURLGitHubAPI+"test1")
+	req2 := createTestRequest(t, "POST", ""+TestURLGitHubAPI+"test2")
 
 	executeAndCloseResponse(client, req1)
 	executeAndCloseResponse(client, req2)
 
-	validateRequestTracking(t, client, 2, "https://api.github.com/test1", "POST")
+	validateRequestTracking(t, client, 2, ""+TestURLGitHubAPI+"test1", "POST")
 }
 
 // createMockHTTPClientWithResponse creates a mock HTTP client with a single configured response.
@@ -101,7 +102,7 @@ func executeRequest(t *testing.T, client *MockHTTPClient, req *http.Request) *ht
 	t.Helper()
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(TestErrUnexpected, err)
 	}
 
 	return resp
@@ -176,11 +177,11 @@ func TestMockGitHubClient(t *testing.T) {
 		ctx := context.Background()
 		_, resp, err := client.Repositories.Get(ctx, "test", "repo")
 		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Fatalf(TestErrUnexpected, err)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			t.Errorf("expected status 200, got %d", resp.StatusCode)
+			t.Errorf(TestErrStatusCode, resp.StatusCode)
 		}
 	})
 
@@ -193,11 +194,11 @@ func TestMockGitHubClient(t *testing.T) {
 		ctx := context.Background()
 		_, resp, err := client.Repositories.Get(ctx, "actions", "checkout")
 		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Fatalf(TestErrUnexpected, err)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			t.Errorf("expected status 200, got %d", resp.StatusCode)
+			t.Errorf(TestErrStatusCode, resp.StatusCode)
 		}
 	})
 }
@@ -213,21 +214,21 @@ func TestMockTransport(t *testing.T) {
 		},
 	}
 
-	transport := &mockTransport{client: client}
+	transport := &MockTransport{Client: client}
 
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/test", nil)
+	req, err := http.NewRequest(http.MethodGet, ""+TestURLGitHubAPI+"test", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
 
 	resp, err := transport.RoundTrip(req)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(TestErrUnexpected, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status 200, got %d", resp.StatusCode)
+		t.Errorf(TestErrStatusCode, resp.StatusCode)
 	}
 }
 
@@ -352,7 +353,7 @@ func TestSetupTestTemplates(t *testing.T) {
 	}
 
 	// Verify theme directories exist
-	themes := []string{"github", "gitlab", "minimal", "professional"}
+	themes := []string{TestThemeGitHub, TestThemeGitLab, TestThemeMinimal, TestThemeProfessional}
 	for _, theme := range themes {
 		themeDir := filepath.Join(templatesDir, "themes", theme)
 		if _, err := os.Stat(themeDir); os.IsNotExist(err) {
@@ -360,7 +361,7 @@ func TestSetupTestTemplates(t *testing.T) {
 		}
 
 		// Verify theme template file exists
-		templateFile := filepath.Join(themeDir, "readme.tmpl")
+		templateFile := filepath.Join(themeDir, TestTemplateReadme)
 		if _, err := os.Stat(templateFile); os.IsNotExist(err) {
 			t.Errorf("template file for theme %s was not created", theme)
 		}
@@ -377,270 +378,9 @@ func TestSetupTestTemplates(t *testing.T) {
 	}
 
 	// Verify default template exists
-	defaultTemplate := filepath.Join(templatesDir, "readme.tmpl")
+	defaultTemplate := filepath.Join(templatesDir, TestTemplateReadme)
 	if _, err := os.Stat(defaultTemplate); os.IsNotExist(err) {
 		t.Error("default template was not created")
-	}
-}
-
-func TestMockColoredOutput(t *testing.T) {
-	t.Parallel()
-	t.Run("creates mock output", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputCreation(t)
-	})
-	t.Run("creates quiet mock output", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputQuietCreation(t)
-	})
-	t.Run("captures info messages", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputInfoMessages(t)
-	})
-	t.Run("captures success messages", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputSuccessMessages(t)
-	})
-	t.Run("captures warning messages", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputWarningMessages(t)
-	})
-	t.Run("captures error messages", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputErrorMessages(t)
-	})
-	t.Run("captures bold messages", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputBoldMessages(t)
-	})
-	t.Run("captures printf messages", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputPrintfMessages(t)
-	})
-	t.Run("quiet mode suppresses non-error messages", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputQuietMode(t)
-	})
-	t.Run("HasMessage works correctly", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputHasMessage(t)
-	})
-	t.Run("HasError works correctly", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputHasError(t)
-	})
-	t.Run("Reset clears messages and errors", func(t *testing.T) {
-		t.Parallel()
-		testMockColoredOutputReset(t)
-	})
-}
-
-// testMockColoredOutputCreation tests basic mock output creation.
-func testMockColoredOutputCreation(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	validateMockOutputCreated(t, output)
-	validateQuietMode(t, output, false)
-	validateEmptyMessagesAndErrors(t, output)
-}
-
-// testMockColoredOutputQuietCreation tests quiet mock output creation.
-func testMockColoredOutputQuietCreation(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(true)
-	validateQuietMode(t, output, true)
-}
-
-// testMockColoredOutputInfoMessages tests info message capture.
-func testMockColoredOutputInfoMessages(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Info("test info: %s", "value")
-	validateSingleMessage(t, output, "INFO: test info: value")
-}
-
-// testMockColoredOutputSuccessMessages tests success message capture.
-func testMockColoredOutputSuccessMessages(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Success("operation completed")
-	validateSingleMessage(t, output, "SUCCESS: operation completed")
-}
-
-// testMockColoredOutputWarningMessages tests warning message capture.
-func testMockColoredOutputWarningMessages(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Warning("this is a warning")
-	validateSingleMessage(t, output, "WARNING: this is a warning")
-}
-
-// testMockColoredOutputErrorMessages tests error message capture.
-func testMockColoredOutputErrorMessages(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Error("error occurred: %d", 404)
-	validateSingleError(t, output, "ERROR: error occurred: 404")
-
-	// Test errors in quiet mode
-	output.Quiet = true
-	output.Error("quiet error")
-	validateErrorCount(t, output, 2)
-}
-
-// testMockColoredOutputBoldMessages tests bold message capture.
-func testMockColoredOutputBoldMessages(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Bold("bold text")
-	validateSingleMessage(t, output, "BOLD: bold text")
-}
-
-// testMockColoredOutputPrintfMessages tests printf message capture.
-func testMockColoredOutputPrintfMessages(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Printf("formatted: %s = %d", "key", 42)
-	validateSingleMessage(t, output, "formatted: key = 42")
-}
-
-// testMockColoredOutputQuietMode tests quiet mode behavior.
-func testMockColoredOutputQuietMode(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(true)
-
-	// Send various message types
-	output.Info("info message")
-	output.Success("success message")
-	output.Warning("warning message")
-	output.Bold("bold message")
-	output.Printf("printf message")
-
-	validateMessageCount(t, output, 0)
-
-	// Errors should still be captured
-	output.Error("error message")
-	validateErrorCount(t, output, 1)
-}
-
-// testMockColoredOutputHasMessage tests HasMessage functionality.
-func testMockColoredOutputHasMessage(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Info("test message with keyword")
-	output.Success("another message")
-
-	validateMessageContains(t, output, "keyword", true)
-	validateMessageContains(t, output, "another", true)
-	validateMessageContains(t, output, "nonexistent", false)
-}
-
-// testMockColoredOutputHasError tests HasError functionality.
-func testMockColoredOutputHasError(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Error("connection failed")
-	output.Error("timeout occurred")
-
-	validateErrorContains(t, output, "connection", true)
-	validateErrorContains(t, output, "timeout", true)
-	validateErrorContains(t, output, "success", false)
-}
-
-// testMockColoredOutputReset tests Reset functionality.
-func testMockColoredOutputReset(t *testing.T) {
-	t.Helper()
-	output := NewMockColoredOutput(false)
-	output.Info("test message")
-	output.Error("test error")
-
-	validateNonEmptyMessagesAndErrors(t, output)
-
-	output.Reset()
-
-	validateEmptyMessagesAndErrors(t, output)
-}
-
-// Helper functions for validation
-
-// validateMockOutputCreated validates that mock output was created successfully.
-func validateMockOutputCreated(t *testing.T, output *MockColoredOutput) {
-	t.Helper()
-	if output == nil {
-		t.Fatal("expected output to be created")
-	}
-}
-
-// validateQuietMode validates the quiet mode setting.
-func validateQuietMode(t *testing.T, output *MockColoredOutput, expected bool) {
-	t.Helper()
-	if output.Quiet != expected {
-		t.Errorf("expected Quiet to be %v, got %v", expected, output.Quiet)
-	}
-}
-
-// validateEmptyMessagesAndErrors validates that messages and errors are empty.
-func validateEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) {
-	t.Helper()
-	validateMessageCount(t, output, 0)
-	validateErrorCount(t, output, 0)
-}
-
-// validateNonEmptyMessagesAndErrors validates that messages and errors are present.
-func validateNonEmptyMessagesAndErrors(t *testing.T, output *MockColoredOutput) {
-	t.Helper()
-	if len(output.Messages) == 0 || len(output.Errors) == 0 {
-		t.Fatal("expected messages and errors to be present before reset")
-	}
-}
-
-// validateSingleMessage validates a single message was captured.
-func validateSingleMessage(t *testing.T, output *MockColoredOutput, expected string) {
-	t.Helper()
-	validateMessageCount(t, output, 1)
-	if output.Messages[0] != expected {
-		t.Errorf("expected message %s, got %s", expected, output.Messages[0])
-	}
-}
-
-// validateSingleError validates a single error was captured.
-func validateSingleError(t *testing.T, output *MockColoredOutput, expected string) {
-	t.Helper()
-	validateErrorCount(t, output, 1)
-	if output.Errors[0] != expected {
-		t.Errorf("expected error %s, got %s", expected, output.Errors[0])
-	}
-}
-
-// validateMessageCount validates the message count.
-func validateMessageCount(t *testing.T, output *MockColoredOutput, expected int) {
-	t.Helper()
-	if len(output.Messages) != expected {
-		t.Errorf("expected %d messages, got %d", expected, len(output.Messages))
-	}
-}
-
-// validateErrorCount validates the error count.
-func validateErrorCount(t *testing.T, output *MockColoredOutput, expected int) {
-	t.Helper()
-	if len(output.Errors) != expected {
-		t.Errorf("expected %d errors, got %d", expected, len(output.Errors))
-	}
-}
-
-// validateMessageContains validates that HasMessage works correctly.
-func validateMessageContains(t *testing.T, output *MockColoredOutput, keyword string, expected bool) {
-	t.Helper()
-	if output.HasMessage(keyword) != expected {
-		t.Errorf("expected HasMessage('%s') to return %v", keyword, expected)
-	}
-}
-
-// validateErrorContains validates that HasError works correctly.
-func validateErrorContains(t *testing.T, output *MockColoredOutput, keyword string, expected bool) {
-	t.Helper()
-	if output.HasError(keyword) != expected {
-		t.Errorf("expected HasError('%s') to return %v", keyword, expected)
 	}
 }
 
@@ -658,7 +398,7 @@ func TestCreateTestAction(t *testing.T) {
 		action := CreateTestAction(name, description, inputs)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		// Verify the action contains our values
@@ -685,7 +425,7 @@ func TestCreateTestAction(t *testing.T) {
 		action := CreateTestAction("Simple Action", "No inputs", nil)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		if !strings.Contains(action, "Simple Action") {
@@ -701,14 +441,14 @@ func TestCreateCompositeAction(t *testing.T) {
 		name := "Composite Test"
 		description := "A composite action"
 		steps := []string{
-			"actions/checkout@v4",
+			TestActionCheckoutV4,
 			"actions/setup-node@v4",
 		}
 
 		action := CreateCompositeAction(name, description, steps)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		// Verify the action contains our values
@@ -732,7 +472,7 @@ func TestCreateCompositeAction(t *testing.T) {
 		action := CreateCompositeAction("Empty Composite", "No steps", nil)
 
 		if action == "" {
-			t.Fatal("expected non-empty action content")
+			t.Fatal(TestErrNonEmptyAction)
 		}
 
 		if !strings.Contains(action, "Empty Composite") {
@@ -804,7 +544,7 @@ func createFullOverrides() *TestAppConfig {
 // createPartialOverrides creates a partial set of test overrides.
 func createPartialOverrides() *TestAppConfig {
 	return &TestAppConfig{
-		Theme:   "professional",
+		Theme:   TestThemeProfessional,
 		Verbose: true,
 	}
 }
@@ -845,7 +585,7 @@ func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
 // validatePartialOverrides validates partially overridden values.
 func validatePartialOverrides(t *testing.T, config *TestAppConfig) {
 	t.Helper()
-	validateStringField(t, config.Theme, "professional", "theme")
+	validateStringField(t, config.Theme, TestThemeProfessional, "theme")
 	validateBoolField(t, config.Verbose, true, "verbose")
 }
 
@@ -1098,4 +838,45 @@ func TestNewStringReader(t *testing.T) {
 			t.Error("large string content mismatch")
 		}
 	})
+}
+
+func TestCaptureStdout(t *testing.T) {
+	// Note: Cannot run in parallel as it manipulates global os.Stdout
+
+	output := CaptureStdout(func() {
+		fmt.Print("test output")
+	})
+
+	if output != "test output" {
+		t.Errorf("expected 'test output', got %q", output)
+	}
+}
+
+func TestCaptureStderr(t *testing.T) {
+	// Note: Cannot run in parallel as it manipulates global os.Stderr
+
+	output := CaptureStderr(func() {
+		fmt.Fprint(os.Stderr, "test error")
+	})
+
+	if output != "test error" {
+		t.Errorf("expected 'test error', got %q", output)
+	}
+}
+
+func TestCaptureOutputStreams(t *testing.T) {
+	// Note: Cannot run in parallel as it manipulates global os.Stdout/Stderr
+
+	output := CaptureOutputStreams(func() {
+		fmt.Print("stdout message")
+		fmt.Fprint(os.Stderr, "stderr message")
+	})
+
+	if output.Stdout != "stdout message" {
+		t.Errorf("expected stdout 'stdout message', got %q", output.Stdout)
+	}
+
+	if output.Stderr != "stderr message" {
+		t.Errorf("expected stderr 'stderr message', got %q", output.Stderr)
+	}
 }

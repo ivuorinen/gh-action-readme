@@ -264,11 +264,12 @@ func DiscoverActionFiles(dir string, recursive bool, ignoredDirs []string) ([]st
 	}
 
 	// Check only the specified directory (non-recursive)
-	return discoverActionFilesNonRecursive(dir), nil
+	return DiscoverActionFilesNonRecursive(dir), nil
 }
 
-// discoverActionFilesNonRecursive finds action files in a single directory.
-func discoverActionFilesNonRecursive(dir string) []string {
+// DiscoverActionFilesNonRecursive finds action files (action.yml or action.yaml) in a single directory.
+// This is exported for use by other packages that need to discover action files.
+func DiscoverActionFilesNonRecursive(dir string) []string {
 	var actionFiles []string
 	for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
 		path := filepath.Join(dir, filename)

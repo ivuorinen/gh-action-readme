@@ -48,7 +48,13 @@ func isUnitTestEnvironment() bool {
 // NewGenerator creates a new generator instance with the provided configuration.
 // This constructor maintains backward compatibility by using concrete implementations.
 // In unit test environments, it automatically uses NullOutput to suppress output.
+// If config is nil, it uses DefaultAppConfig() to prevent panics.
 func NewGenerator(config *AppConfig) *Generator {
+	// Handle nil config gracefully
+	if config == nil {
+		config = DefaultAppConfig()
+	}
+
 	// Use null output in unit test environments to keep tests clean
 	// Integration tests need real output to verify CLI behavior
 	if isUnitTestEnvironment() {
@@ -289,29 +295,45 @@ func (g *Generator) renderTemplateForAction(
 	return content, nil
 }
 
-// generateMarkdown creates a README.md file using the template.
-func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+// generateSimpleFormat is a helper for generating simple text-based formats (Markdown, AsciiDoc).
+// It consolidates the common pattern of template rendering, file writing, and success messaging.
+func (g *Generator) generateSimpleFormat(
+	action *ActionYML,
+	outputDir, actionPath string,
+	format, defaultFilename, successMsg string,
+) error {
 	templatePath := g.resolveTemplatePathForFormat()
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
-		Format:       "md",
+		Format:       format,
 	}
 
 	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
-		return fmt.Errorf("failed to render markdown template: %w", err)
+		return fmt.Errorf("failed to render %s template: %w", format, err)
 	}
 
-	outputPath := g.resolveOutputPath(outputDir, appconstants.ReadmeMarkdown)
+	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
+	if err != nil {
+		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
 	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
-		return fmt.Errorf("failed to write README.md to %s: %w", outputPath, err)
+		return fmt.Errorf("failed to write %s to %s: %w", format, outputPath, err)
 	}
 
-	g.Output.Success("Generated README.md: %s", outputPath)
+	g.Output.Success("%s: %s", successMsg, outputPath)
 
 	return nil
+}
+
+// generateMarkdown creates a README.md file using the template.
+func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+	return g.generateSimpleFormat(
+		action, outputDir, actionPath,
+		"md", appconstants.ReadmeMarkdown, "Generated README.md",
+	)
 }
 
 // generateHTML creates an HTML file using the template and optional header/footer.
@@ -337,7 +359,10 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 	}
 
 	defaultFilename := action.Name + ".html"
-	outputPath := g.resolveOutputPath(outputDir, defaultFilename)
+	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
+	if err != nil {
+		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
 	if err := writer.Write(content, outputPath); err != nil {
 		return fmt.Errorf("failed to write HTML to %s: %w", outputPath, err)
 	}
@@ -351,7 +376,10 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 	writer := NewJSONWriter(g.Config)
 
-	outputPath := g.resolveOutputPath(outputDir, appconstants.ActionDocsJSON)
+	outputPath, err := g.resolveOutputPath(outputDir, appconstants.ActionDocsJSON)
+	if err != nil {
+		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
 	if err := writer.Write(action, outputPath); err != nil {
 		return fmt.Errorf("failed to write JSON to %s: %w", outputPath, err)
 	}
@@ -363,27 +391,10 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
 func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string) error {
-	templatePath := g.resolveTemplatePathForFormat()
-
-	opts := TemplateOptions{
-		TemplatePath: templatePath,
-		Format:       "asciidoc",
-	}
-
-	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
-	if err != nil {
-		return fmt.Errorf("failed to render AsciiDoc template: %w", err)
-	}
-
-	outputPath := g.resolveOutputPath(outputDir, appconstants.ReadmeASCIIDoc)
-	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
-		// #nosec G306 -- output file permissions
-		return fmt.Errorf("failed to write AsciiDoc to %s: %w", outputPath, err)
-	}
-
-	g.Output.Success("Generated AsciiDoc: %s", outputPath)
-
-	return nil
+	return g.generateSimpleFormat(
+		action, outputDir, actionPath,
+		"asciidoc", appconstants.ReadmeASCIIDoc, "Generated AsciiDoc",
+	)
 }
 
 // processFiles processes each file and tracks results.
@@ -468,17 +479,56 @@ func (g *Generator) determineOutputDir(actionPath string) string {
 	return g.Config.OutputDir
 }
 
-// resolveOutputPath resolves the final output path, considering custom filename.
-func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) string {
+// resolveOutputPath resolves the final output path and validates it prevents path traversal.
+// Returns an error if the resolved path would escape the outputDir.
+func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string, error) {
+	// Determine the filename to use
+	filename := defaultFilename
 	if g.Config.OutputFilename != "" {
-		if filepath.IsAbs(g.Config.OutputFilename) {
-			return g.Config.OutputFilename
-		}
-
-		return filepath.Join(outputDir, g.Config.OutputFilename)
+		filename = g.Config.OutputFilename
 	}
 
-	return filepath.Join(outputDir, defaultFilename)
+	// Reject paths containing .. components (path traversal attempt)
+	if strings.Contains(filename, "..") {
+		return "", fmt.Errorf(appconstants.ErrPathTraversal, filename, outputDir)
+	}
+
+	// Handle absolute paths - allow them as-is (user's explicit choice)
+	if filepath.IsAbs(filename) {
+		cleaned := filepath.Clean(filename)
+		if cleaned != filename {
+			return "", fmt.Errorf("absolute path contains extraneous components: %s", filename)
+		}
+
+		return cleaned, nil
+	}
+
+	// For relative paths, join with output directory
+	finalPath := filepath.Join(outputDir, filename)
+
+	// Validate the final path stays within outputDir
+	absOutputDir, err := filepath.Abs(outputDir)
+	if err != nil {
+		return "", fmt.Errorf(appconstants.ErrInvalidOutputPath, err)
+	}
+
+	absFinalPath, err := filepath.Abs(finalPath)
+	if err != nil {
+		return "", fmt.Errorf(appconstants.ErrInvalidOutputPath, err)
+	}
+
+	// Check if final path is within output directory using filepath.Rel
+	relPath, err := filepath.Rel(absOutputDir, absFinalPath)
+	if err != nil {
+		return "", fmt.Errorf(appconstants.ErrInvalidOutputPath, err)
+	}
+
+	// If relative path starts with "..", it's outside the output directory
+	if strings.HasPrefix(relPath, "..") {
+		return "", fmt.Errorf(appconstants.ErrPathTraversal, filename, outputDir)
+	}
+
+	return absFinalPath, nil
 }
 
 // generateByFormat generates documentation in the specified format.

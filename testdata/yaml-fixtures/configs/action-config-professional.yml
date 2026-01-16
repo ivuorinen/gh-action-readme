@@ -1,0 +1,3 @@
+theme: professional
+template: custom-template.tmpl
+output_dir: docs
