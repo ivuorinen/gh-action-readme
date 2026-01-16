@@ -10,6 +10,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/gofri/go-github-ratelimit v1.1.1
 	github.com/google/go-github/v74 v74.0.0
+	github.com/leanovate/gopter v0.2.11
 	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
