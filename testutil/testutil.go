@@ -790,3 +790,76 @@ func CreateTempActionFile(t *testing.T, content string) string {
 
 	return tmpFile.Name()
 }
+
+// SetupTestEnvironment creates a temp directory and sets up config environment variables.
+// Returns temp directory path and cleanup function.
+// Consolidates the common pattern: TempDir + XDG_CONFIG_HOME + HOME setup.
+//
+// Example:
+//
+//	tmpDir, cleanup := testutil.SetupTestEnvironment(t)
+//	defer cleanup()
+func SetupTestEnvironment(t *testing.T) (tmpDir string, cleanup func()) {
+	t.Helper()
+	tmpDir, cleanup = TempDir(t)
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+	t.Setenv("HOME", tmpDir)
+
+	return tmpDir, cleanup
+}
+
+// SetupTestEnvironmentWithSetup creates test environment and runs a custom setup function.
+// Returns temp directory path and cleanup function.
+//
+// Example:
+//
+//	tmpDir, cleanup := testutil.SetupTestEnvironmentWithSetup(t, func(t *testing.T, dir string) {
+//		testutil.WriteFileInDir(t, dir, "config.yml", "theme: default")
+//	})
+//	defer cleanup()
+func SetupTestEnvironmentWithSetup(
+	t *testing.T,
+	setupFunc func(t *testing.T, tmpDir string),
+) (tmpDir string, cleanup func()) {
+	t.Helper()
+	tmpDir, cleanup = SetupTestEnvironment(t)
+	if setupFunc != nil {
+		setupFunc(t, tmpDir)
+	}
+
+	return tmpDir, cleanup
+}
+
+// SetupTokenEnv sets up GitHub token environment variables for testing.
+// Pass empty string to clear a token.
+//
+// Example:
+//
+//	testutil.SetupTokenEnv(t, "tool-token", "standard-token")
+func SetupTokenEnv(t *testing.T, toolToken, standardToken string) {
+	t.Helper()
+	t.Setenv(appconstants.EnvGitHubToken, toolToken)
+	t.Setenv(appconstants.EnvGitHubTokenStandard, standardToken)
+}
+
+// ClearTokenEnv clears all GitHub token environment variables.
+func ClearTokenEnv(t *testing.T) {
+	t.Helper()
+	SetupTokenEnv(t, "", "")
+}
+
+// SetupXDGEnv sets XDG_CONFIG_HOME and HOME environment variables.
+// Use empty string to skip setting a variable.
+//
+// Example:
+//
+//	testutil.SetupXDGEnv(t, tmpDir, "")  // Set XDG, clear HOME
+func SetupXDGEnv(t *testing.T, xdgConfigHome, home string) {
+	t.Helper()
+	if xdgConfigHome != "" {
+		t.Setenv("XDG_CONFIG_HOME", xdgConfigHome)
+	}
+	if home != "" {
+		t.Setenv("HOME", home)
+	}
+}

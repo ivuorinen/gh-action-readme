@@ -29,11 +29,7 @@ func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
 	}
 
 	// Create detector with temp directory
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	characteristics := detector.analyzeProjectFiles()
 
@@ -72,11 +68,7 @@ func TestProjectDetectorDetectVersionFromPackageJSON(t *testing.T) {
 
 	testutil.WriteFileInDir(t, tempDir, appconstants.PackageJSON, packageJSON)
 
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	version := detector.detectVersionFromPackageJSON()
 	if version != "2.1.0" {
@@ -92,11 +84,7 @@ func TestProjectDetectorDetectVersionFromFiles(t *testing.T) {
 	versionContent := "3.2.1\n"
 	testutil.WriteFileInDir(t, tempDir, "VERSION", versionContent)
 
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	version := detector.detectVersionFromFiles()
 	if version != "3.2.1" {
@@ -119,11 +107,7 @@ func TestProjectDetectorFindActionFiles(t *testing.T) {
 	subActionYAML := filepath.Join(subDir, "action.yaml")
 	testutil.WriteTestFile(t, subActionYAML, "name: Sub Action")
 
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	// Test non-recursive
 	files, err := detector.findActionFiles(tempDir, false)

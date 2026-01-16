@@ -60,8 +60,7 @@ func TestInitConfig(t *testing.T) {
 			configFile: testutil.TestPathConfigYML,
 			setupFunc: func(t *testing.T, tempDir string) {
 				t.Helper()
-				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML,
-					string(testutil.MustReadFixture(testutil.TestErrorInvalidYAMLBrackets)))
+				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML, "invalid: yaml: content: [")
 			},
 			expectError: true,
 		},
@@ -74,12 +73,8 @@ func TestInitConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir, cleanup := testutil.TempDir(t)
+			tmpDir, cleanup := testutil.SetupTestEnvironment(t)
 			defer cleanup()
-
-			// Set XDG_CONFIG_HOME to our temp directory
-			t.Setenv("XDG_CONFIG_HOME", tmpDir)
-			t.Setenv("HOME", tmpDir)
 
 			if tt.setupFunc != nil {
 				tt.setupFunc(t, tmpDir)
@@ -133,8 +128,7 @@ func TestLoadConfiguration(t *testing.T) {
 
 				// Create global config
 				globalConfigDir := filepath.Join(tempDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
-				globalConfigPath := testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML,
-					string(testutil.MustReadFixture(testutil.TestConfigGlobalDefault)))
+				globalConfigPath := WriteConfigFixture(t, globalConfigDir, testutil.TestConfigGlobalDefault)
 
 				// Create repo root with repo-specific config
 				repoRoot := filepath.Join(tempDir, "repo")
@@ -143,8 +137,7 @@ func TestLoadConfiguration(t *testing.T) {
 
 				// Create current directory with action-specific config
 				currentDir := filepath.Join(repoRoot, "action")
-				testutil.WriteFileInDir(t, currentDir, testutil.TestFileConfigYAML,
-					string(testutil.MustReadFixture(testutil.TestConfigActionSimple)))
+				WriteConfigFixture(t, currentDir, testutil.TestConfigActionSimple)
 
 				return globalConfigPath, repoRoot, currentDir
 			},
@@ -168,8 +161,10 @@ func TestLoadConfiguration(t *testing.T) {
 				t.Setenv("GITHUB_TOKEN", "fallback-token")
 
 				// Create config file
-				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML,
-					string(testutil.MustReadFixture(testutil.TestConfigMinimalWithToken)))
+				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML, `
+theme: minimal
+github_token: config-token
+`)
 				configPath := filepath.Join(tempDir, testutil.TestPathConfigYML)
 
 				return configPath, tempDir, tempDir
@@ -191,8 +186,7 @@ func TestLoadConfiguration(t *testing.T) {
 
 				// Create XDG-compliant config
 				configDir := filepath.Join(xdgConfigHome, testutil.TestBinaryName)
-				configPath := testutil.WriteFileInDir(t, configDir, testutil.TestFileConfigYAML,
-					string(testutil.MustReadFixture(testutil.TestConfigGitHubVerbose)))
+				configPath := WriteConfigFixture(t, configDir, testutil.TestConfigGitHubVerbose)
 
 				return configPath, tempDir, tempDir
 			},
@@ -233,11 +227,8 @@ func TestLoadConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir, cleanup := testutil.TempDir(t)
+			tmpDir, cleanup := testutil.SetupTestEnvironment(t)
 			defer cleanup()
-
-			// Set HOME to temp directory for fallback
-			t.Setenv("HOME", tmpDir)
 
 			configFile, repoRoot, currentDir := tt.setupFunc(t, tmpDir)
 
@@ -305,11 +296,8 @@ func TestGetConfigPath(t *testing.T) {
 }
 
 func TestWriteDefaultConfig(t *testing.T) {
-	tmpDir, cleanup := testutil.TempDir(t)
+	_, cleanup := testutil.SetupTestEnvironment(t)
 	defer cleanup()
-
-	// Set XDG_CONFIG_HOME to our temp directory
-	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	err := WriteDefaultConfig()
 	testutil.AssertNoError(t, err)
@@ -439,8 +427,7 @@ func TestConfigMerging(t *testing.T) {
 	// Test config merging by creating config files and seeing the result
 
 	globalConfigDir := filepath.Join(tmpDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
-	testutil.WriteFileInDir(t, globalConfigDir, testutil.TestFileConfigYAML,
-		string(testutil.MustReadFixture(testutil.TestConfigGlobalBaseToken)))
+	WriteConfigFixture(t, globalConfigDir, testutil.TestConfigGlobalBaseToken)
 
 	repoRoot := filepath.Join(tmpDir, "repo")
 	testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML,

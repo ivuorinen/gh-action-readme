@@ -155,3 +155,122 @@ func createMapMergeTest(
 		expected: expected,
 	}
 }
+
+// ConfigHierarchySetup contains fixture paths for creating a multi-level config hierarchy.
+type ConfigHierarchySetup struct {
+	GlobalFixture string // Fixture path for global config
+	RepoFixture   string // Fixture path for repo config
+	ActionFixture string // Fixture path for action config
+}
+
+// SetupConfigHierarchy creates a multi-level config hierarchy (global/repo/action).
+// Returns global config path, repo root, and action directory.
+//
+// Example:
+//
+//	globalPath, repoRoot, actionDir := SetupConfigHierarchy(t, tmpDir, ConfigHierarchySetup{
+//		GlobalFixture: testutil.TestConfigGlobalDefault,
+//		RepoFixture:   testutil.TestConfigRepoSimple,
+//		ActionFixture: testutil.TestConfigActionSimple,
+//	})
+func SetupConfigHierarchy(
+	t *testing.T,
+	baseDir string,
+	setup ConfigHierarchySetup,
+) (globalConfigPath, repoRoot, actionDir string) {
+	t.Helper()
+
+	// Create global config
+	if setup.GlobalFixture != "" {
+		globalConfigDir := filepath.Join(baseDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
+		globalConfigPath = testutil.WriteFileInDir(
+			t, globalConfigDir, testutil.TestFileConfigYAML,
+			string(testutil.MustReadFixture(setup.GlobalFixture)),
+		)
+	}
+
+	// Create repo config
+	repoRoot = filepath.Join(baseDir, "repo")
+	if setup.RepoFixture != "" {
+		testutil.WriteFileInDir(
+			t, repoRoot, testutil.TestFileGHReadmeYAML,
+			string(testutil.MustReadFixture(setup.RepoFixture)),
+		)
+	}
+
+	// Create action config
+	if setup.ActionFixture != "" {
+		actionDir = filepath.Join(repoRoot, "action")
+		testutil.WriteFileInDir(
+			t, actionDir, testutil.TestFileConfigYAML,
+			string(testutil.MustReadFixture(setup.ActionFixture)),
+		)
+	} else {
+		actionDir = repoRoot
+	}
+
+	return globalConfigPath, repoRoot, actionDir
+}
+
+// WriteConfigFixture writes a config fixture to a directory with standard config filename.
+// Returns the full path to the written config file.
+//
+// Example:
+//
+//	configPath := WriteConfigFixture(t, tmpDir, testutil.TestConfigGlobalDefault)
+func WriteConfigFixture(t *testing.T, dir, fixturePath string) string {
+	t.Helper()
+
+	return testutil.WriteFileInDir(
+		t, dir, testutil.TestFileConfigYAML,
+		string(testutil.MustReadFixture(fixturePath)),
+	)
+}
+
+// ExpectedConfig holds expected values for config field assertions.
+// Only non-zero values will be checked.
+type ExpectedConfig struct {
+	Theme        string
+	OutputFormat string
+	OutputDir    string
+	Template     string
+	Schema       string
+	Verbose      bool
+	Quiet        bool
+	GitHubToken  string
+}
+
+// AssertConfigFields asserts that config matches expected values for all non-empty fields.
+// Only checks fields that are set in expected (non-zero values).
+//
+// Example:
+//
+//	AssertConfigFields(t, config, ExpectedConfig{
+//		Theme:        testutil.TestThemeDefault,
+//		OutputFormat: "md",
+//		Verbose:      true,
+//	})
+func AssertConfigFields(t *testing.T, config *AppConfig, expected ExpectedConfig) {
+	t.Helper()
+	if expected.Theme != "" {
+		testutil.AssertEqual(t, expected.Theme, config.Theme)
+	}
+	if expected.OutputFormat != "" {
+		testutil.AssertEqual(t, expected.OutputFormat, config.OutputFormat)
+	}
+	if expected.OutputDir != "" {
+		testutil.AssertEqual(t, expected.OutputDir, config.OutputDir)
+	}
+	if expected.Template != "" {
+		testutil.AssertEqual(t, expected.Template, config.Template)
+	}
+	if expected.Schema != "" {
+		testutil.AssertEqual(t, expected.Schema, config.Schema)
+	}
+	// Always check booleans (they have meaningful zero values)
+	testutil.AssertEqual(t, expected.Verbose, config.Verbose)
+	testutil.AssertEqual(t, expected.Quiet, config.Quiet)
+	if expected.GitHubToken != "" {
+		testutil.AssertEqual(t, expected.GitHubToken, config.GitHubToken)
+	}
+}
