@@ -141,7 +141,7 @@ func (w *ConfigWizard) configureThemeSelection() {
 // configureOutputFormat handles output format selection.
 func (w *ConfigWizard) configureOutputFormat() {
 	w.output.Info("\nAvailable output formats:")
-	formats := []string{"md", "html", "json", "asciidoc"}
+	formats := appconstants.GetSupportedOutputFormats()
 
 	w.displayFormatOptions(formats)
 

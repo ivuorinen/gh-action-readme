@@ -105,7 +105,7 @@ func (cl *ConfigurationLoader) ValidateConfiguration(config *AppConfig) error {
 	}
 
 	// Validate output format
-	validFormats := []string{"md", "html", "json", "asciidoc"}
+	validFormats := appconstants.GetSupportedOutputFormats()
 	if !containsString(validFormats, config.OutputFormat) {
 		return fmt.Errorf("invalid output format '%s', must be one of: %s",
 			config.OutputFormat, strings.Join(validFormats, ", "))

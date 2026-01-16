@@ -123,6 +123,23 @@ func GetSupportedThemes() []string {
 	return themes
 }
 
+// supportedOutputFormats lists all available output format names (unexported to prevent modification).
+var supportedOutputFormats = []string{
+	OutputFormatMarkdown,
+	OutputFormatHTML,
+	OutputFormatJSON,
+	OutputFormatASCIIDoc,
+}
+
+// GetSupportedOutputFormats returns a copy of the supported output format names.
+// Returns a new slice to prevent external modification of the internal list.
+func GetSupportedOutputFormats() []string {
+	formats := make([]string, len(supportedOutputFormats))
+	copy(formats, supportedOutputFormats)
+
+	return formats
+}
+
 // Template placeholder constants for Git repository information.
 const (
 	// DefaultOrgPlaceholder is the default organization placeholder.

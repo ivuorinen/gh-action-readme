@@ -1,6 +1,9 @@
 package wizard
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // validateFieldWithEmptyCheck is a generic helper for fields that:
 // - Allow empty values (with optional warning)
@@ -52,6 +55,6 @@ func (v *ConfigValidator) validateFieldInList(
 			Value:   fieldValue,
 		})
 		result.Suggestions = append(result.Suggestions,
-			"Valid "+field+"s: "+strings.Join(validValues, ", "))
+			fmt.Sprintf("Valid %ss: %s", field, strings.Join(validValues, ", ")))
 	}
 }

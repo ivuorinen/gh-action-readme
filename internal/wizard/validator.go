@@ -35,6 +35,22 @@ type ValidationWarning struct {
 	Value   string
 }
 
+// validPermissionsMap defines valid GitHub Actions permissions and their allowed values.
+var validPermissionsMap = map[string][]string{
+	"actions":             {"read", "write"},
+	"checks":              {"read", "write"},
+	"contents":            {"read", "write"},
+	"deployments":         {"read", "write"},
+	"id-token":            {"write"},
+	"issues":              {"read", "write"},
+	"discussions":         {"read", "write"},
+	"packages":            {"read", "write"},
+	"pull-requests":       {"read", "write"},
+	"repository-projects": {"read", "write"},
+	"security-events":     {"read", "write"},
+	"statuses":            {"read", "write"},
+}
+
 // ConfigValidator handles configuration validation with immediate feedback.
 type ConfigValidator struct {
 	output *internal.ColoredOutput
@@ -198,7 +214,7 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 
 // validateOutputFormat validates the output format field.
 func (v *ConfigValidator) validateOutputFormat(format string, result *ValidationResult) {
-	validFormats := []string{"md", "html", "json", "asciidoc"}
+	validFormats := appconstants.GetSupportedOutputFormats()
 
 	v.validateFieldInList("output_format", format, validFormats, "Invalid output format", result)
 }
@@ -272,30 +288,32 @@ func (v *ConfigValidator) validateGitHubToken(token string, result *ValidationRe
 		"Consider using GITHUB_TOKEN environment variable instead")
 }
 
+// validatePermissionValue validates a single permission value and updates the result.
+func (v *ConfigValidator) validatePermissionValue(
+	permission, value string,
+	validValues []string,
+	result *ValidationResult,
+) {
+	if !v.isValueInList(value, validValues) {
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "permissions." + permission,
+			Message: "Invalid permission value",
+			Value:   value,
+		})
+		result.Suggestions = append(result.Suggestions,
+			fmt.Sprintf("Valid values for %s: %s", permission, strings.Join(validValues, ", ")))
+	}
+}
+
 // validatePermissions validates the permissions field.
 func (v *ConfigValidator) validatePermissions(permissions map[string]string, result *ValidationResult) {
 	if len(permissions) == 0 {
 		return
 	}
 
-	validPermissions := map[string][]string{
-		"actions":             {"read", "write"},
-		"checks":              {"read", "write"},
-		"contents":            {"read", "write"},
-		"deployments":         {"read", "write"},
-		"id-token":            {"write"},
-		"issues":              {"read", "write"},
-		"discussions":         {"read", "write"},
-		"packages":            {"read", "write"},
-		"pull-requests":       {"read", "write"},
-		"repository-projects": {"read", "write"},
-		"security-events":     {"read", "write"},
-		"statuses":            {"read", "write"},
-	}
-
 	for permission, value := range permissions {
 		// Check if permission is valid
-		validValues, permissionExists := validPermissions[permission]
+		validValues, permissionExists := validPermissionsMap[permission]
 		if !permissionExists {
 			result.Warnings = append(result.Warnings, ValidationWarning{
 				Field:   "permissions",
@@ -307,15 +325,7 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		}
 
 		// Check if value is valid
-		if !v.isValueInList(value, validValues) {
-			result.Errors = append(result.Errors, ValidationError{
-				Field:   "permissions",
-				Message: "Invalid value for permission " + permission,
-				Value:   value,
-			})
-			result.Suggestions = append(result.Suggestions,
-				fmt.Sprintf("Valid values for %s: %s", permission, strings.Join(validValues, ", ")))
-		}
+		v.validatePermissionValue(permission, value, validValues, result)
 	}
 }
 
