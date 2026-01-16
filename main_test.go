@@ -2240,15 +2240,8 @@ func TestCheckAllOutdated(t *testing.T) {
 			wantOutdatedCnt: 0, // Mock analyzer will return no outdated deps
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-				testutil.WriteTestFile(t, actionPath,
-					testActionBasic)
-
-				return []string{actionPath}
-			},
+			name:            testutil.TestScenarioNoDeps,
+			setupFunc:       setupWithActionContent(testActionBasic),
 			mockAnalyzer:    true,
 			wantOutdatedCnt: 0,
 		},
@@ -2319,15 +2312,8 @@ func TestAnalyzeSecurityDeps(t *testing.T) {
 			wantPinned: 2, // TestFixtureCompositeWithDeps has 2 pinned dependencies
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-				testutil.WriteTestFile(t, actionPath,
-					testActionBasic)
-
-				return []string{actionPath}
-			},
+			name:       testutil.TestScenarioNoDeps,
+			setupFunc:  setupWithActionContent(testActionBasic),
 			wantPinned: 0,
 		},
 		{
@@ -2413,15 +2399,8 @@ func TestCollectAllUpdates(t *testing.T) {
 			wantUpdateCnt: 0, // Without GitHub token, won't fetch updates
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-				testutil.WriteTestFile(t, actionPath,
-					testActionBasic)
-
-				return []string{actionPath}
-			},
+			name:          testutil.TestScenarioNoDeps,
+			setupFunc:     setupWithActionContent(testActionBasic),
 			wantUpdateCnt: 0,
 		},
 	}

@@ -101,3 +101,18 @@ func setupWithSingleFixture(fixturePath string) func(*testing.T, string) []strin
 		return []string{tmpDir}
 	}
 }
+
+// setupWithActionContent is a helper for test setup functions that:
+// - Write action content to tmpDir/action.yml
+// - Return []string{actionPath} pointing to the created action file
+//
+// This reduces duplication in tests that need to create action files from string content.
+func setupWithActionContent(content string) func(*testing.T, string) []string {
+	return func(t *testing.T, tmpDir string) []string {
+		t.Helper()
+		actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+		testutil.WriteTestFile(t, actionPath, content)
+
+		return []string{actionPath}
+	}
+}
