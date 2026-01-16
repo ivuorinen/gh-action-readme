@@ -271,22 +271,28 @@ func TestVersionCleaningProperties(t *testing.T) {
 		),
 	)
 
-	// Property 5: Preserves non-v content
+	// Property 5: Preserves non-v content and trims whitespace
 	properties.Property("non-v content is preserved",
 		prop.ForAll(
 			func(content string) bool {
 				// Generate strings without 'v' at start
-				if content == "" || strings.HasPrefix(content, "v") {
+				trimmed := strings.TrimSpace(content)
+				if trimmed == "" || strings.HasPrefix(trimmed, "v") {
 					return true // Skip these cases
 				}
 
-				input := strings.TrimSpace(content)
-				result := CleanVersionString(input)
+				result := CleanVersionString(content)
 
-				// If input had no v prefix, result should equal trimmed input
-				return result == input
+				// CleanVersionString should trim whitespace and preserve non-v content
+				return result == trimmed
 			},
-			gen.AlphaString(),
+			gen.OneGenOf(
+				gen.AlphaString(),
+				gen.AlphaString().Map(func(s string) string { return "  " + s }),
+				gen.AlphaString().Map(func(s string) string { return s + "  " }),
+				gen.AlphaString().Map(func(s string) string { return "  " + s + "  " }),
+				gen.AlphaString().Map(func(s string) string { return "\t" + s + "\n" }),
+			),
 		),
 	)
 
