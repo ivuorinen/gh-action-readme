@@ -116,3 +116,42 @@ func createTokenMergeTest(
 		want:        &AppConfig{GitHubToken: wantToken},
 	}
 }
+
+// createMapMergeTest creates a test table entry for testing map field merging (permissions/variables).
+// This helper reduces duplication for tests that merge map[string]string fields.
+func createMapMergeTest(
+	name string,
+	dstMap, srcMap, expectedMap map[string]string,
+	isPermissions bool,
+) struct {
+	name     string
+	dst      *AppConfig
+	src      *AppConfig
+	expected *AppConfig
+} {
+	dst := &AppConfig{}
+	src := &AppConfig{}
+	expected := &AppConfig{}
+
+	if isPermissions {
+		dst.Permissions = dstMap
+		src.Permissions = srcMap
+		expected.Permissions = expectedMap
+	} else {
+		dst.Variables = dstMap
+		src.Variables = srcMap
+		expected.Variables = expectedMap
+	}
+
+	return struct {
+		name     string
+		dst      *AppConfig
+		src      *AppConfig
+		expected *AppConfig
+	}{
+		name:     name,
+		dst:      dst,
+		src:      src,
+		expected: expected,
+	}
+}

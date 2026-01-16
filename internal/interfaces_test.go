@@ -24,28 +24,33 @@ type MockMessageLogger struct {
 }
 
 func (m *MockMessageLogger) Info(format string, args ...any) {
-	m.InfoCalls = append(m.InfoCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.InfoCalls, format, args...)
 }
 
 func (m *MockMessageLogger) Success(format string, args ...any) {
-	m.SuccessCalls = append(m.SuccessCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.SuccessCalls, format, args...)
 }
 
 func (m *MockMessageLogger) Warning(format string, args ...any) {
-	m.WarningCalls = append(m.WarningCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.WarningCalls, format, args...)
 }
 
 func (m *MockMessageLogger) Bold(format string, args ...any) {
-	m.BoldCalls = append(m.BoldCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.BoldCalls, format, args...)
 }
 
 func (m *MockMessageLogger) Printf(format string, args ...any) {
-	m.PrintfCalls = append(m.PrintfCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.PrintfCalls, format, args...)
 }
 
 func (m *MockMessageLogger) Fprintf(_ *os.File, format string, args ...any) {
 	// For testing, just track the formatted message
-	m.PrintfCalls = append(m.PrintfCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.PrintfCalls, format, args...)
+}
+
+// recordCall is a helper to reduce duplication in mock methods.
+func (m *MockMessageLogger) recordCall(callSlice *[]string, format string, args ...any) {
+	*callSlice = append(*callSlice, fmt.Sprintf(format, args...))
 }
 
 // MockErrorReporter implements ErrorReporter for testing.
@@ -57,7 +62,7 @@ type MockErrorReporter struct {
 }
 
 func (m *MockErrorReporter) Error(format string, args ...any) {
-	m.ErrorCalls = append(m.ErrorCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.ErrorCalls, format, args...)
 }
 
 func (m *MockErrorReporter) ErrorWithSuggestions(err *apperrors.ContextualError) {
@@ -74,13 +79,23 @@ func (m *MockErrorReporter) ErrorWithSimpleFix(message, suggestion string) {
 	m.ErrorWithSimpleFixCalls = append(m.ErrorWithSimpleFixCalls, message+": "+suggestion)
 }
 
+// recordCall is a helper to reduce duplication in mock methods.
+func (m *MockErrorReporter) recordCall(callSlice *[]string, format string, args ...any) {
+	*callSlice = append(*callSlice, fmt.Sprintf(format, args...))
+}
+
 // MockProgressReporter implements ProgressReporter for testing.
 type MockProgressReporter struct {
 	ProgressCalls []string
 }
 
 func (m *MockProgressReporter) Progress(format string, args ...any) {
-	m.ProgressCalls = append(m.ProgressCalls, fmt.Sprintf(format, args...))
+	m.recordCall(&m.ProgressCalls, format, args...)
+}
+
+// recordCall is a helper to reduce duplication in mock methods.
+func (m *MockProgressReporter) recordCall(callSlice *[]string, format string, args ...any) {
+	*callSlice = append(*callSlice, fmt.Sprintf(format, args...))
 }
 
 // MockOutputConfig implements OutputConfig for testing.

@@ -541,50 +541,34 @@ func TestMergeMapFields(t *testing.T) {
 		src      *AppConfig
 		expected *AppConfig
 	}{
-		{
-			name: "merge permissions into empty dst",
-			dst:  &AppConfig{},
-			src: &AppConfig{
-				Permissions: map[string]string{"read": "read", "write": "write"},
-			},
-			expected: &AppConfig{
-				Permissions: map[string]string{"read": "read", "write": "write"},
-			},
-		},
-		{
-			name: "merge permissions into existing dst",
-			dst: &AppConfig{
-				Permissions: map[string]string{"read": "existing"},
-			},
-			src: &AppConfig{
-				Permissions: map[string]string{"read": "new", "write": "write"},
-			},
-			expected: &AppConfig{
-				Permissions: map[string]string{"read": "new", "write": "write"},
-			},
-		},
-		{
-			name: "merge variables into empty dst",
-			dst:  &AppConfig{},
-			src: &AppConfig{
-				Variables: map[string]string{"VAR1": "value1", "VAR2": "value2"},
-			},
-			expected: &AppConfig{
-				Variables: map[string]string{"VAR1": "value1", "VAR2": "value2"},
-			},
-		},
-		{
-			name: "merge variables into existing dst",
-			dst: &AppConfig{
-				Variables: map[string]string{"VAR1": "existing"},
-			},
-			src: &AppConfig{
-				Variables: map[string]string{"VAR1": "new", "VAR2": "value2"},
-			},
-			expected: &AppConfig{
-				Variables: map[string]string{"VAR1": "new", "VAR2": "value2"},
-			},
-		},
+		createMapMergeTest(
+			"merge permissions into empty dst",
+			nil,
+			map[string]string{"read": "read", "write": "write"},
+			map[string]string{"read": "read", "write": "write"},
+			true,
+		),
+		createMapMergeTest(
+			"merge permissions into existing dst",
+			map[string]string{"read": "existing"},
+			map[string]string{"read": "new", "write": "write"},
+			map[string]string{"read": "new", "write": "write"},
+			true,
+		),
+		createMapMergeTest(
+			"merge variables into empty dst",
+			nil,
+			map[string]string{"VAR1": "value1", "VAR2": "value2"},
+			map[string]string{"VAR1": "value1", "VAR2": "value2"},
+			false,
+		),
+		createMapMergeTest(
+			"merge variables into existing dst",
+			map[string]string{"VAR1": "existing"},
+			map[string]string{"VAR1": "new", "VAR2": "value2"},
+			map[string]string{"VAR1": "new", "VAR2": "value2"},
+			false,
+		),
 		{
 			name: "merge both permissions and variables",
 			dst: &AppConfig{
