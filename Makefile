@@ -38,8 +38,9 @@ test: ## Run all tests (standard and property-based)
 	@echo ""
 	@echo "✅ All tests (standard + property) completed successfully!"
 	@echo ""
-	@echo "Note: Mutation tests are disabled due to go-mutesting compatibility issues."
-	@echo "Run 'make test-quick' for fast iteration (unit tests only)."
+	@echo "Note: Mutation tests require go-mutesting (compatible with Go 1.22/1.23 only)."
+	@echo "      Run 'make test-mutation' if you have a compatible Go version."
+	@echo "      Run 'make test-quick' for fast iteration (unit tests only)."
 
 test-quick: ## Run only standard unit tests (fast)
 	go test ./...

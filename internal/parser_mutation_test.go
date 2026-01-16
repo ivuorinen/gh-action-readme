@@ -1,9 +1,10 @@
 package internal
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // TestPermissionParsingMutationResistance provides comprehensive test cases designed
@@ -208,9 +209,7 @@ name: Test Action
 			tmpDir := t.TempDir()
 			testFile := filepath.Join(tmpDir, "action.yml")
 
-			if err := os.WriteFile(testFile, []byte(tt.yaml), 0600); err != nil {
-				t.Fatalf("Failed to write test file: %v", err)
-			}
+			testutil.WriteTestFile(t, testFile, tt.yaml)
 
 			// Parse permissions
 			result, err := parsePermissionsFromComments(testFile)

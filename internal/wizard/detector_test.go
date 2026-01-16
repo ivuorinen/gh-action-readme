@@ -68,11 +68,7 @@ func TestProjectDetectorDetectVersionFromPackageJSON(t *testing.T) {
 	tempDir := t.TempDir()
 
 	// Create package.json with version
-	packageJSON := `{
-		"name": "test-package",
-		"version": "2.1.0",
-		"description": "Test package"
-	}`
+	packageJSON := string(testutil.MustReadFixture(testutil.TestJSONPackageFull))
 
 	testutil.WriteFileInDir(t, tempDir, appconstants.PackageJSON, packageJSON)
 
@@ -703,7 +699,7 @@ func TestDetectVersion(t *testing.T) {
 			name: "detects version from package.json",
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
-				content := `{"version": "1.2.3"}`
+				content := string(testutil.MustReadFixture(testutil.TestJSONPackageVersionOnly))
 				testutil.WriteFileInDir(t, dir, appconstants.PackageJSON, content)
 			},
 			want: "1.2.3",

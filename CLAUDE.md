@@ -185,7 +185,7 @@ This project enforces strict quality gates aligned with [SonarCloud "Sonar way"]
 | Line Length | ≤ 120 characters | `make lint` (via lll) |
 
 **Current Coverage:** 72.8% overall (target: 80%)
-**Coverage Threshold:** Set in `Makefile` as `COVERAGE_THRESHOLD := 80.0`
+**Coverage Threshold:** Set in `Makefile` as `COVERAGE_THRESHOLD := 72.0`
 
 **Pre-commit Quality Checks:**
 
@@ -519,7 +519,7 @@ make test-coverage-html         # HTML coverage report + browser
 make test-coverage-check        # Verify coverage >= 72%
 ```
 
-**Note:** Mutation tests are not included in `make test` due to go-mutesting compatibility issues.
+**Note:** Mutation tests require go-mutesting (Go 1.22/1.23 compatible). Run `make test-mutation` if supported. Not included in `make test` by default for broad compatibility.
 
 ### Linting and Quality
 

@@ -37,8 +37,12 @@ func TestInitConfig(t *testing.T) {
 			configFile: testutil.TestFileCustomConfig,
 			setupFunc: func(t *testing.T, tempDir string) {
 				t.Helper()
-				configPath := filepath.Join(tempDir, testutil.TestFileCustomConfig)
-				testutil.WriteTestFile(t, configPath, testutil.MustReadFixture(testutil.TestFixtureProfessionalConfig))
+				testutil.WriteFileInDir(
+					t,
+					tempDir,
+					testutil.TestFileCustomConfig,
+					testutil.MustReadFixture(testutil.TestFixtureProfessionalConfig),
+				)
 			},
 			expected: &AppConfig{
 				Theme:        testutil.TestThemeProfessional,
@@ -56,8 +60,8 @@ func TestInitConfig(t *testing.T) {
 			configFile: testutil.TestPathConfigYML,
 			setupFunc: func(t *testing.T, tempDir string) {
 				t.Helper()
-				configPath := filepath.Join(tempDir, testutil.TestPathConfigYML)
-				testutil.WriteTestFile(t, configPath, "invalid: yaml: content: [")
+				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML,
+					string(testutil.MustReadFixture(testutil.TestErrorInvalidYAMLBrackets)))
 			},
 			expectError: true,
 		},
@@ -164,11 +168,9 @@ func TestLoadConfiguration(t *testing.T) {
 				t.Setenv("GITHUB_TOKEN", "fallback-token")
 
 				// Create config file
+				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML,
+					string(testutil.MustReadFixture(testutil.TestConfigMinimalWithToken)))
 				configPath := filepath.Join(tempDir, testutil.TestPathConfigYML)
-				testutil.WriteTestFile(t, configPath, `
-theme: minimal
-github_token: config-token
-`)
 
 				return configPath, tempDir, tempDir
 			},
@@ -210,10 +212,12 @@ github_token: config-token
 				testutil.WriteFileInDir(t, repoRoot, testutil.TestFileGHReadmeYAML,
 					string(testutil.MustReadFixture(testutil.TestConfigMinimalTheme)))
 
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, testutil.TestDirDotConfig, "ghreadme.yaml"),
+				configDir := filepath.Join(repoRoot, testutil.TestDirDotConfig)
+				testutil.WriteFileInDir(t, configDir, "ghreadme.yaml",
 					string(testutil.MustReadFixture(testutil.TestConfigProfessionalQuiet)))
 
-				testutil.WriteTestFile(t, filepath.Join(repoRoot, ".github", "ghreadme.yaml"),
+				githubDir := filepath.Join(repoRoot, ".github")
+				testutil.WriteFileInDir(t, githubDir, "ghreadme.yaml",
 					string(testutil.MustReadFixture(testutil.TestConfigGitHubVerbose)))
 
 				return "", repoRoot, repoRoot
@@ -546,28 +550,28 @@ func TestMergeMapFields(t *testing.T) {
 			nil,
 			map[string]string{"read": "read", "write": "write"},
 			map[string]string{"read": "read", "write": "write"},
-			true,
+			true, // isPermissions
 		),
 		createMapMergeTest(
 			"merge permissions into existing dst",
 			map[string]string{"read": "existing"},
 			map[string]string{"read": "new", "write": "write"},
 			map[string]string{"read": "new", "write": "write"},
-			true,
+			true, // isPermissions
 		),
 		createMapMergeTest(
 			"merge variables into empty dst",
 			nil,
 			map[string]string{"VAR1": "value1", "VAR2": "value2"},
 			map[string]string{"VAR1": "value1", "VAR2": "value2"},
-			false,
+			false, // isPermissions
 		),
 		createMapMergeTest(
 			"merge variables into existing dst",
 			map[string]string{"VAR1": "existing"},
 			map[string]string{"VAR1": "new", "VAR2": "value2"},
 			map[string]string{"VAR1": "new", "VAR2": "value2"},
-			false,
+			false, // isPermissions
 		),
 		{
 			name: "merge both permissions and variables",
@@ -761,8 +765,20 @@ func TestMergeSecurityFields(t *testing.T) {
 		allowTokens bool
 		want        *AppConfig
 	}{
-		createTokenMergeTest("allow tokens - merge token", "", "ghp_test_token", "ghp_test_token", true),
-		createTokenMergeTest("disallow tokens - do not merge token", "", "ghp_test_token", "", false),
+		createTokenMergeTest(
+			"allow tokens - merge token",
+			"",
+			"ghp_test_token",
+			"ghp_test_token",
+			true,
+		),
+		createTokenMergeTest(
+			"disallow tokens - do not merge token",
+			"",
+			"ghp_test_token",
+			"",
+			false,
+		),
 		createTokenMergeTest(
 			"allow tokens - do not overwrite with empty",
 			"ghp_existing_token",
@@ -1004,8 +1020,8 @@ func TestResolveTemplatePathEdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 				tmpDir, cleanup := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, "template.tmpl", "test template")
 				absPath := filepath.Join(tmpDir, "template.tmpl")
-				testutil.WriteTestFile(t, absPath, "test template")
 
 				return absPath, cleanup
 			},
@@ -1054,8 +1070,7 @@ func TestResolveTemplatePathEdgeCases(t *testing.T) {
 				tmpDir, cleanup := testutil.TempDir(t)
 				// Create template in current directory
 				templateName := "custom-template.tmpl"
-				templatePath := filepath.Join(tmpDir, templateName)
-				testutil.WriteTestFile(t, templatePath, "custom template")
+				testutil.WriteFileInDir(t, tmpDir, templateName, "custom template")
 
 				// Change to tmpDir
 				t.Chdir(tmpDir)
@@ -1271,8 +1286,8 @@ func TestLoadConfigurationEdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, string, string) {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFileConfigYAML, "theme: minimal\n")
 				configPath := filepath.Join(tmpDir, testutil.TestFileConfigYAML)
-				testutil.WriteTestFile(t, configPath, "theme: minimal\n")
 
 				return configPath, tmpDir, tmpDir
 			},
@@ -1349,8 +1364,8 @@ func TestInitConfigEdgeCases(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, "empty.yaml", "---\n")
 				configPath := filepath.Join(tmpDir, "empty.yaml")
-				testutil.WriteTestFile(t, configPath, "---\n")
 
 				return configPath
 			},

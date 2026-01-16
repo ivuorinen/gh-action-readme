@@ -147,11 +147,9 @@ func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, string, string) {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFileConfigYAML,
+					string(testutil.MustReadFixture(testutil.TestConfigGlobalGitHubHTML)))
 				configPath := filepath.Join(tmpDir, testutil.TestFileConfigYAML)
-				testutil.WriteTestFile(t, configPath, `
-theme: github
-output_format: html
-`)
 
 				return configPath, "", ""
 			},
@@ -166,11 +164,9 @@ output_format: html
 				tmpDir, _ := testutil.TempDir(t)
 
 				// Global config
+				testutil.WriteFileInDir(t, tmpDir, "global.yaml",
+					string(testutil.MustReadFixture(testutil.TestConfigGlobalDefaultMD)))
 				globalPath := filepath.Join(tmpDir, "global.yaml")
-				testutil.WriteTestFile(t, globalPath, `
-theme: default
-output_format: md
-`)
 
 				// Repo config
 				repoRoot := filepath.Join(tmpDir, "repo")
@@ -190,11 +186,9 @@ output_format: md
 				tmpDir, _ := testutil.TempDir(t)
 
 				// Global config
+				testutil.WriteFileInDir(t, tmpDir, "global.yaml",
+					string(testutil.MustReadFixture(testutil.TestConfigGlobalDefaultMD)))
 				globalPath := filepath.Join(tmpDir, "global.yaml")
-				testutil.WriteTestFile(t, globalPath, `
-theme: default
-output_format: md
-`)
 
 				// Repo config
 				repoRoot := filepath.Join(tmpDir, "repo")
@@ -220,8 +214,9 @@ output_format: md
 			setupFunc: func(t *testing.T) (string, string, string) {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, "bad.yaml",
+					string(testutil.MustReadFixture(testutil.TestErrorInvalidYAMLBraces)))
 				configPath := filepath.Join(tmpDir, "bad.yaml")
-				testutil.WriteTestFile(t, configPath, `{invalid yaml: [[`)
 
 				return configPath, "", ""
 			},
@@ -265,12 +260,9 @@ func TestConfigurationLoaderLoadGlobalConfig(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFileConfigYAML,
+					string(testutil.MustReadFixture(testutil.TestConfigGlobalGitHubHTMLVerbose)))
 				configPath := filepath.Join(tmpDir, testutil.TestFileConfigYAML)
-				testutil.WriteTestFile(t, configPath, `
-theme: github
-output_format: html
-verbose: true
-`)
 
 				return configPath
 			},
@@ -288,8 +280,8 @@ verbose: true
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, "empty.yaml", "---\n")
 				configPath := filepath.Join(tmpDir, "empty.yaml")
-				testutil.WriteTestFile(t, configPath, "---\n")
 
 				return configPath
 			},
@@ -317,8 +309,9 @@ verbose: true
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
+				testutil.WriteFileInDir(t, tmpDir, "bad.yaml",
+					string(testutil.MustReadFixture(testutil.TestErrorInvalidYAMLTripleBraces)))
 				configPath := filepath.Join(tmpDir, "bad.yaml")
-				testutil.WriteTestFile(t, configPath, `{{{invalid}}}`)
 
 				return configPath
 			},

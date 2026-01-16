@@ -92,6 +92,21 @@ const (
 	TestFixtureActionSimple                = "actions/simple/action.yml"
 	TestFixtureActionMinimal               = "actions/minimal/action.yml"
 
+	// Config test fixtures for configuration tests.
+	TestConfigGlobalGitHubHTML        = "configs/global-github-html.yml"
+	TestConfigGlobalDefaultMD         = "configs/global-default-md.yml"
+	TestConfigGlobalGitHubHTMLVerbose = "configs/global-github-html-verbose.yml"
+	TestConfigMinimalWithToken        = "configs/minimal-with-token.yml" // #nosec G101 -- fixture path
+
+	// Error scenario fixtures for error handling tests.
+	TestErrorInvalidYAMLBrackets     = "error-scenarios/invalid-yaml-brackets.yml"
+	TestErrorInvalidYAMLBraces       = "error-scenarios/invalid-yaml-braces.yml"
+	TestErrorInvalidYAMLTripleBraces = "error-scenarios/invalid-yaml-triple-braces.yml"
+
+	// JSON fixture paths - located in testdata/yaml-fixtures/json-fixtures/.
+	TestJSONPackageFull        = "json-fixtures/package-full.json"
+	TestJSONPackageVersionOnly = "json-fixtures/package-version-only.json"
+
 	// Permission test fixtures for parser tests.
 	TestFixturePermissionsDashSingle     = "permissions/dash-format-single.yml"
 	TestFixturePermissionsDashMultiple   = "permissions/dash-format-multiple.yml"
