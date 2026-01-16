@@ -371,15 +371,6 @@ func (w *ConfigWizard) findActionFiles(dir string) []string {
 		return []string{} // Return empty for paths with traversal
 	}
 
-	var actionFiles []string
-
 	// Check for action.yml and action.yaml using validated path
-	for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
-		actionPath := filepath.Join(cleanDir, filename)
-		if _, err := os.Stat(actionPath); err == nil {
-			actionFiles = append(actionFiles, actionPath)
-		}
-	}
-
-	return actionFiles
+	return internal.DiscoverActionFilesNonRecursive(cleanDir)
 }

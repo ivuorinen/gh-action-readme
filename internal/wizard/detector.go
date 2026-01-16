@@ -300,16 +300,7 @@ func (d *ProjectDetector) handleDirectory(info os.FileInfo) error {
 
 // findActionFilesInDirectory finds action files only in the specified directory.
 func (d *ProjectDetector) findActionFilesInDirectory(dir string) ([]string, error) {
-	var actionFiles []string
-
-	for _, filename := range []string{appconstants.ActionFileNameYML, appconstants.ActionFileNameYAML} {
-		actionPath := filepath.Join(dir, filename)
-		if _, err := os.Stat(actionPath); err == nil {
-			actionFiles = append(actionFiles, actionPath)
-		}
-	}
-
-	return actionFiles, nil
+	return internal.DiscoverActionFilesNonRecursive(dir), nil
 }
 
 // isActionFile checks if a filename is an action file.
