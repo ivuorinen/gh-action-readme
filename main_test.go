@@ -436,12 +436,9 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		// Phase 5: Additional error path tests for validate handler
 		{
-			name: "validate with missing required field (description)",
-			args: []string{testCmdValidate},
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureInvalidMissingDescription)
-			},
+			name:      "validate with missing required field (description)",
+			args:      []string{testCmdValidate},
+			setupFunc: setupFixtureInDir(testutil.TestFixtureInvalidMissingDescription),
 			wantExit:  1,
 			wantError: "validation failed",
 		},
@@ -1636,28 +1633,19 @@ func TestValidateHandlerIntegration(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "validates valid action successfully",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-			},
-			wantErr: false,
+			name:      "validates valid action successfully",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 		},
 		{
-			name: "validates composite action",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
-			},
-			wantErr: false,
+			name:      "validates composite action",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeBasic),
+			wantErr:   false,
 		},
 		{
-			name: "validates docker action",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureDockerBasic)
-			},
-			wantErr: false,
+			name:      "validates docker action",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureDockerBasic),
+			wantErr:   false,
 		},
 		{
 			name: "validates multiple actions recursively",
@@ -1970,12 +1958,9 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-			},
-			wantErr: false,
+			name:      testutil.TestScenarioNoDeps,
+			setupFunc: setupFixtureInDir(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 		},
 		{
 			name: "handles no action files",
@@ -2189,13 +2174,10 @@ func TestDepsOutdatedHandlerIntegration(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "handles missing GitHub token",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
-			},
-			setToken: false,
-			wantErr:  false,
+			name:      "handles missing GitHub token",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeWithDeps),
+			setToken:  false,
+			wantErr:   false,
 		},
 	}
 

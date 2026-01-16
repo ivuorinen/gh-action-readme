@@ -72,3 +72,15 @@ func setupWithSingleFixture(fixturePath string) func(*testing.T, string) []strin
 		return []string{tmpDir}
 	}
 }
+
+// setupFixtureInDir is a helper for E2E test setup functions that:
+// - Write a single action fixture to tmpDir
+// - Don't return anything (void setupFunc)
+//
+// This reduces duplication in E2E integration tests where many cases write a single fixture.
+func setupFixtureInDir(fixturePath string) func(*testing.T, string) {
+	return func(t *testing.T, tmpDir string) {
+		t.Helper()
+		testutil.WriteActionFixture(t, tmpDir, fixturePath)
+	}
+}
