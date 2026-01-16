@@ -9,7 +9,7 @@ import (
 )
 
 // TestDefaultTestConfig_Helper tests the defaultTestConfig helper function.
-func TestDefaultTestConfig_Helper(t *testing.T) {
+func TestDefaultTestConfigHelper(t *testing.T) {
 	t.Parallel()
 
 	// Call the helper multiple times to verify consistency
@@ -49,7 +49,7 @@ func TestDefaultTestConfig_Helper(t *testing.T) {
 }
 
 // TestAssertActionFiles_Helper tests the assertActionFiles helper function.
-func TestAssertActionFiles_Helper(t *testing.T) {
+func TestAssertActionFilesHelper(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

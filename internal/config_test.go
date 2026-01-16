@@ -1021,7 +1021,7 @@ func assertGitHubClientValid(t *testing.T, client *GitHubClient, expectedToken s
 }
 
 // TestNewGitHubClient_EdgeCases tests GitHub client initialization edge cases.
-func TestNewGitHubClient_EdgeCases(t *testing.T) {
+func TestNewGitHubClientEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -1096,7 +1096,7 @@ func runTemplatePathTest(
 }
 
 // TestResolveTemplatePath_EdgeCases tests template path resolution edge cases.
-func TestResolveTemplatePath_EdgeCases(t *testing.T) {
+func TestResolveTemplatePathEdgeCases(t *testing.T) {
 	// Note: Cannot use t.Parallel() because one subtest uses t.Chdir()
 
 	tests := []struct {
@@ -1233,7 +1233,7 @@ func TestResolveTemplatePath_EdgeCases(t *testing.T) {
 }
 
 // TestDetectRepositoryName_EdgeCases tests repository name detection edge cases.
-func TestDetectRepositoryName_EdgeCases(t *testing.T) {
+func TestDetectRepositoryNameEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -1363,7 +1363,7 @@ func TestDetectRepositoryName_EdgeCases(t *testing.T) {
 }
 
 // TestLoadConfiguration_EdgeCases tests configuration loading edge cases.
-func TestLoadConfiguration_EdgeCases(t *testing.T) {
+func TestLoadConfigurationEdgeCases(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T) (configFile, repoRoot, currentDir string)
@@ -1461,7 +1461,7 @@ func TestLoadConfiguration_EdgeCases(t *testing.T) {
 }
 
 // TestInitConfig_EdgeCases tests config initialization edge cases.
-func TestInitConfig_EdgeCases(t *testing.T) {
+func TestInitConfigEdgeCases(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T) string

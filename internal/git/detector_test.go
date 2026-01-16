@@ -416,7 +416,7 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 }
 
 // TestGetDefaultBranch_Fallbacks tests branch detection fallback logic.
-func TestGetDefaultBranch_Fallbacks(t *testing.T) {
+func TestGetDefaultBranchFallbacks(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -499,7 +499,7 @@ func TestGetDefaultBranch_Fallbacks(t *testing.T) {
 }
 
 // TestGetRemoteURL_AllSources tests all remote URL detection methods.
-func TestGetRemoteURL_AllSources(t *testing.T) {
+func TestGetRemoteURLAllSources(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -594,7 +594,7 @@ func TestGetRemoteURL_AllSources(t *testing.T) {
 }
 
 // TestGetRemoteURLFromConfig_EdgeCases tests git config parsing with edge cases.
-func TestGetRemoteURLFromConfig_EdgeCases(t *testing.T) {
+func TestGetRemoteURLFromConfigEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -714,7 +714,7 @@ func TestGetRemoteURLFromConfig_EdgeCases(t *testing.T) {
 }
 
 // TestFindRepositoryRoot_EdgeCases tests additional edge cases for repository root detection.
-func TestFindRepositoryRoot_EdgeCases(t *testing.T) {
+func TestFindRepositoryRootEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -809,7 +809,7 @@ func TestFindRepositoryRoot_EdgeCases(t *testing.T) {
 }
 
 // TestParseGitHubURL_EdgeCases tests additional URL parsing edge cases.
-func TestParseGitHubURL_EdgeCases(t *testing.T) {
+func TestParseGitHubURLEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

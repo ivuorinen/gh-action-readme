@@ -111,7 +111,7 @@ func TestNewConfigurationLoaderWithOptions(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_LoadConfiguration(t *testing.T) {
+func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 	// Note: Cannot use t.Parallel() because subtests use t.Setenv()
 
 	tests := []struct {
@@ -258,7 +258,7 @@ output_format: md
 	}
 }
 
-func TestConfigurationLoader_LoadGlobalConfig(t *testing.T) {
+func TestConfigurationLoaderLoadGlobalConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -357,7 +357,7 @@ verbose: true
 	}
 }
 
-func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
+func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -412,7 +412,7 @@ func TestConfigurationLoader_ValidateConfiguration(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_SourceManagement(t *testing.T) {
+func TestConfigurationLoaderSourceManagement(t *testing.T) {
 	t.Parallel()
 
 	loader := NewConfigurationLoader()
@@ -479,7 +479,7 @@ func TestConfigurationSourceString(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
+func TestConfigurationLoaderEnvironmentOverrides(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupEnv    func(t *testing.T)
@@ -561,7 +561,7 @@ func TestConfigurationLoader_EnvironmentOverrides(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
+func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 	tests := []struct {
 		name           string
 		setupFunc      func(t *testing.T) (config *AppConfig, repoRoot string)
@@ -658,7 +658,7 @@ func TestConfigurationLoader_ApplyRepoOverrides(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
+func TestConfigurationLoaderLoadActionConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -725,7 +725,7 @@ func TestConfigurationLoader_LoadActionConfig(t *testing.T) {
 	}
 }
 
-func TestConfigurationLoader_ValidateTheme(t *testing.T) {
+func TestConfigurationLoaderValidateTheme(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

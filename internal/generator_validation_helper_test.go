@@ -7,7 +7,7 @@ import (
 )
 
 // TestAssertMessageCounts_Helper tests the assertMessageCounts helper function.
-func TestAssertMessageCounts_Helper(t *testing.T) {
+func TestAssertMessageCountsHelper(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

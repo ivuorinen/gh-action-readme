@@ -12,7 +12,7 @@ import (
 )
 
 // TestAssertBooleanConfigFields_Helper tests the assertBooleanConfigFields helper.
-func TestAssertBooleanConfigFields_Helper(t *testing.T) {
+func TestAssertBooleanConfigFieldsHelper(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -68,7 +68,7 @@ func TestAssertBooleanConfigFields_Helper(t *testing.T) {
 }
 
 // TestAssertGitHubClientValid_Helper tests the assertGitHubClientValid helper.
-func TestAssertGitHubClientValid_Helper(t *testing.T) {
+func TestAssertGitHubClientValidHelper(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -114,7 +114,7 @@ func TestAssertGitHubClientValid_Helper(t *testing.T) {
 }
 
 // TestRunTemplatePathTest_Helper tests the runTemplatePathTest helper.
-func TestRunTemplatePathTest_Helper(t *testing.T) {
+func TestRunTemplatePathTestHelper(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

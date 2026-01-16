@@ -199,7 +199,7 @@ func TestReadTemplate(t *testing.T) {
 }
 
 // TestReadTemplate_PathValidation tests security aspects of path handling.
-func TestReadTemplate_PathValidation(t *testing.T) {
+func TestReadTemplatePathValidation(t *testing.T) {
 	t.Parallel()
 
 	securityTests := []struct {

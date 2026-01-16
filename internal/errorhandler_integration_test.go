@@ -97,7 +97,7 @@ func TestErrorHandlerIntegration(t *testing.T) {
 			name:           "HandleError with file not found",
 			testType:       "handle_error_file_not_found",
 			expectedExit:   appconstants.ExitCodeError,
-			expectedStderr: "file not found",
+			expectedStderr: testutil.TestErrFileNotFound,
 		},
 		{
 			name:           "HandleError with validation error",
@@ -115,13 +115,13 @@ func TestErrorHandlerIntegration(t *testing.T) {
 			name:           "HandleError with suggestions",
 			testType:       "handle_error_with_suggestions",
 			expectedExit:   appconstants.ExitCodeError,
-			expectedStderr: "file error",
+			expectedStderr: testutil.TestErrFileError,
 		},
 		{
 			name:           "HandleFatalError with permission denied",
 			testType:       "handle_fatal_error_permission",
 			expectedExit:   appconstants.ExitCodeError,
-			expectedStderr: "permission denied",
+			expectedStderr: testutil.TestErrPermissionDenied,
 		},
 		{
 			name:           "HandleFatalError with config error",
@@ -139,7 +139,7 @@ func TestErrorHandlerIntegration(t *testing.T) {
 			name:           "HandleSimpleError with file not found pattern",
 			testType:       "handle_simple_error_not_found",
 			expectedExit:   appconstants.ExitCodeError,
-			expectedStderr: "file error",
+			expectedStderr: testutil.TestErrFileError,
 		},
 		{
 			name:           "HandleSimpleError with permission pattern",
@@ -165,7 +165,7 @@ func runSubprocessTest() {
 
 	switch testType {
 	case "handle_error_file_not_found":
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, "file not found")
+		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestErrFileNotFound)
 		handler.HandleError(err)
 
 	case "handle_error_validation":
@@ -206,10 +206,10 @@ func runSubprocessTest() {
 		handler.HandleSimpleError("operation failed", errors.New("generic error occurred"))
 
 	case "handle_simple_error_not_found":
-		handler.HandleSimpleError("file error", errors.New("no such file or directory"))
+		handler.HandleSimpleError(testutil.TestErrFileError, errors.New("no such file or directory"))
 
 	case "handle_simple_error_permission":
-		handler.HandleSimpleError("access error", errors.New("permission denied"))
+		handler.HandleSimpleError("access error", errors.New(testutil.TestErrPermissionDenied))
 
 	default:
 		os.Exit(99) // Unexpected test type
@@ -231,8 +231,8 @@ func TestErrorHandlerAllErrorCodes(t *testing.T) {
 		code        appconstants.ErrorCode
 		description string
 	}{
-		{appconstants.ErrCodeFileNotFound, "file not found"},
-		{appconstants.ErrCodePermission, "permission denied"},
+		{appconstants.ErrCodeFileNotFound, testutil.TestErrFileNotFound},
+		{appconstants.ErrCodePermission, testutil.TestErrPermissionDenied},
 		{appconstants.ErrCodeInvalidYAML, "invalid yaml"},
 		{appconstants.ErrCodeInvalidAction, "invalid action"},
 		{appconstants.ErrCodeNoActionFiles, "no action files"},

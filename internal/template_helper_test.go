@@ -10,7 +10,7 @@ import (
 )
 
 // TestAssertTemplateData_Helper tests the assertTemplateData helper function.
-func TestAssertTemplateData_Helper(t *testing.T) {
+func TestAssertTemplateDataHelper(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -109,7 +109,7 @@ func TestAssertTemplateData_Helper(t *testing.T) {
 }
 
 // TestPrepareTestActionFile_Helper tests the prepareTestActionFile helper function.
-func TestPrepareTestActionFile_Helper(t *testing.T) {
+func TestPrepareTestActionFileHelper(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

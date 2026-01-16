@@ -16,6 +16,15 @@ const (
 const (
 	UnknownErrorMsg = "unknown error"
 	HelloWorldStr   = "hello world"
+
+	// TestErrFileNotFound is used in error handler tests for file not found scenarios.
+	TestErrFileNotFound = "file not found"
+
+	// TestErrFileError is used in error handler tests for generic file errors.
+	TestErrFileError = "file error"
+
+	// TestErrPermissionDenied is used in error handler tests for permission errors.
+	TestErrPermissionDenied = "permission denied"
 )
 
 // Validation component test constants for reducing string duplication.
