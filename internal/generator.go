@@ -295,32 +295,45 @@ func (g *Generator) renderTemplateForAction(
 	return content, nil
 }
 
-// generateMarkdown creates a README.md file using the template.
-func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+// generateSimpleFormat is a helper for generating simple text-based formats (Markdown, AsciiDoc).
+// It consolidates the common pattern of template rendering, file writing, and success messaging.
+func (g *Generator) generateSimpleFormat(
+	action *ActionYML,
+	outputDir, actionPath string,
+	format, defaultFilename, successMsg string,
+) error {
 	templatePath := g.resolveTemplatePathForFormat()
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
-		Format:       "md",
+		Format:       format,
 	}
 
 	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
 	if err != nil {
-		return fmt.Errorf("failed to render markdown template: %w", err)
+		return fmt.Errorf("failed to render %s template: %w", format, err)
 	}
 
-	outputPath, err := g.resolveOutputPath(outputDir, appconstants.ReadmeMarkdown)
+	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
 	}
 	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
-		return fmt.Errorf("failed to write README.md to %s: %w", outputPath, err)
+		return fmt.Errorf("failed to write %s to %s: %w", format, outputPath, err)
 	}
 
-	g.Output.Success("Generated README.md: %s", outputPath)
+	g.Output.Success("%s: %s", successMsg, outputPath)
 
 	return nil
+}
+
+// generateMarkdown creates a README.md file using the template.
+func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+	return g.generateSimpleFormat(
+		action, outputDir, actionPath,
+		"md", appconstants.ReadmeMarkdown, "Generated README.md",
+	)
 }
 
 // generateHTML creates an HTML file using the template and optional header/footer.
@@ -378,30 +391,10 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
 func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string) error {
-	templatePath := g.resolveTemplatePathForFormat()
-
-	opts := TemplateOptions{
-		TemplatePath: templatePath,
-		Format:       "asciidoc",
-	}
-
-	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
-	if err != nil {
-		return fmt.Errorf("failed to render AsciiDoc template: %w", err)
-	}
-
-	outputPath, err := g.resolveOutputPath(outputDir, appconstants.ReadmeASCIIDoc)
-	if err != nil {
-		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
-	}
-	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
-		// #nosec G306 -- output file permissions
-		return fmt.Errorf("failed to write AsciiDoc to %s: %w", outputPath, err)
-	}
-
-	g.Output.Success("Generated AsciiDoc: %s", outputPath)
-
-	return nil
+	return g.generateSimpleFormat(
+		action, outputDir, actionPath,
+		"asciidoc", appconstants.ReadmeASCIIDoc, "Generated AsciiDoc",
+	)
 }
 
 // processFiles processes each file and tracks results.
