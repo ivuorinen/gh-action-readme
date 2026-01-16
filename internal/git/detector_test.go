@@ -469,59 +469,32 @@ func TestGetRemoteURLAllSources(t *testing.T) {
 		expectError bool
 		expectedURL string
 	}{
-		{
+		createGitURLTestCase(gitURLTestCase{
 			name: "remote from git config - https",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[remote "origin"]
+			configContent: `[remote "origin"]
 	url = https://github.com/test/repo.git
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
+`,
 			expectError: false,
 			expectedURL: "https://github.com/test/repo.git",
-		},
-		{
+		}),
+		createGitURLTestCase(gitURLTestCase{
 			name: "remote from git config - ssh",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[remote "origin"]
+			configContent: `[remote "origin"]
 	url = git@github.com:user/repo.git
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
+`,
 			expectError: false,
 			expectedURL: "git@github.com:user/repo.git",
-		},
-		{
+		}),
+		createGitURLTestCase(gitURLTestCase{
 			name: "multiple remotes - origin takes precedence",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[remote "upstream"]
+			configContent: `[remote "upstream"]
 	url = https://github.com/upstream/repo
 [remote "origin"]
 	url = https://github.com/origin/repo
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
+`,
 			expectError: false,
 			expectedURL: "https://github.com/origin/repo",
-		},
+		}),
 		{
 			name: "no remote configured",
 			setupFunc: func(t *testing.T, tmpDir string) string {

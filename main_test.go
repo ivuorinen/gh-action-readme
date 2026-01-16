@@ -61,6 +61,33 @@ func createFixtureTestCase(name, fixturePath string, wantErr bool) struct {
 	}
 }
 
+// createFixtureTestCaseWithPaths creates a test table entry for tests that load a fixture
+// and return paths for processing. This helper reduces duplication for the pattern where
+// setupFunc returns []string paths.
+func createFixtureTestCaseWithPaths(name, fixturePath string, wantErr bool) struct {
+	name      string
+	setupFunc func(t *testing.T, tmpDir string) []string
+	wantErr   bool
+	setFlags  func(cmd *cobra.Command)
+} {
+	return struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string) []string
+		wantErr   bool
+		setFlags  func(cmd *cobra.Command)
+	}{
+		name: name,
+		setupFunc: func(t *testing.T, tmpDir string) []string {
+			t.Helper()
+			fixtureContent := testutil.MustReadFixture(fixturePath)
+			testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+
+			return []string{tmpDir}
+		},
+		wantErr: wantErr,
+	}
+}
+
 // TestCLICommands tests the main CLI commands using subprocess execution.
 func TestCLICommands(t *testing.T) {
 	t.Parallel()
@@ -1593,28 +1620,16 @@ func TestGenHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		// Error scenarios using fixtures
-		{
-			name: "returns error for invalid YAML syntax",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-
-				return []string{tmpDir}
-			},
-			wantErr: true,
-		},
-		{
-			name: "returns error for missing required fields",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioMissingFields)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-
-				return []string{tmpDir}
-			},
-			wantErr: true,
-		},
+		createFixtureTestCaseWithPaths(
+			"returns error for invalid YAML syntax",
+			testutil.TestErrorScenarioInvalidYAML,
+			true,
+		),
+		createFixtureTestCaseWithPaths(
+			"returns error for missing required fields",
+			testutil.TestErrorScenarioMissingFields,
+			true,
+		),
 		{
 			name: "returns error for empty directory with no action files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
@@ -1633,28 +1648,18 @@ func TestGenHandlerIntegration(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "handles empty action file gracefully",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestFixtureEmptyAction)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-
-				return []string{tmpDir}
-			},
-			wantErr: false, // Empty steps is valid
-		},
-		{
-			name: "processes action with outdated dependencies",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-
-				return []string{tmpDir}
-			},
-			wantErr: false, // Old deps don't cause generation to fail
-		},
+		// Empty steps is valid
+		createFixtureTestCaseWithPaths(
+			"handles empty action file gracefully",
+			testutil.TestFixtureEmptyAction,
+			false,
+		),
+		// Old deps don't cause generation to fail
+		createFixtureTestCaseWithPaths(
+			"processes action with outdated dependencies",
+			testutil.TestErrorScenarioOldDeps,
+			false,
+		),
 	}
 
 	for _, tt := range tests {
