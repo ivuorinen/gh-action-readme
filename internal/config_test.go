@@ -777,58 +777,22 @@ func TestMergeSecurityFields(t *testing.T) {
 		allowTokens bool
 		want        *AppConfig
 	}{
-		{
-			name: "allow tokens - merge token",
-			dst: &AppConfig{
-				GitHubToken: "",
-			},
-			src: &AppConfig{
-				GitHubToken: "ghp_test_token",
-			},
-			allowTokens: true,
-			want: &AppConfig{
-				GitHubToken: "ghp_test_token",
-			},
-		},
-		{
-			name: "disallow tokens - do not merge token",
-			dst: &AppConfig{
-				GitHubToken: "",
-			},
-			src: &AppConfig{
-				GitHubToken: "ghp_test_token",
-			},
-			allowTokens: false,
-			want: &AppConfig{
-				GitHubToken: "",
-			},
-		},
-		{
-			name: "allow tokens - do not overwrite with empty",
-			dst: &AppConfig{
-				GitHubToken: "ghp_existing_token",
-			},
-			src: &AppConfig{
-				GitHubToken: "",
-			},
-			allowTokens: true,
-			want: &AppConfig{
-				GitHubToken: "ghp_existing_token",
-			},
-		},
-		{
-			name: "allow tokens - overwrite existing token",
-			dst: &AppConfig{
-				GitHubToken: "ghp_old_token",
-			},
-			src: &AppConfig{
-				GitHubToken: "ghp_new_token",
-			},
-			allowTokens: true,
-			want: &AppConfig{
-				GitHubToken: "ghp_new_token",
-			},
-		},
+		createTokenMergeTest("allow tokens - merge token", "", "ghp_test_token", "ghp_test_token", true),
+		createTokenMergeTest("disallow tokens - do not merge token", "", "ghp_test_token", "", false),
+		createTokenMergeTest(
+			"allow tokens - do not overwrite with empty",
+			"ghp_existing_token",
+			"",
+			"ghp_existing_token",
+			true,
+		),
+		createTokenMergeTest(
+			"allow tokens - overwrite existing token",
+			"ghp_old_token",
+			"ghp_new_token",
+			"ghp_new_token",
+			true,
+		),
 		{
 			name: "allow tokens - merge repo overrides into nil dst",
 			dst: &AppConfig{

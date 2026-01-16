@@ -89,3 +89,30 @@ func createGitRemoteTestCase(
 		description:    description,
 	}
 }
+
+// createTokenMergeTest creates a test table entry for testing token merging behavior.
+// This helper reduces duplication for the 4 token merge test cases.
+func createTokenMergeTest(
+	name, dstToken, srcToken, wantToken string,
+	allowTokens bool,
+) struct {
+	name        string
+	dst         *AppConfig
+	src         *AppConfig
+	allowTokens bool
+	want        *AppConfig
+} {
+	return struct {
+		name        string
+		dst         *AppConfig
+		src         *AppConfig
+		allowTokens bool
+		want        *AppConfig
+	}{
+		name:        name,
+		dst:         &AppConfig{GitHubToken: dstToken},
+		src:         &AppConfig{GitHubToken: srcToken},
+		allowTokens: allowTokens,
+		want:        &AppConfig{GitHubToken: wantToken},
+	}
+}
