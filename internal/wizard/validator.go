@@ -180,6 +180,16 @@ func (v *ConfigValidator) validateRepository(repo string, result *ValidationResu
 	)
 }
 
+// addWarningWithSuggestion is a helper to add a warning and suggestion together.
+func addWarningWithSuggestion(result *ValidationResult, field, message, value, suggestion string) {
+	result.Warnings = append(result.Warnings, ValidationWarning{
+		Field:   field,
+		Message: message,
+		Value:   value,
+	})
+	result.Suggestions = append(result.Suggestions, suggestion)
+}
+
 // validateVersion validates the version field.
 func (v *ConfigValidator) validateVersion(version string, result *ValidationResult) {
 	if version == "" {
@@ -189,12 +199,10 @@ func (v *ConfigValidator) validateVersion(version string, result *ValidationResu
 
 	// Check if it follows semantic versioning
 	if !v.isValidSemanticVersion(version) {
-		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "version",
-			Message: "Version does not follow semantic versioning (x.y.z)",
-			Value:   version,
-		})
-		result.Suggestions = append(result.Suggestions,
+		addWarningWithSuggestion(result,
+			"version",
+			"Version does not follow semantic versioning (x.y.z)",
+			version,
 			"Consider using semantic versioning format (e.g., 1.0.0)")
 	}
 }
@@ -237,24 +245,20 @@ func (v *ConfigValidator) validateOutputDir(dir string, result *ValidationResult
 		parent := filepath.Dir(dir)
 		if parent != "." {
 			if _, err := os.Stat(parent); os.IsNotExist(err) {
-				result.Warnings = append(result.Warnings, ValidationWarning{
-					Field:   "output_dir",
-					Message: "Parent directory does not exist",
-					Value:   dir,
-				})
-				result.Suggestions = append(result.Suggestions,
+				addWarningWithSuggestion(result,
+					"output_dir",
+					"Parent directory does not exist",
+					dir,
 					"Ensure the parent directory exists or will be created")
 			}
 		}
 	} else {
 		// Absolute path - check if it exists
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			result.Warnings = append(result.Warnings, ValidationWarning{
-				Field:   "output_dir",
-				Message: "Directory does not exist",
-				Value:   dir,
-			})
-			result.Suggestions = append(result.Suggestions,
+			addWarningWithSuggestion(result,
+				"output_dir",
+				"Directory does not exist",
+				dir,
 				"Directory will be created if it doesn't exist")
 		}
 	}
@@ -356,12 +360,10 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 		// If not a standard runner, it might be self-hosted
 		if !isValid {
 			if !strings.HasPrefix(runner, "self-hosted") {
-				result.Warnings = append(result.Warnings, ValidationWarning{
-					Field:   "runs_on",
-					Message: "Unknown runner: " + runner,
-					Value:   runner,
-				})
-				result.Suggestions = append(result.Suggestions,
+				addWarningWithSuggestion(result,
+					"runs_on",
+					"Unknown runner: "+runner,
+					runner,
 					"Ensure the runner is available in your GitHub organization")
 			}
 		}
