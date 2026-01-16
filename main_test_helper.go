@@ -1,10 +1,12 @@
 package main
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/cobra"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
@@ -59,28 +61,17 @@ func testSimpleVoidHandler(
 	handlerFunc(cmd, []string{})
 }
 
-// setupWithSingleFixture is a helper for test setup functions that:
+// setupFixtureReturningPath is a helper for test setup functions that:
 // - Write a single action fixture to tmpDir
-// - Return []string{tmpDir} for test processing
+// - Return []string{actionPath} pointing to the created action file
 //
-// This reduces duplication in genHandler tests where many cases follow the same pattern.
-func setupWithSingleFixture(fixturePath string) func(*testing.T, string) []string {
+// This reduces duplication in tests that need the action file path for processing.
+func setupFixtureReturningPath(fixturePath string) func(*testing.T, string) []string {
 	return func(t *testing.T, tmpDir string) []string {
 		t.Helper()
+		actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 		testutil.WriteActionFixture(t, tmpDir, fixturePath)
 
-		return []string{tmpDir}
-	}
-}
-
-// setupFixtureInDir is a helper for E2E test setup functions that:
-// - Write a single action fixture to tmpDir
-// - Don't return anything (void setupFunc)
-//
-// This reduces duplication in E2E integration tests where many cases write a single fixture.
-func setupFixtureInDir(fixturePath string) func(*testing.T, string) {
-	return func(t *testing.T, tmpDir string) {
-		t.Helper()
-		testutil.WriteActionFixture(t, tmpDir, fixturePath)
+		return []string{actionPath}
 	}
 }
