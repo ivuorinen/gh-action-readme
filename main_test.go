@@ -436,12 +436,9 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		// Phase 5: Additional error path tests for validate handler
 		{
-			name: "validate with missing required field (description)",
-			args: []string{testCmdValidate},
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureInvalidMissingDescription)
-			},
+			name:      "validate with missing required field (description)",
+			args:      []string{testCmdValidate},
+			setupFunc: setupFixtureInDir(testutil.TestFixtureInvalidMissingDescription),
 			wantExit:  1,
 			wantError: "validation failed",
 		},
@@ -1463,83 +1460,48 @@ func TestGenHandlerIntegration(t *testing.T) {
 		setFlags  func(cmd *cobra.Command)
 	}{
 		{
-			name: "generates README from valid action in current dir",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "generates README from valid action in current dir",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 		},
 		{
-			name: "generates HTML output",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "generates HTML output",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, testFormatHTML)
 			},
 		},
 		{
-			name: "generates JSON output",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "generates JSON output",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, testFormatJSON)
 			},
 		},
 		{
-			name: "generates with theme override",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "generates with theme override",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set("theme", testThemeGitHub)
 			},
 		},
 		{
-			name: "processes composite action",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "processes composite action",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureCompositeBasic),
+			wantErr:   false,
 		},
 		{
-			name: "processes docker action",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureDockerBasic)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "processes docker action",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureDockerBasic),
+			wantErr:   false,
 		},
 		{
-			name: "processes action with custom output file",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-
-				return []string{tmpDir}
-			},
-			wantErr: false,
+			name:      "processes action with custom output file",
+			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
 				_ = cmd.Flags().Set("output", "custom-readme.md")
 			},
@@ -1656,28 +1618,19 @@ func TestValidateHandlerIntegration(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "validates valid action successfully",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-			},
-			wantErr: false,
+			name:      "validates valid action successfully",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 		},
 		{
-			name: "validates composite action",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
-			},
-			wantErr: false,
+			name:      "validates composite action",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeBasic),
+			wantErr:   false,
 		},
 		{
-			name: "validates docker action",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureDockerBasic)
-			},
-			wantErr: false,
+			name:      "validates docker action",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureDockerBasic),
+			wantErr:   false,
 		},
 		{
 			name: "validates multiple actions recursively",
@@ -1982,20 +1935,14 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "lists dependencies from composite action",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
-			},
-			wantErr: false,
+			name:      "lists dependencies from composite action",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeWithDeps),
+			wantErr:   false,
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-			},
-			wantErr: false,
+			name:      testutil.TestScenarioNoDeps,
+			setupFunc: setupFixtureInDir(testutil.TestFixtureJavaScriptSimple),
+			wantErr:   false,
 		},
 		{
 			name: "handles no action files",
@@ -2085,22 +2032,16 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "analyzes security with GitHub token",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
-			},
-			setToken: true,
-			wantErr:  false,
+			name:      "analyzes security with GitHub token",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeWithDeps),
+			setToken:  true,
+			wantErr:   false,
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-			},
-			setToken: true,
-			wantErr:  false,
+			name:      testutil.TestScenarioNoDeps,
+			setupFunc: setupFixtureInDir(testutil.TestFixtureJavaScriptSimple),
+			setToken:  true,
+			wantErr:   false,
 		},
 		{
 			name: "handles invalid YAML syntax gracefully",
@@ -2191,13 +2132,10 @@ func TestDepsOutdatedHandlerIntegration(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "checks outdated with GitHub token",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
-			},
-			setToken: true,
-			wantErr:  false,
+			name:      "checks outdated with GitHub token",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeWithDeps),
+			setToken:  true,
+			wantErr:   false,
 		},
 		{
 			name: "handles no action files",
@@ -2209,13 +2147,10 @@ func TestDepsOutdatedHandlerIntegration(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "handles missing GitHub token",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
-			},
-			setToken: false,
-			wantErr:  false,
+			name:      "handles missing GitHub token",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeWithDeps),
+			setToken:  false,
+			wantErr:   false,
 		},
 	}
 
