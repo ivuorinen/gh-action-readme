@@ -38,6 +38,29 @@ const (
 	testMsgUsesGlobalCfg = "uses globalConfig when config parameter is nil"
 )
 
+// createFixtureTestCase creates a test table entry for tests that load a fixture
+// and expect a specific error outcome. This helper reduces duplication by standardizing
+// the creation of test structures that follow the "load fixture, write to tmpDir, expect error" pattern.
+func createFixtureTestCase(name, fixturePath string, wantErr bool) struct {
+	name      string
+	setupFunc func(t *testing.T, tmpDir string)
+	wantErr   bool
+} {
+	return struct {
+		name      string
+		setupFunc func(t *testing.T, tmpDir string)
+		wantErr   bool
+	}{
+		name: name,
+		setupFunc: func(t *testing.T, tmpDir string) {
+			t.Helper()
+			fixtureContent := testutil.MustReadFixture(fixturePath)
+			testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
+		},
+		wantErr: wantErr,
+	}
+}
+
 // TestCLICommands tests the main CLI commands using subprocess execution.
 func TestCLICommands(t *testing.T) {
 	t.Parallel()
@@ -1712,33 +1735,22 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		// Error scenarios using fixtures
-		{
-			name: "returns error for invalid YAML syntax",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-			},
-			wantErr: true,
-		},
-		{
-			name: "returns error for missing required fields",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioMissingFields)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-			},
-			wantErr: true,
-		},
-		{
-			name: "validates action with outdated dependencies",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-			},
-			wantErr: false, // Outdated dependencies don't fail validation
-		},
+		createFixtureTestCase(
+			"returns error for invalid YAML syntax",
+			testutil.TestErrorScenarioInvalidYAML,
+			true,
+		),
+		createFixtureTestCase(
+			"returns error for missing required fields",
+			testutil.TestErrorScenarioMissingFields,
+			true,
+		),
+		// Outdated dependencies don't fail validation
+		createFixtureTestCase(
+			"validates action with outdated dependencies",
+			testutil.TestErrorScenarioOldDeps,
+			false,
+		),
 		{
 			name: "returns error for empty directory with no action files",
 			setupFunc: func(t *testing.T, _ string) {
@@ -2040,33 +2052,24 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 			wantErr: false,
 		},
 		// Error scenarios using fixtures
-		{
-			name: "handles invalid YAML syntax with warning",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-			},
-			wantErr: false, // depsListHandler shows warning but returns nil
-		},
-		{
-			name: "handles missing required fields with warning",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioMissingFields)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-			},
-			wantErr: false, // depsListHandler shows warning but returns nil
-		},
-		{
-			name: "lists dependencies from action with outdated deps",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				fixtureContent := testutil.MustReadFixture(testutil.TestErrorScenarioOldDeps)
-				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
-			},
-			wantErr: false, // Should successfully list the outdated deps
-		},
+		// depsListHandler shows warning but returns nil
+		createFixtureTestCase(
+			"handles invalid YAML syntax with warning",
+			testutil.TestErrorScenarioInvalidYAML,
+			false,
+		),
+		// depsListHandler shows warning but returns nil
+		createFixtureTestCase(
+			"handles missing required fields with warning",
+			testutil.TestErrorScenarioMissingFields,
+			false,
+		),
+		// Should successfully list the outdated deps
+		createFixtureTestCase(
+			"lists dependencies from action with outdated deps",
+			testutil.TestErrorScenarioOldDeps,
+			false,
+		),
 		{
 			name: "handles multiple action files recursively",
 			setupFunc: func(t *testing.T, tmpDir string) {
