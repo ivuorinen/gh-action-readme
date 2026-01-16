@@ -60,32 +60,34 @@ func templateFuncs() template.FuncMap {
 	}
 }
 
-// getGitOrg returns the Git organization from template data.
-func getGitOrg(data any) string {
+// getFieldWithFallback extracts a field from TemplateData with Git-then-Config fallback logic.
+func getFieldWithFallback(data any, gitGetter, configGetter func(*TemplateData) string, defaultValue string) string {
 	if td, ok := data.(*TemplateData); ok {
-		if td.Git.Organization != "" {
-			return td.Git.Organization
+		if gitValue := gitGetter(td); gitValue != "" {
+			return gitValue
 		}
-		if td.Config.Organization != "" {
-			return td.Config.Organization
+		if configValue := configGetter(td); configValue != "" {
+			return configValue
 		}
 	}
 
-	return appconstants.DefaultOrgPlaceholder
+	return defaultValue
+}
+
+// getGitOrg returns the Git organization from template data.
+func getGitOrg(data any) string {
+	return getFieldWithFallback(data,
+		func(td *TemplateData) string { return td.Git.Organization },
+		func(td *TemplateData) string { return td.Config.Organization },
+		appconstants.DefaultOrgPlaceholder)
 }
 
 // getGitRepo returns the Git repository name from template data.
 func getGitRepo(data any) string {
-	if td, ok := data.(*TemplateData); ok {
-		if td.Git.Repository != "" {
-			return td.Git.Repository
-		}
-		if td.Config.Repository != "" {
-			return td.Config.Repository
-		}
-	}
-
-	return appconstants.DefaultRepoPlaceholder
+	return getFieldWithFallback(data,
+		func(td *TemplateData) string { return td.Git.Repository },
+		func(td *TemplateData) string { return td.Config.Repository },
+		appconstants.DefaultRepoPlaceholder)
 }
 
 // getGitUsesString returns a complete uses string for the action.
