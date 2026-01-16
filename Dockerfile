@@ -10,12 +10,10 @@ ARG TARGETPLATFORM
 # Copy the binary from the build context (platform-specific)
 COPY $TARGETPLATFORM/gh-action-readme /usr/local/bin/gh-action-readme
 
-# Copy templates and schemas
-COPY templates /usr/local/share/gh-action-readme/templates
+# Copy schemas (templates are embedded in the binary via go:embed)
 COPY schemas /usr/local/share/gh-action-readme/schemas
 
-# Set environment variables for template paths
-ENV GH_ACTION_README_TEMPLATE_PATH=/usr/local/share/gh-action-readme/templates
+# Set environment variable for schema path
 ENV GH_ACTION_README_SCHEMA_PATH=/usr/local/share/gh-action-readme/schemas
 
 # Set the binary as entrypoint
