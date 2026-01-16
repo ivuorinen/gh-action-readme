@@ -93,3 +93,34 @@ func createGitURLTestCase(tc gitURLTestCase) struct {
 		expectedURL: tc.expectedURL,
 	}
 }
+
+// defaultBranchTestCase defines the configuration for default branch detection tests.
+type defaultBranchTestCase struct {
+	name           string
+	branch         string
+	expectedBranch string
+}
+
+// createDefaultBranchTestCase creates a test table entry for default branch tests.
+// This helper reduces duplication for tests that set up git repos with different branches.
+func createDefaultBranchTestCase(tc defaultBranchTestCase) struct {
+	name           string
+	setupFunc      func(t *testing.T, tmpDir string) string
+	expectedBranch string
+} {
+	return struct {
+		name           string
+		setupFunc      func(t *testing.T, tmpDir string) string
+		expectedBranch string
+	}{
+		name: tc.name,
+		setupFunc: func(t *testing.T, tmpDir string) string {
+			t.Helper()
+			gitDir := testutil.SetupGitDirectory(t, tmpDir)
+			testutil.CreateGitConfigWithRemote(t, gitDir, testutil.TestURLGitHubUserRepo, tc.branch)
+
+			return tmpDir
+		},
+		expectedBranch: tc.expectedBranch,
+	}
+}

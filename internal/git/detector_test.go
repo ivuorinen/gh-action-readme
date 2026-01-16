@@ -385,39 +385,21 @@ func TestGetDefaultBranchFallbacks(t *testing.T) {
 		setupFunc      func(t *testing.T, tmpDir string) string
 		expectedBranch string
 	}{
-		{
-			name: "git config with main branch",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-				testutil.CreateGitConfigWithRemote(t, gitDir, testutil.TestURLGitHubUserRepo, "main")
-
-				return tmpDir
-			},
+		createDefaultBranchTestCase(defaultBranchTestCase{
+			name:           "git config with main branch",
+			branch:         "main",
 			expectedBranch: "main",
-		},
-		{
-			name: "git config with master branch - returns main fallback",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-				testutil.CreateGitConfigWithRemote(t, gitDir, testutil.TestURLGitHubUserRepo, "master")
-
-				return tmpDir
-			},
-			expectedBranch: "main", // getDefaultBranch doesn't parse config, falls back to "main"
-		},
-		{
-			name: "git config with develop branch - returns main fallback",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-				testutil.CreateGitConfigWithRemote(t, gitDir, testutil.TestURLGitHubUserRepo, "develop")
-
-				return tmpDir
-			},
-			expectedBranch: "main", // getDefaultBranch doesn't parse config, falls back to "main"
-		},
+		}),
+		createDefaultBranchTestCase(defaultBranchTestCase{
+			name:           "git config with master branch - returns main fallback",
+			branch:         "master",
+			expectedBranch: "main",
+		}),
+		createDefaultBranchTestCase(defaultBranchTestCase{
+			name:           "git config with develop branch - returns main fallback",
+			branch:         "develop",
+			expectedBranch: "main",
+		}),
 		{
 			name: "no git config - returns main fallback",
 			setupFunc: func(t *testing.T, tmpDir string) string {
