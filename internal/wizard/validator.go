@@ -140,50 +140,28 @@ func (v *ConfigValidator) DisplayValidationResult(result *ValidationResult) {
 
 // validateOrganization validates the organization field.
 func (v *ConfigValidator) validateOrganization(org string, result *ValidationResult) {
-	if org == "" {
-		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "organization",
-			Message: "Organization is empty - will use auto-detected value",
-			Value:   org,
-		})
-
-		return
-	}
-
-	// GitHub username/organization rules
-	if !v.isValidGitHubName(org) {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "organization",
-			Message: "Invalid organization name format",
-			Value:   org,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Organization names can only contain alphanumeric characters and hyphens")
-	}
+	v.validateFieldWithEmptyCheck(
+		"organization",
+		org,
+		v.isValidGitHubName,
+		"Organization is empty - will use auto-detected value",
+		"Invalid organization name format",
+		"Organization names can only contain alphanumeric characters and hyphens",
+		result,
+	)
 }
 
 // validateRepository validates the repository field.
 func (v *ConfigValidator) validateRepository(repo string, result *ValidationResult) {
-	if repo == "" {
-		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "repository",
-			Message: "Repository is empty - will use auto-detected value",
-			Value:   repo,
-		})
-
-		return
-	}
-
-	// GitHub repository name rules
-	if !v.isValidGitHubName(repo) {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "repository",
-			Message: "Invalid repository name format",
-			Value:   repo,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Repository names can only contain alphanumeric characters, hyphens, and underscores")
-	}
+	v.validateFieldWithEmptyCheck(
+		"repository",
+		repo,
+		v.isValidGitHubName,
+		"Repository is empty - will use auto-detected value",
+		"Invalid repository name format",
+		"Repository names can only contain alphanumeric characters, hyphens, and underscores",
+		result,
+	)
 }
 
 // validateVersion validates the version field.
@@ -215,30 +193,14 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 		appconstants.ThemeProfessional,
 	}
 
-	if !v.isValueInList(theme, validThemes) {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "theme",
-			Message: "Invalid theme",
-			Value:   theme,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Valid themes: "+strings.Join(validThemes, ", "))
-	}
+	v.validateFieldInList("theme", theme, validThemes, "Invalid theme", result)
 }
 
 // validateOutputFormat validates the output format field.
 func (v *ConfigValidator) validateOutputFormat(format string, result *ValidationResult) {
 	validFormats := []string{"md", "html", "json", "asciidoc"}
 
-	if !v.isValueInList(format, validFormats) {
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "output_format",
-			Message: "Invalid output format",
-			Value:   format,
-		})
-		result.Suggestions = append(result.Suggestions,
-			"Valid formats: "+strings.Join(validFormats, ", "))
-	}
+	v.validateFieldInList("output_format", format, validFormats, "Invalid output format", result)
 }
 
 // validateOutputDir validates the output directory field.
