@@ -67,42 +67,26 @@ func TestApplyPinnedUpdates(t *testing.T) {
 		validateBackup bool
 		checkRollback  bool
 	}{
-		{
-			name:          "list format updates now work correctly (bug fixed)",
-			actionContent: testutil.MustReadFixture("dependencies/simple-list-step.yml"),
-			updates: []PinnedUpdate{
-				{
-					FilePath:   "", // Will be set by test
-					OldUses:    testutil.TestCheckoutV4OldUses,
-					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  testutil.TestActionCheckoutSHA,
-					Version:    testutil.TestVersionV417,
-					UpdateType: "patch",
-					LineNumber: 0,
-				},
-			},
-			wantErr:        false, // Updates work correctly after fix
-			validateBackup: true,
-			checkRollback:  false,
-		},
-		{
-			name:          "updates work when uses is not in list format",
-			actionContent: testutil.MustReadFixture("dependencies/named-step.yml"),
-			updates: []PinnedUpdate{
-				{
-					FilePath:   "", // Will be set by test
-					OldUses:    testutil.TestCheckoutV4OldUses,
-					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  testutil.TestActionCheckoutSHA,
-					Version:    testutil.TestVersionV417,
-					UpdateType: "patch",
-					LineNumber: 0,
-				},
-			},
-			wantErr:        false,
-			validateBackup: true,
-			checkRollback:  false,
-		},
+		createSingleUpdateTestCase(
+			"list format updates now work correctly (bug fixed)",
+			"dependencies/simple-list-step.yml",
+			testutil.TestCheckoutV4OldUses,
+			testutil.TestCheckoutPinnedV417,
+			testutil.TestActionCheckoutSHA,
+			testutil.TestVersionV417,
+			"patch",
+			false, true, false,
+		),
+		createSingleUpdateTestCase(
+			"updates work when uses is not in list format",
+			"dependencies/named-step.yml",
+			testutil.TestCheckoutV4OldUses,
+			testutil.TestCheckoutPinnedV417,
+			testutil.TestActionCheckoutSHA,
+			testutil.TestVersionV417,
+			"patch",
+			false, true, false,
+		),
 		{
 			name:          "multiple updates in non-list format",
 			actionContent: testutil.MustReadFixture("dependencies/multiple-steps.yml"),
@@ -130,42 +114,26 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			validateBackup: true,
 			checkRollback:  false,
 		},
-		{
-			name:          "preserves indentation in non-list format",
-			actionContent: testutil.MustReadFixture("dependencies/step-with-parameters.yml"),
-			updates: []PinnedUpdate{
-				{
-					FilePath:   "", // Will be set by test
-					OldUses:    testutil.TestCheckoutV4OldUses,
-					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  testutil.TestActionCheckoutSHA,
-					Version:    testutil.TestVersionV417,
-					UpdateType: "patch",
-					LineNumber: 0,
-				},
-			},
-			wantErr:        false,
-			validateBackup: true,
-			checkRollback:  false,
-		},
-		{
-			name:          "handles already pinned dependencies",
-			actionContent: testutil.MustReadFixture("dependencies/already-pinned.yml"),
-			updates: []PinnedUpdate{
-				{
-					FilePath:   "", // Will be set by test
-					OldUses:    testutil.TestCheckoutPinnedV417,
-					NewUses:    testutil.TestCheckoutPinnedV417,
-					CommitSHA:  testutil.TestActionCheckoutSHA,
-					Version:    testutil.TestVersionV417,
-					UpdateType: "none",
-					LineNumber: 0,
-				},
-			},
-			wantErr:        false,
-			validateBackup: true,
-			checkRollback:  false,
-		},
+		createSingleUpdateTestCase(
+			"preserves indentation in non-list format",
+			"dependencies/step-with-parameters.yml",
+			testutil.TestCheckoutV4OldUses,
+			testutil.TestCheckoutPinnedV417,
+			testutil.TestActionCheckoutSHA,
+			testutil.TestVersionV417,
+			"patch",
+			false, true, false,
+		),
+		createSingleUpdateTestCase(
+			"handles already pinned dependencies",
+			"dependencies/already-pinned.yml",
+			testutil.TestCheckoutPinnedV417,
+			testutil.TestCheckoutPinnedV417,
+			testutil.TestActionCheckoutSHA,
+			testutil.TestVersionV417,
+			"none",
+			false, true, false,
+		),
 		{
 			name:          "invalid YAML triggers rollback",
 			actionContent: testutil.MustReadFixture("dependencies/simple-test-step.yml"),
