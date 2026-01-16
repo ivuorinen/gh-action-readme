@@ -104,3 +104,13 @@ func runConfigLoaderTest(
 		}
 	}
 }
+
+// checkThemeAndFormat is a helper that creates a checkFunc for verifying theme and output format.
+// This reduces duplication in test cases that only need to verify these two fields.
+func checkThemeAndFormat(expectedTheme, expectedFormat string) func(t *testing.T, config *AppConfig) {
+	return func(t *testing.T, config *AppConfig) {
+		t.Helper()
+		testutil.AssertEqual(t, expectedTheme, config.Theme)
+		testutil.AssertEqual(t, expectedFormat, config.OutputFormat)
+	}
+}

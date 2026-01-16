@@ -156,11 +156,7 @@ output_format: html
 				return configPath, "", ""
 			},
 			expectError: false,
-			checkFunc: func(t *testing.T, config *AppConfig) {
-				t.Helper()
-				testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme)
-				testutil.AssertEqual(t, "html", config.OutputFormat)
-			},
+			checkFunc:   checkThemeAndFormat(testutil.TestThemeGitHub, "html"),
 			description: "Should load global config only",
 		},
 		{
@@ -184,11 +180,7 @@ output_format: md
 				return globalPath, repoRoot, ""
 			},
 			expectError: false,
-			checkFunc: func(t *testing.T, config *AppConfig) {
-				t.Helper()
-				testutil.AssertEqual(t, testutil.TestThemeMinimal, config.Theme)
-				testutil.AssertEqual(t, "md", config.OutputFormat) // From global
-			},
+			checkFunc:   checkThemeAndFormat(testutil.TestThemeMinimal, "md"),
 			description: "Repo config should override global",
 		},
 		{
