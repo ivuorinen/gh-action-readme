@@ -780,47 +780,17 @@ func assertCommandResult(t *testing.T, result cmdResult, wantExit int, wantStdou
 // These test the handler logic directly without subprocess execution
 
 func TestCacheClearHandler(t *testing.T) {
-	// Setup
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
-
-	globalConfig = &internal.AppConfig{Quiet: true}
-
-	// Execute handler - now returns error
-	cmd := &cobra.Command{}
-	err := cacheClearHandler(cmd, []string{})
-	if err != nil {
-		t.Errorf("cacheClearHandler() unexpected error: %v", err)
-	}
-
 	// Handler should execute without error
 	// The actual cache clearing logic is tested in cache package
+	testSimpleHandler(t, cacheClearHandler, "cacheClearHandler")
 }
 
 func TestCacheStatsHandler(t *testing.T) {
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
-
-	globalConfig = &internal.AppConfig{Quiet: true}
-
-	cmd := &cobra.Command{}
-	err := cacheStatsHandler(cmd, []string{})
-	if err != nil {
-		t.Errorf("cacheStatsHandler() unexpected error: %v", err)
-	}
+	testSimpleHandler(t, cacheStatsHandler, "cacheStatsHandler")
 }
 
 func TestCachePathHandler(t *testing.T) {
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
-
-	globalConfig = &internal.AppConfig{Quiet: true}
-
-	cmd := &cobra.Command{}
-	err := cachePathHandler(cmd, []string{})
-	if err != nil {
-		t.Errorf("cachePathHandler() unexpected error: %v", err)
-	}
+	testSimpleHandler(t, cachePathHandler, "cachePathHandler")
 }
 
 func TestSchemaHandler(t *testing.T) {
