@@ -28,37 +28,37 @@ type CapturedOutput struct {
 
 // Bold appends a bold-formatted message to the captured output.
 func (c *CapturedOutput) Bold(format string, args ...any) {
-	c.BoldMessages = append(c.BoldMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.BoldMessages, format, args...)
 }
 
 // Success appends a success message to the captured output.
 func (c *CapturedOutput) Success(format string, args ...any) {
-	c.SuccessMessages = append(c.SuccessMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.SuccessMessages, format, args...)
 }
 
 // Error appends an error message to the captured output.
 func (c *CapturedOutput) Error(format string, args ...any) {
-	c.ErrorMessages = append(c.ErrorMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.ErrorMessages, format, args...)
 }
 
 // Warning appends a warning message to the captured output.
 func (c *CapturedOutput) Warning(format string, args ...any) {
-	c.WarningMessages = append(c.WarningMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.WarningMessages, format, args...)
 }
 
 // Info appends an info message to the captured output.
 func (c *CapturedOutput) Info(format string, args ...any) {
-	c.InfoMessages = append(c.InfoMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.InfoMessages, format, args...)
 }
 
 // Printf appends a printf-formatted message to the captured output.
 func (c *CapturedOutput) Printf(format string, args ...any) {
-	c.PrintfMessages = append(c.PrintfMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.PrintfMessages, format, args...)
 }
 
 // Fprintf appends a fprintf-formatted message to the captured output.
 func (c *CapturedOutput) Fprintf(_ *os.File, format string, args ...any) {
-	c.PrintfMessages = append(c.PrintfMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.PrintfMessages, format, args...)
 }
 
 // ErrorWithSuggestions captures error reporting with suggestions.
@@ -92,7 +92,7 @@ func (c *CapturedOutput) FormatContextualError(err error) string {
 
 // Progress captures progress reporting messages.
 func (c *CapturedOutput) Progress(format string, args ...any) {
-	c.ProgressMessages = append(c.ProgressMessages, fmt.Sprintf(format, args...))
+	c.recordMessage(&c.ProgressMessages, format, args...)
 }
 
 // IsQuiet returns whether the output is in quiet mode.
@@ -131,6 +131,12 @@ func (c *CapturedOutput) ContainsError(needle string) bool {
 // ContainsWarning checks if any warning message contains the needle.
 func (c *CapturedOutput) ContainsWarning(needle string) bool {
 	return ContainsInSlice(c.WarningMessages, needle)
+}
+
+// recordMessage is a helper that appends a formatted message to the specified message slice.
+// This reduces duplication across Bold, Success, Error, Warning, Info, Printf, and Progress methods.
+func (c *CapturedOutput) recordMessage(messageSlice *[]string, format string, args ...any) {
+	*messageSlice = append(*messageSlice, fmt.Sprintf(format, args...))
 }
 
 // ContainsInSlice checks if any string in the slice contains the substring.
