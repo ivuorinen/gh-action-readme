@@ -488,40 +488,43 @@ func runTypedTestSuite(t *testing.T, suiteName string, testCases []TestCase) {
 	RunTestSuite(t, suite)
 }
 
+// extractTestCasesGeneric extracts TestCase slices from typed test case slices.
+// This helper reduces duplication across RunActionTests, RunGeneratorTests, and RunValidationTests.
+func extractTestCasesGeneric[T interface {
+	ActionTestCase | GeneratorTestCase | ValidationTestCase
+}](cases []T) []TestCase {
+	testCases := make([]TestCase, len(cases))
+	for i := range cases {
+		// Use type assertion to access TestCase field
+		switch c := any(cases[i]).(type) {
+		case ActionTestCase:
+			testCases[i] = c.TestCase
+		case GeneratorTestCase:
+			testCases[i] = c.TestCase
+		case ValidationTestCase:
+			testCases[i] = c.TestCase
+		}
+	}
+
+	return testCases
+}
+
 // RunActionTests executes action-related test cases.
 func RunActionTests(t *testing.T, cases []ActionTestCase) {
 	t.Helper()
-
-	testCases := make([]TestCase, len(cases))
-	for i, actionCase := range cases {
-		testCases[i] = actionCase.TestCase
-	}
-
-	runTypedTestSuite(t, "Action Tests", testCases)
+	runTypedTestSuite(t, "Action Tests", extractTestCasesGeneric(cases))
 }
 
 // RunGeneratorTests executes generator test cases.
 func RunGeneratorTests(t *testing.T, cases []GeneratorTestCase) {
 	t.Helper()
-
-	testCases := make([]TestCase, len(cases))
-	for i, genCase := range cases {
-		testCases[i] = genCase.TestCase
-	}
-
-	runTypedTestSuite(t, "Generator Tests", testCases)
+	runTypedTestSuite(t, "Generator Tests", extractTestCasesGeneric(cases))
 }
 
 // RunValidationTests executes validation test cases.
 func RunValidationTests(t *testing.T, cases []ValidationTestCase) {
 	t.Helper()
-
-	testCases := make([]TestCase, len(cases))
-	for i, valCase := range cases {
-		testCases[i] = valCase.TestCase
-	}
-
-	runTypedTestSuite(t, "Validation Tests", testCases)
+	runTypedTestSuite(t, "Validation Tests", extractTestCasesGeneric(cases))
 }
 
 // Utility functions
