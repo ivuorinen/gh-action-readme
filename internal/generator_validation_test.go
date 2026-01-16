@@ -140,84 +140,32 @@ func assertMessageCounts(t *testing.T, output *capturedOutput, want messageCount
 
 // TestShowValidationSummary tests the validation summary display function.
 func TestShowValidationSummary(t *testing.T) {
-	tests := []struct {
-		name        string
-		totalFiles  int
-		validFiles  int
-		totalIssues int
-		resultCount int
-		errorCount  int
-		wantBold    int // Number of bold messages expected
-		wantSuccess int // Number of success messages expected
-		wantWarning int // Number of warning messages expected
-		wantError   int // Number of error messages expected
-		wantInfo    int // Number of info messages expected
-	}{
-		{
-			name:        "all valid files",
-			totalFiles:  3,
-			validFiles:  3,
-			totalIssues: 0,
-			resultCount: 3,
-			errorCount:  0,
-			wantBold:    1,
-			wantSuccess: 1,
-			wantWarning: 0,
-			wantError:   0,
-			wantInfo:    0,
-		},
-		{
-			name:        "some files with issues",
-			totalFiles:  3,
-			validFiles:  1,
-			totalIssues: 5,
-			resultCount: 3,
-			errorCount:  0,
-			wantBold:    1,
-			wantSuccess: 1,
-			wantWarning: 1, // Files with issues
-			wantError:   0,
-			wantInfo:    1, // Total issues
-		},
-		{
-			name:        "parse errors present",
-			totalFiles:  5,
-			validFiles:  2,
-			totalIssues: 3,
-			resultCount: 3,
-			errorCount:  2,
-			wantBold:    1,
-			wantSuccess: 1,
-			wantWarning: 1, // Files with issues
-			wantError:   1, // Parse errors
-			wantInfo:    1, // Total issues
-		},
-		{
-			name:        "only parse errors",
-			totalFiles:  2,
-			validFiles:  0,
-			totalIssues: 0,
-			resultCount: 0,
-			errorCount:  2,
-			wantBold:    1,
-			wantSuccess: 1,
-			wantWarning: 0,
-			wantError:   1, // Parse errors
-			wantInfo:    0,
-		},
-		{
-			name:        "zero files",
-			totalFiles:  0,
-			validFiles:  0,
-			totalIssues: 0,
-			resultCount: 0,
-			errorCount:  0,
-			wantBold:    1,
-			wantSuccess: 1,
-			wantWarning: 0,
-			wantError:   0,
-			wantInfo:    0,
-		},
+	tests := []validationSummaryTestCase{
+		createValidationSummaryTest(
+			"all valid files",
+			3, 3, 0, 3, 0, // totalFiles, validFiles, totalIssues, resultCount, errorCount
+			0, 0, 0, // wantWarning, wantError, wantInfo
+		),
+		createValidationSummaryTest(
+			"some files with issues",
+			3, 1, 5, 3, 0,
+			1, 0, 1, // Files with issues, no errors, total issues
+		),
+		createValidationSummaryTest(
+			"parse errors present",
+			5, 2, 3, 3, 2,
+			1, 1, 1, // Files with issues, parse errors, total issues
+		),
+		createValidationSummaryTest(
+			"only parse errors",
+			2, 0, 0, 0, 2,
+			0, 1, 0, // No warnings, parse errors, no info
+		),
+		createValidationSummaryTest(
+			"zero files",
+			0, 0, 0, 0, 0,
+			0, 0, 0, // All zeros
+		),
 	}
 
 	for _, tt := range tests {
