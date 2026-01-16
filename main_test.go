@@ -830,37 +830,16 @@ func TestSchemaHandler(t *testing.T) {
 	}
 }
 
-func TestConfigThemesHandler(_ *testing.T) {
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
-
-	globalConfig = &internal.AppConfig{Quiet: true}
-
-	cmd := &cobra.Command{}
-	configThemesHandler(cmd, []string{})
-	// Should not panic
+func TestConfigThemesHandler(t *testing.T) {
+	testSimpleVoidHandler(t, configThemesHandler)
 }
 
-func TestConfigShowHandler(_ *testing.T) {
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
-
-	globalConfig = &internal.AppConfig{Quiet: true}
-
-	cmd := &cobra.Command{}
-	configShowHandler(cmd, []string{})
-	// Should not panic
+func TestConfigShowHandler(t *testing.T) {
+	testSimpleVoidHandler(t, configShowHandler)
 }
 
-func TestDepsGraphHandler(_ *testing.T) {
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
-
-	globalConfig = &internal.AppConfig{Quiet: true}
-
-	cmd := &cobra.Command{}
-	depsGraphHandler(cmd, []string{})
-	// Should not panic - this is a placeholder handler
+func TestDepsGraphHandler(t *testing.T) {
+	testSimpleVoidHandler(t, depsGraphHandler)
 }
 
 func TestCreateAnalyzer(t *testing.T) {

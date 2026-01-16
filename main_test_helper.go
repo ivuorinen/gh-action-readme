@@ -34,3 +34,26 @@ func testSimpleHandler(
 		t.Errorf("%s() unexpected error: %v", handlerName, err)
 	}
 }
+
+// testSimpleVoidHandler is a helper for testing void command handlers that:
+// - Don't need specific setup beyond globalConfig
+// - Don't return an error
+// - Should complete without panicking
+//
+// This reduces duplication in tests like TestConfigThemesHandler, TestConfigShowHandler, etc.
+func testSimpleVoidHandler(
+	t *testing.T,
+	handlerFunc func(cmd *cobra.Command, args []string),
+) {
+	t.Helper()
+
+	// Save and restore globalConfig
+	originalConfig := globalConfig
+	defer func() { globalConfig = originalConfig }()
+
+	globalConfig = &internal.AppConfig{Quiet: true}
+
+	// Execute handler (should not panic)
+	cmd := &cobra.Command{}
+	handlerFunc(cmd, []string{})
+}
