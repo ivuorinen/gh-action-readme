@@ -110,3 +110,36 @@ func verifyFileExists(t *testing.T, fullPath, expectedFileName string) {
 		t.Errorf("Expected %s to be created", expectedFileName)
 	}
 }
+
+// createTestDirs creates multiple test directories with given names.
+func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
+	t.Helper()
+	dirs := make([]string, len(names))
+	for i, name := range names {
+		dirPath := filepath.Join(tmpDir, name)
+		testutil.CreateTestDir(t, dirPath)
+		dirs[i] = dirPath
+	}
+
+	return dirs
+}
+
+// createMultiActionSetup creates a setupFunc for batch processing tests with multiple actions.
+// It generates separate directories for each action and writes the specified fixtures.
+func createMultiActionSetup(dirNames []string, fixtures []string) func(t *testing.T, tmpDir string) []string {
+	return func(t *testing.T, tmpDir string) []string {
+		t.Helper()
+
+		// Create separate directories for each action
+		dirs := createTestDirs(t, tmpDir, dirNames...)
+
+		// Build file paths and write fixtures
+		files := make([]string, len(dirs))
+		for i, dir := range dirs {
+			files[i] = filepath.Join(dir, appconstants.ActionFileNameYML)
+			testutil.WriteTestFile(t, files[i], testutil.MustReadFixture(fixtures[i]))
+		}
+
+		return files
+	}
+}

@@ -423,43 +423,19 @@ func TestGeneratorProcessBatch(t *testing.T) {
 	}{
 		{
 			name: "process multiple valid files",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				// Create separate directories for each action
-				dirs := createTestDirs(t, tmpDir, "action1", "action2")
-
-				files := []string{
-					filepath.Join(dirs[0], appconstants.ActionFileNameYML),
-					filepath.Join(dirs[1], appconstants.ActionFileNameYML),
-				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
-
-				return files
-			},
+			setupFunc: createMultiActionSetup(
+				[]string{"action1", "action2"},
+				[]string{testutil.TestFixtureJavaScriptSimple, testutil.TestFixtureCompositeBasic},
+			),
 			expectError: false,
 			expectFiles: 2,
 		},
 		{
 			name: "handle mixed valid and invalid files",
-			setupFunc: func(t *testing.T, tmpDir string) []string {
-				t.Helper()
-				// Create separate directories for mixed test too
-				dirs := createTestDirs(t, tmpDir, "valid-action", "invalid-action")
-
-				files := []string{
-					filepath.Join(dirs[0], appconstants.ActionFileNameYML),
-					filepath.Join(dirs[1], appconstants.ActionFileNameYML),
-				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
-				testutil.WriteTestFile(
-					t,
-					files[1],
-					testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
-				)
-
-				return files
-			},
+			setupFunc: createMultiActionSetup(
+				[]string{"valid-action", "invalid-action"},
+				[]string{testutil.TestFixtureJavaScriptSimple, testutil.TestFixtureInvalidInvalidUsing},
+			),
 			expectError: true, // Invalid runtime configuration should cause batch to fail
 			expectFiles: 0,    // No files should be expected when batch fails
 		},
@@ -744,20 +720,6 @@ func TestGeneratorErrorHandling(t *testing.T) {
 			}
 		})
 	}
-}
-
-// createTestDirs is a helper that creates multiple directories within tmpDir for testing.
-// Returns the full paths of all created directories.
-func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
-	t.Helper()
-	dirs := make([]string, len(names))
-	for i, name := range names {
-		dirPath := filepath.Join(tmpDir, name)
-		testutil.CreateTestDir(t, dirPath)
-		dirs[i] = dirPath
-	}
-
-	return dirs
 }
 
 // TestGeneratorDiscoverActionFilesWithValidation tests the validation wrapper.
