@@ -1219,78 +1219,39 @@ func TestDetectRepositoryNameEdgeCases(t *testing.T) {
 			expectedResult: "",
 			description:    "Directory without .git should return empty string",
 		},
-		{
-			name: "valid git repository with GitHub remote",
-			setupFunc: func(t *testing.T) string {
-				t.Helper()
-				tmpDir, _ := testutil.TempDir(t)
-				testutil.InitGitRepo(t, tmpDir)
-
-				// Add GitHub remote
-				configContent := `[remote "origin"]
+		createGitRemoteTestCase(
+			"valid git repository with GitHub remote",
+			`[remote "origin"]
 	url = https://github.com/testorg/testrepo.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
-`
-				configPath := filepath.Join(tmpDir, ".git", "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
-			expectedResult: "testorg/testrepo",
-			description:    "Valid GitHub repo should return org/repo",
-		},
-		{
-			name: "git repository with SSH remote",
-			setupFunc: func(t *testing.T) string {
-				t.Helper()
-				tmpDir, _ := testutil.TempDir(t)
-				testutil.InitGitRepo(t, tmpDir)
-
-				// Add SSH remote
-				configContent := `[remote "origin"]
+`,
+			"testorg/testrepo",
+			"Valid GitHub repo should return org/repo",
+		),
+		createGitRemoteTestCase(
+			"git repository with SSH remote",
+			`[remote "origin"]
 	url = git@github.com:sshorg/sshrepo.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
-`
-				configPath := filepath.Join(tmpDir, ".git", "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
-			expectedResult: "sshorg/sshrepo",
-			description:    "SSH remote should be parsed correctly",
-		},
-		{
-			name: "git repository without remote",
-			setupFunc: func(t *testing.T) string {
-				t.Helper()
-				tmpDir, _ := testutil.TempDir(t)
-				testutil.InitGitRepo(t, tmpDir)
-
-				return tmpDir
-			},
-			expectedResult: "",
-			description:    "Repository without remote should return empty string",
-		},
-		{
-			name: "git repository with non-GitHub remote",
-			setupFunc: func(t *testing.T) string {
-				t.Helper()
-				tmpDir, _ := testutil.TempDir(t)
-				testutil.InitGitRepo(t, tmpDir)
-
-				// Add GitLab remote
-				configContent := `[remote "origin"]
+`,
+			"sshorg/sshrepo",
+			"SSH remote should be parsed correctly",
+		),
+		createGitRemoteTestCase(
+			"git repository without remote",
+			"", // No config content
+			"",
+			"Repository without remote should return empty string",
+		),
+		createGitRemoteTestCase(
+			"git repository with non-GitHub remote",
+			`[remote "origin"]
 	url = https://gitlab.com/glorg/glrepo.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
-`
-				configPath := filepath.Join(tmpDir, ".git", "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
-			expectedResult: "",
-			description:    "Non-GitHub remote should return empty string",
-		},
+`,
+			"",
+			"Non-GitHub remote should return empty string",
+		),
 	}
 
 	for _, tt := range tests {

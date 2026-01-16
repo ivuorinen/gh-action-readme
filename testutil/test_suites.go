@@ -474,6 +474,20 @@ func validateCustom(t *testing.T, expected *ExpectedResult, result *TestResult) 
 
 // Helper functions for specific test types
 
+// runTypedTestSuite is a helper to reduce duplication in test runner functions.
+// It converts typed test cases to TestCase and runs them in a suite.
+func runTypedTestSuite(t *testing.T, suiteName string, testCases []TestCase) {
+	t.Helper()
+
+	suite := TestSuite{
+		Name:     suiteName,
+		Cases:    testCases,
+		Parallel: true,
+	}
+
+	RunTestSuite(t, suite)
+}
+
 // RunActionTests executes action-related test cases.
 func RunActionTests(t *testing.T, cases []ActionTestCase) {
 	t.Helper()
@@ -483,13 +497,7 @@ func RunActionTests(t *testing.T, cases []ActionTestCase) {
 		testCases[i] = actionCase.TestCase
 	}
 
-	suite := TestSuite{
-		Name:     "Action Tests",
-		Cases:    testCases,
-		Parallel: true,
-	}
-
-	RunTestSuite(t, suite)
+	runTypedTestSuite(t, "Action Tests", testCases)
 }
 
 // RunGeneratorTests executes generator test cases.
@@ -501,13 +509,7 @@ func RunGeneratorTests(t *testing.T, cases []GeneratorTestCase) {
 		testCases[i] = genCase.TestCase
 	}
 
-	suite := TestSuite{
-		Name:     "Generator Tests",
-		Cases:    testCases,
-		Parallel: true,
-	}
-
-	RunTestSuite(t, suite)
+	runTypedTestSuite(t, "Generator Tests", testCases)
 }
 
 // RunValidationTests executes validation test cases.
@@ -519,13 +521,7 @@ func RunValidationTests(t *testing.T, cases []ValidationTestCase) {
 		testCases[i] = valCase.TestCase
 	}
 
-	suite := TestSuite{
-		Name:     "Validation Tests",
-		Cases:    testCases,
-		Parallel: true,
-	}
-
-	RunTestSuite(t, suite)
+	runTypedTestSuite(t, "Validation Tests", testCases)
 }
 
 // Utility functions

@@ -1,5 +1,12 @@
 package internal
 
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
+)
+
 // boolFields represents the boolean configuration fields used in merge tests.
 type boolFields struct {
 	AnalyzeDependencies bool
@@ -46,5 +53,39 @@ func createBoolFieldMergeTest(name string, dst, src, want boolFields) struct {
 			Quiet:               want.Quiet,
 			UseDefaultBranch:    want.UseDefaultBranch,
 		},
+	}
+}
+
+// createGitRemoteTestCase creates a test table entry for git remote detection tests.
+// This helper reduces duplication for tests that set up a git repo with a remote config.
+func createGitRemoteTestCase(
+	name, configContent, expectedResult, description string,
+) struct {
+	name           string
+	setupFunc      func(t *testing.T) string
+	expectedResult string
+	description    string
+} {
+	return struct {
+		name           string
+		setupFunc      func(t *testing.T) string
+		expectedResult string
+		description    string
+	}{
+		name: name,
+		setupFunc: func(t *testing.T) string {
+			t.Helper()
+			tmpDir, _ := testutil.TempDir(t)
+			testutil.InitGitRepo(t, tmpDir)
+
+			if configContent != "" {
+				configPath := filepath.Join(tmpDir, ".git", "config")
+				testutil.WriteTestFile(t, configPath, configContent)
+			}
+
+			return tmpDir
+		},
+		expectedResult: expectedResult,
+		description:    description,
 	}
 }
