@@ -18,6 +18,17 @@ type gitTestCase struct {
 }
 
 // createGitRepoTestCase creates a test table entry for git repository detection tests.
+// setupGitTestRepo creates a test git directory with the specified config content.
+// This helper is used by multiple test case creators to eliminate duplicate setup logic.
+func setupGitTestRepo(t *testing.T, tmpDir, configContent string) string {
+	t.Helper()
+	gitDir := testutil.SetupGitDirectory(t, tmpDir)
+	configPath := filepath.Join(gitDir, "config")
+	testutil.WriteTestFile(t, configPath, configContent)
+
+	return tmpDir
+}
+
 // This helper reduces duplication by standardizing the setup and assertion patterns
 // for git repository test cases.
 func createGitRepoTestCase(tc gitTestCase) struct {
@@ -33,11 +44,8 @@ func createGitRepoTestCase(tc gitTestCase) struct {
 		name: tc.name,
 		setupFunc: func(t *testing.T, tmpDir string) string {
 			t.Helper()
-			gitDir := testutil.SetupGitDirectory(t, tmpDir)
-			configPath := filepath.Join(gitDir, "config")
-			testutil.WriteTestFile(t, configPath, tc.configContent)
 
-			return tmpDir
+			return setupGitTestRepo(t, tmpDir, tc.configContent)
 		},
 		checkFunc: func(t *testing.T, info *RepoInfo) {
 			t.Helper()
@@ -78,11 +86,8 @@ func createGitURLTestCase(tc gitURLTestCase) struct {
 		name: tc.name,
 		setupFunc: func(t *testing.T, tmpDir string) string {
 			t.Helper()
-			gitDir := testutil.SetupGitDirectory(t, tmpDir)
-			configPath := filepath.Join(gitDir, "config")
-			testutil.WriteTestFile(t, configPath, tc.configContent)
 
-			return tmpDir
+			return setupGitTestRepo(t, tmpDir, tc.configContent)
 		},
 		expectError: tc.expectError,
 		expectedURL: tc.expectedURL,
