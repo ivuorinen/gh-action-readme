@@ -34,6 +34,25 @@ func assertActionFiles(t *testing.T, files []string) {
 	}
 }
 
+// createMultipleFixtureFiles writes multiple fixtures to files and returns their paths.
+// This helper reduces duplication for tests that set up multiple action files.
+func createMultipleFixtureFiles(
+	t *testing.T,
+	tmpDir string,
+	filesAndFixtures map[string]string,
+) []string {
+	t.Helper()
+
+	files := make([]string, 0, len(filesAndFixtures))
+	for filename, fixturePath := range filesAndFixtures {
+		filePath := filepath.Join(tmpDir, filename)
+		testutil.WriteTestFile(t, filePath, testutil.MustReadFixture(fixturePath))
+		files = append(files, filePath)
+	}
+
+	return files
+}
+
 func TestGeneratorNewGenerator(t *testing.T) {
 	t.Parallel()
 	config := defaultTestConfig()
@@ -517,14 +536,11 @@ func TestGeneratorValidateFiles(t *testing.T) {
 			name: "all valid files",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				files := []string{
-					filepath.Join(tmpDir, "action1.yml"),
-					filepath.Join(tmpDir, "action2.yml"),
-				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
-				testutil.WriteTestFile(t, files[1], testutil.MustReadFixture(testutil.TestFixtureMinimalAction))
 
-				return files
+				return createMultipleFixtureFiles(t, tmpDir, map[string]string{
+					"action1.yml": testutil.TestFixtureJavaScriptSimple,
+					"action2.yml": testutil.TestFixtureMinimalAction,
+				})
 			},
 			expectError: false,
 		},
@@ -532,18 +548,11 @@ func TestGeneratorValidateFiles(t *testing.T) {
 			name: "files with validation issues",
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
-				files := []string{
-					filepath.Join(tmpDir, "valid.yml"),
-					filepath.Join(tmpDir, "invalid.yml"),
-				}
-				testutil.WriteTestFile(t, files[0], testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
-				testutil.WriteTestFile(
-					t,
-					files[1],
-					testutil.MustReadFixture(testutil.TestFixtureInvalidMissingDescription),
-				)
 
-				return files
+				return createMultipleFixtureFiles(t, tmpDir, map[string]string{
+					"valid.yml":   testutil.TestFixtureJavaScriptSimple,
+					"invalid.yml": testutil.TestFixtureInvalidMissingDescription,
+				})
 			},
 			expectError: true, // Validation should fail for invalid runtime configuration
 		},
