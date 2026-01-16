@@ -43,14 +43,7 @@ func (co *ColoredOutput) IsQuiet() bool {
 
 // Success prints a success message in green.
 func (co *ColoredOutput) Success(format string, args ...any) {
-	if co.Quiet {
-		return
-	}
-	if co.NoColor {
-		fmt.Printf("✅ "+format+"\n", args...)
-	} else {
-		color.Green("✅ "+format, args...)
-	}
+	co.printWithIcon("✅", format, color.Green, args...)
 }
 
 // Error prints an error message in red to stderr.
@@ -64,38 +57,17 @@ func (co *ColoredOutput) Error(format string, args ...any) {
 
 // Warning prints a warning message in yellow.
 func (co *ColoredOutput) Warning(format string, args ...any) {
-	if co.Quiet {
-		return
-	}
-	if co.NoColor {
-		fmt.Printf("⚠️  "+format+"\n", args...)
-	} else {
-		color.Yellow("⚠️  "+format, args...)
-	}
+	co.printWithIcon("⚠️ ", format, color.Yellow, args...)
 }
 
 // Info prints an info message in blue.
 func (co *ColoredOutput) Info(format string, args ...any) {
-	if co.Quiet {
-		return
-	}
-	if co.NoColor {
-		fmt.Printf("ℹ️  "+format+"\n", args...)
-	} else {
-		color.Blue("ℹ️  "+format, args...)
-	}
+	co.printWithIcon("ℹ️ ", format, color.Blue, args...)
 }
 
 // Progress prints a progress message in cyan.
 func (co *ColoredOutput) Progress(format string, args ...any) {
-	if co.Quiet {
-		return
-	}
-	if co.NoColor {
-		fmt.Printf("🔄 "+format+"\n", args...)
-	} else {
-		color.Cyan("🔄 "+format, args...)
-	}
+	co.printWithIcon("🔄", format, color.Cyan, args...)
 }
 
 // Bold prints text in bold.
@@ -194,6 +166,20 @@ func (co *ColoredOutput) FormatContextualError(err *apperrors.ContextualError) s
 	return strings.Join(parts, "\n")
 }
 
+// printWithIcon is a helper for printing messages with icons and colors.
+// It handles quiet mode, color toggling, and consistent formatting.
+func (co *ColoredOutput) printWithIcon(icon, format string, colorFunc func(string, ...any), args ...any) {
+	if co.Quiet {
+		return
+	}
+	message := icon + " " + format
+	if co.NoColor {
+		fmt.Printf(message+"\n", args...)
+	} else {
+		colorFunc(message, args...)
+	}
+}
+
 // formatMainError formats the main error message with code.
 func (co *ColoredOutput) formatMainError(err *apperrors.ContextualError) string {
 	mainMsg := fmt.Sprintf("%s [%s]", err.Error(), err.Code)
@@ -204,15 +190,19 @@ func (co *ColoredOutput) formatMainError(err *apperrors.ContextualError) string 
 	return color.RedString("❌ ") + mainMsg
 }
 
+// formatBoldSection formats a section header with or without color.
+func (co *ColoredOutput) formatBoldSection(section string) string {
+	if co.NoColor {
+		return section
+	}
+
+	return color.New(color.Bold).Sprint(section)
+}
+
 // formatDetailsSection formats the details section.
 func (co *ColoredOutput) formatDetailsSection(details map[string]string) []string {
 	var parts []string
-
-	if co.NoColor {
-		parts = append(parts, appconstants.SectionDetails)
-	} else {
-		parts = append(parts, color.New(color.Bold).Sprint(appconstants.SectionDetails))
-	}
+	parts = append(parts, co.formatBoldSection(appconstants.SectionDetails))
 
 	for key, value := range details {
 		if co.NoColor {
@@ -230,12 +220,7 @@ func (co *ColoredOutput) formatDetailsSection(details map[string]string) []strin
 // formatSuggestionsSection formats the suggestions section.
 func (co *ColoredOutput) formatSuggestionsSection(suggestions []string) []string {
 	var parts []string
-
-	if co.NoColor {
-		parts = append(parts, appconstants.SectionSuggestions)
-	} else {
-		parts = append(parts, color.New(color.Bold).Sprint(appconstants.SectionSuggestions))
-	}
+	parts = append(parts, co.formatBoldSection(appconstants.SectionSuggestions))
 
 	for _, suggestion := range suggestions {
 		if co.NoColor {
