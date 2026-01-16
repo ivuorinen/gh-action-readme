@@ -142,6 +142,22 @@ func wrapError(msgConstant string, err error) error {
 	return fmt.Errorf("%s: %w", msgConstant, err)
 }
 
+// handleNoFilesFoundError handles errors where no action files are found, showing a warning instead of failing.
+// Returns nil if the error is about no files found (after showing warning), otherwise returns the original error.
+func handleNoFilesFoundError(err error, output *internal.ColoredOutput) error {
+	if err == nil {
+		return nil
+	}
+
+	if strings.Contains(err.Error(), appconstants.ErrNoActionFilesFound) {
+		output.Warning(appconstants.ErrNoActionFilesFound)
+
+		return nil
+	}
+
+	return err
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "gh-action-readme",
@@ -689,14 +705,7 @@ func depsListHandler(_ *cobra.Command, _ []string) error {
 		globalConfig.IgnoredDirectories,
 		"dependency listing",
 	)
-	if err != nil {
-		// For deps list, we can continue if no files found (show warning instead of error)
-		if strings.Contains(err.Error(), appconstants.ErrNoActionFilesFound) {
-			output.Warning(appconstants.ErrNoActionFilesFound)
-
-			return nil
-		}
-
+	if err := handleNoFilesFoundError(err, output); err != nil {
 		return err
 	}
 
@@ -898,14 +907,7 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) error {
 		globalConfig.IgnoredDirectories,
 		"outdated dependency analysis",
 	)
-	if err != nil {
-		// For deps outdated, we can continue if no files found (show warning instead of error)
-		if strings.Contains(err.Error(), appconstants.ErrNoActionFilesFound) {
-			output.Warning(appconstants.ErrNoActionFilesFound)
-
-			return nil
-		}
-
+	if err := handleNoFilesFoundError(err, output); err != nil {
 		return err
 	}
 
