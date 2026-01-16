@@ -645,7 +645,6 @@ func applyUpdatesToLines(lines []string, updates []PinnedUpdate) {
 
 			// Reconstruct: indent + list marker + uses field
 			lines[i] = indent + listMarker + appconstants.UsesFieldPrefix + update.NewUses
-			update.LineNumber = i + 1 // Store line number for last updated occurrence
 		}
 	}
 }

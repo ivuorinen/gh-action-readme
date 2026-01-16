@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -874,9 +875,11 @@ func TestBuildTestBinary(t *testing.T) {
 		t.Fatalf("Failed to stat binary: %v", err)
 	}
 
-	// On Unix systems, check executable bit
-	if info.Mode()&0111 == 0 {
-		t.Error("buildTestBinary() created binary is not executable")
+	// Check executable bit on Unix systems only
+	if runtime.GOOS != "windows" {
+		if info.Mode()&0111 == 0 {
+			t.Error("buildTestBinary() created binary is not executable")
+		}
 	}
 }
 
