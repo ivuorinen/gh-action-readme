@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -214,16 +215,7 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 		appconstants.ThemeProfessional,
 	}
 
-	found := false
-	for _, validTheme := range validThemes {
-		if theme == validTheme {
-			found = true
-
-			break
-		}
-	}
-
-	if !found {
+	if !v.isValueInList(theme, validThemes) {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "theme",
 			Message: "Invalid theme",
@@ -238,16 +230,7 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 func (v *ConfigValidator) validateOutputFormat(format string, result *ValidationResult) {
 	validFormats := []string{"md", "html", "json", "asciidoc"}
 
-	found := false
-	for _, validFormat := range validFormats {
-		if format == validFormat {
-			found = true
-
-			break
-		}
-	}
-
-	if !found {
+	if !v.isValueInList(format, validFormats) {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "output_format",
 			Message: "Invalid output format",
@@ -362,16 +345,7 @@ func (v *ConfigValidator) validatePermissions(permissions map[string]string, res
 		}
 
 		// Check if value is valid
-		validValue := false
-		for _, validVal := range validValues {
-			if value == validVal {
-				validValue = true
-
-				break
-			}
-		}
-
-		if !validValue {
+		if !v.isValueInList(value, validValues) {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "permissions",
 				Message: "Invalid value for permission " + permission,
@@ -405,14 +379,7 @@ func (v *ConfigValidator) validateRunsOn(runsOn []string, result *ValidationResu
 
 	for _, runner := range runsOn {
 		// Check if it's a GitHub-hosted runner
-		isValid := false
-		for _, validRunner := range validRunners {
-			if runner == validRunner {
-				isValid = true
-
-				break
-			}
-		}
+		isValid := v.isValueInList(runner, validRunners)
 
 		// If not a standard runner, it might be self-hosted
 		if !isValid {
@@ -461,6 +428,11 @@ func (v *ConfigValidator) validateVariables(variables map[string]string, result 
 				"Variable names should contain only letters, numbers, and underscores")
 		}
 	}
+}
+
+// isValueInList checks if a value exists in a list of valid options.
+func (v *ConfigValidator) isValueInList(value string, validOptions []string) bool {
+	return slices.Contains(validOptions, value)
 }
 
 // isValidGitHubName checks if a name follows GitHub naming rules.
