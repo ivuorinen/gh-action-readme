@@ -112,15 +112,9 @@ func TestDetectGitRepository(t *testing.T) {
 		setupFunc func(t *testing.T, tmpDir string) string
 		checkFunc func(t *testing.T, info *RepoInfo)
 	}{
-		{
+		createGitRepoTestCase(gitTestCase{
 			name: "GitHub repository",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				// Create .git directory
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				// Create config file with GitHub remote
-				configContent := `[core]
+			configContent: `[core]
 	repositoryformatversion = 0
 	filemode = true
 	bare = false
@@ -131,41 +125,21 @@ func TestDetectGitRepository(t *testing.T) {
 [branch "main"]
 	remote = origin
 	merge = refs/heads/main
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
-			checkFunc: func(t *testing.T, info *RepoInfo) {
-				t.Helper()
-				testutil.AssertEqual(t, "owner", info.Organization)
-				testutil.AssertEqual(t, "repo", info.Repository)
-				testutil.AssertEqual(t, "https://github.com/owner/repo.git", info.RemoteURL)
-			},
-		},
-		{
+`,
+			expectedOrg:  "owner",
+			expectedRepo: "repo",
+			expectedURL:  "https://github.com/owner/repo.git",
+		}),
+		createGitRepoTestCase(gitTestCase{
 			name: "SSH remote URL",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[remote "origin"]
+			configContent: `[remote "origin"]
 	url = git@github.com:owner/repo.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
-			checkFunc: func(t *testing.T, info *RepoInfo) {
-				t.Helper()
-				testutil.AssertEqual(t, "owner", info.Organization)
-				testutil.AssertEqual(t, "repo", info.Repository)
-				testutil.AssertEqual(t, "git@github.com:owner/repo.git", info.RemoteURL)
-			},
-		},
+`,
+			expectedOrg:  "owner",
+			expectedRepo: "repo",
+			expectedURL:  "git@github.com:owner/repo.git",
+		}),
 		{
 			name: "no git repository",
 			setupFunc: func(_ *testing.T, tmpDir string) string {
@@ -178,29 +152,16 @@ func TestDetectGitRepository(t *testing.T) {
 				testutil.AssertEqual(t, "", info.Repository)
 			},
 		},
-		{
+		createGitRepoTestCase(gitTestCase{
 			name: "git repository without origin remote",
-			setupFunc: func(t *testing.T, tmpDir string) string {
-				t.Helper()
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
-
-				configContent := `[core]
+			configContent: `[core]
 	repositoryformatversion = 0
 	filemode = true
 	bare = false
-`
-				configPath := filepath.Join(gitDir, "config")
-				testutil.WriteTestFile(t, configPath, configContent)
-
-				return tmpDir
-			},
-			checkFunc: func(t *testing.T, info *RepoInfo) {
-				t.Helper()
-				testutil.AssertEqual(t, true, info.IsGitRepo)
-				testutil.AssertEqual(t, "", info.Organization)
-				testutil.AssertEqual(t, "", info.Repository)
-			},
-		},
+`,
+			expectedOrg:  "",
+			expectedRepo: "",
+		}),
 	}
 
 	for _, tt := range tests {

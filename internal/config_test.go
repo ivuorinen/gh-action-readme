@@ -735,78 +735,24 @@ func TestMergeBooleanFields(t *testing.T) {
 		src  *AppConfig
 		want *AppConfig
 	}{
-		{
-			name: "merge all true values",
-			dst: &AppConfig{
-				AnalyzeDependencies: false,
-				ShowSecurityInfo:    false,
-				Verbose:             false,
-				Quiet:               false,
-				UseDefaultBranch:    false,
-			},
-			src: &AppConfig{
-				AnalyzeDependencies: true,
-				ShowSecurityInfo:    true,
-				Verbose:             true,
-				Quiet:               true,
-				UseDefaultBranch:    true,
-			},
-			want: &AppConfig{
-				AnalyzeDependencies: true,
-				ShowSecurityInfo:    true,
-				Verbose:             true,
-				Quiet:               true,
-				UseDefaultBranch:    true,
-			},
-		},
-		{
-			name: "merge only some true values",
-			dst: &AppConfig{
-				AnalyzeDependencies: false,
-				ShowSecurityInfo:    true,
-				Verbose:             false,
-				Quiet:               true,
-				UseDefaultBranch:    false,
-			},
-			src: &AppConfig{
-				AnalyzeDependencies: true,
-				ShowSecurityInfo:    false,
-				Verbose:             true,
-				Quiet:               false,
-				UseDefaultBranch:    false,
-			},
-			want: &AppConfig{
-				AnalyzeDependencies: true,
-				ShowSecurityInfo:    true,
-				Verbose:             true,
-				Quiet:               true,
-				UseDefaultBranch:    false,
-			},
-		},
-		{
-			name: "merge with all source false",
-			dst: &AppConfig{
-				AnalyzeDependencies: true,
-				ShowSecurityInfo:    true,
-				Verbose:             true,
-				Quiet:               true,
-				UseDefaultBranch:    true,
-			},
-			src: &AppConfig{
-				AnalyzeDependencies: false,
-				ShowSecurityInfo:    false,
-				Verbose:             false,
-				Quiet:               false,
-				UseDefaultBranch:    false,
-			},
-			want: &AppConfig{
-				AnalyzeDependencies: true,
-				ShowSecurityInfo:    true,
-				Verbose:             true,
-				Quiet:               true,
-				UseDefaultBranch:    true,
-			},
-		},
+		createBoolFieldMergeTest(
+			"merge all true values",
+			boolFields{false, false, false, false, false},
+			boolFields{true, true, true, true, true},
+			boolFields{true, true, true, true, true},
+		),
+		createBoolFieldMergeTest(
+			"merge only some true values",
+			boolFields{false, true, false, true, false},
+			boolFields{true, false, true, false, false},
+			boolFields{true, true, true, true, false},
+		),
+		createBoolFieldMergeTest(
+			"merge with all source false",
+			boolFields{true, true, true, true, true},
+			boolFields{false, false, false, false, false},
+			boolFields{true, true, true, true, true},
+		),
 	}
 
 	for _, tt := range tests {
