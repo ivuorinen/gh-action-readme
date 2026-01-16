@@ -1950,12 +1950,9 @@ func TestDepsListHandlerIntegration(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "lists dependencies from composite action",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
-			},
-			wantErr: false,
+			name:      "lists dependencies from composite action",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeWithDeps),
+			wantErr:   false,
 		},
 		{
 			name:      testutil.TestScenarioNoDeps,
@@ -2050,22 +2047,16 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "analyzes security with GitHub token",
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeWithDeps)
-			},
-			setToken: true,
-			wantErr:  false,
+			name:      "analyzes security with GitHub token",
+			setupFunc: setupFixtureInDir(testutil.TestFixtureCompositeWithDeps),
+			setToken:  true,
+			wantErr:   false,
 		},
 		{
-			name: testutil.TestScenarioNoDeps,
-			setupFunc: func(t *testing.T, tmpDir string) {
-				t.Helper()
-				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
-			},
-			setToken: true,
-			wantErr:  false,
+			name:      testutil.TestScenarioNoDeps,
+			setupFunc: setupFixtureInDir(testutil.TestFixtureJavaScriptSimple),
+			setToken:  true,
+			wantErr:   false,
 		},
 		{
 			name: "handles invalid YAML syntax gracefully",
