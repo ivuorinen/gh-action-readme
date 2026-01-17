@@ -660,20 +660,20 @@ const (
 
 // Configuration field name constants for reducing string duplication.
 const (
-	ConfigFieldName        = "config"
-	ConfigFieldRepository  = "repository"
-	ConfigFieldVersion     = "version"
+	ConfigFieldName         = "config"
+	ConfigFieldRepository   = "repository"
+	ConfigFieldVersion      = "version"
 	ConfigFieldOrganization = "organization"
-	ConfigFieldOutputDir   = "output_dir"
-	ConfigFieldAction      = "action"
-	ConfigFieldRepo        = "repo"
-	ConfigFieldGit         = ".git"
+	ConfigFieldOutputDir    = "output_dir"
+	ConfigFieldAction       = "action"
+	ConfigFieldRepo         = "repo"
+	ConfigFieldGit          = ".git"
 )
 
 // Whitespace character constants for reducing string duplication in tests.
 const (
-	WhitespaceSpace = " "
-	WhitespaceTab   = "\t"
-	WhitespaceNewline = "\n"
+	WhitespaceSpace          = " "
+	WhitespaceTab            = "\t"
+	WhitespaceNewline        = "\n"
 	WhitespaceCarriageReturn = "\r"
 )

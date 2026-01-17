@@ -680,7 +680,7 @@ func (fm *FixtureManager) determineConfigType(name string) string {
 	if strings.Contains(name, "global") {
 		return appconstants.ScopeGlobal
 	}
-	if strings.Contains(name, "repo") {
+	if strings.Contains(name, ConfigFieldRepo) {
 		return "repo-specific"
 	}
 	if strings.Contains(name, "user") {

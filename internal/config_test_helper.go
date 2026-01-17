@@ -80,7 +80,7 @@ func createGitRemoteTestCase(
 			testutil.InitGitRepo(t, tmpDir)
 
 			if configContent != "" {
-				configPath := filepath.Join(tmpDir, ".git", "config")
+				configPath := filepath.Join(tmpDir, testutil.ConfigFieldGit, "config")
 				testutil.WriteTestFile(t, configPath, configContent)
 			}
 
@@ -195,7 +195,7 @@ func SetupConfigHierarchy(
 	}
 
 	// Create repo config
-	repoRoot = filepath.Join(baseDir, "repo")
+	repoRoot = filepath.Join(baseDir, testutil.ConfigFieldRepo)
 	if err := os.MkdirAll(repoRoot, 0o700); err != nil {
 		t.Fatalf("failed to create repo directory: %v", err)
 	}
@@ -208,7 +208,7 @@ func SetupConfigHierarchy(
 
 	// Create action config
 	if setup.ActionFixture != "" {
-		actionDir = filepath.Join(repoRoot, "action")
+		actionDir = filepath.Join(repoRoot, testutil.ConfigFieldAction)
 		testutil.WriteFileInDir(
 			t, actionDir, testutil.TestFileConfigYAML,
 			testutil.MustReadFixture(setup.ActionFixture),

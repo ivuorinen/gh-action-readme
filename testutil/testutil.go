@@ -342,7 +342,7 @@ func CreateGitRepoWithRemote(t *testing.T, tmpDir, remoteURL string) string {
 
 	InitGitRepo(t, tmpDir)
 
-	gitDir := filepath.Join(tmpDir, ".git")
+	gitDir := filepath.Join(tmpDir, ConfigFieldGit)
 	configPath := filepath.Join(gitDir, "config")
 
 	configContent := fmt.Sprintf(`[remote "origin"]
