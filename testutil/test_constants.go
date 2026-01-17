@@ -615,7 +615,8 @@ const (
 	MutationRepoGhActionReadme = "gh-action-readme"
 
 	// Test description constants for reducing duplication.
-	MutationDescEmptyInput = "Empty input"
+	MutationDescEmptyInput    = "Empty input"
+	MutationStrHelloWorldDash = "hello-world"
 
 	// String mutation test constants.
 	MutationStrEmpty               = ""

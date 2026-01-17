@@ -239,7 +239,7 @@ func TestSanitizeActionNameMutationResistance(t *testing.T) {
 		makeSanitizeTestCase(
 			"space_to_dash",
 			testutil.ValidationHelloWorld,
-			"hello-world",
+			testutil.MutationStrHelloWorldDash,
 			true,
 			"ReplaceAll spaces with dashes",
 		),
@@ -259,14 +259,14 @@ func TestSanitizeActionNameMutationResistance(t *testing.T) {
 		makeSanitizeTestCase(
 			"uppercase_with_spaces",
 			"HELLO WORLD",
-			"hello-world",
+			testutil.MutationStrHelloWorldDash,
 			true,
 			"Both lowercase and space replacement",
 		),
 		makeSanitizeTestCase(
 			"leading_trailing_spaces_uppercase",
 			"  HELLO WORLD  ",
-			"hello-world",
+			testutil.MutationStrHelloWorldDash,
 			true,
 			"All transformations: trim, replace, lowercase",
 		),
