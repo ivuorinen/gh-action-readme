@@ -153,6 +153,11 @@ const (
 	TestVersionV417 = "v4.1.7"
 )
 
+// Mutation test string constants for string operations tests.
+const (
+	MutationStrHelloWorldDoubleSpace = "hello  world" // Double space for testing space normalization
+)
+
 // Test file path constants for reducing string duplication.
 const (
 	TestPathConfigYML = "config.yml"
