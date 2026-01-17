@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -179,6 +180,10 @@ func SetupConfigHierarchy(
 	setup ConfigHierarchySetup,
 ) (globalConfigPath, repoRoot, actionDir string) {
 	t.Helper()
+	// setupAndCreateConfigFixtures sets up config fixtures in a test directory.
+	// It creates the repo directory structure unconditionally and populates config files
+	// based on the provided setup.GlobalFixture, setup.RepoFixture, and
+	// setup.ActionFixture. Returns globalConfigPath, repoRoot, and actionDir.
 
 	// Create global config
 	if setup.GlobalFixture != "" {
@@ -191,6 +196,9 @@ func SetupConfigHierarchy(
 
 	// Create repo config
 	repoRoot = filepath.Join(baseDir, "repo")
+	if err := os.MkdirAll(repoRoot, 0o700); err != nil {
+		t.Fatalf("failed to create repo directory: %v", err)
+	}
 	if setup.RepoFixture != "" {
 		testutil.WriteFileInDir(
 			t, repoRoot, testutil.TestFileGHReadmeYAML,
