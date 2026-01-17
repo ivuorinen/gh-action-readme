@@ -17,7 +17,6 @@ const (
 // Error handler test constants for reducing string duplication.
 const (
 	UnknownErrorMsg = "unknown error"
-	HelloWorldStr   = "hello world"
 
 	// TestErrFileNotFound is used in error handler tests for file not found scenarios.
 	TestErrFileNotFound = "file not found"
@@ -27,6 +26,16 @@ const (
 
 	// TestErrPermissionDenied is used in error handler tests for permission errors.
 	TestErrPermissionDenied = "permission denied"
+)
+
+// Progress test constants for reducing string duplication.
+const (
+	TestProgressDescription = "Test progress"
+)
+
+// Configuration field name constants for reducing string duplication.
+const (
+	TestFieldOutputFormat = "output format"
 )
 
 // Validation component test constants for reducing string duplication.
@@ -44,6 +53,11 @@ const (
 	TestActionName = "Test Action"
 	TestActionDesc = "Test Description"
 	TestMyAction   = "My Action"
+)
+
+// Fixture filename constants for reducing string duplication.
+const (
+	TestFixtureSimpleAction = "simple-action.yml"
 )
 
 // GitHub authentication test constants for reducing string duplication.
@@ -179,7 +193,6 @@ const (
 const (
 	TestRepoActionPath      = "/repo/action.yml"
 	TestRepoBuildActionPath = "/repo/build/action.yml"
-	TestVersionV123         = "@v1.2.3"
 )
 
 // Test error message formats for testutil tests.
@@ -245,6 +258,7 @@ const (
 const (
 	TestVersionSemantic = "v1.2.3"
 	TestVersionPlain    = "1.2.3"
+	TestVersionWithAt   = "@v1.2.3"
 	TestCaseNameEmpty   = "empty string"
 	TestBranchMain      = "main"
 	TestGitRefMain      = "refs/heads/main"
@@ -600,9 +614,10 @@ const (
 	MutationRepoSetupNode      = "setup-node"
 	MutationRepoGhActionReadme = "gh-action-readme"
 
+	// Test description constants for reducing duplication.
+	MutationDescEmptyInput = "Empty input"
+
 	// String mutation test constants.
-	MutationStrHelloWorld          = "hello world"
-	MutationStrHelloWorldDash      = "hello-world"
 	MutationStrEmpty               = ""
 	MutationStrSetupNode           = "Setup-Node"
 	MutationStrCheckoutCode        = "Checkout Code"
@@ -611,7 +626,6 @@ const (
 	MutationStrSetupGoEnvironmentD = "setup-go-environment"
 
 	// Version mutation test constants.
-	MutationVersionV1         = "v1.2.3"
 	MutationVersionV2         = "v2.5.1"
 	MutationVersionNoV        = "1.2.3"
 	MutationVersionBuild      = "1.2.3+build.123"
@@ -624,7 +638,6 @@ const (
 
 	// Semantic version mutation test constants.
 	MutationSemverFull            = "1.2.3"
-	MutationSemverWithV           = "v1.2.3"
 	MutationSemverPrerelease      = "1.2.3-alpha"
 	MutationSemverBuildMeta       = "1.2.3+build.123"
 	MutationSemverPrereleaseBuild = "1.2.3-alpha+build.123"

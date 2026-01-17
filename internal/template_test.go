@@ -365,12 +365,12 @@ func TestFormatVersion(t *testing.T) {
 		{
 			name:    "version without @",
 			version: "v1.2.3",
-			want:    testutil.TestVersionV123,
+			want:    testutil.TestVersionWithAt,
 		},
 		{
 			name:    "version with @",
-			version: testutil.TestVersionV123,
-			want:    testutil.TestVersionV123,
+			version: testutil.TestVersionWithAt,
+			want:    testutil.TestVersionWithAt,
 		},
 		{
 			name:    "main branch",

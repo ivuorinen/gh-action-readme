@@ -148,7 +148,7 @@ func TestIsSemanticVersionMutationResistance(t *testing.T) {
 		makeSemverTestCase("basic_semver", "1.2.3", true, false, "Basic X.Y.Z"),
 		makeSemverTestCase(
 			"basic_semver_with_v",
-			testutil.MutationSemverWithV,
+			testutil.TestVersionSemantic,
 			true,
 			true,
 			"v prefix optional (v? quantifier)",

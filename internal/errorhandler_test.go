@@ -222,7 +222,7 @@ func TestContains(t *testing.T) {
 	}{
 		{
 			name:   "exact match",
-			s:      testutil.HelloWorldStr,
+			s:      testutil.ValidationHelloWorld,
 			substr: "hello",
 			want:   true,
 		},
@@ -234,13 +234,13 @@ func TestContains(t *testing.T) {
 		},
 		{
 			name:   testutil.TestCaseNameNoMatch,
-			s:      testutil.HelloWorldStr,
+			s:      testutil.ValidationHelloWorld,
 			substr: "goodbye",
 			want:   false,
 		},
 		{
 			name:   "empty substring",
-			s:      testutil.HelloWorldStr,
+			s:      testutil.ValidationHelloWorld,
 			substr: "",
 			want:   true,
 		},

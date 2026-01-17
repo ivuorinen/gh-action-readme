@@ -238,8 +238,8 @@ func TestSanitizeActionNameMutationResistance(t *testing.T) {
 		makeSanitizeTestCase("lowercase_conversion", "UPPERCASE", "uppercase", true, "ToLower applied"),
 		makeSanitizeTestCase(
 			"space_to_dash",
-			testutil.MutationStrHelloWorld,
-			testutil.MutationStrHelloWorldDash,
+			testutil.ValidationHelloWorld,
+			"hello-world",
 			true,
 			"ReplaceAll spaces with dashes",
 		),
@@ -272,7 +272,13 @@ func TestSanitizeActionNameMutationResistance(t *testing.T) {
 		),
 
 		// Edge cases
-		makeSanitizeTestCase("empty_string", testutil.MutationStrEmpty, testutil.MutationStrEmpty, true, "Empty input"),
+		makeSanitizeTestCase(
+			"empty_string",
+			testutil.MutationStrEmpty,
+			testutil.MutationStrEmpty,
+			true,
+			testutil.MutationDescEmptyInput,
+		),
 		makeSanitizeTestCase("only_spaces", "   ", testutil.MutationStrEmpty, true, "Only spaces (trimmed to empty)"),
 		makeSanitizeTestCase(
 			"no_changes_needed",
@@ -340,7 +346,7 @@ func TestTrimAndNormalizeMutationResistance(t *testing.T) {
 		// Internal whitespace normalization
 		makeSanitizeTestCase(
 			"double_space",
-			testutil.MutationStrHelloWorld,
+			testutil.ValidationHelloWorld,
 			testutil.ValidationHelloWorld,
 			true,
 			"Double space to single (\\s+ pattern)",
@@ -400,7 +406,13 @@ func TestTrimAndNormalizeMutationResistance(t *testing.T) {
 		),
 
 		// Edge cases
-		makeSanitizeTestCase("empty_string", testutil.MutationStrEmpty, testutil.MutationStrEmpty, true, "Empty input"),
+		makeSanitizeTestCase(
+			"empty_string",
+			testutil.MutationStrEmpty,
+			testutil.MutationStrEmpty,
+			true,
+			testutil.MutationDescEmptyInput,
+		),
 		makeSanitizeTestCase("only_spaces", "     ", testutil.MutationStrEmpty, true, "Only spaces (trimmed to empty)"),
 		makeSanitizeTestCase(
 			"only_whitespace_mixed",
@@ -412,8 +424,8 @@ func TestTrimAndNormalizeMutationResistance(t *testing.T) {
 		makeSanitizeTestCase("no_whitespace", "hello", "hello", false, "No whitespace to normalize"),
 		makeSanitizeTestCase(
 			"single_space_valid",
-			testutil.MutationStrHelloWorld,
-			testutil.MutationStrHelloWorld,
+			testutil.ValidationHelloWorld,
+			testutil.ValidationHelloWorld,
 			false,
 			"Already normalized",
 		),
@@ -430,8 +442,8 @@ func TestTrimAndNormalizeMutationResistance(t *testing.T) {
 		// Unicode whitespace
 		makeSanitizeTestCase(
 			"regular_space",
-			testutil.MutationStrHelloWorld,
-			testutil.MutationStrHelloWorld,
+			testutil.ValidationHelloWorld,
+			testutil.ValidationHelloWorld,
 			false,
 			"Regular ASCII space",
 		),
@@ -673,7 +685,13 @@ func TestCleanVersionStringMutationResistance(t *testing.T) {
 
 		// Edge cases
 		makeSanitizeTestCase("only_v", "v", testutil.MutationStrEmpty, true, "Just v becomes empty"),
-		makeSanitizeTestCase("empty_string", testutil.MutationStrEmpty, testutil.MutationStrEmpty, true, "Empty input"),
+		makeSanitizeTestCase(
+			"empty_string",
+			testutil.MutationStrEmpty,
+			testutil.MutationStrEmpty,
+			true,
+			testutil.MutationDescEmptyInput,
+		),
 		makeSanitizeTestCase("only_whitespace", "   ", testutil.MutationStrEmpty, true, "Only spaces"),
 
 		// Multiple v's

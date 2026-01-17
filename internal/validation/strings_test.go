@@ -24,17 +24,17 @@ func TestTrimAndNormalize(t *testing.T) {
 		{
 			Name:  "multiple internal spaces",
 			Input: "hello    world",
-			Want:  testutil.HelloWorldStr,
+			Want:  testutil.ValidationHelloWorld,
 		},
 		{
 			Name:  "mixed whitespace",
 			Input: "  hello   world  ",
-			Want:  testutil.HelloWorldStr,
+			Want:  testutil.ValidationHelloWorld,
 		},
 		{
 			Name:  "newlines and tabs",
 			Input: "hello\n\t\tworld",
-			Want:  testutil.HelloWorldStr,
+			Want:  testutil.ValidationHelloWorld,
 		},
 		{
 			Name:  "empty string",

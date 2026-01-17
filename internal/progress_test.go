@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/schollz/progressbar/v3"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 func TestProgressBarManagerCreateProgressBar(t *testing.T) {
@@ -19,28 +21,28 @@ func TestProgressBarManagerCreateProgressBar(t *testing.T) {
 		{
 			name:        "normal progress bar",
 			quiet:       false,
-			description: "Test progress",
+			description: testutil.TestProgressDescription,
 			total:       10,
 			expectNil:   false,
 		},
 		{
 			name:        "quiet mode returns nil",
 			quiet:       true,
-			description: "Test progress",
+			description: testutil.TestProgressDescription,
 			total:       10,
 			expectNil:   true,
 		},
 		{
 			name:        "single item returns nil",
 			quiet:       false,
-			description: "Test progress",
+			description: testutil.TestProgressDescription,
 			total:       1,
 			expectNil:   true,
 		},
 		{
 			name:        "zero items returns nil",
 			quiet:       false,
-			description: "Test progress",
+			description: testutil.TestProgressDescription,
 			total:       0,
 			expectNil:   true,
 		},

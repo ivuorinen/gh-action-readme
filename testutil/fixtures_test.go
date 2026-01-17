@@ -24,7 +24,7 @@ func TestMustReadFixture(t *testing.T) {
 	}{
 		{
 			name:     "valid fixture file",
-			filename: "simple-action.yml",
+			filename: TestFixtureSimpleAction,
 			wantErr:  false,
 		},
 		{
@@ -332,7 +332,7 @@ func TestFixtureFileSystem(t *testing.T) {
 	t.Parallel()
 	// Verify that the fixture files actually exist
 	fixtureFiles := []string{
-		"simple-action.yml",
+		TestFixtureSimpleAction,
 		"composite-action.yml",
 		"docker-action.yml",
 		"invalid-action.yml",
@@ -513,7 +513,7 @@ func TestGetFixtureManager(t *testing.T) {
 func TestActionFixtureLoading(t *testing.T) {
 	t.Parallel()
 	// Test loading a fixture that should exist
-	fixture, err := LoadActionFixture("simple-action.yml")
+	fixture, err := LoadActionFixture(TestFixtureSimpleAction)
 	if err != nil {
 		t.Fatalf("failed to load simple action fixture: %v", err)
 	}

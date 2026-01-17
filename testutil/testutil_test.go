@@ -561,7 +561,7 @@ func validateConfigCreated(t *testing.T, config *TestAppConfig) {
 func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
 	t.Helper()
 	validateStringField(t, config.Theme, "default", "theme")
-	validateStringField(t, config.OutputFormat, "md", "output format")
+	validateStringField(t, config.OutputFormat, "md", TestFieldOutputFormat)
 	validateStringField(t, config.OutputDir, ".", "output dir")
 	validateStringField(t, config.Schema, "schemas/action.schema.json", "schema")
 	validateBoolField(t, config.Verbose, false, "verbose")
@@ -573,7 +573,7 @@ func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
 func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
 	t.Helper()
 	validateStringField(t, config.Theme, "github", "theme")
-	validateStringField(t, config.OutputFormat, "html", "output format")
+	validateStringField(t, config.OutputFormat, "html", TestFieldOutputFormat)
 	validateStringField(t, config.OutputDir, "docs", "output dir")
 	validateStringField(t, config.Template, "custom.tmpl", "template")
 	validateStringField(t, config.Schema, "custom.schema.json", "schema")
@@ -592,7 +592,7 @@ func validatePartialOverrides(t *testing.T, config *TestAppConfig) {
 // validateRemainingDefaults validates that non-overridden values remain default.
 func validateRemainingDefaults(t *testing.T, config *TestAppConfig) {
 	t.Helper()
-	validateStringField(t, config.OutputFormat, "md", "output format")
+	validateStringField(t, config.OutputFormat, "md", TestFieldOutputFormat)
 	validateBoolField(t, config.Quiet, false, "quiet")
 }
 
