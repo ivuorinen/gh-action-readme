@@ -13,19 +13,27 @@ NC='\033[0m' # No Color
 
 # Functions
 log_info() {
-  echo -e "${BLUE}[INFO]${NC} $1"
+  local msg="$1"
+  echo -e "${BLUE}[INFO]${NC} ${msg}"
+  return 0
 }
 
 log_success() {
-  echo -e "${GREEN}[SUCCESS]${NC} $1"
+  local msg="$1"
+  echo -e "${GREEN}[SUCCESS]${NC} ${msg}"
+  return 0
 }
 
 log_warning() {
-  echo -e "${YELLOW}[WARNING]${NC} $1"
+  local msg="$1"
+  echo -e "${YELLOW}[WARNING]${NC} ${msg}"
+  return 0
 }
 
 log_error() {
-  echo -e "${RED}[ERROR]${NC} $1"
+  local msg="$1"
+  echo -e "${RED}[ERROR]${NC} ${msg}" >&2
+  return 0
 }
 
 # Check if we're in the right directory
