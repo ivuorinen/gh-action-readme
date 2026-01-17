@@ -153,11 +153,6 @@ const (
 	TestVersionV417 = "v4.1.7"
 )
 
-// Mutation test string constants for string operations tests.
-const (
-	MutationStrHelloWorldDoubleSpace = "hello  world" // Double space for testing space normalization
-)
-
 // Test file path constants for reducing string duplication.
 const (
 	TestPathConfigYML = "config.yml"
@@ -624,12 +619,13 @@ const (
 	MutationStrHelloWorldDash = "hello-world"
 
 	// String mutation test constants.
-	MutationStrEmpty               = ""
-	MutationStrSetupNode           = "Setup-Node"
-	MutationStrCheckoutCode        = "Checkout Code"
-	MutationStrCheckoutCodeDash    = "checkout-code"
-	MutationStrSetupGoEnvironment  = "Setup Go Environment"
-	MutationStrSetupGoEnvironmentD = "setup-go-environment"
+	MutationStrEmpty                 = ""
+	MutationStrSetupNode             = "Setup-Node"
+	MutationStrCheckoutCode          = "Checkout Code"
+	MutationStrCheckoutCodeDash      = "checkout-code"
+	MutationStrSetupGoEnvironment    = "Setup Go Environment"
+	MutationStrSetupGoEnvironmentD   = "setup-go-environment"
+	MutationStrHelloWorldDoubleSpace = "hello  world" // Double space for testing space normalization
 
 	// Version mutation test constants.
 	MutationVersionV2         = "v2.5.1"
