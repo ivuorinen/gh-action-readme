@@ -677,3 +677,21 @@ const (
 	WhitespaceNewline        = "\n"
 	WhitespaceCarriageReturn = "\r"
 )
+
+// Test YAML fixture file name constants for reducing string duplication.
+const (
+	TestFixtureGlobalYAML     = "global.yaml"
+	TestFixtureBadYAML        = "bad.yaml"
+	TestFixturePullRequests   = "pull-requests"
+	TestFixtureMissingPermKey = "missing permission key %q"
+	TestFixtureContentsRead   = "contents: read"
+	TestFixtureIssuesWrite    = "issues: write"
+)
+
+// Parser test permission constants for reducing string duplication.
+const (
+	PermissionContents = "contents"
+	PermissionIssues   = "issues"
+	PermissionRead     = "read"
+	PermissionWrite    = "write"
+)

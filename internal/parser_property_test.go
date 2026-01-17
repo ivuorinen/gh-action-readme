@@ -17,7 +17,7 @@ func TestPermissionMergingProperties(t *testing.T) {
 	// Property 1: YAML always wins conflicts
 	properties.Property("YAML permissions override comment permissions",
 		prop.ForAll(
-			func(key string, yamlVal string, commentVal string) bool {
+			func(key, yamlVal, commentVal string) bool {
 				// Only test when values differ and key is non-empty
 				if yamlVal == commentVal || yamlVal == "" || key == "" || commentVal == "" {
 					return true
@@ -42,7 +42,7 @@ func TestPermissionMergingProperties(t *testing.T) {
 	// Property 2: All unique keys preserved
 	properties.Property("merge preserves all non-conflicting keys",
 		prop.ForAll(
-			func(yamlKey string, commentKey string, val string) bool {
+			func(yamlKey, commentKey, val string) bool {
 				// Only test when keys are different and non-empty
 				if yamlKey == commentKey || yamlKey == "" || commentKey == "" || val == "" {
 					return true
@@ -70,7 +70,7 @@ func TestPermissionMergingProperties(t *testing.T) {
 	// Property 3: Identity - merging with nil preserves original
 	properties.Property("merging with nil preserves original permissions",
 		prop.ForAll(
-			func(key string, value string) bool {
+			func(key, value string) bool {
 				if key == "" || value == "" {
 					return true
 				}
@@ -109,7 +109,7 @@ func TestPermissionMergingProperties(t *testing.T) {
 	// Property 4: Identity - merging with empty map preserves original
 	properties.Property("merging with empty map preserves original permissions",
 		prop.ForAll(
-			func(key string, value string) bool {
+			func(key, value string) bool {
 				if key == "" || value == "" {
 					return true
 				}
@@ -198,7 +198,7 @@ func TestActionYMLNilPermissionsProperties(t *testing.T) {
 	// Property 1: Merging into nil permissions creates new map
 	properties.Property("merging into nil permissions creates new map",
 		prop.ForAll(
-			func(key string, value string) bool {
+			func(key, value string) bool {
 				if key == "" || value == "" {
 					return true
 				}
@@ -240,54 +240,59 @@ func TestActionYMLNilPermissionsProperties(t *testing.T) {
 
 	properties.TestingRun(t)
 }
+  //nolint:gocyclo // Property-based test with multiple properties
 
 // TestCommentPermissionsOnlyProperties verifies behavior when only comment permissions exist.
 func TestCommentPermissionsOnlyProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
+	registerCommentPermissionsOnlyProperties(properties)
+	properties.TestingRun(t)
+}
 
+func registerCommentPermissionsOnlyProperties(properties *gopter.Properties) {
 	// Property: All comment permissions transferred when YAML is nil
 	properties.Property("all comment permissions transferred when YAML is nil",
 		prop.ForAll(
-			func(keys []string, value string) bool {
-				if len(keys) == 0 || value == "" {
-					return true
-				}
-
-				// Build comment permissions
-				commentPerms := make(map[string]string)
-				for _, key := range keys {
-					if key != "" {
-						commentPerms[key] = value
-					}
-				}
-
-				if len(commentPerms) == 0 {
-					return true
-				}
-
-				action := &ActionYML{
-					Permissions: nil,
-				}
-
-				mergePermissions(action, commentPerms)
-
-				// All comment permissions should be in action
-				if action.Permissions == nil {
-					return false
-				}
-
-				for key, val := range commentPerms {
-					if action.Permissions[key] != val {
-						return false
-					}
-				}
-
-				return true
-			},
+			verifyCommentPermissionsTransferred,
 			gen.SliceOf(gen.AlphaString().SuchThat(func(s string) bool { return s != "" })),
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 		),
 	)
+}
 
-	properties.TestingRun(t)
+func verifyCommentPermissionsTransferred(keys []string, value string) bool {
+	if len(keys) == 0 || value == "" {
+		return true
+	}
+
+	// Build comment permissions
+	commentPerms := make(map[string]string)
+	for _, key := range keys {
+		if key != "" {
+			commentPerms[key] = value
+		}
+	}
+
+	if len(commentPerms) == 0 {
+		return true
+	}
+
+	action := &ActionYML{
+		Permissions: nil,
+	}
+
+	mergePermissions(action, commentPerms)
+
+	// All comment permissions should be in action
+	if action.Permissions == nil {
+		return false
+	}
+
+	for key, val := range commentPerms {
+		if action.Permissions[key] != val {
+			return false
+		}
+	}
+
+	return true
 }

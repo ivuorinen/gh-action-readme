@@ -10,6 +10,8 @@ import (
 // TestPermissionParsingMutationResistance provides comprehensive test cases designed
 // to catch mutations in the permission parsing logic. These tests target critical
 // boundaries, operators, and conditions that are susceptible to mutation.
+//
+//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
 func TestPermissionParsingMutationResistance(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -32,9 +34,9 @@ func TestPermissionParsingMutationResistance(t *testing.T) {
 #   issues: write
 #   pull-requests: read`,
 			expected: map[string]string{
-				"contents":      "read",
-				"issues":        "write",
-				"pull-requests": "read",
+				"contents":                       "read",
+				"issues":                         "write",
+				testutil.TestFixturePullRequests: "read",
 			},
 			critical: true,
 		},
@@ -184,20 +186,20 @@ name: Test Action
 #   security-events: write
 #   statuses: write`,
 			expected: map[string]string{
-				"actions":             "write",
-				"attestations":        "write",
-				"checks":              "write",
-				"contents":            "write",
-				"deployments":         "write",
-				"discussions":         "write",
-				"id-token":            "write",
-				"issues":              "write",
-				"packages":            "write",
-				"pages":               "write",
-				"pull-requests":       "write",
-				"repository-projects": "write",
-				"security-events":     "write",
-				"statuses":            "write",
+				"actions":                        "write",
+				"attestations":                   "write",
+				"checks":                         "write",
+				"contents":                       "write",
+				"deployments":                    "write",
+				"discussions":                    "write",
+				"id-token":                       "write",
+				"issues":                         "write",
+				"packages":                       "write",
+				"pages":                          "write",
+				testutil.TestFixturePullRequests: "write",
+				"repository-projects":            "write",
+				"security-events":                "write",
+				"statuses":                       "write",
 			},
 			critical: false, // Stress test for map operations
 		},
@@ -205,44 +207,48 @@ name: Test Action
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temporary file with test YAML
-			tmpDir := t.TempDir()
-			testFile := filepath.Join(tmpDir, "action.yml")
-
-			testutil.WriteTestFile(t, testFile, tt.yaml)
-
-			// Parse permissions
-			result, err := parsePermissionsFromComments(testFile)
-			if err != nil {
-				t.Fatalf("parsePermissionsFromComments() error = %v", err)
-			}
-
-			// Verify expected permissions
-			if len(result) != len(tt.expected) {
-				t.Errorf("got %d permissions, want %d", len(result), len(tt.expected))
-				t.Logf("got: %v", result)
-				t.Logf("want: %v", tt.expected)
-			}
-
-			for key, expectedValue := range tt.expected {
-				gotValue, exists := result[key]
-				if !exists {
-					t.Errorf("missing permission key %q", key)
-
-					continue
-				}
-				if gotValue != expectedValue {
-					t.Errorf("permission %q: got value %q, want %q", key, gotValue, expectedValue)
-				}
-			}
-
-			// Check for unexpected keys
-			for key := range result {
-				if _, expected := tt.expected[key]; !expected {
-					t.Errorf("unexpected permission key %q with value %q", key, result[key])
-				}
-			}
+			testPermissionParsingCase(t, tt.yaml, tt.expected)
 		})
+	}
+}
+
+func testPermissionParsingCase(t *testing.T, yaml string, expected map[string]string) {
+	// Create temporary file with test YAML
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "action.yml")
+
+	testutil.WriteTestFile(t, testFile, yaml)
+
+	// Parse permissions
+	result, err := parsePermissionsFromComments(testFile)
+	if err != nil {
+		t.Fatalf("parsePermissionsFromComments() error = %v", err)
+	}
+
+	// Verify expected permissions
+	if len(result) != len(expected) {
+		t.Errorf("got %d permissions, want %d", len(result), len(expected))
+		t.Logf("got: %v", result)
+		t.Logf("want: %v", expected)
+	}
+
+	for key, expectedValue := range expected {
+		gotValue, exists := result[key]
+		if !exists {
+			t.Errorf(testutil.TestFixtureMissingPermKey, key)
+
+			continue
+		}
+		if gotValue != expectedValue {
+			t.Errorf("permission %q: got value %q, want %q", key, gotValue, expectedValue)
+		}
+	}
+
+	// Check for unexpected keys
+	for key := range result {
+		if _, expected := expected[key]; !expected {
+			t.Errorf("unexpected permission key %q with value %q", key, result[key])
+		}
 	}
 }
 
@@ -314,13 +320,13 @@ func TestMergePermissionsMutationResistance(t *testing.T) {
 				"issues":   "write",
 			},
 			commentPerms: map[string]string{
-				"contents":      "read",
-				"pull-requests": "read",
+				"contents":                       "read",
+				testutil.TestFixturePullRequests: "read",
 			},
 			expected: map[string]string{
-				"contents":      "write", // YAML wins
-				"issues":        "write", // Only in YAML
-				"pull-requests": "read",  // Only in comment
+				"contents":                       "write", // YAML wins
+				"issues":                         "write", // Only in YAML
+				testutil.TestFixturePullRequests: "read",  // Only in comment
 			},
 			critical:    true,
 			description: "Complex merge with conflicts and unique keys",
@@ -337,74 +343,80 @@ func TestMergePermissionsMutationResistance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create ActionYML with test permissions
-			action := &ActionYML{}
-
-			// Copy yamlPerms to avoid test pollution
-			if tt.yamlPerms != nil {
-				action.Permissions = make(map[string]string)
-				for k, v := range tt.yamlPerms {
-					action.Permissions[k] = v
-				}
-			}
-
-			// Copy commentPerms to avoid mutation during test
-			var commentPermsCopy map[string]string
-			if tt.commentPerms != nil {
-				commentPermsCopy = make(map[string]string)
-				for k, v := range tt.commentPerms {
-					commentPermsCopy[k] = v
-				}
-			}
-
-			// Perform merge
-			mergePermissions(action, commentPermsCopy)
-
-			// Verify result
-			if tt.expected == nil {
-				if action.Permissions != nil {
-					t.Errorf("expected nil permissions, got %v", action.Permissions)
-				}
-
-				return
-			}
-
-			if action.Permissions == nil {
-				t.Errorf("expected non-nil permissions %v, got nil", tt.expected)
-
-				return
-			}
-
-			if len(action.Permissions) != len(tt.expected) {
-				t.Errorf("got %d permissions, want %d", len(action.Permissions), len(tt.expected))
-				t.Logf("got: %v", action.Permissions)
-				t.Logf("want: %v", tt.expected)
-			}
-
-			for key, expectedValue := range tt.expected {
-				gotValue, exists := action.Permissions[key]
-				if !exists {
-					t.Errorf("missing permission key %q", key)
-
-					continue
-				}
-				if gotValue != expectedValue {
-					t.Errorf("permission %q: got %q, want %q (description: %s)",
-						key, gotValue, expectedValue, tt.description)
-				}
-			}
-
-			for key := range action.Permissions {
-				if _, expected := tt.expected[key]; !expected {
-					t.Errorf("unexpected permission key %q", key)
-				}
-			}
+			testMergePermissionsCase(t, tt.yamlPerms, tt.commentPerms, tt.expected, tt.description)
 		})
+	}
+}
+
+func testMergePermissionsCase(t *testing.T, yamlPerms, commentPerms, expected map[string]string, description string) {
+	// Create ActionYML with test permissions
+	action := &ActionYML{}
+
+	// Copy yamlPerms to avoid test pollution
+	if yamlPerms != nil {
+		action.Permissions = make(map[string]string)
+		for k, v := range yamlPerms {
+			action.Permissions[k] = v
+		}
+	}
+
+	// Copy commentPerms to avoid mutation during test
+	var commentPermsCopy map[string]string
+	if commentPerms != nil {
+		commentPermsCopy = make(map[string]string)
+		for k, v := range commentPerms {
+			commentPermsCopy[k] = v
+		}
+	}
+
+	// Perform merge
+	mergePermissions(action, commentPermsCopy)
+
+	// Verify result
+	if expected == nil {
+		if action.Permissions != nil {
+			t.Errorf("expected nil permissions, got %v", action.Permissions)
+		}
+
+		return
+	}
+
+	if action.Permissions == nil {
+		t.Errorf("expected non-nil permissions %v, got nil", expected)
+
+		return
+	}
+
+	if len(action.Permissions) != len(expected) {
+		t.Errorf("got %d permissions, want %d", len(action.Permissions), len(expected))
+		t.Logf("got: %v", action.Permissions)
+		t.Logf("want: %v", expected)
+	}
+
+	for key, expectedValue := range expected {
+		gotValue, exists := action.Permissions[key]
+		if !exists {
+			t.Errorf(testutil.TestFixtureMissingPermKey, key)
+
+			continue
+		}
+		if gotValue != expectedValue {
+			t.Errorf("permission %q: got %q, want %q (description: %s)",
+				key, gotValue, expectedValue, description)
+		}
+	}
+
+	for key := range action.Permissions {
+		if _, expected := expected[key]; !expected {
+			t.Errorf("unexpected permission key %q", key)
+		}
 	}
 }
 
 // TestParsePermissionLineMutationResistance tests string manipulation boundaries
 // in permission line parsing that are susceptible to mutation.
+//
+//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
 func TestParsePermissionLineMutationResistance(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -417,7 +429,7 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 	}{
 		{
 			name:        "basic_key_value",
-			content:     "contents: read",
+			content:     testutil.TestFixtureContentsRead,
 			expectKey:   "contents",
 			expectValue: "read",
 			expectOk:    true,
@@ -536,26 +548,32 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			key, value, ok := parsePermissionLine(tt.content)
-
-			if ok != tt.expectOk {
-				t.Errorf("ok: got %v, want %v (description: %s)", ok, tt.expectOk, tt.description)
-			}
-
-			if ok {
-				if key != tt.expectKey {
-					t.Errorf("key: got %q, want %q (description: %s)", key, tt.expectKey, tt.description)
-				}
-				if value != tt.expectValue {
-					t.Errorf("value: got %q, want %q (description: %s)", value, tt.expectValue, tt.description)
-				}
-			}
+			testParsePermissionLineCase(t, tt.content, tt.expectKey, tt.expectValue, tt.expectOk, tt.description)
 		})
+	}
+}
+
+func testParsePermissionLineCase(t *testing.T, content, expectKey, expectValue string, expectOk bool, description string) {
+	key, value, ok := parsePermissionLine(content)
+
+	if ok != expectOk {
+		t.Errorf("ok: got %v, want %v (description: %s)", ok, expectOk, description)
+	}
+
+	if ok {
+		if key != expectKey {
+			t.Errorf("key: got %q, want %q (description: %s)", key, expectKey, description)
+		}
+		if value != expectValue {
+			t.Errorf("value: got %q, want %q (description: %s)", value, expectValue, description)
+		}
 	}
 }
 
 // TestProcessPermissionEntryMutationResistance tests indentation logic that is
 // highly susceptible to off-by-one mutations.
+//
+//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
 func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -570,7 +588,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 		{
 			name:              "first_item_sets_indent",
 			line:              "#   contents: read",
-			content:           "contents: read",
+			content:           testutil.TestFixtureContentsRead,
 			initialExpected:   -1,
 			expectBreak:       false,
 			expectPermissions: map[string]string{"contents": "read"},
@@ -580,7 +598,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 		{
 			name:              "same_indent_continues",
 			line:              "#   issues: write",
-			content:           "issues: write",
+			content:           testutil.TestFixtureIssuesWrite,
 			initialExpected:   3,
 			expectBreak:       false,
 			expectPermissions: map[string]string{"issues": "write"},
@@ -590,7 +608,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 		{
 			name:              "dedent_by_one_breaks",
 			line:              "#  issues: write",
-			content:           "issues: write",
+			content:           testutil.TestFixtureIssuesWrite,
 			initialExpected:   3,
 			expectBreak:       true,
 			expectPermissions: map[string]string{},
@@ -600,7 +618,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 		{
 			name:              "dedent_by_two_breaks",
 			line:              "# issues: write",
-			content:           "issues: write",
+			content:           testutil.TestFixtureIssuesWrite,
 			initialExpected:   3,
 			expectBreak:       true,
 			expectPermissions: map[string]string{},
@@ -610,7 +628,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 		{
 			name:              "indent_more_continues",
 			line:              "#     issues: write",
-			content:           "issues: write",
+			content:           testutil.TestFixtureIssuesWrite,
 			initialExpected:   3,
 			expectBreak:       false,
 			expectPermissions: map[string]string{"issues": "write"},
@@ -620,7 +638,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 		{
 			name:              "zero_indent_with_zero_expected",
 			line:              "# contents: read",
-			content:           "contents: read",
+			content:           testutil.TestFixtureContentsRead,
 			initialExpected:   0,
 			expectBreak:       false,
 			expectPermissions: map[string]string{"contents": "read"},
@@ -630,7 +648,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 		{
 			name:              "large_indent_value",
 			line:              "#          contents: read",
-			content:           "contents: read",
+			content:           testutil.TestFixtureContentsRead,
 			initialExpected:   -1,
 			expectBreak:       false,
 			expectPermissions: map[string]string{"contents": "read"},
@@ -641,39 +659,43 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			permissions := make(map[string]string)
-			expectedIndent := tt.initialExpected
-
-			shouldBreak := processPermissionEntry(tt.line, tt.content, &expectedIndent, permissions)
-
-			if shouldBreak != tt.expectBreak {
-				t.Errorf("shouldBreak: got %v, want %v (description: %s)",
-					shouldBreak, tt.expectBreak, tt.description)
-			}
-
-			if len(permissions) != len(tt.expectPermissions) {
-				t.Errorf("got %d permissions, want %d (description: %s)",
-					len(permissions), len(tt.expectPermissions), tt.description)
-			}
-
-			for key, expectedValue := range tt.expectPermissions {
-				gotValue, exists := permissions[key]
-				if !exists {
-					t.Errorf("missing permission key %q", key)
-
-					continue
-				}
-				if gotValue != expectedValue {
-					t.Errorf("permission %q: got %q, want %q", key, gotValue, expectedValue)
-				}
-			}
-
-			// Verify expected indent was set if it was -1
-			if tt.initialExpected == -1 && len(tt.expectPermissions) > 0 {
-				if expectedIndent == -1 {
-					t.Error("expectedIndent should have been set from -1")
-				}
-			}
+			testProcessPermissionEntryCase(t, tt.line, tt.content, tt.initialExpected, tt.expectBreak, tt.expectPermissions, tt.description)
 		})
+	}
+}
+
+func testProcessPermissionEntryCase(t *testing.T, line, content string, initialExpected int, expectBreak bool, expectPermissions map[string]string, description string) {
+	permissions := make(map[string]string)
+	expectedIndent := initialExpected
+
+	shouldBreak := processPermissionEntry(line, content, &expectedIndent, permissions)
+
+	if shouldBreak != expectBreak {
+		t.Errorf("shouldBreak: got %v, want %v (description: %s)",
+			shouldBreak, expectBreak, description)
+	}
+
+	if len(permissions) != len(expectPermissions) {
+		t.Errorf("got %d permissions, want %d (description: %s)",
+			len(permissions), len(expectPermissions), description)
+	}
+
+	for key, expectedValue := range expectPermissions {
+		gotValue, exists := permissions[key]
+		if !exists {
+			t.Errorf(testutil.TestFixtureMissingPermKey, key)
+
+			continue
+		}
+		if gotValue != expectedValue {
+			t.Errorf("permission %q: got %q, want %q", key, gotValue, expectedValue)
+		}
+	}
+
+	// Verify expected indent was set if it was -1
+	if initialExpected == -1 && len(expectPermissions) > 0 {
+		if expectedIndent == -1 {
+			t.Error("expectedIndent should have been set from -1")
+		}
 	}
 }

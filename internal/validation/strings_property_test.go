@@ -17,6 +17,7 @@ func TestFormatUsesStatementProperties(t *testing.T) {
 
 	// Property 1: Result always contains exactly one @ symbol (if non-empty)
 	properties.Property("uses statement has exactly one @ symbol when non-empty",
+		//nolint:gocritic // Property-based testing requires diverse parameter lists
 		prop.ForAll(
 			func(org string, repo string, version string) bool {
 				result := FormatUsesStatement(org, repo, version)
@@ -38,6 +39,7 @@ func TestFormatUsesStatementProperties(t *testing.T) {
 	// Property 2: Non-empty org and repo produce non-empty result
 	properties.Property("non-empty org and repo produce non-empty result",
 		prop.ForAll(
+			//nolint:gocritic // Property-based testing requires diverse parameter lists
 			func(org string, repo string, version string) bool {
 				// Only test when org and repo are non-empty
 				if org == "" || repo == "" {
@@ -57,6 +59,7 @@ func TestFormatUsesStatementProperties(t *testing.T) {
 	// Property 3: Result starts with org/repo pattern
 	properties.Property("uses statement starts with org/repo when both non-empty",
 		prop.ForAll(
+			//nolint:gocritic // Property-based testing requires diverse parameter lists
 			func(org string, repo string, version string) bool {
 				if org == "" || repo == "" {
 					return true
@@ -76,6 +79,7 @@ func TestFormatUsesStatementProperties(t *testing.T) {
 	// Property 4: Empty org or repo always produces empty result
 	properties.Property("empty org or repo produces empty result",
 		prop.ForAll(
+			//nolint:gocritic // Property-based testing requires diverse parameter lists
 			func(org string, repo string, version string) bool {
 				if org == "" || repo == "" {
 					result := FormatUsesStatement(org, repo, version)
@@ -93,6 +97,7 @@ func TestFormatUsesStatementProperties(t *testing.T) {
 
 	// Property 5: Version part always has @ prefix in result
 	properties.Property("version part in result always has @ prefix",
+		//nolint:gocritic // Property-based testing requires diverse parameter lists
 		prop.ForAll(
 			func(org string, repo string, version string) bool {
 				if org == "" || repo == "" {
@@ -117,14 +122,16 @@ func TestFormatUsesStatementProperties(t *testing.T) {
 			gen.AlphaString(),
 		),
 	)
-
-	properties.TestingRun(t)
 }
 
 // TestStringNormalizationProperties verifies idempotency and whitespace properties.
 func TestStringNormalizationProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
+	registerStringNormalizationProperties(properties)
+	properties.TestingRun(t)
+}
 
+func registerStringNormalizationProperties(properties *gopter.Properties) {
 	// Property 1: Idempotency - normalizing twice produces same result as once
 	properties.Property("normalization is idempotent",
 		prop.ForAll(
@@ -198,8 +205,6 @@ func TestStringNormalizationProperties(t *testing.T) {
 			},
 		),
 	)
-
-	properties.TestingRun(t)
 }
 
 // TestVersionCleaningProperties verifies version string cleaning properties.

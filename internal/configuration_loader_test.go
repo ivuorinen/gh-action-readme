@@ -164,9 +164,9 @@ func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 				tmpDir, _ := testutil.TempDir(t)
 
 				// Global config
-				testutil.WriteFileInDir(t, tmpDir, "global.yaml",
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFixtureGlobalYAML,
 					string(testutil.MustReadFixture(testutil.TestConfigGlobalDefaultMD)))
-				globalPath := filepath.Join(tmpDir, "global.yaml")
+				globalPath := filepath.Join(tmpDir, testutil.TestFixtureGlobalYAML)
 
 				// Repo config
 				repoRoot := filepath.Join(tmpDir, "repo")
@@ -186,9 +186,9 @@ func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 				tmpDir, _ := testutil.TempDir(t)
 
 				// Global config
-				testutil.WriteFileInDir(t, tmpDir, "global.yaml",
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFixtureGlobalYAML,
 					string(testutil.MustReadFixture(testutil.TestConfigGlobalDefaultMD)))
-				globalPath := filepath.Join(tmpDir, "global.yaml")
+				globalPath := filepath.Join(tmpDir, testutil.TestFixtureGlobalYAML)
 
 				// Repo config
 				repoRoot := filepath.Join(tmpDir, "repo")
@@ -214,9 +214,9 @@ func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 			setupFunc: func(t *testing.T) (string, string, string) {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
-				testutil.WriteFileInDir(t, tmpDir, "bad.yaml",
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFixtureBadYAML,
 					string(testutil.MustReadFixture(testutil.TestErrorInvalidYAMLBraces)))
-				configPath := filepath.Join(tmpDir, "bad.yaml")
+				configPath := filepath.Join(tmpDir, testutil.TestFixtureBadYAML)
 
 				return configPath, "", ""
 			},
@@ -309,9 +309,9 @@ func TestConfigurationLoaderLoadGlobalConfig(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				t.Helper()
 				tmpDir, _ := testutil.TempDir(t)
-				testutil.WriteFileInDir(t, tmpDir, "bad.yaml",
+				testutil.WriteFileInDir(t, tmpDir, testutil.TestFixtureBadYAML,
 					string(testutil.MustReadFixture(testutil.TestErrorInvalidYAMLTripleBraces)))
-				configPath := filepath.Join(tmpDir, "bad.yaml")
+				configPath := filepath.Join(tmpDir, testutil.TestFixtureBadYAML)
 
 				return configPath
 			},
