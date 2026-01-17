@@ -102,9 +102,3 @@ issues:
   max-issues-per-linter: 150
   max-same-issues: 50
   fix: true
-  exclude-rules:
-    # Mutation test files have inherent longer lines due to many test cases
-    # with similar structure (table-driven tests with detailed descriptions)
-    - path: .*_mutation_test\.go
-      linters:
-        - lll
