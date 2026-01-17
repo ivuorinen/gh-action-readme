@@ -639,8 +639,15 @@ const (
 	MutationUsesOrgRepo           = "org/repo@ver"
 
 	// Semantic version mutation test constants.
-	MutationSemverFull            = "1.2.3"
-	MutationSemverPrerelease      = "1.2.3-alpha"
-	MutationSemverBuildMeta       = "1.2.3+build.123"
-	MutationSemverPrereleaseBuild = "1.2.3-alpha+build.123"
+	MutationSemverFull              = "1.2.3"
+	MutationSemverPrerelease        = "1.2.3-alpha"
+	MutationSemverBuildMeta         = "1.2.3+build.123"
+	MutationSemverPrereleaseBuild   = "1.2.3-alpha+build.123"
+	MutationSemverInvalidExtraParts = "1.2.3.4"
+	MutationSemverEmptyPrerelease   = "1.2.3-"
+	MutationSemverBuildOnlyNumbers  = "1.2.3+20130313144700"
+	MutationSemverDoubleV           = "vv1.2.3"
+	MutationSemverUppercaseV        = "V1.2.3"
+	MutationSemverLeadingSpace      = " 1.2.3"
+	MutationSemverTrailingSpace     = "1.2.3 "
 )

@@ -159,7 +159,7 @@ func TestIsSemanticVersionMutationResistance(t *testing.T) {
 		makeSemverTestCase("missing_minor_patch_invalid", "1", false, true, "Only major version"),
 		makeSemverTestCase(
 			"extra_parts_invalid",
-			"1.2.3.4",
+			testutil.MutationSemverInvalidExtraParts,
 			false,
 			true,
 			"Too many parts (no $ anchor would allow this)",
@@ -171,7 +171,7 @@ func TestIsSemanticVersionMutationResistance(t *testing.T) {
 		makeSemverTestCase("prerelease_multiple_parts", "1.2.3-alpha.beta.1", true, false, "Multiple prerelease parts"),
 		makeSemverTestCase(
 			"empty_prerelease_invalid",
-			"1.2.3-",
+			testutil.MutationSemverEmptyPrerelease,
 			false,
 			true,
 			"Dash with no prerelease (+ requires content)",
@@ -182,7 +182,7 @@ func TestIsSemanticVersionMutationResistance(t *testing.T) {
 		makeSemverTestCase("empty_build_invalid", "1.2.3+", false, true, "Plus with no build metadata"),
 		makeSemverTestCase(
 			"build_metadata_only_numbers",
-			"1.2.3+20130313144700",
+			testutil.MutationSemverBuildOnlyNumbers,
 			true,
 			false,
 			"Build with only numbers",
@@ -204,12 +204,36 @@ func TestIsSemanticVersionMutationResistance(t *testing.T) {
 		makeSemverTestCase("leading_zero_technically_valid", "01.02.03", true, false, "Leading zeros (regex allows)"),
 
 		// v prefix edge cases
-		makeSemverTestCase("double_v_invalid", "vv1.2.3", false, true, "Double v prefix (v? means 0 or 1)"),
-		makeSemverTestCase("uppercase_V_invalid", "V1.2.3", false, true, "Uppercase V not allowed"),
+		makeSemverTestCase(
+			"double_v_invalid",
+			testutil.MutationSemverDoubleV,
+			false,
+			true,
+			"Double v prefix (v? means 0 or 1)",
+		),
+		makeSemverTestCase(
+			"uppercase_V_invalid",
+			testutil.MutationSemverUppercaseV,
+			false,
+			true,
+			"Uppercase V not allowed",
+		),
 
 		// Whitespace
-		makeSemverTestCase("leading_whitespace_invalid", " 1.2.3", false, true, "Leading space (^ anchor)"),
-		makeSemverTestCase("trailing_whitespace_invalid", "1.2.3 ", false, true, "Trailing space ($ anchor)"),
+		makeSemverTestCase(
+			"leading_whitespace_invalid",
+			testutil.MutationSemverLeadingSpace,
+			false,
+			true,
+			"Leading space (^ anchor)",
+		),
+		makeSemverTestCase(
+			"trailing_whitespace_invalid",
+			testutil.MutationSemverTrailingSpace,
+			false,
+			true,
+			"Trailing space ($ anchor)",
+		),
 	}
 
 	for _, tt := range tests {
