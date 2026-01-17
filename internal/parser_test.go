@@ -66,7 +66,7 @@ func TestShouldIgnoreDirectory(t *testing.T) {
 			want:        true,
 		},
 		{
-			name:        "no match",
+			name:        testutil.TestCaseNameNoMatch,
 			dirName:     "src",
 			ignoredDirs: []string{appconstants.DirNodeModules, appconstants.DirVendor},
 			want:        false,

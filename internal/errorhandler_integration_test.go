@@ -245,7 +245,7 @@ func TestErrorHandlerAllErrorCodes(t *testing.T) {
 		{appconstants.ErrCodeFileWrite, "file write error"},
 		{appconstants.ErrCodeDependencyAnalysis, "dependency error"},
 		{appconstants.ErrCodeCacheAccess, "cache error"},
-		{appconstants.ErrCodeUnknown, "unknown error"},
+		{appconstants.ErrCodeUnknown, testutil.TestCaseNameUnknownError},
 	}
 
 	for _, tc := range errorCodes {

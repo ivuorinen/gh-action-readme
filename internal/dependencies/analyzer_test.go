@@ -152,7 +152,7 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 		expectedType    VersionType
 	}{
 		{
-			name:            "semantic version",
+			name:            testutil.TestCaseNameSemanticVersion,
 			uses:            testutil.TestActionCheckoutV4,
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
@@ -168,7 +168,7 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 			expectedType:    SemanticVersion,
 		},
 		{
-			name:            "commit SHA",
+			name:            testutil.TestCaseNameCommitSHA,
 			uses:            "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
@@ -747,7 +747,7 @@ func TestIsCompositeAction(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "javascript action",
+			name:    testutil.TestCaseNameJavaScriptAction,
 			fixture: "javascript-action.yml",
 			want:    false,
 			wantErr: false,

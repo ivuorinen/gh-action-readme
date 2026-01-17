@@ -93,17 +93,17 @@ func TestIsCommitSHA(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "short commit SHA",
+			name:     testutil.TestCaseNameShortCommitSHA,
 			version:  "8f4b7f8",
 			expected: true,
 		},
 		{
-			name:     "semantic version",
+			name:     testutil.TestCaseNameSemanticVersion,
 			version:  testutil.TestVersionSemantic,
 			expected: false,
 		},
 		{
-			name:     "branch name",
+			name:     testutil.TestCaseNameBranchName,
 			version:  testutil.TestBranchMain,
 			expected: false,
 		},
@@ -158,17 +158,17 @@ func TestIsSemanticVersion(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "major version only",
+			name:     testutil.TestCaseNameMajorVersionOnly,
 			version:  "v1",
 			expected: false,
 		},
 		{
-			name:     "commit SHA",
+			name:     testutil.TestCaseNameCommitSHA,
 			version:  testutil.TestSHAForTesting,
 			expected: false,
 		},
 		{
-			name:     "branch name",
+			name:     testutil.TestCaseNameBranchName,
 			version:  testutil.TestBranchMain,
 			expected: false,
 		},
@@ -208,7 +208,7 @@ func TestIsVersionPinned(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "major version only",
+			name:     testutil.TestCaseNameMajorVersionOnly,
 			version:  "v1",
 			expected: false,
 		},
@@ -218,12 +218,12 @@ func TestIsVersionPinned(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "branch name",
+			name:     testutil.TestCaseNameBranchName,
 			version:  testutil.TestBranchMain,
 			expected: false,
 		},
 		{
-			name:     "short commit SHA",
+			name:     testutil.TestCaseNameShortCommitSHA,
 			version:  "8f4b7f8",
 			expected: false,
 		},
@@ -393,7 +393,7 @@ func TestCleanVersionString(t *testing.T) {
 			expected: "",
 		},
 		{
-			name:     "commit SHA",
+			name:     testutil.TestCaseNameCommitSHA,
 			input:    testutil.TestSHAForTesting,
 			expected: testutil.TestSHAForTesting,
 		},
@@ -431,7 +431,7 @@ func TestParseGitHubURL(t *testing.T) {
 			expectedRepo: "repo",
 		},
 		{
-			name:         "SSH GitHub URL",
+			name:         testutil.TestCaseNameSSHGitHub,
 			url:          "git@github.com:owner/repo.git",
 			expectedOrg:  "owner",
 			expectedRepo: "repo",
@@ -530,7 +530,7 @@ func TestEnsureAbsolutePath(t *testing.T) {
 			isAbsolute: true,
 		},
 		{
-			name:       "relative path",
+			name:       testutil.TestCaseNameRelativePath,
 			input:      "./file",
 			isAbsolute: false,
 		},

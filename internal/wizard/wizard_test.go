@@ -60,7 +60,7 @@ func TestPromptWithDefault(t *testing.T) {
 			want:         "",
 		},
 		{
-			name:         "user provides value with whitespace",
+			name:         testutil.TestCaseNameUserWhitespace,
 			input:        "  value-with-spaces  \n",
 			prompt:       testutil.WizardPromptEnter,
 			defaultValue: appconstants.ThemeDefault,
@@ -194,7 +194,7 @@ func TestPromptSensitive(t *testing.T) {
 			want:   "",
 		},
 		{
-			name:   "user provides value with whitespace",
+			name:   testutil.TestCaseNameUserWhitespace,
 			input:  "  token-value  \n",
 			prompt: testutil.WizardInputEnterToken,
 			want:   "token-value",
@@ -528,7 +528,7 @@ func TestConfigureOutputDirectory(t *testing.T) {
 			want:    testutil.TestDirDocs,
 		},
 		{
-			name:    "relative path",
+			name:    testutil.TestCaseNameRelativePath,
 			input:   testutil.TestDirOutput + "\n",
 			initial: ".",
 			want:    testutil.TestDirOutput,
@@ -722,7 +722,7 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:  "user accepts default (yes)",
+			name:  testutil.TestCaseNameUserAcceptDefault,
 			input: "\n",
 			config: &internal.AppConfig{
 				Organization: testutil.WizardOrgTest,
@@ -1181,7 +1181,7 @@ func TestConfirmConfiguration(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "user accepts default (yes)",
+			name:    testutil.TestCaseNameUserAcceptDefault,
 			input:   "\n",
 			wantErr: false,
 		},

@@ -58,7 +58,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		want       string
 	}{
 		{
-			name:       "subdirectory action",
+			name:       testutil.TestCaseNameSubdirAction,
 			actionPath: "/repo/actions/csharp-build/action.yml",
 			repoRoot:   "/repo",
 			want:       "actions/csharp-build",
@@ -76,7 +76,7 @@ func TestExtractActionSubdirectory(t *testing.T) {
 			want:       "a/b/c/d",
 		},
 		{
-			name:       "root action",
+			name:       testutil.TestCaseNameRootAction,
 			actionPath: testutil.TestRepoActionPath,
 			repoRoot:   "/repo",
 			want:       "",
@@ -142,7 +142,7 @@ func TestBuildUsesString(t *testing.T) {
 			want:    "ivuorinen/actions/actions/csharp-build@main",
 		},
 		{
-			name: "root action",
+			name: testutil.TestCaseNameRootAction,
 			td: &TemplateData{
 				ActionPath: testutil.TestRepoActionPath,
 				RepoRoot:   "/repo",
@@ -565,7 +565,7 @@ func TestAnalyzeDependencies(t *testing.T) {
 			expectNil:  false, // Should gracefully handle errors and return empty slice
 		},
 		{
-			name:       "path traversal attempt",
+			name:       testutil.TestCaseNamePathTraversalAttempt,
 			actionPath: "../../etc/passwd",
 			config:     &AppConfig{},
 			expectNil:  false, // Returns empty slice for invalid paths

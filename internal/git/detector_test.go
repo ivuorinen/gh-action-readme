@@ -199,7 +199,7 @@ func TestParseGitHubURL(t *testing.T) {
 			expectedRepo: "repo",
 		},
 		{
-			name:         "SSH GitHub URL",
+			name:         testutil.TestCaseNameSSHGitHub,
 			remoteURL:    "git@github.com:owner/repo.git",
 			expectedOrg:  "owner",
 			expectedRepo: "repo",
@@ -315,7 +315,7 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 			expected:   testutil.TestActionCheckoutV3,
 		},
 		{
-			name: "subdirectory action",
+			name: testutil.TestCaseNameSubdirAction,
 			repoInfo: &RepoInfo{
 				Organization: "actions",
 				Repository:   "toolkit",

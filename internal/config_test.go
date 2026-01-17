@@ -365,7 +365,7 @@ func TestResolveThemeTemplate(t *testing.T) {
 			expectedPath: "templates/themes/professional/readme.tmpl",
 		},
 		{
-			name:        "unknown theme",
+			name:        testutil.TestCaseNameUnknownTheme,
 			theme:       "nonexistent",
 			expectError: true,
 		},
