@@ -385,8 +385,7 @@ func AssertFileNotExists(t *testing.T, path string) {
 	if err == nil {
 		// File exists
 		t.Fatalf("expected file not to exist: %s", path)
-	}
-	if err != nil && !os.IsNotExist(err) {
+	} else if !os.IsNotExist(err) {
 		// Error occurred but it's not a "does not exist" error
 		t.Fatalf("error checking file existence: %v", err)
 	}
@@ -650,7 +649,9 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 				_ = os.Unsetenv(appconstants.EnvGitHubToken)
 				_ = os.Unsetenv(appconstants.EnvGitHubTokenStandard)
 
-				return func() {}
+				return func() {
+					// No cleanup required: environment variables explicitly unset for this scenario.
+				}
 			},
 			ExpectedToken: "",
 		},

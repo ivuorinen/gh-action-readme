@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -875,7 +876,7 @@ func TestBuildTestBinary(t *testing.T) {
 	}
 
 	// On Unix systems, check executable bit
-	if info.Mode()&0111 == 0 {
+	if runtime.GOOS != "windows" && info.Mode()&0111 == 0 {
 		t.Error("buildTestBinary() created binary is not executable")
 	}
 }

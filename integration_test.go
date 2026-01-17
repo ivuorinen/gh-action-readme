@@ -122,7 +122,7 @@ func setupCompleteWorkflow(t *testing.T, tmpDir string) {
 		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, "README.md"), "# Old README")
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGitIgnore), testutil.GitIgnoreContent)
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "package.json"), testutil.PackageJSONContent)
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFilePackageJSON), testutil.PackageJSONContent)
 }
 
 // setupMultiActionWorkflow creates a project with multiple actions.
@@ -197,7 +197,7 @@ func setupCompleteServiceChain(t *testing.T, tmpDir string) {
 	setupMultiActionWithTemplates(t, tmpDir)
 
 	// Add package.json for dependency analysis
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "package.json"), testutil.PackageJSONContent)
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFilePackageJSON), testutil.PackageJSONContent)
 
 	// Add testutil.TestFileGitIgnore
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFileGitIgnore), testutil.GitIgnoreContent)
@@ -223,7 +223,7 @@ func setupDependencyAnalysisWorkflow(t *testing.T, tmpDir string) {
 	testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), compositeAction)
 
 	// Add package.json with npm dependencies
-	testutil.WriteTestFile(t, filepath.Join(tmpDir, "package.json"), testutil.PackageJSONContent)
+	testutil.WriteTestFile(t, filepath.Join(tmpDir, testutil.TestFilePackageJSON), testutil.PackageJSONContent)
 
 	// Add a nested action with different dependencies
 	nestedDir := testutil.CreateTestSubdir(t, tmpDir, "actions", "deploy")
@@ -753,6 +753,31 @@ type errorScenario struct {
 	expectError   string
 }
 
+// runErrorScenario executes a single error scenario and validates expectations.
+func runErrorScenario(t *testing.T, binaryPath, tmpDir string, scenario errorScenario) {
+	t.Helper()
+
+	cmd := exec.Command(binaryPath, scenario.cmd...) // #nosec G204 -- controlled test input
+	cmd.Dir = tmpDir
+
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	output := stdout.String() + stderr.String()
+
+	if scenario.expectFailure && err == nil {
+		t.Error("expected command to fail but it succeeded")
+	} else if !scenario.expectFailure && err != nil {
+		t.Errorf("expected command to succeed but it failed: %v\nOutput: %s", err, output)
+	}
+
+	if scenario.expectError != "" && !strings.Contains(output, scenario.expectError) {
+		t.Errorf("expected error containing %q, got: %s", scenario.expectError, output)
+	}
+}
+
 // testProjectSetup tests basic project validation.
 func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
@@ -1125,24 +1150,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 
 			for _, scenario := range tt.scenarios {
 				t.Run(strings.Join(scenario.cmd, "_"), func(t *testing.T) {
-					cmd := exec.Command(binaryPath, scenario.cmd...) // #nosec G204 -- controlled test input
-					cmd.Dir = tmpDir
-					var stdout, stderr strings.Builder
-					cmd.Stdout = &stdout
-					cmd.Stderr = &stderr
-
-					err := cmd.Run()
-					output := stdout.String() + stderr.String()
-
-					if scenario.expectFailure && err == nil {
-						t.Error("expected command to fail but it succeeded")
-					} else if !scenario.expectFailure && err != nil {
-						t.Errorf("expected command to succeed but it failed: %v\nOutput: %s", err, output)
-					}
-
-					if scenario.expectError != "" && !strings.Contains(output, scenario.expectError) {
-						t.Errorf("expected error containing %q, got: %s", scenario.expectError, output)
-					}
+					runErrorScenario(t, binaryPath, tmpDir, scenario)
 				})
 			}
 		})
@@ -1236,61 +1244,71 @@ func TestProgressBarIntegration(t *testing.T) {
 
 			tt.setupFunc(t, tmpDir)
 
-			cmd := exec.Command(binaryPath, tt.cmd...) // #nosec G204 -- controlled test input
-			cmd.Dir = tmpDir
-			var stdout, stderr strings.Builder
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()
+			output, err := runCommandCaptureOutput(t, binaryPath, tmpDir, tt.cmd)
 			if err != nil {
-				t.Logf(testutil.TestMsgStdout, stdout.String())
-				t.Logf(testutil.TestMsgStderr, stderr.String())
+				t.Logf(testutil.TestMsgStdout, output)
 			}
 			testutil.AssertNoError(t, err)
 
-			output := stdout.String() + stderr.String()
-
-			// Verify progress indicators were shown
-			progressIndicators := []string{
-				"Processing file:",
-				"Generated README",
-				"Discovered action file:",
-				testutil.TestMsgDependenciesFound,
-				"Analyzing dependencies",
-			}
-
-			foundIndicator := false
-			for _, indicator := range progressIndicators {
-				if strings.Contains(output, indicator) {
-					foundIndicator = true
-
-					break
-				}
-			}
-
-			if !foundIndicator {
-				t.Error("no progress indicators found in verbose output")
-				t.Logf("Output: %s", output)
-			}
-
-			// Verify operation completed successfully (files were generated)
-			if strings.Contains(tt.cmd[0], "gen") {
-				var foundFiles []string
-
-				// Use findFilesRecursive for recursive patterns
-				readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
-				foundFiles = append(foundFiles, readmeFiles...)
-
-				htmlFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternHTML)
-				foundFiles = append(foundFiles, htmlFiles...)
-
-				if len(foundFiles) == 0 {
-					t.Logf("No documentation files found, but progress indicators were present")
-					t.Logf("This may be expected if files are cleaned up during testing")
-				}
-			}
+			verifyProgressIndicatorsOutput(t, output)
+			verifyGeneratedDocsIfGen(t, tmpDir, tt.cmd)
 		})
+	}
+}
+
+// runCommandCaptureOutput runs a command and returns combined stdout+stderr.
+func runCommandCaptureOutput(t *testing.T, binaryPath, tmpDir string, args []string) (string, error) {
+	t.Helper()
+
+	cmd := exec.Command(binaryPath, args...) // #nosec G204 -- controlled test input
+	cmd.Dir = tmpDir
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	return stdout.String() + stderr.String(), err
+}
+
+// verifyProgressIndicatorsOutput checks that verbose progress messages are present.
+func verifyProgressIndicatorsOutput(t *testing.T, output string) {
+	t.Helper()
+
+	indicators := []string{
+		"Processing file:",
+		"Generated README",
+		"Discovered action file:",
+		testutil.TestMsgDependenciesFound,
+		"Analyzing dependencies",
+	}
+
+	for _, ind := range indicators {
+		if strings.Contains(output, ind) {
+			return // at least one indicator found
+		}
+	}
+
+	t.Error("no progress indicators found in verbose output")
+	t.Logf("Output: %s", output)
+}
+
+// verifyGeneratedDocsIfGen checks documentation files when running gen commands.
+func verifyGeneratedDocsIfGen(t *testing.T, tmpDir string, cmd []string) {
+	t.Helper()
+
+	if len(cmd) == 0 || !strings.Contains(cmd[0], "gen") {
+		return
+	}
+
+	var foundFiles []string
+	readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
+	foundFiles = append(foundFiles, readmeFiles...)
+	htmlFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternHTML)
+	foundFiles = append(foundFiles, htmlFiles...)
+
+	if len(foundFiles) == 0 {
+		t.Logf("No documentation files found, but progress indicators were present")
+		t.Logf("This may be expected if files are cleaned up during testing")
 	}
 }
 
@@ -1529,7 +1547,7 @@ func verifyCompleteServiceChain(t *testing.T, tmpDir string) {
 	// Verify the complete test environment was set up correctly
 	requiredComponents := []string{
 		filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-		filepath.Join(tmpDir, "package.json"),
+		filepath.Join(tmpDir, testutil.TestFilePackageJSON),
 		filepath.Join(tmpDir, testutil.TestFileGitIgnore),
 	}
 

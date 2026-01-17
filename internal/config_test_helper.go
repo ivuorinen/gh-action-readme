@@ -185,7 +185,7 @@ func SetupConfigHierarchy(
 		globalConfigDir := filepath.Join(baseDir, testutil.TestDirDotConfig, testutil.TestBinaryName)
 		globalConfigPath = testutil.WriteFileInDir(
 			t, globalConfigDir, testutil.TestFileConfigYAML,
-			string(testutil.MustReadFixture(setup.GlobalFixture)),
+			testutil.MustReadFixture(setup.GlobalFixture),
 		)
 	}
 
@@ -194,7 +194,7 @@ func SetupConfigHierarchy(
 	if setup.RepoFixture != "" {
 		testutil.WriteFileInDir(
 			t, repoRoot, testutil.TestFileGHReadmeYAML,
-			string(testutil.MustReadFixture(setup.RepoFixture)),
+			testutil.MustReadFixture(setup.RepoFixture),
 		)
 	}
 
@@ -203,7 +203,7 @@ func SetupConfigHierarchy(
 		actionDir = filepath.Join(repoRoot, "action")
 		testutil.WriteFileInDir(
 			t, actionDir, testutil.TestFileConfigYAML,
-			string(testutil.MustReadFixture(setup.ActionFixture)),
+			testutil.MustReadFixture(setup.ActionFixture),
 		)
 	} else {
 		actionDir = repoRoot
@@ -223,7 +223,7 @@ func WriteConfigFixture(t *testing.T, dir, fixturePath string) string {
 
 	return testutil.WriteFileInDir(
 		t, dir, testutil.TestFileConfigYAML,
-		string(testutil.MustReadFixture(fixturePath)),
+		testutil.MustReadFixture(fixturePath),
 	)
 }
 
