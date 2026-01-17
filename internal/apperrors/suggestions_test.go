@@ -76,7 +76,7 @@ func TestGetSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name:    "no action files",
+			name:    testutil.TestCaseNameNoActionFiles,
 			code:    appconstants.ErrCodeNoActionFiles,
 			context: testutil.ContextWithDirectory("/project"),
 			contains: []string{

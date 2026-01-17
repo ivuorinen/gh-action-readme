@@ -119,7 +119,7 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 			expectedLen: 0,
 		},
 		{
-			name:        "invalid action file",
+			name:        testutil.TestCaseNameInvalidActionFile,
 			actionYML:   testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 			expectError: true,
 		},
@@ -735,7 +735,7 @@ func TestIsCompositeAction(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "composite action",
+			name:    testutil.TestCaseNameCompositeAction,
 			fixture: "composite-action.yml",
 			want:    true,
 			wantErr: false,
@@ -753,7 +753,7 @@ func TestIsCompositeAction(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "invalid yaml",
+			name:    testutil.TestCaseNameInvalidYAML,
 			fixture: "invalid.yml",
 			want:    false,
 			wantErr: true,

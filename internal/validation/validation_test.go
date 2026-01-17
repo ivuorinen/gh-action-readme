@@ -540,7 +540,7 @@ func TestEnsureAbsolutePath(t *testing.T) {
 			isAbsolute: false,
 		},
 		{
-			name:       "empty path",
+			name:       testutil.TestCaseNameEmptyPath,
 			input:      "",
 			isAbsolute: false,
 		},

@@ -273,7 +273,7 @@ func verifyRepoRoot(t *testing.T, repoRoot, tmpDir string) {
 func TestGetGitRepoRootAndInfoErrorHandling(t *testing.T) {
 	t.Parallel()
 
-	t.Run("nonexistent directory", func(t *testing.T) {
+	t.Run(testutil.TestCaseNameNonexistentDir, func(t *testing.T) {
 		t.Parallel()
 
 		nonexistentPath := "/this/path/should/not/exist"

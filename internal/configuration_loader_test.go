@@ -364,7 +364,7 @@ func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 			description: "Invalid theme should error",
 		},
 		{
-			name: "empty theme",
+			name: testutil.TestCaseNameEmptyTheme,
 			config: &AppConfig{
 				Theme:        "",
 				OutputFormat: "md",
@@ -682,7 +682,7 @@ func TestConfigurationLoaderValidateTheme(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "empty theme",
+			name:        testutil.TestCaseNameEmptyTheme,
 			theme:       "",
 			expectError: true,
 		},

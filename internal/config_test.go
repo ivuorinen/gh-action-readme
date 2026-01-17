@@ -370,7 +370,7 @@ func TestResolveThemeTemplate(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "empty theme",
+			name:        testutil.TestCaseNameEmptyTheme,
 			theme:       "",
 			expectError: true,
 		},
@@ -1141,7 +1141,7 @@ func TestResolveTemplatePathEdgeCases(t *testing.T) {
 			description: "Non-existent templates should return original path",
 		},
 		{
-			name: "empty path",
+			name: testutil.TestCaseNameEmptyPath,
 			setupFunc: func(t *testing.T) (string, func()) {
 				t.Helper()
 

@@ -173,7 +173,7 @@ func TestProjectDetectorSuggestConfiguration(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "composite action",
+			name: testutil.TestCaseNameCompositeAction,
 			settings: &DetectedSettings{
 				HasCompositeAction: true,
 			},
@@ -480,7 +480,7 @@ func TestDetectRepositoryInfo(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "no git repository",
+			name:     testutil.TestCaseNameNoGitRepository,
 			repoRoot: "",
 			wantErr:  true,
 		},
@@ -553,7 +553,7 @@ func TestDetectActionFiles(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name: "no action files",
+			name: testutil.TestCaseNameNoActionFiles,
 			setupFunc: func(t *testing.T, _ string) {
 				t.Helper()
 				// Don't create any files
@@ -740,7 +740,7 @@ func TestDetectVersionFromGitTags(t *testing.T) {
 		want     string
 	}{
 		{
-			name:     "no git repository",
+			name:     testutil.TestCaseNameNoGitRepository,
 			repoRoot: "",
 			want:     "",
 		},

@@ -233,9 +233,9 @@ func TestErrorHandlerAllErrorCodes(t *testing.T) {
 	}{
 		{appconstants.ErrCodeFileNotFound, testutil.TestErrFileNotFound},
 		{appconstants.ErrCodePermission, testutil.TestErrPermissionDenied},
-		{appconstants.ErrCodeInvalidYAML, "invalid yaml"},
+		{appconstants.ErrCodeInvalidYAML, testutil.TestCaseNameInvalidYAML},
 		{appconstants.ErrCodeInvalidAction, "invalid action"},
-		{appconstants.ErrCodeNoActionFiles, "no action files"},
+		{appconstants.ErrCodeNoActionFiles, testutil.TestCaseNameNoActionFiles},
 		{appconstants.ErrCodeGitHubAPI, "github api error"},
 		{appconstants.ErrCodeGitHubRateLimit, "rate limit"},
 		{appconstants.ErrCodeGitHubAuth, "auth error"},

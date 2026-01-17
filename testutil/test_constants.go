@@ -199,6 +199,22 @@ const (
 	TestMsgExportConfigError = "ExportConfig() error = %v"      // Used in config export tests
 )
 
+// Test case name constants for reducing duplication across test files.
+const (
+	TestCaseNameNoGitRepository   = "no git repository"
+	TestCaseNameEmptyPath         = "empty path"
+	TestCaseNameNonexistentDir    = "nonexistent directory"
+	TestCaseNameNoActionFiles     = "no action files"
+	TestCaseNameInvalidYAML       = "invalid yaml"
+	TestCaseNameInvalidActionFile = "invalid action file"
+	TestCaseNameEmptyTheme        = "empty theme"
+	TestCaseNameCompositeAction   = "composite action"
+	TestCaseNameCommitSHA         = "commit SHA"
+	TestCaseNameBranchName        = "branch name"
+	TestCaseNameAllValidFiles     = "all valid files"
+	TestCaseNameValidAction       = "valid action"
+)
+
 // Validation test constants.
 const (
 	TestVersionSemantic = "v1.2.3"

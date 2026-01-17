@@ -151,7 +151,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			expectedLen: 1,
 		},
 		{
-			name: "no action files",
+			name: testutil.TestCaseNameNoActionFiles,
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ReadmeMarkdown), "# Test")
@@ -160,7 +160,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			expectedLen: 0,
 		},
 		{
-			name:        "nonexistent directory",
+			name:        testutil.TestCaseNameNonexistentDir,
 			setupFunc:   nil,
 			recursive:   false,
 			expectError: true,
@@ -315,7 +315,7 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 			},
 		},
 		{
-			name:         "invalid action file",
+			name:         testutil.TestCaseNameInvalidActionFile,
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 			outputFormat: appconstants.OutputFormatMarkdown,
 			expectError:  true, // Invalid runtime configuration should cause failure
@@ -746,7 +746,7 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 		setupFunc func(t *testing.T) string
 	}{
 		{
-			name:      "nonexistent directory",
+			name:      testutil.TestCaseNameNonexistentDir,
 			dir:       "/nonexistent/path/does/not/exist",
 			recursive: false,
 			context:   "test context",
@@ -1015,7 +1015,7 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 			wantValid: false,
 		},
 		{
-			name:    "invalid yaml",
+			name:    testutil.TestCaseNameInvalidYAML,
 			content: "name: Test\ninvalid: [\n  - item",
 			wantErr: true,
 		},
