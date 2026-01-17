@@ -327,8 +327,8 @@ func WriteConfigFile(t *testing.T, baseDir, content string) string {
 //	testutil.SetupConfigEnvironment(t, tmpDir)
 func SetupConfigEnvironment(t *testing.T, tmpDir string) {
 	t.Helper()
-	t.Setenv("HOME", tmpDir)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, TestDirDotConfig))
+	t.Setenv(EnvVarHOME, tmpDir)
+	t.Setenv(EnvVarXDGConfigHome, filepath.Join(tmpDir, TestDirDotConfig))
 }
 
 // CreateGitRepoWithRemote initializes a git repository and sets up a remote.
@@ -803,8 +803,8 @@ func CreateTempActionFile(t *testing.T, content string) string {
 func SetupTestEnvironment(t *testing.T) (tmpDir string, cleanup func()) {
 	t.Helper()
 	tmpDir, cleanup = TempDir(t)
-	t.Setenv("XDG_CONFIG_HOME", tmpDir)
-	t.Setenv("HOME", tmpDir)
+	t.Setenv(EnvVarXDGConfigHome, tmpDir)
+	t.Setenv(EnvVarHOME, tmpDir)
 
 	return tmpDir, cleanup
 }
@@ -858,9 +858,9 @@ func ClearTokenEnv(t *testing.T) {
 func SetupXDGEnv(t *testing.T, xdgConfigHome, home string) {
 	t.Helper()
 	if xdgConfigHome != "" {
-		t.Setenv("XDG_CONFIG_HOME", xdgConfigHome)
+		t.Setenv(EnvVarXDGConfigHome, xdgConfigHome)
 	}
 	if home != "" {
-		t.Setenv("HOME", home)
+		t.Setenv(EnvVarHOME, home)
 	}
 }

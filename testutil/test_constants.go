@@ -651,3 +651,29 @@ const (
 	MutationSemverLeadingSpace      = " 1.2.3"
 	MutationSemverTrailingSpace     = "1.2.3 "
 )
+
+// Environment variable name constants for reducing string duplication.
+const (
+	EnvVarHOME          = "HOME"
+	EnvVarXDGConfigHome = "XDG_CONFIG_HOME"
+)
+
+// Configuration field name constants for reducing string duplication.
+const (
+	ConfigFieldName        = "config"
+	ConfigFieldRepository  = "repository"
+	ConfigFieldVersion     = "version"
+	ConfigFieldOrganization = "organization"
+	ConfigFieldOutputDir   = "output_dir"
+	ConfigFieldAction      = "action"
+	ConfigFieldRepo        = "repo"
+	ConfigFieldGit         = ".git"
+)
+
+// Whitespace character constants for reducing string duplication in tests.
+const (
+	WhitespaceSpace = " "
+	WhitespaceTab   = "\t"
+	WhitespaceNewline = "\n"
+	WhitespaceCarriageReturn = "\r"
+)
