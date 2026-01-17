@@ -49,6 +49,7 @@ func runAnalyzeActionFileTest(t *testing.T, tt analyzeActionFileTestCase) {
 
 	if tt.expectError {
 		testutil.AssertError(t, err)
+
 		return
 	}
 	testutil.AssertNoError(t, err)
@@ -82,6 +83,7 @@ func validateExpectedDeps(t *testing.T, tt analyzeActionFileTestCase, deps []Dep
 	for i, expectedDep := range tt.expectedDeps {
 		if i >= len(deps) {
 			t.Errorf("expected dependency %s but got fewer dependencies", expectedDep)
+
 			continue
 		}
 		if !strings.Contains(deps[i].Name+"@"+deps[i].Version, expectedDep) {

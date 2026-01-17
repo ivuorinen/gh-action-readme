@@ -1267,6 +1267,7 @@ func runCommandCaptureOutput(t *testing.T, binaryPath, tmpDir string, args []str
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
+
 	return stdout.String() + stderr.String(), err
 }
 

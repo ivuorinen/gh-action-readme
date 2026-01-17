@@ -185,7 +185,11 @@ func TestFocusedInterfacesSimpleLogger(t *testing.T) {
 	}
 
 	if !strings.Contains(mockLogger.SuccessCalls[0], testutil.TestOperationName) {
-		t.Errorf("expected Success call to contain '%s', got: %s", testutil.TestOperationName, mockLogger.SuccessCalls[0])
+		t.Errorf(
+			"expected Success call to contain '%s', got: %s",
+			testutil.TestOperationName,
+			mockLogger.SuccessCalls[0],
+		)
 	}
 }
 

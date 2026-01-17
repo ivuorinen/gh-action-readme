@@ -203,95 +203,94 @@ func TestStringNormalizationProperties(t *testing.T) {
 }
 
 // TestVersionCleaningProperties verifies version string cleaning properties.
+// versionCleaningIdempotentProperty verifies cleaning twice produces same result.
+func versionCleaningIdempotentProperty(version string) bool {
+	v1 := CleanVersionString(version)
+	v2 := CleanVersionString(v1)
+
+	return v1 == v2
+}
+
+// versionRemovesSingleVProperty verifies single 'v' is removed.
+func versionRemovesSingleVProperty(version string) bool {
+	result := CleanVersionString(version)
+	if result == "" {
+		return true
+	}
+
+	trimmed := strings.TrimSpace(version)
+	if strings.HasPrefix(trimmed, "v") && !strings.HasPrefix(trimmed, "vv") {
+		return !strings.HasPrefix(result, "v")
+	}
+
+	return true
+}
+
+// versionHasNoBoundaryWhitespaceProperty verifies no leading/trailing whitespace.
+func versionHasNoBoundaryWhitespaceProperty(version string) bool {
+	result := CleanVersionString(version)
+	if result == "" {
+		return true
+	}
+
+	return !strings.HasPrefix(result, " ") &&
+		!strings.HasSuffix(result, " ") &&
+		!strings.HasPrefix(result, "\t") &&
+		!strings.HasSuffix(result, "\t")
+}
+
+// whitespaceOnlyVersionBecomesEmptyProperty verifies whitespace-only inputs become empty.
+func whitespaceOnlyVersionBecomesEmptyProperty() bool {
+	whitespaceInputs := []string{"   ", "\t\t", "\n", " \t\n "}
+	for _, input := range whitespaceInputs {
+		result := CleanVersionString(input)
+		if result != "" {
+			return false
+		}
+	}
+
+	return true
+}
+
+// nonVContentPreservedProperty verifies non-v content is preserved and trimmed.
+func nonVContentPreservedProperty(content string) bool {
+	trimmed := strings.TrimSpace(content)
+	if trimmed == "" || strings.HasPrefix(trimmed, "v") {
+		return true // Skip these cases
+	}
+
+	result := CleanVersionString(content)
+
+	return result == trimmed
+}
+
 func TestVersionCleaningProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
 
 	// Property 1: Idempotency - cleaning twice produces same result
 	properties.Property("version cleaning is idempotent",
-		prop.ForAll(
-			func(version string) bool {
-				v1 := CleanVersionString(version)
-				v2 := CleanVersionString(v1)
-
-				return v1 == v2
-			},
-			gen.AnyString(),
-		),
+		prop.ForAll(versionCleaningIdempotentProperty, gen.AnyString()),
 	)
 
 	// Property 2: Result never starts with single 'v' (TrimPrefix removes only one)
 	properties.Property("cleaned version removes single leading v",
-		prop.ForAll(
-			func(version string) bool {
-				result := CleanVersionString(version)
-
-				if result == "" {
-					return true
-				}
-
-				// Only check if input started with single 'v'
-				// If input was "vv1", result will be "v1" (still starts with v)
-				trimmed := strings.TrimSpace(version)
-				if strings.HasPrefix(trimmed, "v") && !strings.HasPrefix(trimmed, "vv") {
-					return !strings.HasPrefix(result, "v")
-				}
-				return true
-			},
-			gen.AnyString(),
-		),
+		prop.ForAll(versionRemovesSingleVProperty, gen.AnyString()),
 	)
 
 	// Property 3: No leading/trailing whitespace in result
 	properties.Property("cleaned version has no boundary whitespace",
-		prop.ForAll(
-			func(version string) bool {
-				result := CleanVersionString(version)
-
-				if result == "" {
-					return true
-				}
-
-				return !strings.HasPrefix(result, " ") &&
-					!strings.HasSuffix(result, " ") &&
-					!strings.HasPrefix(result, "\t") &&
-					!strings.HasSuffix(result, "\t")
-			},
-			gen.AnyString(),
-		),
+		prop.ForAll(versionHasNoBoundaryWhitespaceProperty, gen.AnyString()),
 	)
 
 	// Property 4: Whitespace-only input becomes empty
 	properties.Property("whitespace-only version becomes empty",
-		prop.ForAll(
-			func() bool {
-				whitespaceInputs := []string{"   ", "\t\t", "\n", " \t\n "}
-				for _, input := range whitespaceInputs {
-					result := CleanVersionString(input)
-					if result != "" {
-						return false
-					}
-				}
-
-				return true
-			},
-		),
+		prop.ForAll(whitespaceOnlyVersionBecomesEmptyProperty),
 	)
 
 	// Property 5: Preserves non-v content and trims whitespace
 	properties.Property("non-v content is preserved",
 		prop.ForAll(
-			func(content string) bool {
-				// Generate strings without 'v' at start
-				trimmed := strings.TrimSpace(content)
-				if trimmed == "" || strings.HasPrefix(trimmed, "v") {
-					return true // Skip these cases
-				}
-
-				result := CleanVersionString(content)
-
-				// CleanVersionString should trim whitespace and preserve non-v content
-				return result == trimmed
-			},
+			nonVContentPreservedProperty,
 			gen.OneGenOf(
 				gen.AlphaString(),
 				gen.AlphaString().Map(func(s string) string { return "  " + s }),

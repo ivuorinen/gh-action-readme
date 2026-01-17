@@ -5,11 +5,13 @@ package testutil
 
 // Test cache constants for reducing string duplication.
 const (
-	CacheTestKey    = "test-key"
-	CacheTestValue  = "test-value"
-	CacheTestKey1   = "key1"
-	CacheTestKey2   = "key2"
-	CacheTestValue1 = "value1"
+	CacheTestKey       = "test-key"
+	CacheTestValue     = "test-value"
+	CacheTestKey1      = "key1"
+	CacheTestKey2      = "key2"
+	CacheTestValue1    = "value1"
+	CacheShortLivedKey = "short-lived"
+	CacheExpiringKey   = "expiring-key"
 )
 
 // Error handler test constants for reducing string duplication.
@@ -533,4 +535,51 @@ const (
 
 	// Template fixtures.
 	TestTemplateBroken = "template-fixtures/broken-template.tmpl"
+)
+
+// Mutation test constants for reducing string duplication in test data.
+const (
+	// GitHub URL mutation test constants.
+	MutationURLHTTPS           = "https://github.com/octocat/Hello-World"
+	MutationURLHTTPSGit        = "https://github.com/octocat/Hello-World.git"
+	MutationURLSSH             = "git@github.com:octocat/Hello-World"
+	MutationURLSSHGit          = "git@github.com:octocat/Hello-World.git"
+	MutationURLSimple          = "octocat/Hello-World"
+	MutationURLSetupNode       = "actions/setup-node"
+	MutationURLGitHubReadme    = "https://github.com/ivuorinen/gh-action-readme"
+	MutationOrgOctocat         = "octocat"
+	MutationOrgActions         = "actions"
+	MutationOrgIvuorinen       = "ivuorinen"
+	MutationRepoHelloWorld     = "Hello-World"
+	MutationRepoSetupNode      = "setup-node"
+	MutationRepoGhActionReadme = "gh-action-readme"
+
+	// String mutation test constants.
+	MutationStrHelloWorld          = "hello world"
+	MutationStrHelloWorldDash      = "hello-world"
+	MutationStrEmpty               = ""
+	MutationStrSetupNode           = "Setup-Node"
+	MutationStrCheckoutCode        = "Checkout Code"
+	MutationStrCheckoutCodeDash    = "checkout-code"
+	MutationStrSetupGoEnvironment  = "Setup Go Environment"
+	MutationStrSetupGoEnvironmentD = "setup-go-environment"
+
+	// Version mutation test constants.
+	MutationVersionV1         = "v1.2.3"
+	MutationVersionV2         = "v2.5.1"
+	MutationVersionNoV        = "1.2.3"
+	MutationVersionBuild      = "1.2.3+build.123"
+	MutationVersionPrerelease = "1.2.3-alpha"
+
+	// Uses statement mutation test constants.
+	MutationUsesActionsCheckout   = "actions/checkout@v3"
+	MutationUsesActionsCheckoutV1 = "actions/checkout@v1"
+	MutationUsesOrgRepo           = "org/repo@ver"
+
+	// Semantic version mutation test constants.
+	MutationSemverFull            = "1.2.3"
+	MutationSemverWithV           = "v1.2.3"
+	MutationSemverPrerelease      = "1.2.3-alpha"
+	MutationSemverBuildMeta       = "1.2.3+build.123"
+	MutationSemverPrereleaseBuild = "1.2.3-alpha+build.123"
 )

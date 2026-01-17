@@ -1010,6 +1010,7 @@ func TestValidateGitHubClientCreation(t *testing.T) {
 				mockHTTPClient := &http.Client{
 					Transport: &testutil.MockTransport{},
 				}
+
 				return github.NewClient(mockHTTPClient), nil
 			},
 			expectError: false,

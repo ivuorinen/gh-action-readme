@@ -10,36 +10,39 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// templateDataParams holds parameters for creating test TemplateData.
+type templateDataParams struct {
+	actionName       string
+	version          string
+	useDefaultBranch bool
+	defaultBranch    string
+	org              string
+	repo             string
+	actionPath       string
+	repoRoot         string
+}
+
 // newTemplateData creates a TemplateData with common test values.
-// Pass nil for any field to use defaults or zero values.
-func newTemplateData(
-	actionName string,
-	version string,
-	useDefaultBranch bool,
-	defaultBranch string,
-	org string,
-	repo string,
-	actionPath string,
-	repoRoot string,
-) *TemplateData {
+// Pass zero values for any field to use defaults.
+func newTemplateData(params templateDataParams) *TemplateData {
 	var actionYML *ActionYML
-	if actionName != "" {
-		actionYML = &ActionYML{Name: actionName}
+	if params.actionName != "" {
+		actionYML = &ActionYML{Name: params.actionName}
 	}
 
 	return &TemplateData{
 		ActionYML: actionYML,
 		Config: &AppConfig{
-			Version:          version,
-			UseDefaultBranch: useDefaultBranch,
+			Version:          params.version,
+			UseDefaultBranch: params.useDefaultBranch,
 		},
 		Git: git.RepoInfo{
-			Organization:  org,
-			Repository:    repo,
-			DefaultBranch: defaultBranch,
+			Organization:  params.org,
+			Repository:    params.repo,
+			DefaultBranch: params.defaultBranch,
 		},
-		ActionPath: actionPath,
-		RepoRoot:   repoRoot,
+		ActionPath: params.actionPath,
+		RepoRoot:   params.repoRoot,
 	}
 }
 
@@ -211,27 +214,27 @@ func TestGetActionVersion(t *testing.T) {
 	}{
 		{
 			name: "config version override",
-			data: newTemplateData("", "v2.0.0", true, "main", "", "", "", ""),
+			data: newTemplateData(templateDataParams{version: "v2.0.0", useDefaultBranch: true, defaultBranch: "main"}),
 			want: "v2.0.0",
 		},
 		{
 			name: "use default branch when enabled",
-			data: newTemplateData("", "", true, "main", "", "", "", ""),
+			data: newTemplateData(templateDataParams{useDefaultBranch: true, defaultBranch: "main"}),
 			want: "main",
 		},
 		{
 			name: "use default branch master",
-			data: newTemplateData("", "", true, "master", "", "", "", ""),
+			data: newTemplateData(templateDataParams{useDefaultBranch: true, defaultBranch: "master"}),
 			want: "master",
 		},
 		{
 			name: "fallback to v1 when default branch disabled",
-			data: newTemplateData("", "", false, "main", "", "", "", ""),
+			data: newTemplateData(templateDataParams{useDefaultBranch: false, defaultBranch: "main"}),
 			want: "v1",
 		},
 		{
 			name: "fallback to v1 when default branch not detected",
-			data: newTemplateData("", "", true, "", "", "", "", ""),
+			data: newTemplateData(templateDataParams{useDefaultBranch: true}),
 			want: "v1",
 		},
 		{
@@ -269,26 +272,55 @@ func TestGetGitUsesString(t *testing.T) {
 	}{
 		{
 			name: "monorepo action with default branch",
-			data: newTemplateData("C# Build", "", true, "main", "ivuorinen", "actions",
-				"/repo/csharp-build/action.yml", "/repo"),
+			data: newTemplateData(templateDataParams{
+				actionName:       "C# Build",
+				useDefaultBranch: true,
+				defaultBranch:    "main",
+				org:              "ivuorinen",
+				repo:             "actions",
+				actionPath:       "/repo/csharp-build/action.yml",
+				repoRoot:         "/repo",
+			}),
 			want: "ivuorinen/actions/csharp-build@main",
 		},
 		{
 			name: "monorepo action with explicit version",
-			data: newTemplateData("Build Action", "v1.0.0", true, "main", "org", "actions",
-				testutil.TestRepoBuildActionPath, "/repo"),
+			data: newTemplateData(templateDataParams{
+				actionName:       "Build Action",
+				version:          "v1.0.0",
+				useDefaultBranch: true,
+				defaultBranch:    "main",
+				org:              "org",
+				repo:             "actions",
+				actionPath:       testutil.TestRepoBuildActionPath,
+				repoRoot:         "/repo",
+			}),
 			want: "org/actions/build@v1.0.0",
 		},
 		{
 			name: "root level action with default branch",
-			data: newTemplateData("My Action", "", true, "develop", "user", "my-action",
-				testutil.TestRepoActionPath, "/repo"),
+			data: newTemplateData(templateDataParams{
+				actionName:       "My Action",
+				useDefaultBranch: true,
+				defaultBranch:    "develop",
+				org:              "user",
+				repo:             "my-action",
+				actionPath:       testutil.TestRepoActionPath,
+				repoRoot:         "/repo",
+			}),
 			want: "user/my-action@develop",
 		},
 		{
 			name: "action with use_default_branch disabled",
-			data: newTemplateData(testutil.TestActionName, "", false, "main", "org", "test",
-				testutil.TestRepoActionPath, "/repo"),
+			data: newTemplateData(templateDataParams{
+				actionName:       testutil.TestActionName,
+				useDefaultBranch: false,
+				defaultBranch:    "main",
+				org:              "org",
+				repo:             "test",
+				actionPath:       testutil.TestRepoActionPath,
+				repoRoot:         "/repo",
+			}),
 			want: "org/test@v1",
 		},
 	}
