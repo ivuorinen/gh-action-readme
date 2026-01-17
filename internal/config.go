@@ -298,7 +298,7 @@ func mergeStringFields(dst *AppConfig, src *AppConfig) {
 }
 
 // mergeStringMap is a generic helper that merges a source map into a destination map.
-func mergeStringMap(dst *map[string]string, src map[string]string) {
+func mergeStringMap(src map[string]string, dst *map[string]string) {
 	if len(src) == 0 {
 		return
 	}
@@ -312,8 +312,8 @@ func mergeStringMap(dst *map[string]string, src map[string]string) {
 
 // mergeMapFields merges map fields from src to dst if non-empty.
 func mergeMapFields(dst *AppConfig, src *AppConfig) {
-	mergeStringMap(&dst.Permissions, src.Permissions)
-	mergeStringMap(&dst.Variables, src.Variables)
+	mergeStringMap(src.Permissions, &dst.Permissions)
+	mergeStringMap(src.Variables, &dst.Variables)
 }
 
 // mergeSliceFields merges slice fields from src to dst if non-empty.

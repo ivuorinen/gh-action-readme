@@ -10,7 +10,7 @@ type HTMLWriter struct {
 	Footer string
 }
 
-func (w *HTMLWriter) Write(output string, path string) error {
+func (w *HTMLWriter) Write(output, path string) error {
 	f, err := os.Create(path) // #nosec G304 -- path from function parameter
 	if err != nil {
 		return err
