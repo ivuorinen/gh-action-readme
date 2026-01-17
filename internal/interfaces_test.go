@@ -98,12 +98,12 @@ func (m *MockProgressReporter) recordCall(callSlice *[]string, format string, ar
 	*callSlice = append(*callSlice, fmt.Sprintf(format, args...))
 }
 
-// MockOutputConfig implements OutputConfig for testing.
-type MockOutputConfig struct {
+// MockQuietChecker implements QuietChecker for testing.
+type MockQuietChecker struct {
 	QuietMode bool
 }
 
-func (m *MockOutputConfig) IsQuiet() bool {
+func (m *MockQuietChecker) IsQuiet() bool {
 	return m.QuietMode
 }
 
@@ -166,7 +166,7 @@ func TestFocusedInterfacesSimpleLogger(t *testing.T) {
 	simpleLogger := NewSimpleLogger(mockLogger)
 
 	// Test successful operation
-	simpleLogger.LogOperation("test-operation", true)
+	simpleLogger.LogOperation(testutil.TestOperationName, true)
 
 	// Verify the expected calls were made
 	if len(mockLogger.InfoCalls) != 1 {
@@ -180,12 +180,12 @@ func TestFocusedInterfacesSimpleLogger(t *testing.T) {
 	}
 
 	// Check message content
-	if !strings.Contains(mockLogger.InfoCalls[0], "test-operation") {
-		t.Errorf("expected Info call to contain 'test-operation', got: %s", mockLogger.InfoCalls[0])
+	if !strings.Contains(mockLogger.InfoCalls[0], testutil.TestOperationName) {
+		t.Errorf("expected Info call to contain '%s', got: %s", testutil.TestOperationName, mockLogger.InfoCalls[0])
 	}
 
-	if !strings.Contains(mockLogger.SuccessCalls[0], "test-operation") {
-		t.Errorf("expected Success call to contain 'test-operation', got: %s", mockLogger.SuccessCalls[0])
+	if !strings.Contains(mockLogger.SuccessCalls[0], testutil.TestOperationName) {
+		t.Errorf("expected Success call to contain '%s', got: %s", testutil.TestOperationName, mockLogger.SuccessCalls[0])
 	}
 }
 
@@ -272,7 +272,7 @@ func TestFocusedInterfacesConfigAwareComponent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			mockConfig := &MockOutputConfig{QuietMode: tt.quietMode}
+			mockConfig := &MockQuietChecker{QuietMode: tt.quietMode}
 			component := NewConfigAwareComponent(mockConfig)
 
 			result := component.ShouldOutput()
@@ -289,7 +289,7 @@ func TestFocusedInterfacesCompositeOutputWriter(t *testing.T) {
 	// Create a composite mock that implements OutputWriter
 	mockLogger := &MockMessageLogger{}
 	mockProgress := &MockProgressReporter{}
-	mockConfig := &MockOutputConfig{QuietMode: false}
+	mockConfig := &MockQuietChecker{QuietMode: false}
 
 	compositeWriter := &CompositeOutputWriter{
 		writer: &mockOutputWriter{
@@ -325,7 +325,7 @@ func TestFocusedInterfacesGeneratorWithDependencyInjection(t *testing.T) {
 		reporter:  &MockErrorReporter{},
 		formatter: &errorFormatterWrapper{&testutil.ErrorFormatterMock{}},
 		progress:  &MockProgressReporter{},
-		config:    &MockOutputConfig{QuietMode: false},
+		config:    &MockQuietChecker{QuietMode: false},
 	}
 	mockProgress := &MockProgressManager{}
 
@@ -362,7 +362,7 @@ type mockCompleteOutput struct {
 	reporter  ErrorReporter
 	formatter ErrorFormatter
 	progress  ProgressReporter
-	config    OutputConfig
+	config    QuietChecker
 }
 
 func (m *mockCompleteOutput) Info(format string, args ...any)    { m.logger.Info(format, args...) }
@@ -394,7 +394,7 @@ func (m *mockCompleteOutput) IsQuiet() bool { return m.config.IsQuiet() }
 type mockOutputWriter struct {
 	logger   MessageLogger
 	reporter ProgressReporter
-	config   OutputConfig
+	config   QuietChecker
 }
 
 func (m *mockOutputWriter) Info(format string, args ...any)    { m.logger.Info(format, args...) }

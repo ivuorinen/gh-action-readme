@@ -19,7 +19,7 @@ var (
 	_ ErrorReporter    = (*NullOutput)(nil)
 	_ ErrorFormatter   = (*NullOutput)(nil)
 	_ ProgressReporter = (*NullOutput)(nil)
-	_ OutputConfig     = (*NullOutput)(nil)
+	_ QuietChecker     = (*NullOutput)(nil)
 	_ CompleteOutput   = (*NullOutput)(nil)
 )
 
@@ -34,28 +34,44 @@ func (no *NullOutput) IsQuiet() bool {
 }
 
 // Success is a no-op.
-func (no *NullOutput) Success(_ string, _ ...any) {}
+func (no *NullOutput) Success(_ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // Error is a no-op.
-func (no *NullOutput) Error(_ string, _ ...any) {}
+func (no *NullOutput) Error(_ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // Warning is a no-op.
-func (no *NullOutput) Warning(_ string, _ ...any) {}
+func (no *NullOutput) Warning(_ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // Info is a no-op.
-func (no *NullOutput) Info(_ string, _ ...any) {}
+func (no *NullOutput) Info(_ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // Progress is a no-op.
-func (no *NullOutput) Progress(_ string, _ ...any) {}
+func (no *NullOutput) Progress(_ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // Bold is a no-op.
-func (no *NullOutput) Bold(_ string, _ ...any) {}
+func (no *NullOutput) Bold(_ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // Printf is a no-op.
-func (no *NullOutput) Printf(_ string, _ ...any) {}
+func (no *NullOutput) Printf(_ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // Fprintf is a no-op.
-func (no *NullOutput) Fprintf(_ *os.File, _ string, _ ...any) {}
+func (no *NullOutput) Fprintf(_ *os.File, _ string, _ ...any) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // ErrorWithSuggestions is a no-op.
 func (no *NullOutput) ErrorWithSuggestions(_ *apperrors.ContextualError) {
@@ -68,10 +84,13 @@ func (no *NullOutput) ErrorWithContext(
 	_ string,
 	_ map[string]string,
 ) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
 }
 
 // ErrorWithSimpleFix is a no-op.
-func (no *NullOutput) ErrorWithSimpleFix(_, _ string) {}
+func (no *NullOutput) ErrorWithSimpleFix(_, _ string) {
+	// Intentionally empty: NullOutput suppresses all output for testing.
+}
 
 // FormatContextualError returns empty string.
 func (no *NullOutput) FormatContextualError(_ *apperrors.ContextualError) string {
@@ -103,13 +122,19 @@ func (npm *NullProgressManager) CreateProgressBarForFiles(
 }
 
 // FinishProgressBar is a no-op.
-func (npm *NullProgressManager) FinishProgressBar(_ *progressbar.ProgressBar) {}
+func (npm *NullProgressManager) FinishProgressBar(_ *progressbar.ProgressBar) {
+	// Intentionally empty: NullProgressManager suppresses progress output for testing.
+}
 
 // FinishProgressBarWithNewline is a no-op.
-func (npm *NullProgressManager) FinishProgressBarWithNewline(_ *progressbar.ProgressBar) {}
+func (npm *NullProgressManager) FinishProgressBarWithNewline(_ *progressbar.ProgressBar) {
+	// Intentionally empty: NullProgressManager suppresses progress output for testing.
+}
 
 // UpdateProgressBar is a no-op.
-func (npm *NullProgressManager) UpdateProgressBar(_ *progressbar.ProgressBar) {}
+func (npm *NullProgressManager) UpdateProgressBar(_ *progressbar.ProgressBar) {
+	// Intentionally empty: NullProgressManager suppresses progress output for testing.
+}
 
 // ProcessWithProgressBar executes the function for each item without progress display.
 func (npm *NullProgressManager) ProcessWithProgressBar(

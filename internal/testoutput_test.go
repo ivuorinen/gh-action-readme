@@ -209,7 +209,7 @@ func TestNullOutputInterfaceCompliance(t *testing.T) {
 	var _ ErrorReporter = (*NullOutput)(nil)
 	var _ ErrorFormatter = (*NullOutput)(nil)
 	var _ ProgressReporter = (*NullOutput)(nil)
-	var _ OutputConfig = (*NullOutput)(nil)
+	var _ QuietChecker = (*NullOutput)(nil)
 }
 
 // TestNullProgressManagerInterfaceCompliance verifies NullProgressManager implements ProgressManager.
