@@ -48,6 +48,11 @@ const (
 	TestTokenValue = "test-token"
 )
 
+// Interfaces and components test constants for reducing string duplication.
+const (
+	TestOperationName = "test-operation"
+)
+
 // Validation test file identifiers for reducing string duplication.
 const (
 	ValidationTestFile1 = "file: action1.yml"
@@ -347,6 +352,8 @@ const (
 	TestFileGitIgnore      = ".gitignore"
 	TestFileGHActionReadme = "gh-action-readme.yml"
 	TestBinaryName         = "gh-action-readme"
+	// Common file names used across integration tests.
+	TestFilePackageJSON    = "package.json"
 )
 
 // Integration test CLI flags - moved from appconstants.
