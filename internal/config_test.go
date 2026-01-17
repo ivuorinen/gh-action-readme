@@ -1,8 +1,11 @@
 package internal
 
 import (
+	"net/http"
 	"path/filepath"
 	"testing"
+
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
@@ -973,6 +976,55 @@ func TestNewGitHubClientEdgeCases(t *testing.T) {
 
 			testutil.AssertNoError(t, err)
 			assertGitHubClientValid(t, client, tt.token)
+		})
+	}
+}
+
+// TestValidateGitHubClientCreation tests raw GitHub client creation validation.
+// This test demonstrates the use of the assertGitHubClient helper for
+// validating github.Client instances with different configurations.
+func TestValidateGitHubClientCreation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		setupFunc   func(t *testing.T) (*github.Client, error)
+		expectError bool
+		description string
+	}{
+		{
+			name: "successful client creation with nil transport",
+			setupFunc: func(t *testing.T) (*github.Client, error) {
+				t.Helper()
+				// Valid client creation - github.NewClient handles nil gracefully
+				return github.NewClient(nil), nil
+			},
+			expectError: false,
+			description: "Should create valid GitHub client with default transport",
+		},
+		{
+			name: "successful client creation with custom HTTP client",
+			setupFunc: func(t *testing.T) (*github.Client, error) {
+				t.Helper()
+				// Create client with custom HTTP client for testing
+				mockHTTPClient := &http.Client{
+					Transport: &testutil.MockTransport{},
+				}
+				return github.NewClient(mockHTTPClient), nil
+			},
+			expectError: false,
+			description: "Should create valid GitHub client with custom transport",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, err := tt.setupFunc(t)
+
+			// Use the assertGitHubClient helper to validate the result
+			assertGitHubClient(t, client, err, tt.expectError)
 		})
 	}
 }
