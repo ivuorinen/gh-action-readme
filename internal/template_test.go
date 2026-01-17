@@ -22,8 +22,9 @@ type templateDataParams struct {
 	repoRoot         string
 }
 
-// newTemplateData creates a TemplateData with common test values.
-// Pass zero values for any field to use defaults.
+// newTemplateData creates a TemplateData with the provided templateDataParams.
+// Zero values are preserved as-is; this helper does not apply defaults.
+// Callers must set defaults themselves or use a separate defaulting helper.
 func newTemplateData(params templateDataParams) *TemplateData {
 	var actionYML *ActionYML
 	if params.actionName != "" {
@@ -300,7 +301,7 @@ func TestGetGitUsesString(t *testing.T) {
 		{
 			name: "root level action with default branch",
 			data: newTemplateData(templateDataParams{
-				actionName:       "My Action",
+				actionName:       testutil.TestMyAction,
 				useDefaultBranch: true,
 				defaultBranch:    "develop",
 				org:              "user",

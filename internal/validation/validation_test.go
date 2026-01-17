@@ -471,18 +471,18 @@ func TestSanitizeActionName(t *testing.T) {
 	}{
 		{
 			name:     "normal action name",
-			input:    "My Action",
-			expected: "My Action",
+			input:    testutil.TestMyAction,
+			expected: testutil.TestMyAction,
 		},
 		{
 			name:     "action name with special characters",
-			input:    "My Action! @#$%",
-			expected: "My Action   ",
+			input:    testutil.TestMyAction + "! @#$%",
+			expected: testutil.TestMyAction + "   ",
 		},
 		{
 			name:     "action name with newlines",
 			input:    "My\nAction",
-			expected: "My Action",
+			expected: testutil.TestMyAction,
 		},
 		{
 			name:     testutil.TestCaseNameEmpty,

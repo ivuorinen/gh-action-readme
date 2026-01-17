@@ -43,6 +43,7 @@ const (
 const (
 	TestActionName = "Test Action"
 	TestActionDesc = "Test Description"
+	TestMyAction   = "My Action"
 )
 
 // GitHub authentication test constants for reducing string duplication.
@@ -57,9 +58,12 @@ const (
 
 // Validation test file identifiers for reducing string duplication.
 const (
-	ValidationTestFile1 = "file: action1.yml"
-	ValidationTestFile2 = "file: action2.yml"
-	ValidationTestFile3 = "file: action.yml"
+	ValidationTestFile1  = "file: action1.yml"
+	ValidationTestFile2  = "file: action2.yml"
+	ValidationTestFile3  = "file: action.yml"
+	ValidationCheckout   = "checkout"
+	ValidationCheckoutV3 = "v3"
+	ValidationHelloWorld = "hello world"
 )
 
 // GitHub Actions runner names for reducing string duplication.
