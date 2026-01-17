@@ -353,7 +353,7 @@ const (
 	TestFileGHActionReadme = "gh-action-readme.yml"
 	TestBinaryName         = "gh-action-readme"
 	// Common file names used across integration tests.
-	TestFilePackageJSON    = "package.json"
+	TestFilePackageJSON = "package.json"
 )
 
 // Integration test CLI flags - moved from appconstants.

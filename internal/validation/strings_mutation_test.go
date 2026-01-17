@@ -4,157 +4,111 @@ import (
 	"testing"
 )
 
+// urlTestCase represents a single URL parsing test case.
+type urlTestCase struct {
+	name        string
+	url         string
+	wantOrg     string
+	wantRepo    string
+	critical    bool
+	description string
+}
+
+// makeURLTestCase creates a URL test case with fewer lines of code.
+func makeURLTestCase(name, url, org, repo string, critical bool, desc string) urlTestCase {
+	return urlTestCase{
+		name:        name,
+		url:         url,
+		wantOrg:     org,
+		wantRepo:    repo,
+		critical:    critical,
+		description: desc,
+	}
+}
+
+// sanitizeTestCase represents a string sanitization test case.
+type sanitizeTestCase struct {
+	name        string
+	input       string
+	want        string
+	critical    bool
+	description string
+}
+
+// makeSanitizeTestCase creates a sanitize test case with fewer lines of code.
+func makeSanitizeTestCase(name, input, want string, critical bool, desc string) sanitizeTestCase {
+	return sanitizeTestCase{
+		name:        name,
+		input:       input,
+		want:        want,
+		critical:    critical,
+		description: desc,
+	}
+}
+
+// formatTestCase represents a uses statement formatting test case.
+type formatTestCase struct {
+	name        string
+	org         string
+	repo        string
+	version     string
+	want        string
+	critical    bool
+	description string
+}
+
+// makeFormatTestCase creates a format test case with fewer lines of code.
+func makeFormatTestCase(name, org, repo, version, want string, critical bool, desc string) formatTestCase {
+	return formatTestCase{
+		name:        name,
+		org:         org,
+		repo:        repo,
+		version:     version,
+		want:        want,
+		critical:    critical,
+		description: desc,
+	}
+}
+
 // TestParseGitHubURLMutationResistance tests URL parsing for regex and boundary mutations.
 // Critical mutations to catch:
 // - Pattern order changes (SSH vs HTTPS precedence)
 // - len(matches) >= 3 changed to > 3, == 3, etc.
 // - Return statement modifications (returning wrong indices).
 func TestParseGitHubURLMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		url         string
-		wantOrg     string
-		wantRepo    string
-		critical    bool
-		description string
-	}{
+	tests := []urlTestCase{
 		// HTTPS URLs
-		{
-			name:        "https_standard",
-			url:         "https://github.com/octocat/Hello-World",
-			wantOrg:     "octocat",
-			wantRepo:    "Hello-World",
-			critical:    false,
-			description: "Standard HTTPS URL",
-		},
-		{
-			name:        "https_with_git_extension",
-			url:         "https://github.com/octocat/Hello-World.git",
-			wantOrg:     "octocat",
-			wantRepo:    "Hello-World",
-			critical:    true,
-			description: ".git extension handled by (?:\\.git)? regex",
-		},
+		makeURLTestCase("https_standard", "https://github.com/octocat/Hello-World", "octocat", "Hello-World", false, "Standard HTTPS URL"),
+		makeURLTestCase("https_with_git_extension", "https://github.com/octocat/Hello-World.git", "octocat", "Hello-World", true, ".git extension handled by (?:\\.git)? regex"),
 
 		// SSH URLs
-		{
-			name:        "ssh_standard",
-			url:         "git@github.com:octocat/Hello-World",
-			wantOrg:     "octocat",
-			wantRepo:    "Hello-World",
-			critical:    true,
-			description: "SSH URL with colon separator ([:/] pattern)",
-		},
-		{
-			name:        "ssh_with_git_extension",
-			url:         "git@github.com:octocat/Hello-World.git",
-			wantOrg:     "octocat",
-			wantRepo:    "Hello-World",
-			critical:    true,
-			description: "SSH with .git",
-		},
+		makeURLTestCase("ssh_standard", "git@github.com:octocat/Hello-World", "octocat", "Hello-World", true, "SSH URL with colon separator ([:/] pattern)"),
+		makeURLTestCase("ssh_with_git_extension", "git@github.com:octocat/Hello-World.git", "octocat", "Hello-World", true, "SSH with .git"),
 
 		// Simple format
-		{
-			name:        "simple_org_repo",
-			url:         "octocat/Hello-World",
-			wantOrg:     "octocat",
-			wantRepo:    "Hello-World",
-			critical:    true,
-			description: "Simple org/repo format (second pattern)",
-		},
+		makeURLTestCase("simple_org_repo", "octocat/Hello-World", "octocat", "Hello-World", true, "Simple org/repo format (second pattern)"),
 
 		// Edge cases with special characters
-		{
-			name:        "org_with_dash",
-			url:         "actions/setup-node",
-			wantOrg:     "actions",
-			wantRepo:    "setup-node",
-			critical:    false,
-			description: "Hyphen in repo name",
-		},
-		{
-			name:        "org_with_number",
-			url:         "org123/repo456",
-			wantOrg:     "org123",
-			wantRepo:    "repo456",
-			critical:    false,
-			description: "Numbers in org/repo",
-		},
+		makeURLTestCase("org_with_dash", "actions/setup-node", "actions", "setup-node", false, "Hyphen in repo name"),
+		makeURLTestCase("org_with_number", "org123/repo456", "org123", "repo456", false, "Numbers in org/repo"),
 
 		// Boundary: len(matches) >= 3
-		{
-			name:        "exactly_3_matches",
-			url:         "a/b",
-			wantOrg:     "a",
-			wantRepo:    "b",
-			critical:    true,
-			description: "Minimal valid: exactly 3 matches (full, org, repo)",
-		},
+		makeURLTestCase("exactly_3_matches", "a/b", "a", "b", true, "Minimal valid: exactly 3 matches (full, org, repo)"),
 
 		// Invalid URLs (should return empty)
-		{
-			name:        "no_slash_invalid",
-			url:         "octocatHello-World",
-			wantOrg:     "",
-			wantRepo:    "",
-			critical:    true,
-			description: "No slash separator",
-		},
-		{
-			name:        "empty_string",
-			url:         "",
-			wantOrg:     "",
-			wantRepo:    "",
-			critical:    true,
-			description: "Empty string",
-		},
-		{
-			name:        "only_org",
-			url:         "octocat/",
-			wantOrg:     "",
-			wantRepo:    "",
-			critical:    true,
-			description: "Trailing slash, no repo",
-		},
-		{
-			name:        "only_repo",
-			url:         "/Hello-World",
-			wantOrg:     "",
-			wantRepo:    "",
-			critical:    true,
-			description: "Leading slash, no org",
-		},
+		makeURLTestCase("no_slash_invalid", "octocatHello-World", "", "", true, "No slash separator"),
+		makeURLTestCase("empty_string", "", "", "", true, "Empty string"),
+		makeURLTestCase("only_org", "octocat/", "", "", true, "Trailing slash, no repo"),
+		makeURLTestCase("only_repo", "/Hello-World", "", "", true, "Leading slash, no org"),
 
 		// Pattern precedence tests
-		{
-			name:        "github_com_in_middle",
-			url:         "https://github.com/ivuorinen/gh-action-readme",
-			wantOrg:     "ivuorinen",
-			wantRepo:    "gh-action-readme",
-			critical:    false,
-			description: "First pattern should match",
-		},
+		makeURLTestCase("github_com_in_middle", "https://github.com/ivuorinen/gh-action-readme", "ivuorinen", "gh-action-readme", false, "First pattern should match"),
 
 		// Regex capture group tests
-		{
-			name:        "multiple_slashes",
-			url:         "octocat/Hello-World/extra",
-			wantOrg:     "",
-			wantRepo:    "",
-			critical:    false,
-			description: "Extra path segments invalid for simple format",
-		},
+		makeURLTestCase("multiple_slashes", "octocat/Hello-World/extra", "", "", false, "Extra path segments invalid for simple format"),
 
 		// .git extension edge cases
-		{
-			name:        "double_git_extension",
-			url:         "octocat/Hello-World.git.git",
-			wantOrg:     "",
-			wantRepo:    "",
-			critical:    true,
-			description: "Dots not allowed in repo name by [^/.] pattern",
-		},
+		makeURLTestCase("double_git_extension", "octocat/Hello-World.git.git", "", "", true, "Dots not allowed in repo name by [^/.] pattern"),
 	}
 
 	for _, tt := range tests {
@@ -179,145 +133,37 @@ func TestParseGitHubURLMutationResistance(t *testing.T) {
 // - ReplaceAll vs Replace (all occurrences vs first)
 // - Wrong replacement string.
 func TestSanitizeActionNameMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       string
-		want        string
-		critical    bool
-		description string
-	}{
+	tests := []sanitizeTestCase{
 		// Basic transformations
-		{
-			name:        "lowercase_conversion",
-			input:       "UPPERCASE",
-			want:        "uppercase",
-			critical:    true,
-			description: "ToLower applied",
-		},
-		{
-			name:        "space_to_dash",
-			input:       "hello world",
-			want:        "hello-world",
-			critical:    true,
-			description: "ReplaceAll spaces with dashes",
-		},
-		{
-			name:        "trim_spaces",
-			input:       "  hello  ",
-			want:        "hello",
-			critical:    true,
-			description: "TrimSpace applied",
-		},
+		makeSanitizeTestCase("lowercase_conversion", "UPPERCASE", "uppercase", true, "ToLower applied"),
+		makeSanitizeTestCase("space_to_dash", "hello world", "hello-world", true, "ReplaceAll spaces with dashes"),
+		makeSanitizeTestCase("trim_spaces", "  hello  ", "hello", true, "TrimSpace applied"),
 
 		// Multiple spaces (ReplaceAll vs Replace critical)
-		{
-			name:        "multiple_spaces_all_replaced",
-			input:       "hello  world  test",
-			want:        "hello--world--test",
-			critical:    true,
-			description: "All spaces replaced (ReplaceAll, not Replace)",
-		},
-		{
-			name:        "three_consecutive_spaces",
-			input:       "a   b",
-			want:        "a---b",
-			critical:    true,
-			description: "Each space replaced individually",
-		},
+		makeSanitizeTestCase("multiple_spaces_all_replaced", "hello  world  test", "hello--world--test", true, "All spaces replaced (ReplaceAll, not Replace)"),
+		makeSanitizeTestCase("three_consecutive_spaces", "a   b", "a---b", true, "Each space replaced individually"),
 
 		// Operation order tests
-		{
-			name:        "uppercase_with_spaces",
-			input:       "HELLO WORLD",
-			want:        "hello-world",
-			critical:    true,
-			description: "Both lowercase and space replacement",
-		},
-		{
-			name:        "leading_trailing_spaces_uppercase",
-			input:       "  HELLO WORLD  ",
-			want:        "hello-world",
-			critical:    true,
-			description: "All transformations: trim, replace, lowercase",
-		},
+		makeSanitizeTestCase("uppercase_with_spaces", "HELLO WORLD", "hello-world", true, "Both lowercase and space replacement"),
+		makeSanitizeTestCase("leading_trailing_spaces_uppercase", "  HELLO WORLD  ", "hello-world", true, "All transformations: trim, replace, lowercase"),
 
 		// Edge cases
-		{
-			name:        "empty_string",
-			input:       "",
-			want:        "",
-			critical:    true,
-			description: "Empty input",
-		},
-		{
-			name:        "only_spaces",
-			input:       "   ",
-			want:        "",
-			critical:    true,
-			description: "Only spaces (trimmed to empty)",
-		},
-		{
-			name:        "no_changes_needed",
-			input:       "already-sanitized",
-			want:        "already-sanitized",
-			critical:    false,
-			description: "Already in correct format",
-		},
+		makeSanitizeTestCase("empty_string", "", "", true, "Empty input"),
+		makeSanitizeTestCase("only_spaces", "   ", "", true, "Only spaces (trimmed to empty)"),
+		makeSanitizeTestCase("no_changes_needed", "already-sanitized", "already-sanitized", false, "Already in correct format"),
 
 		// Special characters
-		{
-			name:        "mixed_case_with_hyphens",
-			input:       "Setup-Node",
-			want:        "setup-node",
-			critical:    false,
-			description: "Existing hyphens preserved",
-		},
-		{
-			name:        "underscore_preserved",
-			input:       "hello_world",
-			want:        "hello_world",
-			critical:    false,
-			description: "Underscores not replaced",
-		},
-		{
-			name:        "numbers_preserved",
-			input:       "Action 123",
-			want:        "action-123",
-			critical:    false,
-			description: "Numbers preserved",
-		},
+		makeSanitizeTestCase("mixed_case_with_hyphens", "Setup-Node", "setup-node", false, "Existing hyphens preserved"),
+		makeSanitizeTestCase("underscore_preserved", "hello_world", "hello_world", false, "Underscores not replaced"),
+		makeSanitizeTestCase("numbers_preserved", "Action 123", "action-123", false, "Numbers preserved"),
 
 		// Real-world action names
-		{
-			name:        "checkout_action",
-			input:       "Checkout Code",
-			want:        "checkout-code",
-			critical:    false,
-			description: "Realistic action name",
-		},
-		{
-			name:        "setup_go_action",
-			input:       "Setup Go Environment",
-			want:        "setup-go-environment",
-			critical:    false,
-			description: "Multi-word action name",
-		},
+		makeSanitizeTestCase("checkout_action", "Checkout Code", "checkout-code", false, "Realistic action name"),
+		makeSanitizeTestCase("setup_go_action", "Setup Go Environment", "setup-go-environment", false, "Multi-word action name"),
 
 		// Single character
-		{
-			name:        "single_char",
-			input:       "A",
-			want:        "a",
-			critical:    false,
-			description: "Single character",
-		},
-		{
-			name:        "single_space",
-			input:       " ",
-			want:        "",
-			critical:    true,
-			description: "Single space (trimmed)",
-		},
+		makeSanitizeTestCase("single_char", "A", "a", false, "Single character"),
+		makeSanitizeTestCase("single_space", " ", "", true, "Single space (trimmed)"),
 	}
 
 	for _, tt := range tests {
@@ -337,161 +183,41 @@ func TestSanitizeActionNameMutationResistance(t *testing.T) {
 // - TrimSpace removal or reordering
 // - ReplaceAllString to different methods.
 func TestTrimAndNormalizeMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       string
-		want        string
-		critical    bool
-		description string
-	}{
+	tests := []sanitizeTestCase{
 		// Leading/trailing whitespace
-		{
-			name:        "leading_whitespace",
-			input:       "  hello",
-			want:        "hello",
-			critical:    true,
-			description: "TrimSpace removes leading",
-		},
-		{
-			name:        "trailing_whitespace",
-			input:       "hello  ",
-			want:        "hello",
-			critical:    true,
-			description: "TrimSpace removes trailing",
-		},
-		{
-			name:        "both_sides_whitespace",
-			input:       "  hello  ",
-			want:        "hello",
-			critical:    true,
-			description: "TrimSpace removes both sides",
-		},
+		makeSanitizeTestCase("leading_whitespace", "  hello", "hello", true, "TrimSpace removes leading"),
+		makeSanitizeTestCase("trailing_whitespace", "hello  ", "hello", true, "TrimSpace removes trailing"),
+		makeSanitizeTestCase("both_sides_whitespace", "  hello  ", "hello", true, "TrimSpace removes both sides"),
 
 		// Internal whitespace normalization
-		{
-			name:        "double_space",
-			input:       "hello  world",
-			want:        "hello world",
-			critical:    true,
-			description: "Double space to single (\\s+ pattern)",
-		},
-		{
-			name:        "triple_space",
-			input:       "hello   world",
-			want:        "hello world",
-			critical:    true,
-			description: "Triple space to single",
-		},
-		{
-			name:        "many_spaces",
-			input:       "hello          world",
-			want:        "hello world",
-			critical:    true,
-			description: "Many spaces to single (+ quantifier)",
-		},
+		makeSanitizeTestCase("double_space", "hello  world", "hello world", true, "Double space to single (\\s+ pattern)"),
+		makeSanitizeTestCase("triple_space", "hello   world", "hello world", true, "Triple space to single"),
+		makeSanitizeTestCase("many_spaces", "hello          world", "hello world", true, "Many spaces to single (+ quantifier)"),
 
 		// Mixed whitespace types
-		{
-			name:        "tab_character",
-			input:       "hello\tworld",
-			want:        "hello world",
-			critical:    true,
-			description: "Tab normalized to space (\\s includes tabs)",
-		},
-		{
-			name:        "newline_character",
-			input:       "hello\nworld",
-			want:        "hello world",
-			critical:    true,
-			description: "Newline normalized to space (\\s includes newlines)",
-		},
-		{
-			name:        "carriage_return",
-			input:       "hello\rworld",
-			want:        "hello world",
-			critical:    true,
-			description: "CR normalized to space",
-		},
-		{
-			name:        "mixed_whitespace",
-			input:       "hello \t\n world",
-			want:        "hello world",
-			critical:    true,
-			description: "Mixed whitespace types to single space",
-		},
+		makeSanitizeTestCase("tab_character", "hello\tworld", "hello world", true, "Tab normalized to space (\\s includes tabs)"),
+		makeSanitizeTestCase("newline_character", "hello\nworld", "hello world", true, "Newline normalized to space (\\s includes newlines)"),
+		makeSanitizeTestCase("carriage_return", "hello\rworld", "hello world", true, "CR normalized to space"),
+		makeSanitizeTestCase("mixed_whitespace", "hello \t\n world", "hello world", true, "Mixed whitespace types to single space"),
 
 		// Combined leading/trailing and internal
-		{
-			name:        "all_whitespace_issues",
-			input:       "  hello   world  ",
-			want:        "hello world",
-			critical:    true,
-			description: "Trim + normalize internal",
-		},
+		makeSanitizeTestCase("all_whitespace_issues", "  hello   world  ", "hello world", true, "Trim + normalize internal"),
 
 		// Edge cases
-		{
-			name:        "empty_string",
-			input:       "",
-			want:        "",
-			critical:    true,
-			description: "Empty input",
-		},
-		{
-			name:        "only_spaces",
-			input:       "     ",
-			want:        "",
-			critical:    true,
-			description: "Only spaces (trimmed to empty)",
-		},
-		{
-			name:        "only_whitespace_mixed",
-			input:       " \t\n\r ",
-			want:        "",
-			critical:    true,
-			description: "Only various whitespace types",
-		},
-		{
-			name:        "no_whitespace",
-			input:       "hello",
-			want:        "hello",
-			critical:    false,
-			description: "No whitespace to normalize",
-		},
-		{
-			name:        "single_space_valid",
-			input:       "hello world",
-			want:        "hello world",
-			critical:    false,
-			description: "Already normalized",
-		},
+		makeSanitizeTestCase("empty_string", "", "", true, "Empty input"),
+		makeSanitizeTestCase("only_spaces", "     ", "", true, "Only spaces (trimmed to empty)"),
+		makeSanitizeTestCase("only_whitespace_mixed", " \t\n\r ", "", true, "Only various whitespace types"),
+		makeSanitizeTestCase("no_whitespace", "hello", "hello", false, "No whitespace to normalize"),
+		makeSanitizeTestCase("single_space_valid", "hello world", "hello world", false, "Already normalized"),
 
 		// Multiple words
-		{
-			name:        "three_words_excess_spaces",
-			input:       "one   two   three",
-			want:        "one two three",
-			critical:    false,
-			description: "Three words with excess spaces",
-		},
+		makeSanitizeTestCase("three_words_excess_spaces", "one   two   three", "one two three", false, "Three words with excess spaces"),
 
 		// Unicode whitespace
-		{
-			name:        "regular_space",
-			input:       "hello world",
-			want:        "hello world",
-			critical:    false,
-			description: "Regular ASCII space",
-		},
+		makeSanitizeTestCase("regular_space", "hello world", "hello world", false, "Regular ASCII space"),
 
 		// Quantifier verification (\s+ means one or more)
-		{
-			name:        "single_space_between",
-			input:       "a b",
-			want:        "a b",
-			critical:    true,
-			description: "Single space not collapsed (need + for >1)",
-		},
+		makeSanitizeTestCase("single_space_between", "a b", "a b", true, "Single space not collapsed (need + for >1)"),
 	}
 
 	for _, tt := range tests {
@@ -513,196 +239,44 @@ func TestTrimAndNormalizeMutationResistance(t *testing.T) {
 // - String concatenation order
 // - Default version "v1" changed.
 func TestFormatUsesStatementMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		org         string
-		repo        string
-		version     string
-		want        string
-		critical    bool
-		description string
-	}{
+	tests := []formatTestCase{
 		// Basic formatting
-		{
-			name:        "basic_with_version",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "v3",
-			want:        "actions/checkout@v3",
-			critical:    false,
-			description: "Standard format",
-		},
+		makeFormatTestCase("basic_with_version", "actions", "checkout", "v3", "actions/checkout@v3", false, "Standard format"),
 
 		// Empty checks (critical)
-		{
-			name:        "empty_org_returns_empty",
-			org:         "",
-			repo:        "checkout",
-			version:     "v3",
-			want:        "",
-			critical:    true,
-			description: "org == \"\" check",
-		},
-		{
-			name:        "empty_repo_returns_empty",
-			org:         "actions",
-			repo:        "",
-			version:     "v3",
-			want:        "",
-			critical:    true,
-			description: "repo == \"\" check",
-		},
-		{
-			name:        "both_empty_returns_empty",
-			org:         "",
-			repo:        "",
-			version:     "v3",
-			want:        "",
-			critical:    true,
-			description: "org == \"\" || repo == \"\" (|| operator critical)",
-		},
+		makeFormatTestCase("empty_org_returns_empty", "", "checkout", "v3", "", true, "org == \"\" check"),
+		makeFormatTestCase("empty_repo_returns_empty", "actions", "", "v3", "", true, "repo == \"\" check"),
+		makeFormatTestCase("both_empty_returns_empty", "", "", "v3", "", true, "org == \"\" || repo == \"\" (|| operator critical)"),
 
 		// Default version (critical)
-		{
-			name:        "empty_version_defaults_v1",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "",
-			want:        "actions/checkout@v1",
-			critical:    true,
-			description: "version == \"\" defaults to \"v1\"",
-		},
+		makeFormatTestCase("empty_version_defaults_v1", "actions", "checkout", "", "actions/checkout@v1", true, "version == \"\" defaults to \"v1\""),
 
 		// @ prefix handling (critical)
-		{
-			name:        "version_without_at",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "v3",
-			want:        "actions/checkout@v3",
-			critical:    true,
-			description: "@ added when not present (!HasPrefix check)",
-		},
-		{
-			name:        "version_with_at",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "@v3",
-			want:        "actions/checkout@v3",
-			critical:    true,
-			description: "@ not duplicated (HasPrefix check)",
-		},
-		{
-			name:        "double_at_if_hasprefix_fails",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "@@v3",
-			want:        "actions/checkout@@v3",
-			critical:    false,
-			description: "Malformed input with double @",
-		},
+		makeFormatTestCase("version_without_at", "actions", "checkout", "v3", "actions/checkout@v3", true, "@ added when not present (!HasPrefix check)"),
+		makeFormatTestCase("version_with_at", "actions", "checkout", "@v3", "actions/checkout@v3", true, "@ not duplicated (HasPrefix check)"),
+		makeFormatTestCase("double_at_if_hasprefix_fails", "actions", "checkout", "@@v3", "actions/checkout@@v3", false, "Malformed input with double @"),
 
 		// String concatenation order
-		{
-			name:        "concatenation_order",
-			org:         "org",
-			repo:        "repo",
-			version:     "ver",
-			want:        "org/repo@ver",
-			critical:    true,
-			description: "Correct concatenation: org + \"/\" + repo + version",
-		},
+		makeFormatTestCase("concatenation_order", "org", "repo", "ver", "org/repo@ver", true, "Correct concatenation: org + \"/\" + repo + version"),
 
 		// Edge cases
-		{
-			name:        "single_char_org_repo",
-			org:         "a",
-			repo:        "b",
-			version:     "c",
-			want:        "a/b@c",
-			critical:    false,
-			description: "Minimal valid input",
-		},
-		{
-			name:        "branch_name_version",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "main",
-			want:        "actions/checkout@main",
-			critical:    false,
-			description: "Branch name as version",
-		},
-		{
-			name:        "sha_version",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "abc1234567890def",
-			want:        "actions/checkout@abc1234567890def",
-			critical:    false,
-			description: "SHA as version",
-		},
+		makeFormatTestCase("single_char_org_repo", "a", "b", "c", "a/b@c", false, "Minimal valid input"),
+		makeFormatTestCase("branch_name_version", "actions", "checkout", "main", "actions/checkout@main", false, "Branch name as version"),
+		makeFormatTestCase("sha_version", "actions", "checkout", "abc1234567890def", "actions/checkout@abc1234567890def", false, "SHA as version"),
 
 		// Whitespace in inputs
-		{
-			name:        "org_with_spaces_not_trimmed",
-			org:         " actions ",
-			repo:        "checkout",
-			version:     "v3",
-			want:        " actions /checkout@v3",
-			critical:    false,
-			description: "Spaces preserved (no TrimSpace in function)",
-		},
+		makeFormatTestCase("org_with_spaces_not_trimmed", " actions ", "checkout", "v3", " actions /checkout@v3", false, "Spaces preserved (no TrimSpace in function)"),
 
 		// Special characters
-		{
-			name:        "hyphen_in_repo",
-			org:         "actions",
-			repo:        "setup-node",
-			version:     "v3",
-			want:        "actions/setup-node@v3",
-			critical:    false,
-			description: "Hyphen in repo name",
-		},
-		{
-			name:        "at_in_version_position",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "@v3",
-			want:        "actions/checkout@v3",
-			critical:    true,
-			description: "Existing @ not duplicated",
-		},
+		makeFormatTestCase("hyphen_in_repo", "actions", "setup-node", "v3", "actions/setup-node@v3", false, "Hyphen in repo name"),
+		makeFormatTestCase("at_in_version_position", "actions", "checkout", "@v3", "actions/checkout@v3", true, "Existing @ not duplicated"),
 
 		// Boolean operator mutation detection
-		{
-			name:        "non_empty_org_empty_repo",
-			org:         "actions",
-			repo:        "",
-			version:     "v3",
-			want:        "",
-			critical:    true,
-			description: "|| means either empty returns \"\" (not &&)",
-		},
-		{
-			name:        "empty_org_non_empty_repo",
-			org:         "",
-			repo:        "checkout",
-			version:     "v3",
-			want:        "",
-			critical:    true,
-			description: "|| means either empty returns \"\" (not &&)",
-		},
+		makeFormatTestCase("non_empty_org_empty_repo", "actions", "", "v3", "", true, "|| means either empty returns \"\" (not &&)"),
+		makeFormatTestCase("empty_org_non_empty_repo", "", "checkout", "v3", "", true, "|| means either empty returns \"\" (not &&)"),
 
 		// Default version with @ handling
-		{
-			name:        "empty_version_gets_at_prefix",
-			org:         "actions",
-			repo:        "checkout",
-			version:     "",
-			want:        "actions/checkout@v1",
-			critical:    true,
-			description: "Empty version: default \"v1\" then @ added",
-		},
+		makeFormatTestCase("empty_version_gets_at_prefix", "actions", "checkout", "", "actions/checkout@v1", true, "Empty version: default \"v1\" then @ added"),
 	}
 
 	for _, tt := range tests {
@@ -722,133 +296,37 @@ func TestFormatUsesStatementMutationResistance(t *testing.T) {
 // - TrimPrefix removal or wrong prefix
 // - Operation order (trim then prefix vs prefix then trim).
 func TestCleanVersionStringMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       string
-		want        string
-		critical    bool
-		description string
-	}{
+	tests := []sanitizeTestCase{
 		// v prefix removal
-		{
-			name:        "v_prefix_removed",
-			input:       "v1.2.3",
-			want:        "1.2.3",
-			critical:    true,
-			description: "TrimPrefix(\"v\") applied",
-		},
-		{
-			name:        "no_v_prefix_unchanged",
-			input:       "1.2.3",
-			want:        "1.2.3",
-			critical:    true,
-			description: "No v prefix to remove",
-		},
+		makeSanitizeTestCase("v_prefix_removed", "v1.2.3", "1.2.3", true, "TrimPrefix(\"v\") applied"),
+		makeSanitizeTestCase("no_v_prefix_unchanged", "1.2.3", "1.2.3", true, "No v prefix to remove"),
 
 		// Whitespace handling
-		{
-			name:        "leading_whitespace",
-			input:       "  v1.2.3",
-			want:        "1.2.3",
-			critical:    true,
-			description: "TrimSpace before TrimPrefix",
-		},
-		{
-			name:        "trailing_whitespace",
-			input:       "v1.2.3  ",
-			want:        "1.2.3",
-			critical:    true,
-			description: "TrimSpace applied",
-		},
-		{
-			name:        "both_whitespace_and_v",
-			input:       "  v1.2.3  ",
-			want:        "1.2.3",
-			critical:    true,
-			description: "Both TrimSpace and TrimPrefix",
-		},
+		makeSanitizeTestCase("leading_whitespace", "  v1.2.3", "1.2.3", true, "TrimSpace before TrimPrefix"),
+		makeSanitizeTestCase("trailing_whitespace", "v1.2.3  ", "1.2.3", true, "TrimSpace applied"),
+		makeSanitizeTestCase("both_whitespace_and_v", "  v1.2.3  ", "1.2.3", true, "Both TrimSpace and TrimPrefix"),
 
 		// Operation order critical
-		{
-			name:        "whitespace_before_v",
-			input:       " v1.2.3",
-			want:        "1.2.3",
-			critical:    true,
-			description: "TrimSpace must happen before TrimPrefix",
-		},
+		makeSanitizeTestCase("whitespace_before_v", " v1.2.3", "1.2.3", true, "TrimSpace must happen before TrimPrefix"),
 
 		// Edge cases
-		{
-			name:        "only_v",
-			input:       "v",
-			want:        "",
-			critical:    true,
-			description: "Just v becomes empty",
-		},
-		{
-			name:        "empty_string",
-			input:       "",
-			want:        "",
-			critical:    true,
-			description: "Empty input",
-		},
-		{
-			name:        "only_whitespace",
-			input:       "   ",
-			want:        "",
-			critical:    true,
-			description: "Only spaces",
-		},
+		makeSanitizeTestCase("only_v", "v", "", true, "Just v becomes empty"),
+		makeSanitizeTestCase("empty_string", "", "", true, "Empty input"),
+		makeSanitizeTestCase("only_whitespace", "   ", "", true, "Only spaces"),
 
 		// Multiple v's
-		{
-			name:        "double_v",
-			input:       "vv1.2.3",
-			want:        "v1.2.3",
-			critical:    true,
-			description: "Only first v removed (TrimPrefix, not ReplaceAll)",
-		},
+		makeSanitizeTestCase("double_v", "vv1.2.3", "v1.2.3", true, "Only first v removed (TrimPrefix, not ReplaceAll)"),
 
 		// No changes needed
-		{
-			name:        "already_clean",
-			input:       "1.2.3",
-			want:        "1.2.3",
-			critical:    false,
-			description: "Already clean",
-		},
+		makeSanitizeTestCase("already_clean", "1.2.3", "1.2.3", false, "Already clean"),
 
 		// Real-world versions
-		{
-			name:        "semver_with_v",
-			input:       "v2.5.1",
-			want:        "2.5.1",
-			critical:    false,
-			description: "Realistic semver",
-		},
-		{
-			name:        "semver_no_v",
-			input:       "2.5.1",
-			want:        "2.5.1",
-			critical:    false,
-			description: "Realistic semver without v",
-		},
+		makeSanitizeTestCase("semver_with_v", "v2.5.1", "2.5.1", false, "Realistic semver"),
+		makeSanitizeTestCase("semver_no_v", "2.5.1", "2.5.1", false, "Realistic semver without v"),
 
 		// Whitespace variations
-		{
-			name:        "tab_character",
-			input:       "\tv1.2.3",
-			want:        "1.2.3",
-			critical:    true,
-			description: "Tab handled by TrimSpace",
-		},
-		{
-			name:        "newline",
-			input:       "v1.2.3\n",
-			want:        "1.2.3",
-			critical:    true,
-			description: "Newline handled by TrimSpace",
-		},
+		makeSanitizeTestCase("tab_character", "\tv1.2.3", "1.2.3", true, "Tab handled by TrimSpace"),
+		makeSanitizeTestCase("newline", "v1.2.3\n", "1.2.3", true, "Newline handled by TrimSpace"),
 	}
 
 	for _, tt := range tests {

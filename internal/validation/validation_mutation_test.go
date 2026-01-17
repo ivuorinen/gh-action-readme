@@ -5,139 +5,99 @@ import (
 	"testing"
 )
 
+// Test case helpers - reduce duplication in table-driven tests
+
+// shaTestCase represents a SHA validation test case.
+type shaTestCase struct {
+	name        string
+	version     string
+	want        bool
+	critical    bool
+	description string
+}
+
+// makeSHATestCase constructs a SHA test case.
+func makeSHATestCase(name, version string, want, critical bool, desc string) shaTestCase {
+	return shaTestCase{
+		name:        name,
+		version:     version,
+		want:        want,
+		critical:    critical,
+		description: desc,
+	}
+}
+
+// semverTestCase represents a semantic version validation test case.
+type semverTestCase struct {
+	name        string
+	version     string
+	want        bool
+	critical    bool
+	description string
+}
+
+// makeSemverTestCase constructs a semantic version test case.
+func makeSemverTestCase(name, version string, want, critical bool, desc string) semverTestCase {
+	return semverTestCase{
+		name:        name,
+		version:     version,
+		want:        want,
+		critical:    critical,
+		description: desc,
+	}
+}
+
+// pinnedTestCase represents a version pinning test case.
+type pinnedTestCase struct {
+	name        string
+	version     string
+	want        bool
+	critical    bool
+	description string
+}
+
+// makePinnedTestCase constructs a version pinning test case.
+func makePinnedTestCase(name, version string, want, critical bool, desc string) pinnedTestCase {
+	return pinnedTestCase{
+		name:        name,
+		version:     version,
+		want:        want,
+		critical:    critical,
+		description: desc,
+	}
+}
+
 // TestIsCommitSHAMutationResistance tests SHA validation for boundary mutations.
 // Critical mutations to catch:
 // - len(version) >= 7 changed to > 7 or >= 8
 // - Regex pattern changes (e.g., + to *, removal of quantifiers).
 func TestIsCommitSHAMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		version     string
-		want        bool
-		critical    bool
-		description string
-	}{
+	tests := []shaTestCase{
 		// Boundary: len >= 7
-		{
-			name:        "boundary_7_chars_valid",
-			version:     "abc1234",
-			want:        true,
-			critical:    true,
-			description: "Exactly 7 chars (boundary for >= 7)",
-		},
-		{
-			name:        "boundary_6_chars_invalid",
-			version:     "abc123",
-			want:        false,
-			critical:    true,
-			description: "6 chars should fail (< 7)",
-		},
-		{
-			name:        "boundary_8_chars_valid",
-			version:     "abc12345",
-			want:        true,
-			critical:    false,
-			description: "8 chars valid",
-		},
+		makeSHATestCase("boundary_7_chars_valid", "abc1234", true, true, "Exactly 7 chars (boundary for >= 7)"),
+		makeSHATestCase("boundary_6_chars_invalid", "abc123", false, true, "6 chars should fail (< 7)"),
+		makeSHATestCase("boundary_8_chars_valid", "abc12345", true, false, "8 chars valid"),
 
 		// Boundary: full SHA (40 chars)
-		{
-			name:        "boundary_40_chars_valid",
-			version:     strings.Repeat("a", 40),
-			want:        true,
-			critical:    true,
-			description: "Full 40-char SHA",
-		},
-		{
-			name:        "boundary_39_chars_valid_short_sha",
-			version:     strings.Repeat("a", 39),
-			want:        true,
-			critical:    false,
-			description: "39 chars still valid as short SHA",
-		},
-		{
-			name:        "boundary_41_chars_invalid_too_long",
-			version:     strings.Repeat("a", 41),
-			want:        false,
-			critical:    true,
-			description: "41 chars exceeds SHA length",
-		},
+		makeSHATestCase("boundary_40_chars_valid", strings.Repeat("a", 40), true, true, "Full 40-char SHA"),
+		makeSHATestCase("boundary_39_chars_valid_short_sha", strings.Repeat("a", 39), true, false, "39 chars still valid as short SHA"),
+		makeSHATestCase("boundary_41_chars_invalid_too_long", strings.Repeat("a", 41), false, true, "41 chars exceeds SHA length"),
 
 		// Hex character validation (regex critical)
-		{
-			name:        "all_hex_chars_valid",
-			version:     "abcdef0123456789",
-			want:        true,
-			critical:    false,
-			description: "All hex chars",
-		},
-		{
-			name:        "uppercase_hex_invalid",
-			version:     "ABCDEF0",
-			want:        false,
-			critical:    true,
-			description: "Uppercase hex chars (regex only accepts [a-f], not [A-F])",
-		},
-		{
-			name:        "mixed_case_hex_invalid",
-			version:     "AbCdEf0",
-			want:        false,
-			critical:    true,
-			description: "Mixed case hex (regex only accepts lowercase)",
-		},
-		{
-			name:        "non_hex_char_g_invalid",
-			version:     "abcdefg",
-			want:        false,
-			critical:    true,
-			description: "Contains 'g' (not hex)",
-		},
-		{
-			name:        "non_hex_char_z_invalid",
-			version:     "abcdefz",
-			want:        false,
-			critical:    true,
-			description: "Contains 'z' (not hex)",
-		},
-		{
-			name:        "special_char_invalid",
-			version:     "abc-def",
-			want:        false,
-			critical:    true,
-			description: "Contains dash",
-		},
+		makeSHATestCase("all_hex_chars_valid", "abcdef0123456789", true, false, "All hex chars"),
+		makeSHATestCase("uppercase_hex_invalid", "ABCDEF0", false, true, "Uppercase hex chars (regex only accepts [a-f], not [A-F])"),
+		makeSHATestCase("mixed_case_hex_invalid", "AbCdEf0", false, true, "Mixed case hex (regex only accepts lowercase)"),
+		makeSHATestCase("non_hex_char_g_invalid", "abcdefg", false, true, "Contains 'g' (not hex)"),
+		makeSHATestCase("non_hex_char_z_invalid", "abcdefz", false, true, "Contains 'z' (not hex)"),
+		makeSHATestCase("special_char_invalid", "abc-def", false, true, "Contains dash"),
 
 		// Empty/whitespace
-		{
-			name:        "empty_string_invalid",
-			version:     "",
-			want:        false,
-			critical:    true,
-			description: "Empty string (len < 7)",
-		},
-		{
-			name:        "whitespace_invalid",
-			version:     "   ",
-			want:        false,
-			critical:    false,
-			description: "Whitespace only",
-		},
+		makeSHATestCase("empty_string_invalid", "", false, true, "Empty string (len < 7)"),
+		makeSHATestCase("whitespace_invalid", "   ", false, false, "Whitespace only"),
 
 		// Real-world SHA examples
-		{
-			name:        "real_short_sha",
-			version:     "abc1234",
-			want:        true,
-			critical:    false,
-			description: "Realistic 7-char short SHA",
-		},
-		{
-			name:        "real_full_sha",
-			version:     "1234567890abcdef1234567890abcdef12345678",
-			want:        true,
-			critical:    false,
-			description: "Realistic full SHA",
-		},
+		makeSHATestCase("real_short_sha", "abc1234", true, false, "Realistic 7-char short SHA"),
+		makeSHATestCase("real_full_sha", "1234567890abcdef1234567890abcdef12345678", true, false, "Realistic full SHA"),
 	}
 
 	for _, tt := range tests {
@@ -157,193 +117,49 @@ func TestIsCommitSHAMutationResistance(t *testing.T) {
 // - Part removal (prerelease, build metadata)
 // - Anchor removal (^ or $).
 func TestIsSemanticVersionMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		version     string
-		want        bool
-		critical    bool
-		description string
-	}{
+	tests := []semverTestCase{
 		// Basic semver
-		{
-			name:        "basic_semver",
-			version:     "1.2.3",
-			want:        true,
-			critical:    false,
-			description: "Basic X.Y.Z",
-		},
-		{
-			name:        "basic_semver_with_v",
-			version:     "v1.2.3",
-			want:        true,
-			critical:    true,
-			description: "v prefix optional (v? quantifier)",
-		},
+		makeSemverTestCase("basic_semver", "1.2.3", true, false, "Basic X.Y.Z"),
+		makeSemverTestCase("basic_semver_with_v", "v1.2.3", true, true, "v prefix optional (v? quantifier)"),
 
 		// Missing parts (should fail)
-		{
-			name:        "missing_patch_invalid",
-			version:     "1.2",
-			want:        false,
-			critical:    true,
-			description: "Missing patch version",
-		},
-		{
-			name:        "missing_minor_patch_invalid",
-			version:     "1",
-			want:        false,
-			critical:    true,
-			description: "Only major version",
-		},
-		{
-			name:        "extra_parts_invalid",
-			version:     "1.2.3.4",
-			want:        false,
-			critical:    true,
-			description: "Too many parts (no $ anchor would allow this)",
-		},
+		makeSemverTestCase("missing_patch_invalid", "1.2", false, true, "Missing patch version"),
+		makeSemverTestCase("missing_minor_patch_invalid", "1", false, true, "Only major version"),
+		makeSemverTestCase("extra_parts_invalid", "1.2.3.4", false, true, "Too many parts (no $ anchor would allow this)"),
 
 		// Prerelease versions (optional part)
-		{
-			name:        "prerelease_alpha",
-			version:     "1.2.3-alpha",
-			want:        true,
-			critical:    true,
-			description: "Prerelease part (- with ? quantifier)",
-		},
-		{
-			name:        "prerelease_alpha_1",
-			version:     "1.2.3-alpha.1",
-			want:        true,
-			critical:    true,
-			description: "Prerelease with dot",
-		},
-		{
-			name:        "prerelease_multiple_parts",
-			version:     "1.2.3-alpha.beta.1",
-			want:        true,
-			critical:    false,
-			description: "Multiple prerelease parts",
-		},
-		{
-			name:        "empty_prerelease_invalid",
-			version:     "1.2.3-",
-			want:        false,
-			critical:    true,
-			description: "Dash with no prerelease (+ requires content)",
-		},
+		makeSemverTestCase("prerelease_alpha", "1.2.3-alpha", true, true, "Prerelease part (- with ? quantifier)"),
+		makeSemverTestCase("prerelease_alpha_1", "1.2.3-alpha.1", true, true, "Prerelease with dot"),
+		makeSemverTestCase("prerelease_multiple_parts", "1.2.3-alpha.beta.1", true, false, "Multiple prerelease parts"),
+		makeSemverTestCase("empty_prerelease_invalid", "1.2.3-", false, true, "Dash with no prerelease (+ requires content)"),
 
 		// Build metadata (optional part)
-		{
-			name:        "build_metadata",
-			version:     "1.2.3+build.123",
-			want:        true,
-			critical:    true,
-			description: "Build metadata (+ with ? quantifier)",
-		},
-		{
-			name:        "empty_build_invalid",
-			version:     "1.2.3+",
-			want:        false,
-			critical:    true,
-			description: "Plus with no build metadata",
-		},
-		{
-			name:        "build_metadata_only_numbers",
-			version:     "1.2.3+20130313144700",
-			want:        true,
-			critical:    false,
-			description: "Build with only numbers",
-		},
+		makeSemverTestCase("build_metadata", "1.2.3+build.123", true, true, "Build metadata (+ with ? quantifier)"),
+		makeSemverTestCase("empty_build_invalid", "1.2.3+", false, true, "Plus with no build metadata"),
+		makeSemverTestCase("build_metadata_only_numbers", "1.2.3+20130313144700", true, false, "Build with only numbers"),
 
 		// Combined prerelease and build
-		{
-			name:        "prerelease_and_build",
-			version:     "1.2.3-alpha+build.123",
-			want:        true,
-			critical:    false,
-			description: "Both prerelease and build",
-		},
+		makeSemverTestCase("prerelease_and_build", "1.2.3-alpha+build.123", true, false, "Both prerelease and build"),
 
 		// Zero versions
-		{
-			name:        "zero_version",
-			version:     "0.0.0",
-			want:        true,
-			critical:    false,
-			description: "All zeros valid",
-		},
-		{
-			name:        "zero_major",
-			version:     "0.1.2",
-			want:        true,
-			critical:    false,
-			description: "Zero major valid",
-		},
+		makeSemverTestCase("zero_version", "0.0.0", true, false, "All zeros valid"),
+		makeSemverTestCase("zero_major", "0.1.2", true, false, "Zero major valid"),
 
 		// Large numbers
-		{
-			name:        "large_numbers",
-			version:     "100.200.300",
-			want:        true,
-			critical:    false,
-			description: "Multi-digit versions",
-		},
+		makeSemverTestCase("large_numbers", "100.200.300", true, false, "Multi-digit versions"),
 
 		// Invalid formats
-		{
-			name:        "no_dots_invalid",
-			version:     "123",
-			want:        false,
-			critical:    true,
-			description: "No dots",
-		},
-		{
-			name:        "letters_in_version_invalid",
-			version:     "a.b.c",
-			want:        false,
-			critical:    true,
-			description: "Letters in version numbers",
-		},
-		{
-			name:        "leading_zero_technically_valid",
-			version:     "01.02.03",
-			want:        true,
-			critical:    false,
-			description: "Leading zeros (regex allows)",
-		},
+		makeSemverTestCase("no_dots_invalid", "123", false, true, "No dots"),
+		makeSemverTestCase("letters_in_version_invalid", "a.b.c", false, true, "Letters in version numbers"),
+		makeSemverTestCase("leading_zero_technically_valid", "01.02.03", true, false, "Leading zeros (regex allows)"),
 
 		// v prefix edge cases
-		{
-			name:        "double_v_invalid",
-			version:     "vv1.2.3",
-			want:        false,
-			critical:    true,
-			description: "Double v prefix (v? means 0 or 1)",
-		},
-		{
-			name:        "uppercase_V_invalid",
-			version:     "V1.2.3",
-			want:        false,
-			critical:    true,
-			description: "Uppercase V not allowed",
-		},
+		makeSemverTestCase("double_v_invalid", "vv1.2.3", false, true, "Double v prefix (v? means 0 or 1)"),
+		makeSemverTestCase("uppercase_V_invalid", "V1.2.3", false, true, "Uppercase V not allowed"),
 
 		// Whitespace
-		{
-			name:        "leading_whitespace_invalid",
-			version:     " 1.2.3",
-			want:        false,
-			critical:    true,
-			description: "Leading space (^ anchor)",
-		},
-		{
-			name:        "trailing_whitespace_invalid",
-			version:     "1.2.3 ",
-			want:        false,
-			critical:    true,
-			description: "Trailing space ($ anchor)",
-		},
+		makeSemverTestCase("leading_whitespace_invalid", " 1.2.3", false, true, "Leading space (^ anchor)"),
+		makeSemverTestCase("trailing_whitespace_invalid", "1.2.3 ", false, true, "Trailing space ($ anchor)"),
 	}
 
 	for _, tt := range tests {
@@ -364,140 +180,38 @@ func TestIsSemanticVersionMutationResistance(t *testing.T) {
 // - == 40 changed to != 40, > 40, < 40, >= 40, <= 40
 // - Removal of IsSemanticVersion() or IsCommitSHA() calls.
 func TestIsVersionPinnedMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		version     string
-		want        bool
-		critical    bool
-		description string
-	}{
+	tests := []pinnedTestCase{
 		// Semantic version cases (first part of ||)
-		{
-			name:        "semver_is_pinned",
-			version:     "v1.2.3",
-			want:        true,
-			critical:    true,
-			description: "Semver satisfies first condition",
-		},
-		{
-			name:        "semver_no_v_is_pinned",
-			version:     "1.2.3",
-			want:        true,
-			critical:    true,
-			description: "Semver without v",
-		},
+		makePinnedTestCase("semver_is_pinned", "v1.2.3", true, true, "Semver satisfies first condition"),
+		makePinnedTestCase("semver_no_v_is_pinned", "1.2.3", true, true, "Semver without v"),
 
 		// Full SHA cases (second part of ||)
-		{
-			name:        "full_40_char_sha_is_pinned",
-			version:     strings.Repeat("a", 40),
-			want:        true,
-			critical:    true,
-			description: "40-char SHA satisfies: IsCommitSHA() && len == 40",
-		},
-		{
-			name:        "39_char_sha_not_pinned",
-			version:     strings.Repeat("a", 39),
-			want:        false,
-			critical:    true,
-			description: "39-char SHA fails: len != 40 (critical boundary)",
-		},
-		{
-			name:        "41_char_not_sha_not_pinned",
-			version:     strings.Repeat("a", 41),
-			want:        false,
-			critical:    true,
-			description: "41 chars: not valid SHA && len != 40",
-		},
+		makePinnedTestCase("full_40_char_sha_is_pinned", strings.Repeat("a", 40), true, true, "40-char SHA satisfies: IsCommitSHA() && len == 40"),
+		makePinnedTestCase("39_char_sha_not_pinned", strings.Repeat("a", 39), false, true, "39-char SHA fails: len != 40 (critical boundary)"),
+		makePinnedTestCase("41_char_not_sha_not_pinned", strings.Repeat("a", 41), false, true, "41 chars: not valid SHA && len != 40"),
 
 		// Short SHA cases (should not be pinned)
-		{
-			name:        "7_char_sha_not_pinned",
-			version:     "abcdef0",
-			want:        false,
-			critical:    true,
-			description: "7-char SHA: IsCommitSHA() true but len != 40",
-		},
-		{
-			name:        "20_char_sha_not_pinned",
-			version:     strings.Repeat("a", 20),
-			want:        false,
-			critical:    true,
-			description: "20-char SHA: IsCommitSHA() true but len != 40",
-		},
+		makePinnedTestCase("7_char_sha_not_pinned", "abcdef0", false, true, "7-char SHA: IsCommitSHA() true but len != 40"),
+		makePinnedTestCase("20_char_sha_not_pinned", strings.Repeat("a", 20), false, true, "20-char SHA: IsCommitSHA() true but len != 40"),
 
 		// Major-only versions (not pinned)
-		{
-			name:        "major_only_not_pinned",
-			version:     "v1",
-			want:        false,
-			critical:    true,
-			description: "v1 not semver, not pinned",
-		},
-		{
-			name:        "major_minor_not_pinned",
-			version:     "v1.2",
-			want:        false,
-			critical:    true,
-			description: "v1.2 not semver (missing patch), not pinned",
-		},
+		makePinnedTestCase("major_only_not_pinned", "v1", false, true, "v1 not semver, not pinned"),
+		makePinnedTestCase("major_minor_not_pinned", "v1.2", false, true, "v1.2 not semver (missing patch), not pinned"),
 
 		// Branch names (not pinned)
-		{
-			name:        "branch_main_not_pinned",
-			version:     "main",
-			want:        false,
-			critical:    true,
-			description: "Branch name: not semver, not SHA",
-		},
-		{
-			name:        "branch_develop_not_pinned",
-			version:     "develop",
-			want:        false,
-			critical:    false,
-			description: "Branch name: not semver, not SHA",
-		},
+		makePinnedTestCase("branch_main_not_pinned", "main", false, true, "Branch name: not semver, not SHA"),
+		makePinnedTestCase("branch_develop_not_pinned", "develop", false, false, "Branch name: not semver, not SHA"),
 
 		// Edge cases with prerelease/build
-		{
-			name:        "semver_with_prerelease_pinned",
-			version:     "1.2.3-alpha",
-			want:        true,
-			critical:    false,
-			description: "Semver with prerelease still pinned",
-		},
-		{
-			name:        "semver_with_build_pinned",
-			version:     "1.2.3+build",
-			want:        true,
-			critical:    false,
-			description: "Semver with build metadata still pinned",
-		},
+		makePinnedTestCase("semver_with_prerelease_pinned", "1.2.3-alpha", true, false, "Semver with prerelease still pinned"),
+		makePinnedTestCase("semver_with_build_pinned", "1.2.3+build", true, false, "Semver with build metadata still pinned"),
 
 		// Empty/invalid
-		{
-			name:        "empty_not_pinned",
-			version:     "",
-			want:        false,
-			critical:    true,
-			description: "Empty string: not semver, not SHA",
-		},
+		makePinnedTestCase("empty_not_pinned", "", false, true, "Empty string: not semver, not SHA"),
 
 		// Operator mutation detection tests
-		{
-			name:        "exactly_40_boundary",
-			version:     strings.Repeat("a", 40),
-			want:        true,
-			critical:    true,
-			description: "Exactly 40: tests == boundary (not !=, <, >, <=, >=)",
-		},
-		{
-			name:        "40_char_non_hex_not_sha",
-			version:     strings.Repeat("z", 40),
-			want:        false,
-			critical:    true,
-			description: "40 chars but not hex: IsCommitSHA() false, so && fails",
-		},
+		makePinnedTestCase("exactly_40_boundary", strings.Repeat("a", 40), true, true, "Exactly 40: tests == boundary (not !=, <, >, <=, >=)"),
+		makePinnedTestCase("40_char_non_hex_not_sha", strings.Repeat("z", 40), false, true, "40 chars but not hex: IsCommitSHA() false, so && fails"),
 	}
 
 	for _, tt := range tests {
