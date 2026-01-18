@@ -38,8 +38,8 @@ type ProgressReporter interface {
 	Progress(format string, args ...any)
 }
 
-// OutputConfig provides configuration queries for output behavior.
-type OutputConfig interface {
+// QuietChecker provides queries for quiet mode behavior.
+type QuietChecker interface {
 	IsQuiet() bool
 }
 
@@ -61,7 +61,7 @@ type ProgressManager interface {
 type OutputWriter interface {
 	MessageLogger
 	ProgressReporter
-	OutputConfig
+	QuietChecker
 }
 
 // ErrorManager combines error reporting and formatting for comprehensive error handling.
@@ -77,5 +77,5 @@ type CompleteOutput interface {
 	ErrorReporter
 	ErrorFormatter
 	ProgressReporter
-	OutputConfig
+	QuietChecker
 }

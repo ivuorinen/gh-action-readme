@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // GetSuggestions returns context-aware suggestions for the given error code.
@@ -76,7 +77,7 @@ func getFileNotFoundSuggestions(context map[string]string) []string {
 		}
 
 		// Suggest common file names if looking for action files
-		if strings.Contains(path, "action") {
+		if strings.Contains(path, testutil.ConfigFieldAction) {
 			suggestions = append(suggestions,
 				"Common action file names: action.yml, action.yaml",
 				"Check if the file is in a subdirectory",

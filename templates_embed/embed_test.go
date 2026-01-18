@@ -47,7 +47,7 @@ func TestGetEmbeddedTemplate(t *testing.T) {
 			description:  "Should return error for missing template",
 		},
 		{
-			name:         "empty path",
+			name:         testutil.TestCaseNameEmptyPath,
 			templatePath: "",
 			expectError:  true,
 			description:  "Should return error for empty path",
@@ -121,7 +121,7 @@ func TestIsEmbeddedTemplateAvailable(t *testing.T) {
 			expectExists: false,
 		},
 		{
-			name:         "empty path",
+			name:         testutil.TestCaseNameEmptyPath,
 			templatePath: "",
 			expectExists: false,
 		},

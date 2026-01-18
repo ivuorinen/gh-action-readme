@@ -132,12 +132,12 @@ func (m *ErrorFormatterMock) FormatContextualError(err error) string {
 	return ""
 }
 
-// OutputConfigMock implements OutputConfig for testing.
-type OutputConfigMock struct {
+// QuietCheckerMock implements QuietChecker for testing.
+type QuietCheckerMock struct {
 	QuietMode bool
 }
 
 // IsQuiet returns whether quiet mode is enabled.
-func (m *OutputConfigMock) IsQuiet() bool {
+func (m *QuietCheckerMock) IsQuiet() bool {
 	return m.QuietMode
 }

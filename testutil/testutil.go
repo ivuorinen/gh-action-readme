@@ -327,8 +327,8 @@ func WriteConfigFile(t *testing.T, baseDir, content string) string {
 //	testutil.SetupConfigEnvironment(t, tmpDir)
 func SetupConfigEnvironment(t *testing.T, tmpDir string) {
 	t.Helper()
-	t.Setenv("HOME", tmpDir)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, TestDirDotConfig))
+	t.Setenv(EnvVarHOME, tmpDir)
+	t.Setenv(EnvVarXDGConfigHome, filepath.Join(tmpDir, TestDirDotConfig))
 }
 
 // CreateGitRepoWithRemote initializes a git repository and sets up a remote.
@@ -342,7 +342,7 @@ func CreateGitRepoWithRemote(t *testing.T, tmpDir, remoteURL string) string {
 
 	InitGitRepo(t, tmpDir)
 
-	gitDir := filepath.Join(tmpDir, ".git")
+	gitDir := filepath.Join(tmpDir, ConfigFieldGit)
 	configPath := filepath.Join(gitDir, "config")
 
 	configContent := fmt.Sprintf(`[remote "origin"]
@@ -385,8 +385,7 @@ func AssertFileNotExists(t *testing.T, path string) {
 	if err == nil {
 		// File exists
 		t.Fatalf("expected file not to exist: %s", path)
-	}
-	if err != nil && !os.IsNotExist(err) {
+	} else if !os.IsNotExist(err) {
 		// Error occurred but it's not a "does not exist" error
 		t.Fatalf("error checking file existence: %v", err)
 	}
@@ -650,7 +649,9 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 				_ = os.Unsetenv(appconstants.EnvGitHubToken)
 				_ = os.Unsetenv(appconstants.EnvGitHubTokenStandard)
 
-				return func() {}
+				return func() {
+					// No cleanup required: environment variables explicitly unset for this scenario.
+				}
 			},
 			ExpectedToken: "",
 		},
@@ -789,4 +790,73 @@ func CreateTempActionFile(t *testing.T, content string) string {
 	}
 
 	return tmpFile.Name()
+}
+
+// SetupTestEnvironment creates a temp directory and sets up config environment variables.
+// Returns temp directory path and cleanup function.
+// Consolidates the common pattern: TempDir + XDG_CONFIG_HOME + HOME setup.
+//
+// Example:
+//
+//	tmpDir, cleanup := testutil.SetupTestEnvironment(t)
+//	defer cleanup()
+func SetupTestEnvironment(t *testing.T) (tmpDir string, cleanup func()) {
+	t.Helper()
+	tmpDir, cleanup = TempDir(t)
+	t.Setenv(EnvVarXDGConfigHome, tmpDir)
+	t.Setenv(EnvVarHOME, tmpDir)
+
+	return tmpDir, cleanup
+}
+
+// SetupTestEnvironmentWithSetup creates test environment and runs a custom setup function.
+// Returns temp directory path and cleanup function.
+//
+// Example:
+//
+//	tmpDir, cleanup := testutil.SetupTestEnvironmentWithSetup(t, func(t *testing.T, dir string) {
+//		testutil.WriteFileInDir(t, dir, "config.yml", "theme: default")
+//	})
+//	defer cleanup()
+func SetupTestEnvironmentWithSetup(
+	t *testing.T,
+	setupFunc func(t *testing.T, tmpDir string),
+) (tmpDir string, cleanup func()) {
+	t.Helper()
+	tmpDir, cleanup = SetupTestEnvironment(t)
+	if setupFunc != nil {
+		setupFunc(t, tmpDir)
+	}
+
+	return tmpDir, cleanup
+}
+
+// SetupTokenEnv sets up GitHub token environment variables for testing.
+// Pass empty string to clear a token.
+//
+// Example:
+//
+//	testutil.SetupTokenEnv(t, "tool-token", "standard-token")
+func SetupTokenEnv(t *testing.T, toolToken, standardToken string) {
+	t.Helper()
+	t.Setenv(appconstants.EnvGitHubToken, toolToken)
+	t.Setenv(appconstants.EnvGitHubTokenStandard, standardToken)
+}
+
+// ClearTokenEnv clears all GitHub token environment variables.
+func ClearTokenEnv(t *testing.T) {
+	t.Helper()
+	SetupTokenEnv(t, "", "")
+}
+
+// SetupXDGEnv sets XDG_CONFIG_HOME and HOME environment variables.
+// Pass an empty string to explicitly clear (unset) that variable.
+//
+// Example:
+//
+//	testutil.SetupXDGEnv(t, tmpDir, "")  // Set XDG, clear HOME
+func SetupXDGEnv(t *testing.T, xdgConfigHome, home string) {
+	t.Helper()
+	t.Setenv(EnvVarXDGConfigHome, xdgConfigHome)
+	t.Setenv(EnvVarHOME, home)
 }

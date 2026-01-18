@@ -9,10 +9,8 @@ import (
 )
 
 // assertGitHubClient validates GitHub client creation results.
-// This helper reduces cognitive complexity in config tests by centralizing
-// the client validation logic that was repeated across test cases.
-//
-//nolint:unused // Prepared for future use in config tests
+// This helper reduces test code duplication by centralizing
+// the client validation logic for github.Client instances.
 func assertGitHubClient(t *testing.T, client *github.Client, err error, expectError bool) {
 	t.Helper()
 

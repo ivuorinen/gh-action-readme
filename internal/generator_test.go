@@ -151,7 +151,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			expectedLen: 1,
 		},
 		{
-			name: "no action files",
+			name: testutil.TestCaseNameNoActionFiles,
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ReadmeMarkdown), "# Test")
@@ -160,7 +160,7 @@ func TestGeneratorDiscoverActionFiles(t *testing.T) {
 			expectedLen: 0,
 		},
 		{
-			name:        "nonexistent directory",
+			name:        testutil.TestCaseNameNonexistentDir,
 			setupFunc:   nil,
 			recursive:   false,
 			expectError: true,
@@ -315,14 +315,14 @@ func TestGeneratorGenerateFromFile(t *testing.T) {
 			},
 		},
 		{
-			name:         "invalid action file",
+			name:         testutil.TestCaseNameInvalidActionFile,
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 			outputFormat: appconstants.OutputFormatMarkdown,
 			expectError:  true, // Invalid runtime configuration should cause failure
 			contains:     []string{},
 		},
 		{
-			name:         "unknown output format",
+			name:         testutil.TestCaseNameUnknownFormat,
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
 			outputFormat: "unknown",
 			expectError:  true,
@@ -448,7 +448,7 @@ func TestGeneratorProcessBatch(t *testing.T) {
 			expectFiles: 0,
 		},
 		{
-			name:        "nonexistent files",
+			name:        testutil.TestCaseNameNonexistentFiles,
 			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
 			expectError: true,
 		},
@@ -507,7 +507,7 @@ func TestGeneratorValidateFiles(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "all valid files",
+			name: testutil.TestCaseNameAllValidFiles,
 			setupFunc: func(t *testing.T, tmpDir string) []string {
 				t.Helper()
 
@@ -531,7 +531,7 @@ func TestGeneratorValidateFiles(t *testing.T) {
 			expectError: true, // Validation should fail for invalid runtime configuration
 		},
 		{
-			name:        "nonexistent files",
+			name:        testutil.TestCaseNameNonexistentFiles,
 			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
 			expectError: true,
 		},
@@ -674,7 +674,7 @@ func TestGeneratorErrorHandling(t *testing.T) {
 			wantError: "template",
 		},
 		{
-			name: "permission denied on output directory",
+			name: testutil.TestCaseNamePermissionDenied,
 			setupFunc: func(t *testing.T, tmpDir string) (*Generator, string) {
 				t.Helper()
 				// Set up test templates
@@ -746,7 +746,7 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 		setupFunc func(t *testing.T) string
 	}{
 		{
-			name:      "nonexistent directory",
+			name:      testutil.TestCaseNameNonexistentDir,
 			dir:       "/nonexistent/path/does/not/exist",
 			recursive: false,
 			context:   "test context",
@@ -991,31 +991,31 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 		wantValid bool
 	}{
 		{
-			name:      "valid action",
+			name:      testutil.TestCaseNameValidAction,
 			content:   "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []",
 			wantErr:   false,
 			wantValid: true,
 		},
 		{
-			name:      "missing name",
+			name:      testutil.TestCaseNameMissingName,
 			content:   "description: Test\nruns:\n  using: composite\n  steps: []",
 			wantErr:   true,
 			wantValid: false,
 		},
 		{
-			name:      "missing description",
+			name:      testutil.TestCaseNameMissingDesc,
 			content:   "name: Test\nruns:\n  using: composite\n  steps: []",
 			wantErr:   true,
 			wantValid: false,
 		},
 		{
-			name:      "missing runs",
+			name:      testutil.TestCaseNameMissingRuns,
 			content:   "name: Test\ndescription: Test",
 			wantErr:   true,
 			wantValid: false,
 		},
 		{
-			name:    "invalid yaml",
+			name:    testutil.TestCaseNameInvalidYAML,
 			content: "name: Test\ninvalid: [\n  - item",
 			wantErr: true,
 		},
@@ -1088,7 +1088,7 @@ func TestGeneratorReportResultsEdgeCases(t *testing.T) {
 			wantPanic:    false,
 		},
 		{
-			name:         "zero files",
+			name:         testutil.TestCaseNameZeroFiles,
 			successCount: 0,
 			errors:       []string{},
 			wantPanic:    false,

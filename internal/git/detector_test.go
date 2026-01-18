@@ -46,7 +46,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 			expectEmpty: false,
 		},
 		{
-			name: "no git repository",
+			name: testutil.TestCaseNameNoGitRepository,
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				// Create subdirectory without .git
@@ -58,7 +58,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "nonexistent directory",
+			name: testutil.TestCaseNameNonexistentDir,
 			setupFunc: func(_ *testing.T, tmpDir string) string {
 				t.Helper()
 
@@ -141,7 +141,7 @@ func TestDetectGitRepository(t *testing.T) {
 			expectedURL:  "git@github.com:owner/repo.git",
 		}),
 		{
-			name: "no git repository",
+			name: testutil.TestCaseNameNoGitRepository,
 			setupFunc: func(_ *testing.T, tmpDir string) string {
 				return tmpDir
 			},
@@ -199,7 +199,7 @@ func TestParseGitHubURL(t *testing.T) {
 			expectedRepo: "repo",
 		},
 		{
-			name:         "SSH GitHub URL",
+			name:         testutil.TestCaseNameSSHGitHub,
 			remoteURL:    "git@github.com:owner/repo.git",
 			expectedOrg:  "owner",
 			expectedRepo: "repo",
@@ -315,7 +315,7 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 			expected:   testutil.TestActionCheckoutV3,
 		},
 		{
-			name: "subdirectory action",
+			name: testutil.TestCaseNameSubdirAction,
 			repoInfo: &RepoInfo{
 				Organization: "actions",
 				Repository:   "toolkit",

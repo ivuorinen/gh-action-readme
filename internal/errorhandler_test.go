@@ -77,7 +77,7 @@ func TestDetermineErrorCode(t *testing.T) {
 			wantCode: appconstants.ErrCodeConfiguration,
 		},
 		{
-			name:     "unknown error",
+			name:     testutil.TestCaseNameUnknownError,
 			err:      errors.New("some random error"),
 			wantCode: appconstants.ErrCodeUnknown,
 		},
@@ -140,7 +140,7 @@ func TestCheckTypedError(t *testing.T) {
 			wantCode: appconstants.ErrCodeConfiguration,
 		},
 		{
-			name:     "unknown error",
+			name:     testutil.TestCaseNameUnknownError,
 			err:      errors.New(testutil.UnknownErrorMsg),
 			wantCode: appconstants.ErrCodeUnknown,
 		},
@@ -222,7 +222,7 @@ func TestContains(t *testing.T) {
 	}{
 		{
 			name:   "exact match",
-			s:      testutil.HelloWorldStr,
+			s:      testutil.ValidationHelloWorld,
 			substr: "hello",
 			want:   true,
 		},
@@ -233,14 +233,14 @@ func TestContains(t *testing.T) {
 			want:   true,
 		},
 		{
-			name:   "no match",
-			s:      testutil.HelloWorldStr,
+			name:   testutil.TestCaseNameNoMatch,
+			s:      testutil.ValidationHelloWorld,
 			substr: "goodbye",
 			want:   false,
 		},
 		{
 			name:   "empty substring",
-			s:      testutil.HelloWorldStr,
+			s:      testutil.ValidationHelloWorld,
 			substr: "",
 			want:   true,
 		},

@@ -388,50 +388,73 @@ func TestCreateTestAction(t *testing.T) {
 	t.Parallel()
 	t.Run("creates basic action", func(t *testing.T) {
 		t.Parallel()
-		name := "Test Action"
-		description := "A test action for testing"
-		inputs := map[string]string{
-			"input1": "First input",
-			"input2": "Second input",
-		}
-
-		action := CreateTestAction(name, description, inputs)
-
-		if action == "" {
-			t.Fatal(TestErrNonEmptyAction)
-		}
-
-		// Verify the action contains our values
-		if !strings.Contains(action, name) {
-			t.Errorf("action should contain name: %s", name)
-		}
-
-		if !strings.Contains(action, description) {
-			t.Errorf("action should contain description: %s", description)
-		}
-
-		for inputName, inputDesc := range inputs {
-			if !strings.Contains(action, inputName) {
-				t.Errorf("action should contain input name: %s", inputName)
-			}
-			if !strings.Contains(action, inputDesc) {
-				t.Errorf("action should contain input description: %s", inputDesc)
-			}
-		}
+		testCreateBasicAction(t)
 	})
 
 	t.Run("creates action with no inputs", func(t *testing.T) {
 		t.Parallel()
-		action := CreateTestAction("Simple Action", "No inputs", nil)
-
-		if action == "" {
-			t.Fatal(TestErrNonEmptyAction)
-		}
-
-		if !strings.Contains(action, "Simple Action") {
-			t.Error("action should contain the name")
-		}
+		testCreateActionNoInputs(t)
 	})
+}
+
+// testCreateBasicAction tests creating an action with name, description, and inputs.
+func testCreateBasicAction(t *testing.T) {
+	t.Helper()
+	name := "Test Action"
+	description := "A test action for testing"
+	inputs := map[string]string{
+		"input1": "First input",
+		"input2": "Second input",
+	}
+
+	action := CreateTestAction(name, description, inputs)
+	validateActionNonEmpty(t, action)
+	validateActionContainsNameAndDescription(t, action, name, description)
+	validateActionContainsInputs(t, action, inputs)
+}
+
+// testCreateActionNoInputs tests creating an action without inputs.
+func testCreateActionNoInputs(t *testing.T) {
+	t.Helper()
+	action := CreateTestAction("Simple Action", "No inputs", nil)
+	validateActionNonEmpty(t, action)
+
+	if !strings.Contains(action, "Simple Action") {
+		t.Error("action should contain the name")
+	}
+}
+
+// validateActionNonEmpty checks that the action is not empty.
+func validateActionNonEmpty(t *testing.T, action string) {
+	t.Helper()
+	if action == "" {
+		t.Fatal(TestErrNonEmptyAction)
+	}
+}
+
+// validateActionContainsNameAndDescription validates action contains name and description.
+func validateActionContainsNameAndDescription(t *testing.T, action, name, description string) {
+	t.Helper()
+	if !strings.Contains(action, name) {
+		t.Errorf("action should contain name: %s", name)
+	}
+
+	if !strings.Contains(action, description) {
+		t.Errorf("action should contain description: %s", description)
+	}
+}
+
+// validateActionContainsInputs validates action contains all expected inputs.
+func validateActionContainsInputs(t *testing.T, action string, inputs map[string]string) {
+	t.Helper()
+	for inputName, inputDesc := range inputs {
+		if !strings.Contains(action, inputName) {
+			t.Errorf("action should contain input name: %s", inputName)
+		}
+		if !strings.Contains(action, inputDesc) {
+			t.Errorf("action should contain input description: %s", inputDesc)
+		}
+	}
 }
 
 func TestCreateCompositeAction(t *testing.T) {
@@ -561,7 +584,7 @@ func validateConfigCreated(t *testing.T, config *TestAppConfig) {
 func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
 	t.Helper()
 	validateStringField(t, config.Theme, "default", "theme")
-	validateStringField(t, config.OutputFormat, "md", "output format")
+	validateStringField(t, config.OutputFormat, "md", TestFieldOutputFormat)
 	validateStringField(t, config.OutputDir, ".", "output dir")
 	validateStringField(t, config.Schema, "schemas/action.schema.json", "schema")
 	validateBoolField(t, config.Verbose, false, "verbose")
@@ -573,7 +596,7 @@ func validateConfigDefaults(t *testing.T, config *TestAppConfig) {
 func validateOverriddenValues(t *testing.T, config *TestAppConfig) {
 	t.Helper()
 	validateStringField(t, config.Theme, "github", "theme")
-	validateStringField(t, config.OutputFormat, "html", "output format")
+	validateStringField(t, config.OutputFormat, "html", TestFieldOutputFormat)
 	validateStringField(t, config.OutputDir, "docs", "output dir")
 	validateStringField(t, config.Template, "custom.tmpl", "template")
 	validateStringField(t, config.Schema, "custom.schema.json", "schema")
@@ -592,7 +615,7 @@ func validatePartialOverrides(t *testing.T, config *TestAppConfig) {
 // validateRemainingDefaults validates that non-overridden values remain default.
 func validateRemainingDefaults(t *testing.T, config *TestAppConfig) {
 	t.Helper()
-	validateStringField(t, config.OutputFormat, "md", "output format")
+	validateStringField(t, config.OutputFormat, "md", TestFieldOutputFormat)
 	validateBoolField(t, config.Quiet, false, "quiet")
 }
 
@@ -784,60 +807,83 @@ func TestNewStringReader(t *testing.T) {
 	t.Parallel()
 	t.Run("creates reader from string", func(t *testing.T) {
 		t.Parallel()
-		testString := "Hello, World!"
-		reader := NewStringReader(testString)
-
-		if reader == nil {
-			t.Fatal("expected reader to be created")
-		}
-
-		// Read the content
-		content, err := io.ReadAll(reader)
-		if err != nil {
-			t.Fatalf("failed to read from reader: %v", err)
-		}
-
-		if string(content) != testString {
-			t.Errorf("expected content %s, got %s", testString, string(content))
-		}
+		testNewStringReaderBasic(t)
 	})
 
 	t.Run("creates reader from empty string", func(t *testing.T) {
 		t.Parallel()
-		reader := NewStringReader("")
-		content, err := io.ReadAll(reader)
-		if err != nil {
-			t.Fatalf("failed to read from empty reader: %v", err)
-		}
-
-		if len(content) != 0 {
-			t.Errorf("expected empty content, got %d bytes", len(content))
-		}
+		testNewStringReaderEmpty(t)
 	})
 
 	t.Run("reader can be closed", func(t *testing.T) {
 		t.Parallel()
-		reader := NewStringReader("test")
-		err := reader.Close()
-		if err != nil {
-			t.Errorf("failed to close reader: %v", err)
-		}
+		testNewStringReaderClose(t)
 	})
 
 	t.Run("handles large strings", func(t *testing.T) {
 		t.Parallel()
-		largeString := strings.Repeat("test ", 10000)
-		reader := NewStringReader(largeString)
-
-		content, err := io.ReadAll(reader)
-		if err != nil {
-			t.Fatalf("failed to read large string: %v", err)
-		}
-
-		if string(content) != largeString {
-			t.Error("large string content mismatch")
-		}
+		testNewStringReaderLarge(t)
 	})
+}
+
+// testNewStringReaderBasic tests basic string reader creation and reading.
+func testNewStringReaderBasic(t *testing.T) {
+	t.Helper()
+	testString := "Hello, World!"
+	reader := NewStringReader(testString)
+
+	if reader == nil {
+		t.Fatal("expected reader to be created")
+	}
+
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("failed to read from reader: %v", err)
+	}
+
+	if string(content) != testString {
+		t.Errorf("expected content %s, got %s", testString, string(content))
+	}
+}
+
+// testNewStringReaderEmpty tests string reader with empty string.
+func testNewStringReaderEmpty(t *testing.T) {
+	t.Helper()
+	reader := NewStringReader("")
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("failed to read from empty reader: %v", err)
+	}
+
+	if len(content) != 0 {
+		t.Errorf("expected empty content, got %d bytes", len(content))
+	}
+}
+
+// testNewStringReaderClose tests that the reader can be closed.
+func testNewStringReaderClose(t *testing.T) {
+	t.Helper()
+	reader := NewStringReader("test")
+	err := reader.Close()
+	if err != nil {
+		t.Errorf("failed to close reader: %v", err)
+	}
+}
+
+// testNewStringReaderLarge tests reading large strings.
+func testNewStringReaderLarge(t *testing.T) {
+	t.Helper()
+	largeString := strings.Repeat("test ", 10000)
+	reader := NewStringReader(largeString)
+
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("failed to read large string: %v", err)
+	}
+
+	if string(content) != largeString {
+		t.Error("large string content mismatch")
+	}
 }
 
 func TestCaptureStdout(t *testing.T) {

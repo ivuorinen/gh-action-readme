@@ -28,6 +28,8 @@ jobs:
         run: eclint check .
       - name: Run unit tests
         run: go test ./...
+      - name: Run property-based tests
+        run: make test-property
       - name: Example Action Readme Generation
         run: |
           go run . gen testdata/example-action --output example-README.md

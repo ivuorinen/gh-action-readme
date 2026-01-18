@@ -39,7 +39,7 @@ func TestCountValidationStats(t *testing.T) {
 		wantTotalIssues int
 	}{
 		{
-			name: "all valid files",
+			name: testutil.TestCaseNameAllValidFiles,
 			results: []ValidationResult{
 				{MissingFields: []string{testutil.ValidationTestFile1}},
 				{MissingFields: []string{testutil.ValidationTestFile2}},
@@ -142,7 +142,7 @@ func assertMessageCounts(t *testing.T, output *capturedOutput, want messageCount
 func TestShowValidationSummary(t *testing.T) {
 	tests := []validationSummaryTestCase{
 		createValidationSummaryTest(validationSummaryParams{
-			name:        "all valid files",
+			name:        testutil.TestCaseNameAllValidFiles,
 			totalFiles:  3,
 			validFiles:  3,
 			totalIssues: 0,
@@ -186,7 +186,7 @@ func TestShowValidationSummary(t *testing.T) {
 			wantInfo:    0,
 		}),
 		createValidationSummaryTest(validationSummaryParams{
-			name:        "zero files",
+			name:        testutil.TestCaseNameZeroFiles,
 			totalFiles:  0,
 			validFiles:  0,
 			totalIssues: 0,

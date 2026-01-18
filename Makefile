@@ -1,5 +1,7 @@
-.PHONY: help test test-coverage test-coverage-html test-coverage-check lint build run example \
-	clean readme config-verify security vulncheck audit trivy gitleaks \
+.PHONY: help test test-quick test-coverage test-coverage-html test-coverage-check \
+	test-mutation test-mutation-parser test-mutation-validation \
+	test-property test-property-validation test-property-parser \
+	lint build run example clean readme config-verify security vulncheck audit trivy gitleaks \
 	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update \
 	deps-check deps-update deps-update-all
 
@@ -27,7 +29,20 @@ help: ## Show this help message
 	@echo "  make deps-update         # Update dependencies interactively"
 	@echo "  make security            # Run all security scans"
 
-test: ## Run all tests
+test: ## Run all tests (standard and property-based)
+	@echo "Running standard tests..."
+	@go test ./...
+	@echo ""
+	@echo "Running property-based tests..."
+	@$(MAKE) test-property
+	@echo ""
+	@echo "✅ All tests (standard + property) completed successfully!"
+	@echo ""
+	@echo "Note: Mutation tests require go-mutesting (compatible with Go 1.22/1.23 only)."
+	@echo "      Run 'make test-mutation' if you have a compatible Go version."
+	@echo "      Run 'make test-quick' for fast iteration (unit tests only)."
+
+test-quick: ## Run only standard unit tests (fast)
 	go test ./...
 
 test-coverage: ## Run tests with coverage and display in CLI
@@ -73,6 +88,45 @@ test-coverage-check: ## Run tests with coverage check (overall >= 72%)
 	else \
 		echo "✅ Coverage $$total% meets threshold $(COVERAGE_THRESHOLD)%"; \
 	fi
+
+.PHONY: test-mutation test-mutation-parser test-mutation-validation
+
+test-mutation: test-mutation-parser test-mutation-validation ## Run all mutation tests
+
+test-mutation-parser: ## Run mutation tests on parser (permission parsing)
+	@echo "Running mutation tests on parser..."
+	@command -v go-mutesting >/dev/null 2>&1 || { \
+		echo "❌ go-mutesting not found. Installing..."; \
+		go install github.com/zimmski/go-mutesting/cmd/go-mutesting@latest; \
+	}
+	@go-mutesting --do-not-remove internal/parser.go -- \
+		go test -v ./internal -run "TestParse.*Permissions|TestMerge.*Permissions|TestProcess.*Permission"
+
+test-mutation-validation: ## Run mutation tests on validation (version and strings)
+	@echo "Running mutation tests on validation..."
+	@command -v go-mutesting >/dev/null 2>&1 || { \
+		echo "❌ go-mutesting not found. Installing..."; \
+		go install github.com/zimmski/go-mutesting/cmd/go-mutesting@latest; \
+	}
+	@echo "Testing version validation..."
+	@go-mutesting --do-not-remove internal/validation/validation.go -- \
+		go test -v ./internal/validation -run "TestIsCommitSHA|TestIsSemanticVersion|TestIsVersionPinned"
+	@echo ""
+	@echo "Testing string validation..."
+	@go-mutesting --do-not-remove internal/validation/strings.go -- \
+		go test -v ./internal/validation -run "TestParseGitHubURL|TestSanitize|TestFormat|TestClean"
+
+.PHONY: test-property test-property-validation test-property-parser
+
+test-property: test-property-validation test-property-parser ## Run all property-based tests
+
+test-property-validation: ## Run property tests on validation (strings)
+	@echo "Running property tests on validation..."
+	@go test -v ./internal/validation -run ".*Properties" -timeout 30s
+
+test-property-parser: ## Run property tests on parser (permission merging)
+	@echo "Running property tests on parser..."
+	@go test -v ./internal -run ".*Properties" -timeout 30s
 
 lint: editorconfig ## Run all linters via pre-commit
 	@echo "Running all linters via pre-commit..."

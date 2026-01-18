@@ -130,11 +130,11 @@ func TestCacheTTL(t *testing.T) {
 
 	// Set value with short TTL
 	shortTTL := 100 * time.Millisecond
-	err := cache.SetWithTTL("short-lived", "value", shortTTL)
+	err := cache.SetWithTTL(testutil.CacheShortLivedKey, "value", shortTTL)
 	testutil.AssertNoError(t, err)
 
 	// Should exist immediately
-	value, exists := cache.Get("short-lived")
+	value, exists := cache.Get(testutil.CacheShortLivedKey)
 	if !exists {
 		t.Fatal("expected value to exist immediately")
 	}
@@ -144,7 +144,7 @@ func TestCacheTTL(t *testing.T) {
 	time.Sleep(shortTTL + 50*time.Millisecond)
 
 	// Should not exist after TTL
-	_, exists = cache.Get("short-lived")
+	_, exists = cache.Get(testutil.CacheShortLivedKey)
 	if exists {
 		t.Error("expected value to be expired")
 	}
@@ -222,39 +222,42 @@ func TestCacheConcurrentAccess(t *testing.T) {
 
 	// Launch multiple goroutines doing concurrent operations
 	for i := 0; i < numGoroutines; i++ {
-		go func(goroutineID int) {
-			defer wg.Done()
-
-			for j := 0; j < numOperations; j++ {
-				key := fmt.Sprintf("key-%d-%d", goroutineID, j)
-				value := fmt.Sprintf("value-%d-%d", goroutineID, j)
-
-				// Set value
-				err := cache.Set(key, value)
-				if err != nil {
-					t.Errorf("error setting value: %v", err)
-
-					return
-				}
-
-				// Get value
-				retrieved, exists := cache.Get(key)
-				if !exists {
-					t.Errorf("expected key %s to exist", key)
-
-					return
-				}
-
-				if retrieved != value {
-					t.Errorf("expected %s, got %s", value, retrieved)
-
-					return
-				}
-			}
-		}(i)
+		go performConcurrentCacheOperations(t, cache, i, numOperations, &wg)
 	}
 
 	wg.Wait()
+}
+
+func performConcurrentCacheOperations(t *testing.T, cache *Cache, goroutineID, numOperations int, wg *sync.WaitGroup) {
+	t.Helper()
+	defer wg.Done()
+
+	for j := 0; j < numOperations; j++ {
+		key := fmt.Sprintf("key-%d-%d", goroutineID, j)
+		value := fmt.Sprintf("value-%d-%d", goroutineID, j)
+
+		// Set value
+		err := cache.Set(key, value)
+		if err != nil {
+			t.Errorf("error setting value: %v", err)
+
+			return
+		}
+
+		// Get value
+		retrieved, exists := cache.Get(key)
+		if !exists {
+			t.Errorf("expected key %s to exist", key)
+
+			return
+		}
+
+		if retrieved != value {
+			t.Errorf("expected %s, got %s", value, retrieved)
+
+			return
+		}
+	}
 }
 
 func TestCachePersistence(t *testing.T) {
@@ -415,11 +418,11 @@ func TestCacheCleanupExpiredEntries(t *testing.T) {
 	defer testutil.CleanupCache(t, cache)()
 
 	// Add entry that will expire
-	err = cache.Set("expiring-key", "expiring-value")
+	err = cache.Set(testutil.CacheExpiringKey, "expiring-value")
 	testutil.AssertNoError(t, err)
 
 	// Verify it exists
-	_, exists := cache.Get("expiring-key")
+	_, exists := cache.Get(testutil.CacheExpiringKey)
 	if !exists {
 		t.Fatal("expected entry to exist initially")
 	}
@@ -428,7 +431,7 @@ func TestCacheCleanupExpiredEntries(t *testing.T) {
 	time.Sleep(config.DefaultTTL + config.CleanupInterval + 20*time.Millisecond)
 
 	// Entry should be cleaned up
-	_, exists = cache.Get("expiring-key")
+	_, exists = cache.Get(testutil.CacheExpiringKey)
 	if exists {
 		t.Error("expected expired entry to be cleaned up")
 	}

@@ -13,7 +13,7 @@ import (
 type compositeOutputWriterForTest struct {
 	*testutil.MessageLoggerMock
 	*testutil.ProgressReporterMock
-	*testutil.OutputConfigMock
+	*testutil.QuietCheckerMock
 }
 
 // errorManagerForTest wraps testutil mocks to satisfy ErrorManager interface.
@@ -43,7 +43,7 @@ func TestNewCompositeOutputWriter(t *testing.T) {
 	writer := &compositeOutputWriterForTest{
 		MessageLoggerMock:    &testutil.MessageLoggerMock{},
 		ProgressReporterMock: &testutil.ProgressReporterMock{},
-		OutputConfigMock:     &testutil.OutputConfigMock{},
+		QuietCheckerMock:     &testutil.QuietCheckerMock{},
 	}
 	cow := NewCompositeOutputWriter(writer)
 
@@ -107,7 +107,7 @@ func TestCompositeOutputWriterProcessWithOutput(t *testing.T) {
 			writer := &compositeOutputWriterForTest{
 				MessageLoggerMock:    logger,
 				ProgressReporterMock: progress,
-				OutputConfigMock:     &testutil.OutputConfigMock{QuietMode: tt.isQuiet},
+				QuietCheckerMock:     &testutil.QuietCheckerMock{QuietMode: tt.isQuiet},
 			}
 			cow := NewCompositeOutputWriter(writer)
 

@@ -29,11 +29,7 @@ func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
 	}
 
 	// Create detector with temp directory
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	characteristics := detector.analyzeProjectFiles()
 
@@ -68,19 +64,11 @@ func TestProjectDetectorDetectVersionFromPackageJSON(t *testing.T) {
 	tempDir := t.TempDir()
 
 	// Create package.json with version
-	packageJSON := `{
-		"name": "test-package",
-		"version": "2.1.0",
-		"description": "Test package"
-	}`
+	packageJSON := testutil.MustReadFixture(testutil.TestJSONPackageFull)
 
 	testutil.WriteFileInDir(t, tempDir, appconstants.PackageJSON, packageJSON)
 
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	version := detector.detectVersionFromPackageJSON()
 	if version != "2.1.0" {
@@ -96,11 +84,7 @@ func TestProjectDetectorDetectVersionFromFiles(t *testing.T) {
 	versionContent := "3.2.1\n"
 	testutil.WriteFileInDir(t, tempDir, "VERSION", versionContent)
 
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	version := detector.detectVersionFromFiles()
 	if version != "3.2.1" {
@@ -123,11 +107,7 @@ func TestProjectDetectorFindActionFiles(t *testing.T) {
 	subActionYAML := filepath.Join(subDir, "action.yaml")
 	testutil.WriteTestFile(t, subActionYAML, "name: Sub Action")
 
-	output := internal.NewColoredOutput(true)
-	detector := &ProjectDetector{
-		output:     output,
-		currentDir: tempDir,
-	}
+	detector := NewTestDetector(t, tempDir)
 
 	// Test non-recursive
 	files, err := detector.findActionFiles(tempDir, false)
@@ -193,7 +173,7 @@ func TestProjectDetectorSuggestConfiguration(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "composite action",
+			name: testutil.TestCaseNameCompositeAction,
 			settings: &DetectedSettings{
 				HasCompositeAction: true,
 			},
@@ -500,7 +480,7 @@ func TestDetectRepositoryInfo(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "no git repository",
+			name:     testutil.TestCaseNameNoGitRepository,
 			repoRoot: "",
 			wantErr:  true,
 		},
@@ -573,7 +553,7 @@ func TestDetectActionFiles(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name: "no action files",
+			name: testutil.TestCaseNameNoActionFiles,
 			setupFunc: func(t *testing.T, _ string) {
 				t.Helper()
 				// Don't create any files
@@ -703,7 +683,7 @@ func TestDetectVersion(t *testing.T) {
 			name: "detects version from package.json",
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
-				content := `{"version": "1.2.3"}`
+				content := testutil.MustReadFixture(testutil.TestJSONPackageVersionOnly)
 				testutil.WriteFileInDir(t, dir, appconstants.PackageJSON, content)
 			},
 			want: "1.2.3",
@@ -760,7 +740,7 @@ func TestDetectVersionFromGitTags(t *testing.T) {
 		want     string
 	}{
 		{
-			name:     "no git repository",
+			name:     testutil.TestCaseNameNoGitRepository,
 			repoRoot: "",
 			want:     "",
 		},

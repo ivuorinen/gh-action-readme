@@ -875,11 +875,9 @@ func TestBuildTestBinary(t *testing.T) {
 		t.Fatalf("Failed to stat binary: %v", err)
 	}
 
-	// Check executable bit on Unix systems only
-	if runtime.GOOS != "windows" {
-		if info.Mode()&0111 == 0 {
-			t.Error("buildTestBinary() created binary is not executable")
-		}
+	// On Unix systems, check executable bit
+	if runtime.GOOS != "windows" && info.Mode()&0111 == 0 {
+		t.Error("buildTestBinary() created binary is not executable")
 	}
 }
 
@@ -1331,9 +1329,7 @@ func TestAnalyzeActionFileDeps(t *testing.T) {
 				tmpDir := t.TempDir()
 				actionFile := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 				// Write invalid YAML (unclosed bracket)
-				if err := os.WriteFile(actionFile, []byte(testutil.TestInvalidYAMLPrefix), 0600); err != nil {
-					t.Fatalf("Failed to write invalid action file: %v", err)
-				}
+				testutil.WriteTestFile(t, actionFile, testutil.TestInvalidYAMLPrefix)
 
 				// Create a basic analyzer without GitHub client
 				analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)

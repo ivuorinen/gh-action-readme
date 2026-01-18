@@ -16,17 +16,86 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// analyzeActionFileTestCase describes a single test case for AnalyzeActionFile.
+type analyzeActionFileTestCase struct {
+	name         string
+	actionYML    string
+	expectError  bool
+	expectDeps   bool
+	expectedLen  int
+	expectedDeps []string
+}
+
+// runAnalyzeActionFileTest executes a single test case with setup, analysis, and validation.
+func runAnalyzeActionFileTest(t *testing.T, tt analyzeActionFileTestCase) {
+	t.Helper()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	testutil.WriteTestFile(t, actionPath, tt.actionYML)
+
+	mockResponses := testutil.MockGitHubResponses()
+	githubClient := testutil.MockGitHubClient(mockResponses)
+	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+
+	analyzer := &Analyzer{
+		GitHubClient: githubClient,
+		Cache:        NewCacheAdapter(cacheInstance),
+	}
+
+	deps, err := analyzer.AnalyzeActionFile(actionPath)
+
+	if tt.expectError {
+		testutil.AssertError(t, err)
+
+		return
+	}
+	testutil.AssertNoError(t, err)
+
+	validateAnalyzedDependencies(t, tt, deps)
+}
+
+// validateAnalyzedDependencies checks that analyzed dependencies match expectations.
+func validateAnalyzedDependencies(t *testing.T, tt analyzeActionFileTestCase, deps []Dependency) {
+	t.Helper()
+
+	if tt.expectDeps {
+		validateExpectedDeps(t, tt, deps)
+	} else if len(deps) != 0 {
+		t.Errorf("expected no dependencies, got %d", len(deps))
+	}
+}
+
+// validateExpectedDeps validates dependencies when deps are expected.
+func validateExpectedDeps(t *testing.T, tt analyzeActionFileTestCase, deps []Dependency) {
+	t.Helper()
+
+	if len(deps) != tt.expectedLen {
+		t.Errorf("expected %d dependencies, got %d", tt.expectedLen, len(deps))
+	}
+
+	if tt.expectedDeps == nil {
+		return
+	}
+
+	for i, expectedDep := range tt.expectedDeps {
+		if i >= len(deps) {
+			t.Errorf("expected dependency %s but got fewer dependencies", expectedDep)
+
+			continue
+		}
+		if !strings.Contains(deps[i].Name+"@"+deps[i].Version, expectedDep) {
+			t.Errorf("expected dependency %s, got %s@%s", expectedDep, deps[i].Name, deps[i].Version)
+		}
+	}
+}
+
 func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name         string
-		actionYML    string
-		expectError  bool
-		expectDeps   bool
-		expectedLen  int
-		expectedDeps []string
-	}{
+	tests := []analyzeActionFileTestCase{
 		{
 			name:        "simple action - no dependencies",
 			actionYML:   testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple),
@@ -39,7 +108,7 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 			actionYML:    testutil.MustReadFixture(testutil.TestFixtureCompositeWithDeps),
 			expectError:  false,
 			expectDeps:   true,
-			expectedLen:  5, // 3 action dependencies + 2 shell script dependencies
+			expectedLen:  5,
 			expectedDeps: []string{testutil.TestActionCheckoutV4, "actions/setup-node@v4", "actions/setup-python@v4"},
 		},
 		{
@@ -50,7 +119,7 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 			expectedLen: 0,
 		},
 		{
-			name:        "invalid action file",
+			name:        testutil.TestCaseNameInvalidActionFile,
 			actionYML:   testutil.MustReadFixture(testutil.TestFixtureInvalidInvalidUsing),
 			expectError: true,
 		},
@@ -66,57 +135,7 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
-			// Create temporary action file
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
-
-			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, tt.actionYML)
-
-			// Create analyzer with mock GitHub client
-			mockResponses := testutil.MockGitHubResponses()
-			githubClient := testutil.MockGitHubClient(mockResponses)
-			cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
-
-			analyzer := &Analyzer{
-				GitHubClient: githubClient,
-				Cache:        NewCacheAdapter(cacheInstance),
-			}
-
-			// Analyze the action file
-			deps, err := analyzer.AnalyzeActionFile(actionPath)
-
-			// Check error expectation
-			if tt.expectError {
-				testutil.AssertError(t, err)
-
-				return
-			}
-			testutil.AssertNoError(t, err)
-
-			// Check dependencies
-			if tt.expectDeps {
-				if len(deps) != tt.expectedLen {
-					t.Errorf("expected %d dependencies, got %d", tt.expectedLen, len(deps))
-				}
-
-				// Check specific dependencies if provided
-				if tt.expectedDeps != nil {
-					for i, expectedDep := range tt.expectedDeps {
-						if i >= len(deps) {
-							t.Errorf("expected dependency %s but got fewer dependencies", expectedDep)
-
-							continue
-						}
-						if !strings.Contains(deps[i].Name+"@"+deps[i].Version, expectedDep) {
-							t.Errorf("expected dependency %s, got %s@%s", expectedDep, deps[i].Name, deps[i].Version)
-						}
-					}
-				}
-			} else if len(deps) != 0 {
-				t.Errorf("expected no dependencies, got %d", len(deps))
-			}
+			runAnalyzeActionFileTest(t, tt)
 		})
 	}
 }
@@ -133,7 +152,7 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 		expectedType    VersionType
 	}{
 		{
-			name:            "semantic version",
+			name:            testutil.TestCaseNameSemanticVersion,
 			uses:            testutil.TestActionCheckoutV4,
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
@@ -149,7 +168,7 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 			expectedType:    SemanticVersion,
 		},
 		{
-			name:            "commit SHA",
+			name:            testutil.TestCaseNameCommitSHA,
 			uses:            "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
 			expectedOwner:   "actions",
 			expectedRepo:    "checkout",
@@ -716,7 +735,7 @@ func TestIsCompositeAction(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "composite action",
+			name:    testutil.TestCaseNameCompositeAction,
 			fixture: "composite-action.yml",
 			want:    true,
 			wantErr: false,
@@ -728,13 +747,13 @@ func TestIsCompositeAction(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "javascript action",
+			name:    testutil.TestCaseNameJavaScriptAction,
 			fixture: "javascript-action.yml",
 			want:    false,
 			wantErr: false,
 		},
 		{
-			name:    "invalid yaml",
+			name:    testutil.TestCaseNameInvalidYAML,
 			fixture: "invalid.yml",
 			want:    false,
 			wantErr: true,

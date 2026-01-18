@@ -5,17 +5,18 @@ package testutil
 
 // Test cache constants for reducing string duplication.
 const (
-	CacheTestKey    = "test-key"
-	CacheTestValue  = "test-value"
-	CacheTestKey1   = "key1"
-	CacheTestKey2   = "key2"
-	CacheTestValue1 = "value1"
+	CacheTestKey       = "test-key"
+	CacheTestValue     = "test-value"
+	CacheTestKey1      = "key1"
+	CacheTestKey2      = "key2"
+	CacheTestValue1    = "value1"
+	CacheShortLivedKey = "short-lived"
+	CacheExpiringKey   = "expiring-key"
 )
 
 // Error handler test constants for reducing string duplication.
 const (
 	UnknownErrorMsg = "unknown error"
-	HelloWorldStr   = "hello world"
 
 	// TestErrFileNotFound is used in error handler tests for file not found scenarios.
 	TestErrFileNotFound = "file not found"
@@ -25,6 +26,24 @@ const (
 
 	// TestErrPermissionDenied is used in error handler tests for permission errors.
 	TestErrPermissionDenied = "permission denied"
+)
+
+// Progress test constants for reducing string duplication.
+const (
+	TestProgressDescription = "Test progress"
+)
+
+// Progress message constants for reducing string duplication in verbose output tests.
+const (
+	TestMsgProcessingFile   = "Processing file:"
+	TestMsgGeneratedReadme  = "Generated README"
+	TestMsgDiscoveredAction = "Discovered action file:"
+	TestMsgAnalyzingDeps    = "Analyzing dependencies"
+)
+
+// Configuration field name constants for reducing string duplication.
+const (
+	TestFieldOutputFormat = "output format"
 )
 
 // Validation component test constants for reducing string duplication.
@@ -41,6 +60,12 @@ const (
 const (
 	TestActionName = "Test Action"
 	TestActionDesc = "Test Description"
+	TestMyAction   = "My Action"
+)
+
+// Fixture filename constants for reducing string duplication.
+const (
+	TestFixtureSimpleAction = "simple-action.yml"
 )
 
 // GitHub authentication test constants for reducing string duplication.
@@ -48,11 +73,19 @@ const (
 	TestTokenValue = "test-token"
 )
 
+// Interfaces and components test constants for reducing string duplication.
+const (
+	TestOperationName = "test-operation"
+)
+
 // Validation test file identifiers for reducing string duplication.
 const (
-	ValidationTestFile1 = "file: action1.yml"
-	ValidationTestFile2 = "file: action2.yml"
-	ValidationTestFile3 = "file: action.yml"
+	ValidationTestFile1  = "file: action1.yml"
+	ValidationTestFile2  = "file: action2.yml"
+	ValidationTestFile3  = "file: action.yml"
+	ValidationCheckout   = "checkout"
+	ValidationCheckoutV3 = "v3"
+	ValidationHelloWorld = "hello world"
 )
 
 // GitHub Actions runner names for reducing string duplication.
@@ -91,6 +124,21 @@ const (
 	TestFixtureRepoConfig                  = "repo-config.yml"
 	TestFixtureActionSimple                = "actions/simple/action.yml"
 	TestFixtureActionMinimal               = "actions/minimal/action.yml"
+
+	// Config test fixtures for configuration tests.
+	TestConfigGlobalGitHubHTML        = "configs/global-github-html.yml"
+	TestConfigGlobalDefaultMD         = "configs/global-default-md.yml"
+	TestConfigGlobalGitHubHTMLVerbose = "configs/global-github-html-verbose.yml"
+	TestConfigMinimalWithToken        = "configs/minimal-with-token.yml" // #nosec G101 -- fixture path
+
+	// Error scenario fixtures for error handling tests.
+	TestErrorInvalidYAMLBrackets     = "error-scenarios/invalid-yaml-brackets.yml"
+	TestErrorInvalidYAMLBraces       = "error-scenarios/invalid-yaml-braces.yml"
+	TestErrorInvalidYAMLTripleBraces = "error-scenarios/invalid-yaml-triple-braces.yml"
+
+	// JSON fixture paths - located in testdata/yaml-fixtures/json-fixtures/.
+	TestJSONPackageFull        = "json-fixtures/package-full.json"
+	TestJSONPackageVersionOnly = "json-fixtures/package-version-only.json"
 
 	// Permission test fixtures for parser tests.
 	TestFixturePermissionsDashSingle     = "permissions/dash-format-single.yml"
@@ -153,7 +201,6 @@ const (
 const (
 	TestRepoActionPath      = "/repo/action.yml"
 	TestRepoBuildActionPath = "/repo/build/action.yml"
-	TestVersionV123         = "@v1.2.3"
 )
 
 // Test error message formats for testutil tests.
@@ -173,10 +220,53 @@ const (
 	TestMsgExportConfigError = "ExportConfig() error = %v"      // Used in config export tests
 )
 
+// Test case name constants for reducing duplication across test files.
+const (
+	TestCaseNameNoGitRepository      = "no git repository"
+	TestCaseNameEmptyPath            = "empty path"
+	TestCaseNameNonexistentDir       = "nonexistent directory"
+	TestCaseNameNoActionFiles        = "no action files"
+	TestCaseNameInvalidYAML          = "invalid yaml"
+	TestCaseNameInvalidActionFile    = "invalid action file"
+	TestCaseNameEmptyTheme           = "empty theme"
+	TestCaseNameCompositeAction      = "composite action"
+	TestCaseNameCommitSHA            = "commit SHA"
+	TestCaseNameBranchName           = "branch name"
+	TestCaseNameAllValidFiles        = "all valid files"
+	TestCaseNameValidAction          = "valid action"
+	TestCaseNameZeroFiles            = "zero files"
+	TestCaseNamePathTraversal        = "with path traversal attempt"
+	TestCaseNameVerboseFlag          = "verbose flag"
+	TestCaseNameUserWhitespace       = "user provides value with whitespace"
+	TestCaseNameUserAcceptDefault    = "user accepts default (yes)"
+	TestCaseNameUnknownTheme         = "unknown theme"
+	TestCaseNameUnknownFormat        = "unknown output format"
+	TestCaseNameUnknownError         = "unknown error"
+	TestCaseNameSubdirAction         = "subdirectory action"
+	TestCaseNameSSHGitHub            = "SSH GitHub URL"
+	TestCaseNameShortCommitSHA       = "short commit SHA"
+	TestCaseNameSemanticVersion      = "semantic version"
+	TestCaseNameRootAction           = "root action"
+	TestCaseNameErrorEmptyDir        = "returns error for empty directory with no action files"
+	TestCaseNameRelativePath         = "relative path"
+	TestCaseNameQuietFlag            = "quiet flag"
+	TestCaseNamePermissionDenied     = "permission denied on output directory"
+	TestCaseNamePathTraversalAttempt = "path traversal attempt"
+	TestCaseNameNonexistentTemplate  = "non-existent template"
+	TestCaseNameNonexistentFiles     = "nonexistent files"
+	TestCaseNameNoMatch              = "no match"
+	TestCaseNameMissingRuns          = "missing runs"
+	TestCaseNameMissingName          = "missing name"
+	TestCaseNameMissingDesc          = "missing description"
+	TestCaseNameMajorVersionOnly     = "major version only"
+	TestCaseNameJavaScriptAction     = "javascript action"
+)
+
 // Validation test constants.
 const (
 	TestVersionSemantic = "v1.2.3"
 	TestVersionPlain    = "1.2.3"
+	TestVersionWithAt   = "@v1.2.3"
 	TestCaseNameEmpty   = "empty string"
 	TestBranchMain      = "main"
 	TestGitRefMain      = "refs/heads/main"
@@ -332,6 +422,8 @@ const (
 	TestFileGitIgnore      = ".gitignore"
 	TestFileGHActionReadme = "gh-action-readme.yml"
 	TestBinaryName         = "gh-action-readme"
+	// Common file names used across integration tests.
+	TestFilePackageJSON = "package.json"
 )
 
 // Integration test CLI flags - moved from appconstants.
@@ -511,4 +603,103 @@ const (
 
 	// Template fixtures.
 	TestTemplateBroken = "template-fixtures/broken-template.tmpl"
+)
+
+// Mutation test constants for reducing string duplication in test data.
+const (
+	// GitHub URL mutation test constants.
+	MutationURLHTTPS           = "https://github.com/octocat/Hello-World"
+	MutationURLHTTPSGit        = "https://github.com/octocat/Hello-World.git"
+	MutationURLSSH             = "git@github.com:octocat/Hello-World"
+	MutationURLSSHGit          = "git@github.com:octocat/Hello-World.git"
+	MutationURLSimple          = "octocat/Hello-World"
+	MutationURLSetupNode       = "actions/setup-node"
+	MutationURLGitHubReadme    = "https://github.com/ivuorinen/gh-action-readme"
+	MutationOrgOctocat         = "octocat"
+	MutationOrgActions         = "actions"
+	MutationOrgIvuorinen       = "ivuorinen"
+	MutationRepoHelloWorld     = "Hello-World"
+	MutationRepoSetupNode      = "setup-node"
+	MutationRepoGhActionReadme = "gh-action-readme"
+
+	// Test description constants for reducing duplication.
+	MutationDescEmptyInput    = "Empty input"
+	MutationStrHelloWorldDash = "hello-world"
+
+	// String mutation test constants.
+	MutationStrEmpty                 = ""
+	MutationStrSetupNode             = "Setup-Node"
+	MutationStrCheckoutCode          = "Checkout Code"
+	MutationStrCheckoutCodeDash      = "checkout-code"
+	MutationStrSetupGoEnvironment    = "Setup Go Environment"
+	MutationStrSetupGoEnvironmentD   = "setup-go-environment"
+	MutationStrHelloWorldDoubleSpace = "hello  world" // Double space for testing space normalization
+
+	// Version mutation test constants.
+	MutationVersionV2         = "v2.5.1"
+	MutationVersionNoV        = "1.2.3"
+	MutationVersionBuild      = "1.2.3+build.123"
+	MutationVersionPrerelease = "1.2.3-alpha"
+
+	// Uses statement mutation test constants.
+	MutationUsesActionsCheckout   = "actions/checkout@v3"
+	MutationUsesActionsCheckoutV1 = "actions/checkout@v1"
+	MutationUsesOrgRepo           = "org/repo@ver"
+
+	// Semantic version mutation test constants.
+	MutationSemverFull              = "1.2.3"
+	MutationSemverPrerelease        = "1.2.3-alpha"
+	MutationSemverBuildMeta         = "1.2.3+build.123"
+	MutationSemverPrereleaseBuild   = "1.2.3-alpha+build.123"
+	MutationSemverInvalidExtraParts = "1.2.3.4"
+	MutationSemverEmptyPrerelease   = "1.2.3-"
+	MutationSemverBuildOnlyNumbers  = "1.2.3+20130313144700"
+	MutationSemverDoubleV           = "vv1.2.3"
+	MutationSemverUppercaseV        = "V1.2.3"
+	MutationSemverLeadingSpace      = " 1.2.3"
+	MutationSemverTrailingSpace     = "1.2.3 "
+)
+
+// Environment variable name constants for reducing string duplication.
+const (
+	EnvVarHOME          = "HOME"
+	EnvVarXDGConfigHome = "XDG_CONFIG_HOME"
+)
+
+// Configuration field name constants for reducing string duplication.
+const (
+	ConfigFieldName         = "config"
+	ConfigFieldRepository   = "repository"
+	ConfigFieldVersion      = "version"
+	ConfigFieldOrganization = "organization"
+	ConfigFieldOutputDir    = "output_dir"
+	ConfigFieldAction       = "action"
+	ConfigFieldRepo         = "repo"
+	ConfigFieldGit          = ".git"
+)
+
+// Whitespace character constants for reducing string duplication in tests.
+const (
+	WhitespaceSpace          = " "
+	WhitespaceTab            = "\t"
+	WhitespaceNewline        = "\n"
+	WhitespaceCarriageReturn = "\r"
+)
+
+// Test YAML fixture file name constants for reducing string duplication.
+const (
+	TestFixtureGlobalYAML     = "global.yaml"
+	TestFixtureBadYAML        = "bad.yaml"
+	TestFixturePullRequests   = "pull-requests"
+	TestFixtureMissingPermKey = "missing permission key %q"
+	TestFixtureContentsRead   = "contents: read"
+	TestFixtureIssuesWrite    = "issues: write"
+)
+
+// Parser test permission constants for reducing string duplication.
+const (
+	PermissionContents = "contents"
+	PermissionIssues   = "issues"
+	PermissionRead     = "read"
+	PermissionWrite    = "write"
 )

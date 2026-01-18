@@ -74,13 +74,13 @@ func (tp *TaskProgress) ReportProgress(task string, step int, total int) {
 }
 
 // ConfigAwareComponent demonstrates a component that only needs to check configuration.
-// It depends only on OutputConfig, not the entire output system.
+// It depends only on QuietChecker, not the entire output system.
 type ConfigAwareComponent struct {
-	config OutputConfig
+	config QuietChecker
 }
 
 // NewConfigAwareComponent creates a component that checks output configuration.
-func NewConfigAwareComponent(config OutputConfig) *ConfigAwareComponent {
+func NewConfigAwareComponent(config QuietChecker) *ConfigAwareComponent {
 	return &ConfigAwareComponent{config: config}
 }
 

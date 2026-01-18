@@ -24,7 +24,7 @@ var (
 	_ ErrorReporter    = (*ColoredOutput)(nil)
 	_ ErrorFormatter   = (*ColoredOutput)(nil)
 	_ ProgressReporter = (*ColoredOutput)(nil)
-	_ OutputConfig     = (*ColoredOutput)(nil)
+	_ QuietChecker     = (*ColoredOutput)(nil)
 	_ CompleteOutput   = (*ColoredOutput)(nil)
 )
 

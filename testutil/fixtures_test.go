@@ -17,46 +17,27 @@ const testVersion = "v4.1.1"
 
 func TestMustReadFixture(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name     string
-		filename string
-		wantErr  bool
-	}{
-		{
-			name:     "valid fixture file",
-			filename: "simple-action.yml",
-			wantErr:  false,
-		},
-		{
-			name:     "another valid fixture",
-			filename: "composite-action.yml",
-			wantErr:  false,
-		},
+	t.Run("valid fixture file", func(t *testing.T) {
+		t.Parallel()
+		validateFixtureContent(t, TestFixtureSimpleAction)
+	})
+	t.Run("another valid fixture", func(t *testing.T) {
+		t.Parallel()
+		validateFixtureContent(t, "composite-action.yml")
+	})
+}
+
+// validateFixtureContent reads a fixture file and validates its content.
+func validateFixtureContent(t *testing.T, filename string) {
+	t.Helper()
+	content := mustReadFixture(filename)
+	if content == "" {
+		t.Error("expected non-empty content")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			if tt.wantErr {
-				defer func() {
-					if r := recover(); r == nil {
-						t.Error("expected panic but got none")
-					}
-				}()
-			}
-
-			content := mustReadFixture(tt.filename)
-			if !tt.wantErr {
-				if content == "" {
-					t.Error("expected non-empty content")
-				}
-				// Verify it's valid YAML
-				var yamlContent map[string]any
-				if err := yaml.Unmarshal([]byte(content), &yamlContent); err != nil {
-					t.Errorf("fixture content is not valid YAML: %v", err)
-				}
-			}
-		})
+	var yamlContent map[string]any
+	if err := yaml.Unmarshal([]byte(content), &yamlContent); err != nil {
+		t.Errorf("fixture content is not valid YAML: %v", err)
 	}
 }
 
@@ -262,8 +243,19 @@ func TestMockGitHubResponses(t *testing.T) {
 
 func TestFixtureConstants(t *testing.T) {
 	t.Parallel()
-	// Test that all fixture variables are properly loaded
-	fixtures := map[string]string{
+	fixtures := buildFixtureConstantsMap()
+
+	for name, content := range fixtures {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			validateFixtureConstant(t, name, content)
+		})
+	}
+}
+
+// buildFixtureConstantsMap returns the map of fixture names to content.
+func buildFixtureConstantsMap() map[string]string {
+	return map[string]string{
 		"SimpleActionYML":        MustReadFixture("actions/javascript/simple.yml"),
 		"CompositeActionYML":     MustReadFixture("actions/composite/basic.yml"),
 		"DockerActionYML":        MustReadFixture("actions/docker/basic.yml"),
@@ -273,32 +265,45 @@ func TestFixtureConstants(t *testing.T) {
 		"RepoSpecificConfigYAML": MustReadFixture("repo-config.yml"),
 		"PackageJSONContent":     PackageJSONContent,
 	}
+}
 
-	for name, content := range fixtures {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if content == "" {
-				t.Errorf("%s is empty", name)
-			}
+// validateFixtureConstant validates a single fixture constant.
+func validateFixtureConstant(t *testing.T, name, content string) {
+	t.Helper()
+	if content == "" {
+		t.Errorf("%s is empty", name)
 
-			// For YAML fixtures, verify they're valid YAML (except InvalidActionYML)
-			if strings.HasSuffix(name, "YML") || strings.HasSuffix(name, "YAML") {
-				if name != "InvalidActionYML" {
-					var yamlContent map[string]any
-					if err := yaml.Unmarshal([]byte(content), &yamlContent); err != nil {
-						t.Errorf("%s contains invalid YAML: %v", name, err)
-					}
-				}
-			}
+		return
+	}
 
-			// For JSON fixtures, verify they're valid JSON
-			if strings.Contains(name, "JSON") {
-				var jsonContent any
-				if err := json.Unmarshal([]byte(content), &jsonContent); err != nil {
-					t.Errorf("%s contains invalid JSON: %v", name, err)
-				}
-			}
-		})
+	validateYAMLFixture(t, name, content)
+	validateJSONFixture(t, name, content)
+}
+
+// validateYAMLFixture validates YAML fixtures (except InvalidActionYML).
+func validateYAMLFixture(t *testing.T, name, content string) {
+	t.Helper()
+	isYAML := strings.HasSuffix(name, "YML") || strings.HasSuffix(name, "YAML")
+	if !isYAML || name == "InvalidActionYML" {
+		return
+	}
+
+	var yamlContent map[string]any
+	if err := yaml.Unmarshal([]byte(content), &yamlContent); err != nil {
+		t.Errorf("%s contains invalid YAML: %v", name, err)
+	}
+}
+
+// validateJSONFixture validates JSON fixtures.
+func validateJSONFixture(t *testing.T, name, content string) {
+	t.Helper()
+	if !strings.Contains(name, "JSON") {
+		return
+	}
+
+	var jsonContent any
+	if err := json.Unmarshal([]byte(content), &jsonContent); err != nil {
+		t.Errorf("%s contains invalid JSON: %v", name, err)
 	}
 }
 
@@ -332,7 +337,7 @@ func TestFixtureFileSystem(t *testing.T) {
 	t.Parallel()
 	// Verify that the fixture files actually exist
 	fixtureFiles := []string{
-		"simple-action.yml",
+		TestFixtureSimpleAction,
 		"composite-action.yml",
 		"docker-action.yml",
 		"invalid-action.yml",
@@ -513,7 +518,7 @@ func TestGetFixtureManager(t *testing.T) {
 func TestActionFixtureLoading(t *testing.T) {
 	t.Parallel()
 	// Test loading a fixture that should exist
-	fixture, err := LoadActionFixture("simple-action.yml")
+	fixture, err := LoadActionFixture(TestFixtureSimpleAction)
 	if err != nil {
 		t.Fatalf("failed to load simple action fixture: %v", err)
 	}
