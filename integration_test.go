@@ -409,7 +409,7 @@ func TestServiceIntegration(t *testing.T) {
 					name:          "generate with verbose progress indicators",
 					cmd:           []string{"gen", testutil.TestFlagVerbose, testutil.TestFlagTheme, "github"},
 					expectSuccess: true,
-					expectOutput:  "Processing file:",
+					expectOutput:  testutil.TestMsgProcessingFile,
 				},
 			},
 			verifications: []verificationStep{
@@ -1276,11 +1276,11 @@ func verifyProgressIndicatorsOutput(t *testing.T, output string) {
 	t.Helper()
 
 	indicators := []string{
-		"Processing file:",
-		"Generated README",
-		"Discovered action file:",
+		testutil.TestMsgProcessingFile,
+		testutil.TestMsgGeneratedReadme,
+		testutil.TestMsgDiscoveredAction,
 		testutil.TestMsgDependenciesFound,
-		"Analyzing dependencies",
+		testutil.TestMsgAnalyzingDeps,
 	}
 
 	for _, ind := range indicators {

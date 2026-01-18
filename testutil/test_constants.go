@@ -33,6 +33,14 @@ const (
 	TestProgressDescription = "Test progress"
 )
 
+// Progress message constants for reducing string duplication in verbose output tests.
+const (
+	TestMsgProcessingFile   = "Processing file:"
+	TestMsgGeneratedReadme  = "Generated README"
+	TestMsgDiscoveredAction = "Discovered action file:"
+	TestMsgAnalyzingDeps    = "Analyzing dependencies"
+)
+
 // Configuration field name constants for reducing string duplication.
 const (
 	TestFieldOutputFormat = "output format"

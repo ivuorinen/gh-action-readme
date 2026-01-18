@@ -20,9 +20,9 @@ type permissionParsingTestCase struct {
 }
 
 // buildPermissionParsingTestCases returns all test cases for permission parsing.
-// YAML content is loaded from fixture files in testdata/yaml-fixtures/permissions/mutation/.
+// YAML content is loaded from fixture files in testdata/yaml-fixtures/configs/permissions/mutation/.
 func buildPermissionParsingTestCases() []permissionParsingTestCase {
-	const fixtureDir = "permissions/mutation/"
+	const fixtureDir = "configs/permissions/mutation/"
 
 	return []permissionParsingTestCase{
 		{

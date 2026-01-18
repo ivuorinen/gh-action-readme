@@ -11,7 +11,6 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
-	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // ValidationResult represents the result of configuration validation.
@@ -101,11 +100,11 @@ func (v *ConfigValidator) ValidateField(fieldName, value string) *ValidationResu
 	}
 
 	switch fieldName {
-	case testutil.ConfigFieldOrganization:
+	case appconstants.ConfigKeyOrganization:
 		v.validateOrganization(value, result)
-	case testutil.ConfigFieldRepository:
+	case appconstants.ConfigKeyRepository:
 		v.validateRepository(value, result)
-	case testutil.ConfigFieldVersion:
+	case appconstants.ConfigKeyVersion:
 		v.validateVersion(value, result)
 	case appconstants.ConfigKeyTheme:
 		v.validateTheme(value, result)
@@ -158,7 +157,7 @@ func (v *ConfigValidator) DisplayValidationResult(result *ValidationResult) {
 // validateOrganization validates the organization field.
 func (v *ConfigValidator) validateOrganization(org string, result *ValidationResult) {
 	v.validateFieldWithEmptyCheck(
-		testutil.ConfigFieldOrganization,
+		appconstants.ConfigKeyOrganization,
 		org,
 		v.isValidGitHubName,
 		"Organization is empty - will use auto-detected value",
@@ -171,7 +170,7 @@ func (v *ConfigValidator) validateOrganization(org string, result *ValidationRes
 // validateRepository validates the repository field.
 func (v *ConfigValidator) validateRepository(repo string, result *ValidationResult) {
 	v.validateFieldWithEmptyCheck(
-		testutil.ConfigFieldRepository,
+		appconstants.ConfigKeyRepository,
 		repo,
 		v.isValidGitHubName,
 		"Repository is empty - will use auto-detected value",
@@ -201,7 +200,7 @@ func (v *ConfigValidator) validateVersion(version string, result *ValidationResu
 	// Check if it follows semantic versioning
 	if !v.isValidSemanticVersion(version) {
 		addWarningWithSuggestion(result,
-			testutil.ConfigFieldVersion,
+			appconstants.ConfigKeyVersion,
 			"Version does not follow semantic versioning (x.y.z)",
 			version,
 			"Consider using semantic versioning format (e.g., 1.0.0)")
@@ -225,14 +224,14 @@ func (v *ConfigValidator) validateTheme(theme string, result *ValidationResult) 
 func (v *ConfigValidator) validateOutputFormat(format string, result *ValidationResult) {
 	validFormats := appconstants.GetSupportedOutputFormats()
 
-	v.validateFieldInList(testutil.ConfigFieldOutputDir, format, validFormats, "Invalid output format", result)
+	v.validateFieldInList(appconstants.ConfigKeyOutputFormat, format, validFormats, "Invalid output format", result)
 }
 
 // validateOutputDir validates the output directory field.
 func (v *ConfigValidator) validateOutputDir(dir string, result *ValidationResult) {
 	if dir == "" {
 		result.Errors = append(result.Errors, ValidationError{
-			Field:   testutil.ConfigFieldOutputDir,
+			Field:   appconstants.ConfigKeyOutputDir,
 			Message: "Output directory cannot be empty",
 			Value:   dir,
 		})
@@ -247,7 +246,7 @@ func (v *ConfigValidator) validateOutputDir(dir string, result *ValidationResult
 		if parent != "." {
 			if _, err := os.Stat(parent); os.IsNotExist(err) {
 				addWarningWithSuggestion(result,
-					testutil.ConfigFieldOutputDir,
+					appconstants.ConfigKeyOutputDir,
 					"Parent directory does not exist",
 					dir,
 					"Ensure the parent directory exists or will be created")
@@ -257,7 +256,7 @@ func (v *ConfigValidator) validateOutputDir(dir string, result *ValidationResult
 		// Absolute path - check if it exists
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			addWarningWithSuggestion(result,
-				testutil.ConfigFieldOutputDir,
+				appconstants.ConfigKeyOutputDir,
 				"Directory does not exist",
 				dir,
 				"Directory will be created if it doesn't exist")

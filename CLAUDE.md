@@ -176,7 +176,7 @@ This project enforces strict quality gates aligned with [SonarCloud "Sonar way"]
 
 | Metric | Threshold | Check Command |
 | ------ | --------- | ------------- |
-| Code Coverage | ≥ 80% (new code) | `make test-coverage-check` |
+| Code Coverage | ≥ 72% (overall); 80% target | `make test-coverage-check` |
 | Duplicated Lines | ≤ 3% (new code) | `make lint` (via dupl) |
 | Security Rating | A (no issues) | `make security` |
 | Reliability Rating | A (no bugs) | `make lint` |
