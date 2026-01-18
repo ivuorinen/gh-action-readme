@@ -1297,7 +1297,7 @@ func verifyProgressIndicatorsOutput(t *testing.T, output string) {
 func verifyGeneratedDocsIfGen(t *testing.T, tmpDir string, cmd []string) {
 	t.Helper()
 
-	if len(cmd) == 0 || !strings.Contains(cmd[0], "gen") {
+	if len(cmd) == 0 || !strings.Contains(cmd[0], testutil.TestCmdGen) {
 		return
 	}
 

@@ -34,3 +34,7 @@ tab_width = 2
 
 [{go.sum,go.mod}]
 max_line_length = 300
+
+# Test fixture that intentionally contains trailing whitespace
+[testdata/yaml-fixtures/configs/permissions/mutation/whitespace-only-value-not-parsed.yaml]
+trim_trailing_whitespace = false
