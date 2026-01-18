@@ -122,6 +122,8 @@ func TestFormatUsesStatementProperties(t *testing.T) {
 			gen.AlphaString(),
 		),
 	)
+
+	properties.TestingRun(t)
 }
 
 // TestStringNormalizationProperties verifies idempotency and whitespace properties.

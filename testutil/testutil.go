@@ -850,17 +850,13 @@ func ClearTokenEnv(t *testing.T) {
 }
 
 // SetupXDGEnv sets XDG_CONFIG_HOME and HOME environment variables.
-// Use empty string to skip setting a variable.
+// Pass an empty string to explicitly clear (unset) that variable.
 //
 // Example:
 //
 //	testutil.SetupXDGEnv(t, tmpDir, "")  // Set XDG, clear HOME
 func SetupXDGEnv(t *testing.T, xdgConfigHome, home string) {
 	t.Helper()
-	if xdgConfigHome != "" {
-		t.Setenv(EnvVarXDGConfigHome, xdgConfigHome)
-	}
-	if home != "" {
-		t.Setenv(EnvVarHOME, home)
-	}
+	t.Setenv(EnvVarXDGConfigHome, xdgConfigHome)
+	t.Setenv(EnvVarHOME, home)
 }

@@ -1,0 +1,4 @@
+# permissions:
+#   contents: read
+# This line is dedented and should stop parsing
+#   issues: write

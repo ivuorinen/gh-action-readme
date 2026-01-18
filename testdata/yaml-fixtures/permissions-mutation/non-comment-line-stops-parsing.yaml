@@ -1,0 +1,4 @@
+# permissions:
+#   contents: read
+name: Test Action
+#   issues: write

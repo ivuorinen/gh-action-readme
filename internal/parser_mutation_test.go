@@ -11,28 +11,28 @@ import (
 // to catch mutations in the permission parsing logic. These tests target critical
 // boundaries, operators, and conditions that are susceptible to mutation.
 //
-//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
-func TestPermissionParsingMutationResistance(t *testing.T) {
-	tests := []struct {
-		name     string
-		yaml     string
-		expected map[string]string
-		critical bool // Critical mutations should fail tests
-	}{
+// permissionParsingTestCase defines a test case for permission parsing tests.
+type permissionParsingTestCase struct {
+	name     string
+	yaml     string
+	expected map[string]string
+	critical bool
+}
+
+// buildPermissionParsingTestCases returns all test cases for permission parsing.
+// YAML content is loaded from fixture files in testdata/yaml-fixtures/permissions-mutation/.
+func buildPermissionParsingTestCases() []permissionParsingTestCase {
+	const fixtureDir = "permissions-mutation/"
+	return []permissionParsingTestCase{
 		{
-			name: "off_by_one_indent_two_items",
-			yaml: `# permissions:
-#   contents: read
-#   issues: write`,
+			name:     "off_by_one_indent_two_items",
+			yaml:     testutil.MustReadFixture(fixtureDir + "off-by-one-indent-two-items.yaml"),
 			expected: map[string]string{"contents": "read", "issues": "write"},
-			critical: true, // Indent comparison operators critical
+			critical: true,
 		},
 		{
 			name: "off_by_one_indent_three_items",
-			yaml: `# permissions:
-#   contents: read
-#   issues: write
-#   pull-requests: read`,
+			yaml: testutil.MustReadFixture(fixtureDir + "off-by-one-indent-three-items.yaml"),
 			expected: map[string]string{
 				"contents":                       "read",
 				"issues":                         "write",
@@ -41,150 +41,110 @@ func TestPermissionParsingMutationResistance(t *testing.T) {
 			critical: true,
 		},
 		{
-			name: "comment_position_at_boundary",
-			yaml: `# permissions:
-#   contents: read  # inline comment at position > 0`,
+			name:     "comment_position_at_boundary",
+			yaml:     testutil.MustReadFixture(fixtureDir + "comment-position-at-boundary.yaml"),
 			expected: map[string]string{"contents": "read"},
-			critical: true, // String.Index() boundary critical (> 0 vs >= 0)
+			critical: true,
 		},
 		{
-			name: "comment_at_position_zero_parses",
-			yaml: `# permissions:
-#contents: read`,
+			name:     "comment_at_position_zero_parses",
+			yaml:     testutil.MustReadFixture(fixtureDir + "comment-at-position-zero-parses.yaml"),
 			expected: map[string]string{"contents": "read"},
-			critical: true, // Zero indent is valid (sets expectedItemIndent to 0)
+			critical: true,
 		},
 		{
-			name: "dash_prefix_with_spaces",
-			yaml: `# permissions:
-#   - contents: read
-#   - issues: write`,
-			expected: map[string]string{"contents": "read", "issues": "write"},
-			critical: true, // Dash removal logic
-		},
-		{
-			name: "mixed_dash_and_no_dash",
-			yaml: `# permissions:
-#   - contents: read
-#   issues: write`,
+			name:     "dash_prefix_with_spaces",
+			yaml:     testutil.MustReadFixture(fixtureDir + "dash-prefix-with-spaces.yaml"),
 			expected: map[string]string{"contents": "read", "issues": "write"},
 			critical: true,
 		},
 		{
-			name: "dedent_stops_parsing",
-			yaml: `# permissions:
-#   contents: read
-# This line is dedented and should stop parsing
-#   issues: write`,
-			expected: map[string]string{"contents": "read"},
-			critical: true, // Dedent detection critical (< vs <=)
-		},
-		{
-			name: "empty_line_in_block_continues",
-			yaml: `# permissions:
-#   contents: read
-#
-#   issues: write`,
+			name:     "mixed_dash_and_no_dash",
+			yaml:     testutil.MustReadFixture(fixtureDir + "mixed-dash-and-no-dash.yaml"),
 			expected: map[string]string{"contents": "read", "issues": "write"},
-			critical: false, // Empty lines should be handled
+			critical: true,
 		},
 		{
-			name: "non_comment_line_stops_parsing",
-			yaml: `# permissions:
-#   contents: read
-name: Test Action
-#   issues: write`,
+			name:     "dedent_stops_parsing",
+			yaml:     testutil.MustReadFixture(fixtureDir + "dedent-stops-parsing.yaml"),
 			expected: map[string]string{"contents": "read"},
-			critical: true, // HasPrefix("#") check critical
+			critical: true,
 		},
 		{
-			name: "exact_expected_indent",
-			yaml: `# permissions:
-#   contents: read`,
+			name:     "empty_line_in_block_continues",
+			yaml:     testutil.MustReadFixture(fixtureDir + "empty-line-in-block-continues.yaml"),
+			expected: map[string]string{"contents": "read", "issues": "write"},
+			critical: false,
+		},
+		{
+			name:     "non_comment_line_stops_parsing",
+			yaml:     testutil.MustReadFixture(fixtureDir + "non-comment-line-stops-parsing.yaml"),
 			expected: map[string]string{"contents": "read"},
-			critical: true, // First item sets expected indent
+			critical: true,
 		},
 		{
-			name: "colon_in_value_preserved",
-			yaml: `# permissions:
-#   contents: read:write`,
+			name:     "exact_expected_indent",
+			yaml:     testutil.MustReadFixture(fixtureDir + "exact-expected-indent.yaml"),
+			expected: map[string]string{"contents": "read"},
+			critical: true,
+		},
+		{
+			name:     "colon_in_value_preserved",
+			yaml:     testutil.MustReadFixture(fixtureDir + "colon-in-value-preserved.yaml"),
 			expected: map[string]string{"contents": "read:write"},
-			critical: true, // SplitN(content, ":", 2) critical
+			critical: true,
 		},
 		{
-			name: "empty_key_not_parsed",
-			yaml: `# permissions:
-#   : read`,
+			name:     "empty_key_not_parsed",
+			yaml:     testutil.MustReadFixture(fixtureDir + "empty-key-not-parsed.yaml"),
 			expected: map[string]string{},
-			critical: true, // key != "" check critical
+			critical: true,
 		},
 		{
-			name: "empty_value_not_parsed",
-			yaml: `# permissions:
-#   contents:`,
+			name:     "empty_value_not_parsed",
+			yaml:     testutil.MustReadFixture(fixtureDir + "empty-value-not-parsed.yaml"),
 			expected: map[string]string{},
-			critical: true, // value != "" check critical
+			critical: true,
 		},
 		{
-			name: "whitespace_only_value_not_parsed",
-			yaml: `# permissions:
-#   contents:   `,
+			name:     "whitespace_only_value_not_parsed",
+			yaml:     testutil.MustReadFixture(fixtureDir + "whitespace-only-value-not-parsed.yaml"),
 			expected: map[string]string{},
-			critical: true, // TrimSpace on value critical
+			critical: true,
 		},
 		{
-			name: "multiple_colons_splits_at_first",
-			yaml: `# permissions:
-#   url: https://example.com:8080`,
+			name:     "multiple_colons_splits_at_first",
+			yaml:     testutil.MustReadFixture(fixtureDir + "multiple-colons-splits-at-first.yaml"),
 			expected: map[string]string{"url": "https://example.com:8080"},
-			critical: true, // SplitN behavior with n=2
+			critical: true,
 		},
 		{
-			name: "inline_comment_removal",
-			yaml: `# permissions:
-#   contents: read  # Required for checkout`,
+			name:     "inline_comment_removal",
+			yaml:     testutil.MustReadFixture(fixtureDir + "inline-comment-removal.yaml"),
 			expected: map[string]string{"contents": "read"},
-			critical: true, // Index(content, "#") > 0 boundary
+			critical: true,
 		},
 		{
-			name: "inline_comment_at_start_of_value",
-			yaml: `# permissions:
-#   contents: #read`,
+			name:     "inline_comment_at_start_of_value",
+			yaml:     testutil.MustReadFixture(fixtureDir + "inline-comment-at-start-of-value.yaml"),
 			expected: map[string]string{},
-			critical: true, // idx > 0 (not >= 0) prevents this
+			critical: true,
 		},
 		{
-			name: "deeply_nested_indent",
-			yaml: `# permissions:
-#     contents: read
-#     issues: write`,
+			name:     "deeply_nested_indent",
+			yaml:     testutil.MustReadFixture(fixtureDir + "deeply-nested-indent.yaml"),
 			expected: map[string]string{"contents": "read", "issues": "write"},
-			critical: true, // Indent calculation with more spaces
+			critical: true,
 		},
 		{
-			name: "minimal_valid_permission",
-			yaml: `# permissions:
-#   x: y`,
+			name:     "minimal_valid_permission",
+			yaml:     testutil.MustReadFixture(fixtureDir + "minimal-valid-permission.yaml"),
 			expected: map[string]string{"x": "y"},
-			critical: true, // Minimal case for key/value
+			critical: true,
 		},
 		{
 			name: "maximum_realistic_permissions",
-			yaml: `# permissions:
-#   actions: write
-#   attestations: write
-#   checks: write
-#   contents: write
-#   deployments: write
-#   discussions: write
-#   id-token: write
-#   issues: write
-#   packages: write
-#   pages: write
-#   pull-requests: write
-#   repository-projects: write
-#   security-events: write
-#   statuses: write`,
+			yaml: testutil.MustReadFixture(fixtureDir + "maximum-realistic-permissions.yaml"),
 			expected: map[string]string{
 				"actions":                        "write",
 				"attestations":                   "write",
@@ -201,9 +161,14 @@ name: Test Action
 				"security-events":                "write",
 				"statuses":                       "write",
 			},
-			critical: false, // Stress test for map operations
+			critical: false,
 		},
 	}
+}
+
+//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
+func TestPermissionParsingMutationResistance(t *testing.T) {
+	tests := buildPermissionParsingTestCases()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -213,6 +178,8 @@ name: Test Action
 }
 
 func testPermissionParsingCase(t *testing.T, yaml string, expected map[string]string) {
+	t.Helper()
+
 	// Create temporary file with test YAML
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "action.yml")
@@ -348,56 +315,70 @@ func TestMergePermissionsMutationResistance(t *testing.T) {
 	}
 }
 
-func testMergePermissionsCase(t *testing.T, yamlPerms, commentPerms, expected map[string]string, description string) {
-	// Create ActionYML with test permissions
-	action := &ActionYML{}
+func testMergePermissionsCase(
+	t *testing.T,
+	yamlPerms, commentPerms, expected map[string]string,
+	description string,
+) {
+	t.Helper()
 
-	// Copy yamlPerms to avoid test pollution
-	if yamlPerms != nil {
-		action.Permissions = make(map[string]string)
-		for k, v := range yamlPerms {
-			action.Permissions[k] = v
-		}
+	// Create ActionYML with test permissions
+	action := &ActionYML{
+		Permissions: copyStringMap(yamlPerms),
 	}
 
 	// Copy commentPerms to avoid mutation during test
-	var commentPermsCopy map[string]string
-	if commentPerms != nil {
-		commentPermsCopy = make(map[string]string)
-		for k, v := range commentPerms {
-			commentPermsCopy[k] = v
-		}
-	}
+	commentPermsCopy := copyStringMap(commentPerms)
 
 	// Perform merge
 	mergePermissions(action, commentPermsCopy)
 
 	// Verify result
-	if expected == nil {
-		if action.Permissions != nil {
-			t.Errorf("expected nil permissions, got %v", action.Permissions)
+	assertPermissionsMatch(t, action.Permissions, expected, description)
+}
+
+// copyStringMap creates a deep copy of a string map, returning nil for nil input.
+func copyStringMap(input map[string]string) map[string]string {
+	if input == nil {
+		return nil
+	}
+	result := make(map[string]string, len(input))
+	for k, v := range input {
+		result[k] = v
+	}
+	return result
+}
+
+// assertPermissionsMatch verifies that got permissions match expected permissions.
+func assertPermissionsMatch(
+	t *testing.T,
+	got, want map[string]string,
+	description string,
+) {
+	t.Helper()
+
+	if want == nil {
+		if got != nil {
+			t.Errorf("expected nil permissions, got %v", got)
 		}
-
 		return
 	}
 
-	if action.Permissions == nil {
-		t.Errorf("expected non-nil permissions %v, got nil", expected)
-
+	if got == nil {
+		t.Errorf("expected non-nil permissions %v, got nil", want)
 		return
 	}
 
-	if len(action.Permissions) != len(expected) {
-		t.Errorf("got %d permissions, want %d", len(action.Permissions), len(expected))
-		t.Logf("got: %v", action.Permissions)
-		t.Logf("want: %v", expected)
+	if len(got) != len(want) {
+		t.Errorf("got %d permissions, want %d", len(got), len(want))
+		t.Logf("got: %v", got)
+		t.Logf("want: %v", want)
 	}
 
-	for key, expectedValue := range expected {
-		gotValue, exists := action.Permissions[key]
+	for key, expectedValue := range want {
+		gotValue, exists := got[key]
 		if !exists {
 			t.Errorf(testutil.TestFixtureMissingPermKey, key)
-
 			continue
 		}
 		if gotValue != expectedValue {
@@ -406,8 +387,8 @@ func testMergePermissionsCase(t *testing.T, yamlPerms, commentPerms, expected ma
 		}
 	}
 
-	for key := range action.Permissions {
-		if _, expected := expected[key]; !expected {
+	for key := range got {
+		if _, expected := want[key]; !expected {
 			t.Errorf("unexpected permission key %q", key)
 		}
 	}
@@ -517,12 +498,26 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testParsePermissionLineCase(t, tt.content, tt.expectKey, tt.expectValue, tt.expectOk, tt.description)
+			testParsePermissionLineCase(
+				t,
+				tt.content,
+				tt.expectKey,
+				tt.expectValue,
+				tt.expectOk,
+				tt.description,
+			)
 		})
 	}
 }
 
-func testParsePermissionLineCase(t *testing.T, content, expectKey, expectValue string, expectOk bool, description string) {
+func testParsePermissionLineCase(
+	t *testing.T,
+	content, expectKey, expectValue string,
+	expectOk bool,
+	description string,
+) {
+	t.Helper()
+
 	key, value, ok := parsePermissionLine(content)
 
 	if ok != expectOk {
@@ -628,12 +623,29 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testProcessPermissionEntryCase(t, tt.line, tt.content, tt.initialExpected, tt.expectBreak, tt.expectPermissions, tt.description)
+			testProcessPermissionEntryCase(
+				t,
+				tt.line,
+				tt.content,
+				tt.initialExpected,
+				tt.expectBreak,
+				tt.expectPermissions,
+				tt.description,
+			)
 		})
 	}
 }
 
-func testProcessPermissionEntryCase(t *testing.T, line, content string, initialExpected int, expectBreak bool, expectPermissions map[string]string, description string) {
+func testProcessPermissionEntryCase(
+	t *testing.T,
+	line, content string,
+	initialExpected int,
+	expectBreak bool,
+	expectPermissions map[string]string,
+	description string,
+) {
+	t.Helper()
+
 	permissions := make(map[string]string)
 	expectedIndent := initialExpected
 

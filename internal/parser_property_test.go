@@ -184,9 +184,9 @@ func TestActionYMLNilPermissionsProperties(t *testing.T) {
 	properties.TestingRun(t)
 }
 
-//nolint:gocyclo // Property-based test with multiple properties
-
 // TestCommentPermissionsOnlyProperties verifies behavior when only comment permissions exist.
+//
+//nolint:gocyclo // Property-based test with multiple properties
 func TestCommentPermissionsOnlyProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
 	registerCommentPermissionsOnlyProperties(properties)
