@@ -23,6 +23,7 @@ type permissionParsingTestCase struct {
 // YAML content is loaded from fixture files in testdata/yaml-fixtures/permissions-mutation/.
 func buildPermissionParsingTestCases() []permissionParsingTestCase {
 	const fixtureDir = "permissions-mutation/"
+
 	return []permissionParsingTestCase{
 		{
 			name:     "off_by_one_indent_two_items",
@@ -166,7 +167,6 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 	}
 }
 
-//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
 func TestPermissionParsingMutationResistance(t *testing.T) {
 	tests := buildPermissionParsingTestCases()
 
@@ -222,7 +222,7 @@ func testPermissionParsingCase(t *testing.T, yaml string, expected map[string]st
 // TestMergePermissionsMutationResistance tests the permission merging logic
 // for mutations in nil checks, map operations, and precedence logic.
 //
-//nolint:gocyclo // Table-driven test with many test cases
+
 func TestMergePermissionsMutationResistance(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -346,6 +346,7 @@ func copyStringMap(input map[string]string) map[string]string {
 	for k, v := range input {
 		result[k] = v
 	}
+
 	return result
 }
 
@@ -361,11 +362,13 @@ func assertPermissionsMatch(
 		if got != nil {
 			t.Errorf("expected nil permissions, got %v", got)
 		}
+
 		return
 	}
 
 	if got == nil {
 		t.Errorf("expected non-nil permissions %v, got nil", want)
+
 		return
 	}
 
@@ -379,6 +382,7 @@ func assertPermissionsMatch(
 		gotValue, exists := got[key]
 		if !exists {
 			t.Errorf(testutil.TestFixtureMissingPermKey, key)
+
 			continue
 		}
 		if gotValue != expectedValue {
@@ -421,7 +425,7 @@ func parseFailCase(name, content, description string) permissionLineTestCase {
 // TestParsePermissionLineMutationResistance tests string manipulation boundaries
 // in permission line parsing that are susceptible to mutation.
 //
-//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
+
 func TestParsePermissionLineMutationResistance(t *testing.T) {
 	tests := []permissionLineTestCase{
 		{
@@ -452,7 +456,11 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 			description: "Index() > 0 boundary (idx=10)",
 		},
 		// Failure test cases with empty expected results
-		parseFailCase("inline_comment_at_position_0_of_value", "contents: #read", "Index() at position in value (should fail parse)"),
+		parseFailCase(
+			"inline_comment_at_position_0_of_value",
+			"contents: #read",
+			"Index() at position 0 in value (should fail parse)",
+		),
 		{
 			name:        "comment_in_middle_of_line",
 			content:     "contents: read  # Required",
@@ -537,7 +545,7 @@ func testParsePermissionLineCase(
 // TestProcessPermissionEntryMutationResistance tests indentation logic that is
 // highly susceptible to off-by-one mutations.
 //
-//nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
+
 func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 	tests := []struct {
 		name              string

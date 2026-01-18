@@ -9,28 +9,32 @@ import (
 )
 
 // TestPermissionMergingProperties verifies properties of permission merging.
-//
-//nolint:gocyclo // Property-based test with multiple properties
 func TestPermissionMergingProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
+	registerPermissionMergingProperties(properties)
+	properties.TestingRun(t)
+}
 
-	// Property 1: YAML always wins conflicts
+// registerPermissionMergingProperties registers all permission merging property tests.
+func registerPermissionMergingProperties(properties *gopter.Properties) {
+	registerYAMLOverridesProperty(properties)
+	registerNonConflictingKeysProperty(properties)
+	registerNilPreservesOriginalProperty(properties)
+	registerEmptyMapPreservesOriginalProperty(properties)
+	registerResultSizeBoundedProperty(properties)
+}
+
+// registerYAMLOverridesProperty tests that YAML permissions override comment permissions.
+func registerYAMLOverridesProperty(properties *gopter.Properties) {
 	properties.Property("YAML permissions override comment permissions",
 		prop.ForAll(
 			func(key, yamlVal, commentVal string) bool {
-				// Only test when values differ and key is non-empty
 				if yamlVal == commentVal || yamlVal == "" || key == "" || commentVal == "" {
 					return true
 				}
+				action := &ActionYML{Permissions: map[string]string{key: yamlVal}}
+				mergePermissions(action, map[string]string{key: commentVal})
 
-				action := &ActionYML{
-					Permissions: map[string]string{key: yamlVal},
-				}
-
-				commentPerms := map[string]string{key: commentVal}
-				mergePermissions(action, commentPerms)
-
-				// YAML value should be preserved
 				return action.Permissions[key] == yamlVal
 			},
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
@@ -38,24 +42,18 @@ func TestPermissionMergingProperties(t *testing.T) {
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 		),
 	)
+}
 
-	// Property 2: All unique keys preserved
+// registerNonConflictingKeysProperty tests that non-conflicting keys are preserved.
+func registerNonConflictingKeysProperty(properties *gopter.Properties) {
 	properties.Property("merge preserves all non-conflicting keys",
 		prop.ForAll(
 			func(yamlKey, commentKey, val string) bool {
-				// Only test when keys are different and non-empty
 				if yamlKey == commentKey || yamlKey == "" || commentKey == "" || val == "" {
 					return true
 				}
-
-				action := &ActionYML{
-					Permissions: map[string]string{yamlKey: val},
-				}
-
-				commentPerms := map[string]string{commentKey: val}
-				mergePermissions(action, commentPerms)
-
-				// Both keys should exist
+				action := &ActionYML{Permissions: map[string]string{yamlKey: val}}
+				mergePermissions(action, map[string]string{commentKey: val})
 				_, hasYaml := action.Permissions[yamlKey]
 				_, hasComment := action.Permissions[commentKey]
 
@@ -66,8 +64,10 @@ func TestPermissionMergingProperties(t *testing.T) {
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 		),
 	)
+}
 
-	// Property 3: Identity - merging with nil preserves original
+// registerNilPreservesOriginalProperty tests merging with nil preserves original.
+func registerNilPreservesOriginalProperty(properties *gopter.Properties) {
 	properties.Property("merging with nil preserves original permissions",
 		prop.ForAll(
 			func(key, value string) bool {
@@ -77,8 +77,10 @@ func TestPermissionMergingProperties(t *testing.T) {
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 		),
 	)
+}
 
-	// Property 4: Identity - merging with empty map preserves original
+// registerEmptyMapPreservesOriginalProperty tests merging with empty map preserves original.
+func registerEmptyMapPreservesOriginalProperty(properties *gopter.Properties) {
 	properties.Property("merging with empty map preserves original permissions",
 		prop.ForAll(
 			func(key, value string) bool {
@@ -88,50 +90,41 @@ func TestPermissionMergingProperties(t *testing.T) {
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 		),
 	)
+}
 
-	// Property 5: Result size bounded
+// registerResultSizeBoundedProperty tests result size is bounded by sum of inputs.
+func registerResultSizeBoundedProperty(properties *gopter.Properties) {
 	properties.Property("merged permissions size bounded by sum of inputs",
 		prop.ForAll(
-			func(yamlKeys []string, commentKeys []string, value string) bool {
-				if len(yamlKeys) == 0 || len(commentKeys) == 0 || value == "" {
-					return true
-				}
-
-				// Build YAML permissions
-				yamlPerms := make(map[string]string)
-				for _, key := range yamlKeys {
-					if key != "" {
-						yamlPerms[key] = value
-					}
-				}
-
-				// Build comment permissions
-				commentPerms := make(map[string]string)
-				for _, key := range commentKeys {
-					if key != "" {
-						commentPerms[key] = value
-					}
-				}
-
-				action := &ActionYML{
-					Permissions: yamlPerms,
-				}
-
-				mergePermissions(action, commentPerms)
-
-				// Result size should be at most sum of input sizes
-				// (could be less if there are duplicates)
-				maxSize := len(yamlPerms) + len(commentPerms)
-
-				return len(action.Permissions) <= maxSize
-			},
+			verifyMergedSizeBounded,
 			gen.SliceOf(gen.AlphaString()),
 			gen.SliceOf(gen.AlphaString()),
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 		),
 	)
+}
 
-	properties.TestingRun(t)
+// verifyMergedSizeBounded checks that merged result size is bounded.
+func verifyMergedSizeBounded(yamlKeys, commentKeys []string, value string) bool {
+	if len(yamlKeys) == 0 || len(commentKeys) == 0 || value == "" {
+		return true
+	}
+	yamlPerms := make(map[string]string)
+	for _, key := range yamlKeys {
+		if key != "" {
+			yamlPerms[key] = value
+		}
+	}
+	commentPerms := make(map[string]string)
+	for _, key := range commentKeys {
+		if key != "" {
+			commentPerms[key] = value
+		}
+	}
+	action := &ActionYML{Permissions: yamlPerms}
+	mergePermissions(action, commentPerms)
+
+	return len(action.Permissions) <= len(yamlPerms)+len(commentPerms)
 }
 
 // TestActionYMLNilPermissionsProperties verifies behavior when permissions is nil.
@@ -186,7 +179,7 @@ func TestActionYMLNilPermissionsProperties(t *testing.T) {
 
 // TestCommentPermissionsOnlyProperties verifies behavior when only comment permissions exist.
 //
-//nolint:gocyclo // Property-based test with multiple properties
+
 func TestCommentPermissionsOnlyProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
 	registerCommentPermissionsOnlyProperties(properties)

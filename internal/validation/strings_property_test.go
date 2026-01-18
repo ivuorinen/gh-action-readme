@@ -10,120 +10,116 @@ import (
 )
 
 // TestFormatUsesStatementProperties verifies properties of uses statement formatting.
-//
-//nolint:gocyclo // Property-based test with multiple properties
 func TestFormatUsesStatementProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
+	registerUsesStatementProperties(properties)
+	properties.TestingRun(t)
+}
 
-	// Property 1: Result always contains exactly one @ symbol (if non-empty)
+// registerUsesStatementProperties registers all uses statement property tests.
+func registerUsesStatementProperties(properties *gopter.Properties) {
+	registerUsesStatementAtSymbolProperty(properties)
+	registerUsesStatementNonEmptyProperty(properties)
+	registerUsesStatementPrefixProperty(properties)
+	registerUsesStatementEmptyInputProperty(properties)
+	registerUsesStatementVersionPrefixProperty(properties)
+}
+
+// registerUsesStatementAtSymbolProperty tests that result contains exactly one @ symbol.
+func registerUsesStatementAtSymbolProperty(properties *gopter.Properties) {
 	properties.Property("uses statement has exactly one @ symbol when non-empty",
-		//nolint:gocritic // Property-based testing requires diverse parameter lists
 		prop.ForAll(
-			func(org string, repo string, version string) bool {
+			func(org, repo, version string) bool {
 				result := FormatUsesStatement(org, repo, version)
-
 				if result == "" {
-					return true // Empty result is acceptable for empty inputs
+					return true
 				}
 
-				count := strings.Count(result, "@")
-
-				return count == 1
+				return strings.Count(result, "@") == 1
 			},
 			gen.AlphaString(),
 			gen.AlphaString(),
 			gen.AlphaString(),
 		),
 	)
+}
 
-	// Property 2: Non-empty org and repo produce non-empty result
+// registerUsesStatementNonEmptyProperty tests non-empty inputs produce non-empty result.
+func registerUsesStatementNonEmptyProperty(properties *gopter.Properties) {
 	properties.Property("non-empty org and repo produce non-empty result",
 		prop.ForAll(
-			//nolint:gocritic // Property-based testing requires diverse parameter lists
-			func(org string, repo string, version string) bool {
-				// Only test when org and repo are non-empty
+			func(org, repo, version string) bool {
 				if org == "" || repo == "" {
 					return true
 				}
 
-				result := FormatUsesStatement(org, repo, version)
-
-				return result != ""
+				return FormatUsesStatement(org, repo, version) != ""
 			},
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString(),
 		),
 	)
+}
 
-	// Property 3: Result starts with org/repo pattern
+// registerUsesStatementPrefixProperty tests result starts with org/repo pattern.
+func registerUsesStatementPrefixProperty(properties *gopter.Properties) {
 	properties.Property("uses statement starts with org/repo when both non-empty",
 		prop.ForAll(
-			//nolint:gocritic // Property-based testing requires diverse parameter lists
-			func(org string, repo string, version string) bool {
+			func(org, repo, version string) bool {
 				if org == "" || repo == "" {
 					return true
 				}
-
 				result := FormatUsesStatement(org, repo, version)
-				expected := org + "/" + repo
 
-				return strings.HasPrefix(result, expected)
+				return strings.HasPrefix(result, org+"/"+repo)
 			},
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString(),
 		),
 	)
+}
 
-	// Property 4: Empty org or repo always produces empty result
+// registerUsesStatementEmptyInputProperty tests empty inputs produce empty result.
+func registerUsesStatementEmptyInputProperty(properties *gopter.Properties) {
 	properties.Property("empty org or repo produces empty result",
 		prop.ForAll(
-			//nolint:gocritic // Property-based testing requires diverse parameter lists
-			func(org string, repo string, version string) bool {
+			func(org, repo, version string) bool {
 				if org == "" || repo == "" {
-					result := FormatUsesStatement(org, repo, version)
-
-					return result == ""
+					return FormatUsesStatement(org, repo, version) == ""
 				}
 
-				return true // Skip when both non-empty
+				return true
 			},
 			gen.AlphaString(),
 			gen.AlphaString(),
 			gen.AlphaString(),
 		),
 	)
+}
 
-	// Property 5: Version part always has @ prefix in result
+// registerUsesStatementVersionPrefixProperty tests version part has @ prefix.
+func registerUsesStatementVersionPrefixProperty(properties *gopter.Properties) {
 	properties.Property("version part in result always has @ prefix",
-		//nolint:gocritic // Property-based testing requires diverse parameter lists
 		prop.ForAll(
-			func(org string, repo string, version string) bool {
+			func(org, repo, version string) bool {
 				if org == "" || repo == "" {
 					return true
 				}
-
 				result := FormatUsesStatement(org, repo, version)
-
-				// Find the @ symbol
 				atIndex := strings.Index(result, "@")
 				if atIndex == -1 {
-					return false // Should always have @
+					return false
 				}
 
-				// Everything after org/repo should start with @
-				expectedPrefix := org + "/" + repo + "@"
-
-				return strings.HasPrefix(result, expectedPrefix)
+				return strings.HasPrefix(result, org+"/"+repo+"@")
 			},
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString(),
 		),
 	)
-
-	properties.TestingRun(t)
 }
 
 // TestStringNormalizationProperties verifies idempotency and whitespace properties.
@@ -399,12 +395,23 @@ func TestSanitizeActionNameProperties(t *testing.T) {
 }
 
 // TestParseGitHubURLProperties verifies URL parsing properties.
-//
-//nolint:gocyclo // Property-based test with multiple properties
 func TestParseGitHubURLProperties(t *testing.T) {
 	properties := gopter.NewProperties(nil)
+	registerGitHubURLProperties(properties)
+	properties.TestingRun(t)
+}
 
-	// Property 1: Empty inputs produce empty outputs
+// registerGitHubURLProperties registers all GitHub URL parsing property tests.
+func registerGitHubURLProperties(properties *gopter.Properties) {
+	registerGitHubURLEmptyInputProperty(properties)
+	registerGitHubURLSimpleFormatProperty(properties)
+	registerGitHubURLNoSlashesProperty(properties)
+	registerGitHubURLInvalidInputProperty(properties)
+	registerGitHubURLConsistencyProperty(properties)
+}
+
+// registerGitHubURLEmptyInputProperty tests empty URL produces empty results.
+func registerGitHubURLEmptyInputProperty(properties *gopter.Properties) {
 	properties.Property("empty URL produces empty org and repo",
 		prop.ForAll(
 			func() bool {
@@ -414,17 +421,17 @@ func TestParseGitHubURLProperties(t *testing.T) {
 			},
 		),
 	)
+}
 
-	// Property 2: Valid org/repo format always parses
+// registerGitHubURLSimpleFormatProperty tests simple org/repo format parsing.
+func registerGitHubURLSimpleFormatProperty(properties *gopter.Properties) {
 	properties.Property("simple org/repo format always parses correctly",
 		prop.ForAll(
-			func(org string, repo string) bool {
+			func(org, repo string) bool {
 				if org == "" || repo == "" || strings.Contains(org, "/") || strings.Contains(repo, "/") {
-					return true // Skip invalid inputs
+					return true
 				}
-
-				url := org + "/" + repo
-				gotOrg, gotRepo := ParseGitHubURL(url)
+				gotOrg, gotRepo := ParseGitHubURL(org + "/" + repo)
 
 				return gotOrg == org && gotRepo == repo
 			},
@@ -436,8 +443,10 @@ func TestParseGitHubURLProperties(t *testing.T) {
 			}),
 		),
 	)
+}
 
-	// Property 3: Result org/repo never contain slashes
+// registerGitHubURLNoSlashesProperty tests parsed results never contain slashes.
+func registerGitHubURLNoSlashesProperty(properties *gopter.Properties) {
 	properties.Property("parsed org and repo never contain slashes",
 		prop.ForAll(
 			func(url string) bool {
@@ -448,38 +457,35 @@ func TestParseGitHubURLProperties(t *testing.T) {
 			gen.AnyString(),
 		),
 	)
+}
 
-	// Property 4: Invalid input produces empty result
+// registerGitHubURLInvalidInputProperty tests invalid URLs produce empty results.
+func registerGitHubURLInvalidInputProperty(properties *gopter.Properties) {
 	properties.Property("URLs without slash produce empty result",
 		prop.ForAll(
 			func(url string) bool {
-				if strings.Contains(url, "/") {
-					return true // Skip URLs with slashes
+				if strings.Contains(url, "/") || strings.Contains(url, "github.com") {
+					return true
 				}
-
 				org, repo := ParseGitHubURL(url)
-				// URLs without slashes should not parse (unless they match github.com pattern)
-				if strings.Contains(url, "github.com") {
-					return true // github.com URLs might parse differently
-				}
 
 				return org == "" && repo == ""
 			},
 			gen.AlphaString(),
 		),
 	)
+}
 
-	// Property 5: Both org and repo empty, or both non-empty
+// registerGitHubURLConsistencyProperty tests org and repo are both empty or both non-empty.
+func registerGitHubURLConsistencyProperty(properties *gopter.Properties) {
 	properties.Property("org and repo are both empty or both non-empty",
 		prop.ForAll(
 			func(url string) bool {
 				org, repo := ParseGitHubURL(url)
-				// Either both empty, or both non-empty
+
 				return (org == "" && repo == "") || (org != "" && repo != "")
 			},
 			gen.AnyString(),
 		),
 	)
-
-	properties.TestingRun(t)
 }

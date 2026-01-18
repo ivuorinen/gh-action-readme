@@ -996,7 +996,8 @@ func CreateGeneratorTestCases() []GeneratorTestCase {
 		appconstants.OutputFormatASCIIDoc,
 	}
 
-	cases := make([]GeneratorTestCase, 0)
+	// Preallocate with estimated capacity
+	cases := make([]GeneratorTestCase, 0, len(validFixtures)*len(themes)*len(formats))
 
 	// Create test cases for each valid fixture with each theme/format combination
 	for _, fixture := range validFixtures {
@@ -1041,7 +1042,8 @@ func CreateGeneratorTestCases() []GeneratorTestCase {
 // CreateValidationTestCases creates test cases for validation testing.
 func CreateValidationTestCases() []ValidationTestCase {
 	fm := GetFixtureManager()
-	cases := make([]ValidationTestCase, 0)
+	// Preallocate with known capacity
+	cases := make([]ValidationTestCase, 0, len(fm.scenarios))
 
 	// Add test cases for all scenarios
 	for _, scenario := range fm.scenarios {

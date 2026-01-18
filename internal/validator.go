@@ -43,7 +43,10 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 				result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
 				result.Suggestions = append(
 					result.Suggestions,
-					fmt.Sprintf("Invalid runtime '%s'. Valid runtimes: node12, node16, node20, docker, composite", using),
+					fmt.Sprintf(
+						"Invalid runtime '%s'. Valid runtimes: node12, node16, node20, docker, composite",
+						using,
+					),
 				)
 			}
 		} else {

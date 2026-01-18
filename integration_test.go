@@ -1301,10 +1301,10 @@ func verifyGeneratedDocsIfGen(t *testing.T, tmpDir string, cmd []string) {
 		return
 	}
 
-	var foundFiles []string
 	readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
-	foundFiles = append(foundFiles, readmeFiles...)
 	htmlFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternHTML)
+	foundFiles := make([]string, 0, len(readmeFiles)+len(htmlFiles))
+	foundFiles = append(foundFiles, readmeFiles...)
 	foundFiles = append(foundFiles, htmlFiles...)
 
 	if len(foundFiles) == 0 {
