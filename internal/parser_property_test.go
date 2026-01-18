@@ -71,35 +71,7 @@ func TestPermissionMergingProperties(t *testing.T) {
 	properties.Property("merging with nil preserves original permissions",
 		prop.ForAll(
 			func(key, value string) bool {
-				if key == "" || value == "" {
-					return true
-				}
-
-				action := &ActionYML{
-					Permissions: map[string]string{key: value},
-				}
-
-				// Make a copy to compare
-				originalPerms := make(map[string]string)
-				for k, v := range action.Permissions {
-					originalPerms[k] = v
-				}
-
-				// Merge with nil
-				mergePermissions(action, nil)
-
-				// Should be unchanged
-				if len(action.Permissions) != len(originalPerms) {
-					return false
-				}
-
-				for k, v := range originalPerms {
-					if action.Permissions[k] != v {
-						return false
-					}
-				}
-
-				return true
+				return verifyMergePreservesOriginal(key, value, nil)
 			},
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
@@ -110,36 +82,7 @@ func TestPermissionMergingProperties(t *testing.T) {
 	properties.Property("merging with empty map preserves original permissions",
 		prop.ForAll(
 			func(key, value string) bool {
-				if key == "" || value == "" {
-					return true
-				}
-
-				action := &ActionYML{
-					Permissions: map[string]string{key: value},
-				}
-
-				// Make a copy to compare
-				originalPerms := make(map[string]string)
-				for k, v := range action.Permissions {
-					originalPerms[k] = v
-				}
-
-				// Merge with empty map
-				emptyPerms := make(map[string]string)
-				mergePermissions(action, emptyPerms)
-
-				// Should be unchanged
-				if len(action.Permissions) != len(originalPerms) {
-					return false
-				}
-
-				for k, v := range originalPerms {
-					if action.Permissions[k] != v {
-						return false
-					}
-				}
-
-				return true
+				return verifyMergePreservesOriginal(key, value, make(map[string]string))
 			},
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
 			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
@@ -240,7 +183,8 @@ func TestActionYMLNilPermissionsProperties(t *testing.T) {
 
 	properties.TestingRun(t)
 }
-  //nolint:gocyclo // Property-based test with multiple properties
+
+//nolint:gocyclo // Property-based test with multiple properties
 
 // TestCommentPermissionsOnlyProperties verifies behavior when only comment permissions exist.
 func TestCommentPermissionsOnlyProperties(t *testing.T) {
@@ -290,6 +234,40 @@ func verifyCommentPermissionsTransferred(keys []string, value string) bool {
 
 	for key, val := range commentPerms {
 		if action.Permissions[key] != val {
+			return false
+		}
+	}
+
+	return true
+}
+
+// verifyMergePreservesOriginal is a helper to test that merging with
+// nil or empty permissions preserves the original permissions.
+func verifyMergePreservesOriginal(key, value string, mergeWith map[string]string) bool {
+	if key == "" || value == "" {
+		return true
+	}
+
+	action := &ActionYML{
+		Permissions: map[string]string{key: value},
+	}
+
+	// Make a copy to compare
+	originalPerms := make(map[string]string)
+	for k, v := range action.Permissions {
+		originalPerms[k] = v
+	}
+
+	// Merge with provided map (nil or empty)
+	mergePermissions(action, mergeWith)
+
+	// Should be unchanged
+	if len(action.Permissions) != len(originalPerms) {
+		return false
+	}
+
+	for k, v := range originalPerms {
+		if action.Permissions[k] != v {
 			return false
 		}
 	}

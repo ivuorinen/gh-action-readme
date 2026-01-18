@@ -413,20 +413,36 @@ func testMergePermissionsCase(t *testing.T, yamlPerms, commentPerms, expected ma
 	}
 }
 
+// permissionLineTestCase defines a test case for parsePermissionLine tests.
+type permissionLineTestCase struct {
+	name        string
+	content     string
+	expectKey   string
+	expectValue string
+	expectOk    bool
+	critical    bool
+	description string
+}
+
+// parseFailCase creates a test case expecting parse failure with empty results.
+func parseFailCase(name, content, description string) permissionLineTestCase {
+	return permissionLineTestCase{
+		name:        name,
+		content:     content,
+		expectKey:   "",
+		expectValue: "",
+		expectOk:    false,
+		critical:    true,
+		description: description,
+	}
+}
+
 // TestParsePermissionLineMutationResistance tests string manipulation boundaries
 // in permission line parsing that are susceptible to mutation.
 //
 //nolint:gocyclo // Comprehensive mutation test cases require multiple scenarios
 func TestParsePermissionLineMutationResistance(t *testing.T) {
-	tests := []struct {
-		name        string
-		content     string
-		expectKey   string
-		expectValue string
-		expectOk    bool
-		critical    bool
-		description string
-	}{
+	tests := []permissionLineTestCase{
 		{
 			name:        "basic_key_value",
 			content:     testutil.TestFixtureContentsRead,
@@ -454,15 +470,8 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 			critical:    true,
 			description: "Index() > 0 boundary (idx=10)",
 		},
-		{
-			name:        "inline_comment_at_position_0_of_value",
-			content:     "contents: #read",
-			expectKey:   "",
-			expectValue: "",
-			expectOk:    false,
-			critical:    true,
-			description: "Index() at position in value (should fail parse)",
-		},
+		// Failure test cases with empty expected results
+		parseFailCase("inline_comment_at_position_0_of_value", "contents: #read", "Index() at position in value (should fail parse)"),
 		{
 			name:        "comment_in_middle_of_line",
 			content:     "contents: read  # Required",
@@ -472,15 +481,7 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 			critical:    true,
 			description: "Comment removal before parse",
 		},
-		{
-			name:        "no_colon",
-			content:     "contents read",
-			expectKey:   "",
-			expectValue: "",
-			expectOk:    false,
-			critical:    true,
-			description: "len(parts) == 2 check",
-		},
+		parseFailCase("no_colon", "contents read", "len(parts) == 2 check"),
 		{
 			name:        "multiple_colons",
 			content:     "url: https://example.com:8080",
@@ -490,42 +491,10 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 			critical:    true,
 			description: "SplitN with n=2 preserves colons in value",
 		},
-		{
-			name:        "empty_key",
-			content:     ": value",
-			expectKey:   "",
-			expectValue: "",
-			expectOk:    false,
-			critical:    true,
-			description: "key != \"\" check critical",
-		},
-		{
-			name:        "empty_value",
-			content:     "key:",
-			expectKey:   "",
-			expectValue: "",
-			expectOk:    false,
-			critical:    true,
-			description: "value != \"\" check critical",
-		},
-		{
-			name:        "whitespace_key",
-			content:     "  : value",
-			expectKey:   "",
-			expectValue: "",
-			expectOk:    false,
-			critical:    true,
-			description: "TrimSpace on key critical",
-		},
-		{
-			name:        "whitespace_value",
-			content:     "key:   ",
-			expectKey:   "",
-			expectValue: "",
-			expectOk:    false,
-			critical:    true,
-			description: "TrimSpace on value critical",
-		},
+		parseFailCase("empty_key", ": value", "key != \"\" check critical"),
+		parseFailCase("empty_value", "key:", "value != \"\" check critical"),
+		parseFailCase("whitespace_key", "  : value", "TrimSpace on key critical"),
+		parseFailCase("whitespace_value", "key:   ", "TrimSpace on value critical"),
 		{
 			name:        "single_char_key_value",
 			content:     "a: b",
