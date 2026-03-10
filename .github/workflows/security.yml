@@ -12,6 +12,8 @@ on:
     - cron: "0 2 * * 0"
   merge_group:
 
+permissions: {}
+
 jobs:
   # Comprehensive security coverage:
   # - govulncheck: Go-specific vulnerability scanning
@@ -45,7 +47,7 @@ jobs:
     name: Trivy Security Scan
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # needed for Dependency Submission API (SBOM)
       security-events: write
     steps:
       - name: Checkout repository
