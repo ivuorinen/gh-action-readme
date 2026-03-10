@@ -153,6 +153,11 @@ refactor: move inline YAML to fixtures for better test maintainability
 - Do NOT argue or explain why they might be useful
 - Just comply immediately and recommit without bylines
 
+### 🚫 Commit Messages Over 100 Characters
+
+Commitlint enforces `header-max-length: 100`. Keep commit message first lines under 100 characters.
+The `commit-msg` hook catches this locally if installed via `make pre-commit-install`.
+
 ### ✅ Prevention Mechanisms
 
 **Before writing ANY code:**
