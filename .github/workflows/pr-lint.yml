@@ -12,8 +12,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   Linter:
@@ -31,4 +30,4 @@ jobs:
     steps:
       - name: Run PR Lint
         # https://github.com/ivuorinen/actions
-        uses: ivuorinen/actions/pr-lint@6e8f2aae9d0846d901d9eba15b8e94a2900573dc # v2026.03.02
+        uses: ivuorinen/actions/pr-lint@4360ea39c744dbd52bf1d624bf058ba4dd81245a # v2026.03.09
