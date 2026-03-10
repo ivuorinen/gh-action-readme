@@ -139,6 +139,7 @@ pre-commit-install: ## Install pre-commit hooks
 	@command -v pre-commit >/dev/null 2>&1 || \
 		{ echo "Please install pre-commit or run 'make devtools'"; exit 1; }
 	pre-commit install
+	pre-commit install --hook-type commit-msg
 
 pre-commit-update: ## Update pre-commit hooks to latest versions
 	@echo "Updating pre-commit hooks..."
