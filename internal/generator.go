@@ -601,7 +601,7 @@ func (g *Generator) countValidationStats(results []ValidationResult) (validFiles
 // showValidationSummary displays the summary statistics.
 func (g *Generator) showValidationSummary(totalFiles, validFiles, totalIssues, resultCount, errorCount int) {
 	g.Output.Bold("\nValidation Summary for %d files:", totalFiles)
-	g.Output.Printf("=" + strings.Repeat("=", 35) + "\n")
+	g.Output.Printf("%s", "="+strings.Repeat("=", 35)+"\n")
 
 	g.Output.Success("Valid files: %d", validFiles)
 	if resultCount-validFiles > 0 {
@@ -622,7 +622,7 @@ func (g *Generator) showDetailedIssues(results []ValidationResult, totalIssues i
 	}
 
 	g.Output.Bold("\nDetailed Issues & Suggestions:")
-	g.Output.Printf("-" + strings.Repeat("-", 35) + "\n")
+	g.Output.Printf("%s", "-"+strings.Repeat("-", 35)+"\n")
 
 	for _, result := range results {
 		if len(result.MissingFields) > 1 || len(result.Warnings) > 0 {
@@ -663,7 +663,7 @@ func (g *Generator) showParseErrors(errors []string) {
 	}
 
 	g.Output.Bold("\nParse Errors:")
-	g.Output.Printf("-" + strings.Repeat("-", 15) + "\n")
+	g.Output.Printf("%s", "-"+strings.Repeat("-", 15)+"\n")
 	for _, errMsg := range errors {
 		g.Output.Error("  - %s", errMsg)
 	}
