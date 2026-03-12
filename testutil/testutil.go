@@ -521,11 +521,9 @@ func SetEnv(t *testing.T, key, value string) func() {
 }
 
 // WithContext creates a context with timeout for testing.
-func WithContext(timeout time.Duration) context.Context {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout) // #nosec G118 -- test helper, timeout-based expiry is intentional
-	_ = cancel                                                         // cancel is intentionally not deferred; context expires by timeout
-
-	return ctx
+// The caller is responsible for calling the returned cancel function.
+func WithContext(timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), timeout)
 }
 
 // AssertNoError fails the test if err is not nil.

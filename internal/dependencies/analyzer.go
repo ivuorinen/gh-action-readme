@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -591,15 +592,17 @@ func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) strin
 
 // updateActionFile applies updates to a single action file.
 func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) error {
+	cleanPath := filepath.Clean(filePath)
+
 	// Read the file
-	content, err := os.ReadFile(filePath) // #nosec G304 -- file path from function parameter
+	content, err := os.ReadFile(cleanPath) // #nosec G304 -- file path from validated filesystem scan
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Create backup
-	backupPath := filePath + appconstants.BackupExtension
-	if err := os.WriteFile(backupPath, content, appconstants.FilePermDefault); err != nil { // #nosec G306 G703
+	backupPath := cleanPath + appconstants.BackupExtension
+	if err := os.WriteFile(backupPath, content, appconstants.FilePermDefault); err != nil { // #nosec G306 G703 -- path is cleaned via filepath.Clean
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -609,12 +612,12 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
-	if err := os.WriteFile(filePath, []byte(updatedContent), appconstants.FilePermDefault); err != nil { // #nosec G306 G703
+	if err := os.WriteFile(cleanPath, []byte(updatedContent), appconstants.FilePermDefault); err != nil { // #nosec G306 G703 -- path is cleaned via filepath.Clean
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 
 	// Validate and rollback on failure
-	if err := a.validateAndRollbackOnFailure(filePath, backupPath); err != nil {
+	if err := a.validateAndRollbackOnFailure(cleanPath, backupPath); err != nil {
 		return err
 	}
 

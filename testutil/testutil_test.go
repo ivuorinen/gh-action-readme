@@ -697,7 +697,8 @@ func TestWithContext(t *testing.T) {
 	t.Run("creates context with timeout", func(t *testing.T) {
 		t.Parallel()
 		timeout := 100 * time.Millisecond
-		ctx := WithContext(timeout)
+		ctx, cancel := WithContext(timeout)
+		defer cancel()
 
 		if ctx == nil {
 			t.Fatal("expected context to be created")
@@ -719,7 +720,8 @@ func TestWithContext(t *testing.T) {
 
 	t.Run("context eventually times out", func(t *testing.T) {
 		t.Parallel()
-		ctx := WithContext(1 * time.Millisecond)
+		ctx, cancel := WithContext(1 * time.Millisecond)
+		defer cancel()
 
 		// Wait a bit longer than the timeout
 		time.Sleep(10 * time.Millisecond)
