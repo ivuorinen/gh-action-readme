@@ -592,17 +592,22 @@ func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) strin
 
 // updateActionFile applies updates to a single action file.
 func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) error {
+	// filepath.Clean normalises the path (removes redundant separators, ".", "..").
+	// It does NOT validate containment within a root directory; the actual security
+	// justification for the #nosec annotations below is that filePath originates
+	// from the tool's own filesystem discovery (DiscoverActionFilesWithValidation),
+	// not from direct, uncontrolled user input.
 	cleanPath := filepath.Clean(filePath)
 
 	// Read the file
-	content, err := os.ReadFile(cleanPath) // #nosec G304 -- file path from validated filesystem scan
+	content, err := os.ReadFile(cleanPath) // #nosec G304 -- path from tool-internal filesystem scan
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Create backup
 	backupPath := cleanPath + appconstants.BackupExtension
-	if err := os.WriteFile( // #nosec G306 G703 -- path is cleaned via filepath.Clean
+	if err := os.WriteFile( // #nosec G306 G703 -- path from tool-internal filesystem scan
 		backupPath,
 		content,
 		appconstants.FilePermDefault,
@@ -616,7 +621,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
-	if err := os.WriteFile( // #nosec G306 G703 -- path is cleaned via filepath.Clean
+	if err := os.WriteFile( // #nosec G306 G703 -- path from tool-internal filesystem scan
 		cleanPath,
 		[]byte(updatedContent),
 		appconstants.FilePermDefault,
