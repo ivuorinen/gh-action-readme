@@ -162,7 +162,7 @@ func WriteTestFile(t *testing.T, path, content string) {
 		t.Fatalf("failed to create dir %s: %v", dir, err)
 	}
 
-	// #nosec G306 -- test file permissions
+	// #nosec G306 G703 -- test file permissions, path is controlled by test infrastructure
 	if err := os.WriteFile(path, []byte(content), appconstants.FilePermDefault); err != nil {
 		t.Fatalf("failed to write test file %s: %v", path, err)
 	}
@@ -522,8 +522,8 @@ func SetEnv(t *testing.T, key, value string) func() {
 
 // WithContext creates a context with timeout for testing.
 func WithContext(timeout time.Duration) context.Context {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	_ = cancel // Avoid lostcancel - we're intentionally creating a context without cleanup for testing
+	ctx, cancel := context.WithTimeout(context.Background(), timeout) // #nosec G118 -- test helper, timeout-based expiry is intentional
+	_ = cancel                                                         // cancel is intentionally not deferred; context expires by timeout
 
 	return ctx
 }

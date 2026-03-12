@@ -599,7 +599,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Create backup
 	backupPath := filePath + appconstants.BackupExtension
-	if err := os.WriteFile(backupPath, content, appconstants.FilePermDefault); err != nil { // #nosec G306
+	if err := os.WriteFile(backupPath, content, appconstants.FilePermDefault); err != nil { // #nosec G306 G703
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -609,7 +609,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 
 	// Write updated content
 	updatedContent := strings.Join(lines, "\n")
-	if err := os.WriteFile(filePath, []byte(updatedContent), appconstants.FilePermDefault); err != nil { // #nosec G306
+	if err := os.WriteFile(filePath, []byte(updatedContent), appconstants.FilePermDefault); err != nil { // #nosec G306 G703
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 

@@ -1005,7 +1005,7 @@ func TestValidateGitHubToken(t *testing.T) {
 		token string
 		want  bool
 	}{
-		{
+		{ // #nosec G101 -- test token, not a real credential
 			name:  "with valid token",
 			token: "ghp_test_token_123",
 			want:  true,

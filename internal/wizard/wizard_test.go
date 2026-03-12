@@ -644,7 +644,7 @@ func TestConfigureGitHubIntegration(t *testing.T) {
 			wantTokenSet:   false,
 			wantTokenValue: "",
 		},
-		{
+		{ // #nosec G101 -- test token, not a real credential
 			name:           "existing token skips setup",
 			inputs:         "",
 			existingToken:  "ghp_existing_token",
