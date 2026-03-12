@@ -936,7 +936,7 @@ func TestNewGitHubClientEdgeCases(t *testing.T) {
 			expectError: false,
 			description: "Should create client with valid classic token",
 		},
-		{
+		{ // #nosec G101 -- test token, not a real credential
 			name:        "valid fine-grained PAT",
 			token:       "github_pat_11AAAAAA0AAAAaAaaAaaaAaa_AaAAaAAaAAAaAAAAAaAAaAAaAaAAaAAAAaAAAAAAAAaAAaAAaAaaAA",
 			expectError: false,

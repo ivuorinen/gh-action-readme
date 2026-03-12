@@ -39,19 +39,19 @@ func (ce *ContextualError) Error() string {
 
 	// Primary error message
 	if ce.Context != "" {
-		b.WriteString(fmt.Sprintf("%s: %v", ce.Context, ce.Err))
+		fmt.Fprintf(&b, "%s: %v", ce.Context, ce.Err)
 	} else {
 		b.WriteString(ce.Err.Error())
 	}
 
 	// Add error code for reference
-	b.WriteString(fmt.Sprintf(" [%s]", ce.Code))
+	fmt.Fprintf(&b, " [%s]", ce.Code)
 
 	// Add details if available
 	if len(ce.Details) > 0 {
 		b.WriteString("\n\nDetails:")
 		for key, value := range ce.Details {
-			b.WriteString(fmt.Sprintf("\n  %s: %s", key, value))
+			fmt.Fprintf(&b, "\n  %s: %s", key, value)
 		}
 	}
 

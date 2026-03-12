@@ -162,7 +162,7 @@ func WriteTestFile(t *testing.T, path, content string) {
 		t.Fatalf("failed to create dir %s: %v", dir, err)
 	}
 
-	// #nosec G306 -- test file permissions
+	// #nosec G306 G703 -- test file permissions, path is controlled by test infrastructure
 	if err := os.WriteFile(path, []byte(content), appconstants.FilePermDefault); err != nil {
 		t.Fatalf("failed to write test file %s: %v", path, err)
 	}
@@ -396,7 +396,7 @@ func AssertFileNotExists(t *testing.T, path string) {
 func CreateTestAction(name, description string, inputs map[string]string) string {
 	var inputsYAML bytes.Buffer
 	for key, desc := range inputs {
-		inputsYAML.WriteString(fmt.Sprintf("  %s:\n    description: %s\n    required: true\n", key, desc))
+		fmt.Fprintf(&inputsYAML, "  %s:\n    description: %s\n    required: true\n", key, desc)
 	}
 
 	result := fmt.Sprintf(appconstants.YAMLFieldName, name)
@@ -445,7 +445,7 @@ func SetupTestTemplates(t *testing.T, dir string) {
 func CreateCompositeAction(name, description string, steps []string) string {
 	var stepsYAML bytes.Buffer
 	for i, step := range steps {
-		stepsYAML.WriteString(fmt.Sprintf("  - name: Step %d\n    uses: %s\n", i+1, step))
+		fmt.Fprintf(&stepsYAML, "  - name: Step %d\n    uses: %s\n", i+1, step)
 	}
 
 	result := fmt.Sprintf(appconstants.YAMLFieldName, name)
@@ -521,11 +521,9 @@ func SetEnv(t *testing.T, key, value string) func() {
 }
 
 // WithContext creates a context with timeout for testing.
-func WithContext(timeout time.Duration) context.Context {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	_ = cancel // Avoid lostcancel - we're intentionally creating a context without cleanup for testing
-
-	return ctx
+// The caller is responsible for calling the returned cancel function.
+func WithContext(timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), timeout)
 }
 
 // AssertNoError fails the test if err is not nil.
