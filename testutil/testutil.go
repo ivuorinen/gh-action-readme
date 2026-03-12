@@ -396,7 +396,7 @@ func AssertFileNotExists(t *testing.T, path string) {
 func CreateTestAction(name, description string, inputs map[string]string) string {
 	var inputsYAML bytes.Buffer
 	for key, desc := range inputs {
-		inputsYAML.WriteString(fmt.Sprintf("  %s:\n    description: %s\n    required: true\n", key, desc))
+		fmt.Fprintf(&inputsYAML, "  %s:\n    description: %s\n    required: true\n", key, desc)
 	}
 
 	result := fmt.Sprintf(appconstants.YAMLFieldName, name)
@@ -445,7 +445,7 @@ func SetupTestTemplates(t *testing.T, dir string) {
 func CreateCompositeAction(name, description string, steps []string) string {
 	var stepsYAML bytes.Buffer
 	for i, step := range steps {
-		stepsYAML.WriteString(fmt.Sprintf("  - name: Step %d\n    uses: %s\n", i+1, step))
+		fmt.Fprintf(&stepsYAML, "  - name: Step %d\n    uses: %s\n", i+1, step)
 	}
 
 	result := fmt.Sprintf(appconstants.YAMLFieldName, name)
