@@ -1,0 +1,14 @@
+title = "gh-action-readme gitleaks configuration"
+
+[extend]
+useDefault = true
+
+# Allowlist for test files and fixtures that intentionally contain placeholder tokens.
+# These are not real secrets and are used only for testing purposes.
+[[allowlists]]
+description = "Test fixture files containing placeholder tokens"
+paths = [
+  '''testutil/test_constants\.go''',
+  '''.*_test\.go''',
+  '''testdata/.*''',
+]
