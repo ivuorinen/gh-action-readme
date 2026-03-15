@@ -23,3 +23,6 @@ internal/wizard/validator_test.go:github-pat:204
 integration_test.go:github-pat:304
 internal/config_test.go:github-pat:133
 internal/config_test.go:github-pat:162
+testdata/yaml-fixtures/configs/global-config-default.yml:github-pat:4
+testutil/test_constants.go:github-pat:363
+testutil/test_constants.go:github-pat:455
