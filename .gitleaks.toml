@@ -8,7 +8,7 @@ useDefault = true
 [[allowlists]]
 description = "Test fixture files containing placeholder tokens"
 paths = [
-  '''testutil/test_constants\.go''',
-  '''.*_test\.go''',
-  '''testdata/.*''',
+	'''testutil/test_constants\.go''',
+	'''.*_test\.go''',
+	'''testdata/.*''',
 ]
