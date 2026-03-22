@@ -655,8 +655,8 @@ func TestConfigureGitHubIntegration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GITHUB_TOKEN", "")
-			t.Setenv("GH_README_GITHUB_TOKEN", "")
+			t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+			t.Setenv(appconstants.EnvGitHubToken, "")
 			wizard := testWizard(tt.inputs)
 			if tt.existingToken != "" {
 				wizard.config.GitHubToken = tt.existingToken
@@ -998,8 +998,8 @@ func TestRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GITHUB_TOKEN", "")
-			t.Setenv("GH_README_GITHUB_TOKEN", "")
+			t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+			t.Setenv(appconstants.EnvGitHubToken, "")
 			wizard := testWizard(tt.inputs)
 
 			config, err := wizard.Run()
