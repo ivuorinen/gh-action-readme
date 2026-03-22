@@ -10,4 +10,6 @@ description = "Test fixture files containing placeholder tokens"
 paths = [
 	'''^testutil/test_constants\.go$''',
 	'''^testdata/''',
+	'''_test\.go$''',
+	'''^integration_test\.go$''',
 ]

@@ -26,3 +26,23 @@ internal/config_test.go:github-pat:162
 testdata/yaml-fixtures/configs/global-config-default.yml:github-pat:4
 testutil/test_constants.go:github-pat:363
 testutil/test_constants.go:github-pat:455
+
+# config_helper_test.go test tokens (commit 6291710)
+62917109069f227e8227a25448fe8c4242405309:internal/config_helper_test.go:generic-api-key:99
+62917109069f227e8227a25448fe8c4242405309:internal/config_helper_test.go:generic-api-key:101
+62917109069f227e8227a25448fe8c4242405309:internal/config_helper_test.go:github-pat:99
+62917109069f227e8227a25448fe8c4242405309:internal/config_helper_test.go:github-pat:101
+
+# wizard_test.go test tokens (commit 6291710)
+62917109069f227e8227a25448fe8c4242405309:internal/wizard/wizard_test.go:github-pat:621
+62917109069f227e8227a25448fe8c4242405309:internal/wizard/wizard_test.go:github-pat:624
+
+# integration_test.go test tokens (commit d09c791)
+d09c7918cb70017b71fdaeead197e18168e5f398:integration_test.go:generic-api-key:304
+
+# configuration_loader_test.go test tokens (commit d09c791)
+d09c7918cb70017b71fdaeead197e18168e5f398:internal/configuration_loader_test.go:generic-api-key:141
+
+# config_test.go test tokens (commits d09c791, 6291710)
+d09c7918cb70017b71fdaeead197e18168e5f398:internal/config_test.go:generic-api-key:133
+62917109069f227e8227a25448fe8c4242405309:internal/config_test.go:github-pat:929
