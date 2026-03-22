@@ -27,6 +27,12 @@ testdata/yaml-fixtures/configs/global-config-default.yml:github-pat:4
 testutil/test_constants.go:github-pat:363
 testutil/test_constants.go:github-pat:455
 
+# config_helper_test.go test tokens (dir scan format)
+internal/config_helper_test.go:generic-api-key:99
+internal/config_helper_test.go:generic-api-key:101
+internal/config_helper_test.go:github-pat:99
+internal/config_helper_test.go:github-pat:101
+
 # config_helper_test.go test tokens (commit 6291710)
 62917109069f227e8227a25448fe8c4242405309:internal/config_helper_test.go:generic-api-key:99
 62917109069f227e8227a25448fe8c4242405309:internal/config_helper_test.go:generic-api-key:101
