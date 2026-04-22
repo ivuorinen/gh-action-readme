@@ -20,7 +20,6 @@ func TestContextHelpers(t *testing.T) {
 		{"ContextWithMissingFields", "missing_fields", "field1,field2", ContextWithMissingFields},
 		{"ContextWithDirectory", "directory", "/test/dir", ContextWithDirectory},
 		{"ContextWithConfigPath", "config_path", "/config.yaml", ContextWithConfigPath},
-		{"ContextWithCommand", "command", TestCmdGen, ContextWithCommand},
 	}
 
 	for _, tt := range tests {

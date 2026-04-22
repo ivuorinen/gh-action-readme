@@ -3,7 +3,6 @@ package testutil
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/go-github/v74/github"
 
@@ -23,21 +21,6 @@ import (
 type MockHTTPClient struct {
 	Responses map[string]*http.Response
 	Requests  []*http.Request
-}
-
-// HTTPResponse represents a mock HTTP response.
-type HTTPResponse struct {
-	StatusCode int
-	Body       string
-	Headers    map[string]string
-}
-
-// HTTPRequest represents a captured HTTP request.
-type HTTPRequest struct {
-	Method  string
-	URL     string
-	Body    string
-	Headers map[string]string
 }
 
 // Do implements the http.Client interface.
@@ -109,47 +92,14 @@ func CleanupCache(tb testing.TB, cache interface{ Close() error }) func() {
 	}
 }
 
-// ExpectPanic asserts that the provided function panics with a message containing the expected substring.
-// This helper reduces panic recovery test boilerplate from 12-15 lines to 3-4 lines.
-func ExpectPanic(t *testing.T, fn func(), expectedSubstring string) {
-	t.Helper()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic but got none")
-		} else {
-			var errStr string
-			switch v := r.(type) {
-			case string:
-				errStr = v
-			case error:
-				errStr = v.Error()
-			default:
-				errStr = fmt.Sprintf("%v", v)
-			}
-			if !strings.Contains(errStr, expectedSubstring) {
-				t.Errorf("expected panic message containing %q, got: %v", expectedSubstring, r)
-			}
-		}
-	}()
-	fn()
-}
-
-// MustLoadActionFixture loads an action fixture and fails the test on error.
+// mustLoadActionFixture loads an action fixture and fails the test on error.
 // This helper consolidates the load + assertion pattern.
-func MustLoadActionFixture(t *testing.T, path string) *ActionFixture {
+func mustLoadActionFixture(t *testing.T, path string) *ActionFixture {
 	t.Helper()
 	fixture, err := LoadActionFixture(path)
 	AssertNoError(t, err)
 
 	return fixture
-}
-
-// LoadAndWriteFixture loads an action fixture and writes it to the specified path.
-// This helper reduces the common 3-line pattern to a single line.
-func LoadAndWriteFixture(t *testing.T, fixturePath, targetPath string) {
-	t.Helper()
-	fixture := MustLoadActionFixture(t, fixturePath)
-	WriteTestFile(t, targetPath, fixture.Content)
 }
 
 // WriteTestFile writes a test file to the given path.
@@ -183,7 +133,7 @@ func WriteFileInDir(t *testing.T, dir, filename, content string) string {
 func WriteActionFixture(t *testing.T, dir, fixturePath string) string {
 	t.Helper()
 	actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-	fixture := MustLoadActionFixture(t, fixturePath)
+	fixture := mustLoadActionFixture(t, fixturePath)
 	WriteTestFile(t, actionPath, fixture.Content)
 
 	return actionPath
@@ -193,7 +143,7 @@ func WriteActionFixture(t *testing.T, dir, fixturePath string) string {
 func WriteActionFixtureAs(t *testing.T, dir, filename, fixturePath string) string {
 	t.Helper()
 	actionPath := filepath.Join(dir, filename)
-	fixture := MustLoadActionFixture(t, fixturePath)
+	fixture := mustLoadActionFixture(t, fixturePath)
 	WriteTestFile(t, actionPath, fixture.Content)
 
 	return actionPath
@@ -297,22 +247,14 @@ func RunBinaryCommand(t *testing.T, binaryPath, dir string, args ...string) (out
 	return string(out), err
 }
 
-// CreateConfigDir creates a standard .config/gh-action-readme directory.
-func CreateConfigDir(t *testing.T, baseDir string) string {
+// WriteConfigFile writes a config file to the standard location.
+func WriteConfigFile(t *testing.T, baseDir, content string) string {
 	t.Helper()
 	configDir := filepath.Join(baseDir, TestDirConfigGhActionReadme)
 	// #nosec G301 -- test directory permissions
 	if err := os.MkdirAll(configDir, appconstants.FilePermDir); err != nil {
 		t.Fatalf("failed to create config dir: %v", err)
 	}
-
-	return configDir
-}
-
-// WriteConfigFile writes a config file to the standard location.
-func WriteConfigFile(t *testing.T, baseDir, content string) string {
-	t.Helper()
-	configDir := CreateConfigDir(t, baseDir)
 	configPath := filepath.Join(configDir, appconstants.ConfigFileNameFull)
 	WriteTestFile(t, configPath, content)
 
@@ -378,44 +320,6 @@ func AssertFileExists(t *testing.T, path string) {
 	}
 }
 
-// AssertFileNotExists fails if the file exists.
-func AssertFileNotExists(t *testing.T, path string) {
-	t.Helper()
-	_, err := os.Stat(path)
-	if err == nil {
-		// File exists
-		t.Fatalf("expected file not to exist: %s", path)
-	} else if !os.IsNotExist(err) {
-		// Error occurred but it's not a "does not exist" error
-		t.Fatalf("error checking file existence: %v", err)
-	}
-	// err != nil && os.IsNotExist(err) - this is the success case
-}
-
-// CreateTestAction creates a test action.yml file content.
-func CreateTestAction(name, description string, inputs map[string]string) string {
-	var inputsYAML bytes.Buffer
-	for key, desc := range inputs {
-		fmt.Fprintf(&inputsYAML, "  %s:\n    description: %s\n    required: true\n", key, desc)
-	}
-
-	result := fmt.Sprintf(appconstants.YAMLFieldName, name)
-	result += fmt.Sprintf(appconstants.YAMLFieldDescription, description)
-	result += "inputs:\n"
-	result += inputsYAML.String()
-	result += "outputs:\n"
-	result += "  result:\n"
-	result += "    description: 'The result'\n"
-	result += appconstants.YAMLFieldRuns
-	result += "  using: 'node20'\n"
-	result += "  main: 'index.js'\n"
-	result += "branding:\n"
-	result += "  icon: 'zap'\n"
-	result += "  color: 'yellow'\n"
-
-	return result
-}
-
 // SetupTestTemplates creates template files for testing.
 func SetupTestTemplates(t *testing.T, dir string) {
 	t.Helper()
@@ -456,74 +360,6 @@ func CreateCompositeAction(name, description string, steps []string) string {
 	result += stepsYAML.String()
 
 	return result
-}
-
-// TestAppConfig represents a test configuration structure.
-type TestAppConfig struct {
-	Theme        string
-	OutputFormat string
-	OutputDir    string
-	Template     string
-	Schema       string
-	Verbose      bool
-	Quiet        bool
-	GitHubToken  string
-}
-
-// MockAppConfig creates a test configuration.
-func MockAppConfig(overrides *TestAppConfig) *TestAppConfig {
-	config := &TestAppConfig{
-		Theme:        "default",
-		OutputFormat: "md",
-		OutputDir:    ".",
-		Template:     "",
-		Schema:       "schemas/action.schema.json",
-		Verbose:      false,
-		Quiet:        false,
-		GitHubToken:  "",
-	}
-
-	if overrides != nil {
-		if overrides.Theme != "" {
-			config.Theme = overrides.Theme
-		}
-		if overrides.OutputFormat != "" {
-			config.OutputFormat = overrides.OutputFormat
-		}
-		if overrides.OutputDir != "" {
-			config.OutputDir = overrides.OutputDir
-		}
-		if overrides.Template != "" {
-			config.Template = overrides.Template
-		}
-		if overrides.Schema != "" {
-			config.Schema = overrides.Schema
-		}
-		config.Verbose = overrides.Verbose
-		config.Quiet = overrides.Quiet
-		if overrides.GitHubToken != "" {
-			config.GitHubToken = overrides.GitHubToken
-		}
-	}
-
-	return config
-}
-
-// SetEnv sets an environment variable for testing and returns cleanup function.
-func SetEnv(t *testing.T, key, value string) func() {
-	t.Helper()
-
-	t.Setenv(key, value)
-
-	return func() {
-		// t.Setenv() automatically handles cleanup, so no action needed
-	}
-}
-
-// WithContext creates a context with timeout for testing.
-// The caller is responsible for calling the returned cancel function.
-func WithContext(timeout time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), timeout)
 }
 
 // AssertNoError fails the test if err is not nil.
@@ -619,13 +455,10 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			Name: "GH_README_GITHUB_TOKEN has highest priority",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				cleanup1 := SetEnv(t, appconstants.EnvGitHubToken, "priority-token")
-				cleanup2 := SetEnv(t, appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
+				t.Setenv(appconstants.EnvGitHubToken, "priority-token")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
-				return func() {
-					cleanup1()
-					cleanup2()
-				}
+				return func() {}
 			},
 			ExpectedToken: "priority-token",
 		},
@@ -634,9 +467,9 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
 				_ = os.Unsetenv(appconstants.EnvGitHubToken)
-				cleanup := SetEnv(t, appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
+				t.Setenv(appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
-				return cleanup
+				return func() {}
 			},
 			ExpectedToken: appconstants.TokenFallback,
 		},
@@ -654,11 +487,6 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			ExpectedToken: "",
 		},
 	}
-}
-
-// ErrCreateFile returns a formatted error message for file creation failures.
-func ErrCreateFile(name string) string {
-	return fmt.Sprintf("Failed to create %s: %s", name, "%v")
 }
 
 // ErrCreateDir returns a formatted error message for directory creation failures.
@@ -752,21 +580,6 @@ func CaptureStderr(f func()) string {
 	return buf.String()
 }
 
-// OutputStreams holds both stdout and stderr capture results.
-type OutputStreams struct {
-	Stdout string
-	Stderr string
-}
-
-// CaptureOutputStreams captures both stdout and stderr during function execution.
-// Returns a struct with both outputs for convenience.
-func CaptureOutputStreams(f func()) *OutputStreams {
-	return &OutputStreams{
-		Stdout: CaptureStdout(f),
-		Stderr: CaptureStderr(f),
-	}
-}
-
 // CreateTempActionFile creates a temporary action.yml file with content.
 // Returns the file path. File is automatically cleaned up by t.TempDir().
 // Used to eliminate duplication in parser tests (4 occurrences).
@@ -839,12 +652,6 @@ func SetupTokenEnv(t *testing.T, toolToken, standardToken string) {
 	t.Helper()
 	t.Setenv(appconstants.EnvGitHubToken, toolToken)
 	t.Setenv(appconstants.EnvGitHubTokenStandard, standardToken)
-}
-
-// ClearTokenEnv clears all GitHub token environment variables.
-func ClearTokenEnv(t *testing.T) {
-	t.Helper()
-	SetupTokenEnv(t, "", "")
 }
 
 // SetupXDGEnv sets XDG_CONFIG_HOME and HOME environment variables.

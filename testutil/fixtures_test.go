@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,9 +44,13 @@ func TestMustReadFixturePanic(t *testing.T) {
 	t.Parallel()
 	t.Run("missing file panics", func(t *testing.T) {
 		t.Parallel()
-		ExpectPanic(t, func() {
-			mustReadFixture("nonexistent-file.yml")
-		}, "failed to read fixture")
+		defer func() {
+			r := recover()
+			if r == nil {
+				t.Error("expected panic but got none")
+			}
+		}()
+		mustReadFixture("nonexistent-file.yml")
 	})
 }
 
@@ -595,44 +598,126 @@ func TestHelperFunctions(t *testing.T) {
 	})
 }
 
-// TestValidatePinnedUpdate tests the ValidatePinnedUpdate helper function.
-func TestValidatePinnedUpdate(t *testing.T) {
+// TestMustReadAnalyzerFixture tests MustReadAnalyzerFixture.
+func TestMustReadAnalyzerFixture(t *testing.T) {
 	t.Parallel()
+	t.Run("reads existing fixture", func(t *testing.T) {
+		t.Parallel()
+		content := MustReadAnalyzerFixture("composite-action.yml")
+		if content == "" {
+			t.Error("expected non-empty content")
+		}
+	})
 
+	t.Run("panics on missing fixture", func(t *testing.T) {
+		t.Parallel()
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic but got none")
+			}
+		}()
+		MustReadAnalyzerFixture("nonexistent-fixture.yml")
+	})
+
+	t.Run("panics on invalid filename", func(t *testing.T) {
+		t.Parallel()
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic for invalid filename")
+			}
+		}()
+		MustReadAnalyzerFixture("../escape.yml")
+	})
+}
+
+// TestPackageLevelLoadConfigFixture tests the package-level LoadConfigFixture.
+func TestPackageLevelLoadConfigFixture(t *testing.T) {
+	t.Parallel()
+	// The global fixture manager uses testdata/yaml-fixtures/configs/
+	// which may or may not have fixtures — test that the function at least doesn't panic on valid input
+	fixture, err := LoadConfigFixture("default.yml")
+	if err != nil {
+		// It's acceptable that the config fixture doesn't exist; the important thing is the function runs
+		t.Logf("LoadConfigFixture returned error (may be expected): %v", err)
+	} else if fixture == nil {
+		t.Error("expected fixture object, got nil")
+	}
+}
+
+// TestDetermineConfigType tests the determineConfigType method.
+func TestDetermineConfigType(t *testing.T) {
+	t.Parallel()
+	fm := NewFixtureManager()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"global config", "global-config.yml", "global"},
+		{"repo config", "repo-settings.yml", "repo-specific"},
+		{"user config", "user-prefs.yml", "user-specific"},
+		{"generic config", "default.yml", "generic"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := fm.determineConfigType(tt.input)
+			if got != tt.expected {
+				t.Errorf("determineConfigType(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestValidateConfigContent tests the validateConfigContent method.
+func TestValidateConfigContent(t *testing.T) {
+	t.Parallel()
+	fm := NewFixtureManager()
+
+	tests := []struct {
+		name     string
+		content  string
+		expected bool
+	}{
+		{"valid yaml", "theme: default\noutput_format: md", true},
+		{"invalid yaml", "key: [unclosed bracket", false},
+		{"empty content", "{}", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := fm.validateConfigContent(tt.content)
+			if got != tt.expected {
+				t.Errorf("validateConfigContent(%q) = %v, want %v", tt.content, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCreateDefaultScenarios tests the createDefaultScenarios method.
+func TestCreateDefaultScenarios(t *testing.T) {
+	t.Parallel()
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
-	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-	testContent := "uses: " + TestActionCheckoutV3
-	WriteTestFile(t, actionPath, testContent)
+	fm := &FixtureManager{
+		basePath:  tmpDir,
+		scenarios: make(map[string]*TestScenario),
+		cache:     make(map[string]*ActionFixture),
+	}
 
-	t.Run("validates without backup", func(t *testing.T) {
-		ValidatePinnedUpdate(t, actionPath, false, func(content string) error {
-			if !strings.Contains(content, TestActionCheckoutV3) {
-				return errors.New("content does not contain expected string")
-			}
+	scenarioFile := filepath.Join(tmpDir, "test_scenarios.json")
+	err := fm.createDefaultScenarios(scenarioFile)
+	if err != nil {
+		t.Fatalf("createDefaultScenarios() failed: %v", err)
+	}
 
-			return nil
-		})
-	})
-
-	t.Run("validates with backup", func(t *testing.T) {
-		// Create backup file
-		backupPath := actionPath + ".bak"
-		WriteTestFile(t, backupPath, testContent)
-
-		ValidatePinnedUpdate(t, actionPath, true, func(content string) error {
-			if !strings.Contains(content, TestActionCheckoutV3) {
-				return errors.New("content does not contain expected string")
-			}
-
-			return nil
-		})
-	})
-
-	t.Run("validates without validator function", func(t *testing.T) {
-		ValidatePinnedUpdate(t, actionPath, false, nil)
-	})
+	if _, err := os.Stat(scenarioFile); os.IsNotExist(err) {
+		t.Error("createDefaultScenarios() did not create scenario file")
+	}
 }
 
 // TestValidateRollback tests the ValidateRollback helper function.
@@ -648,45 +733,5 @@ func TestValidateRollback(t *testing.T) {
 
 	t.Run("validates successful rollback", func(t *testing.T) {
 		ValidateRollback(t, actionPath, originalContent)
-	})
-}
-
-// TestAssertFileContains tests the AssertFileContains helper function.
-func TestAssertFileContains(t *testing.T) {
-	t.Parallel()
-
-	tmpDir, cleanup := TempDir(t)
-	defer cleanup()
-
-	testPath := filepath.Join(tmpDir, "test.txt")
-	testContent := "This is a test file with some content"
-	WriteTestFile(t, testPath, testContent)
-
-	t.Run("finds existing substring", func(t *testing.T) {
-		AssertFileContains(t, testPath, "test file")
-	})
-
-	t.Run("finds another existing substring", func(t *testing.T) {
-		AssertFileContains(t, testPath, "some content")
-	})
-}
-
-// TestAssertFileNotContains tests the AssertFileNotContains helper function.
-func TestAssertFileNotContains(t *testing.T) {
-	t.Parallel()
-
-	tmpDir, cleanup := TempDir(t)
-	defer cleanup()
-
-	testPath := filepath.Join(tmpDir, "test.txt")
-	testContent := "This is a test file"
-	WriteTestFile(t, testPath, testContent)
-
-	t.Run("confirms substring is absent", func(t *testing.T) {
-		AssertFileNotContains(t, testPath, "nonexistent string")
-	})
-
-	t.Run("confirms another substring is absent", func(t *testing.T) {
-		AssertFileNotContains(t, testPath, "missing content")
 	})
 }

@@ -899,34 +899,6 @@ func GetInvalidFixtures() []string {
 	return GetFixtureManager().GetInvalidFixtures()
 }
 
-// Validation Helpers for Updater Tests
-
-// ValidatePinnedUpdate validates that a pinned dependency was correctly updated.
-// Checks that backup exists if requested and validates content with provided validator.
-func ValidatePinnedUpdate(t *testing.T, filePath string, requireBackup bool, validator func(content string) error) {
-	t.Helper()
-
-	// Check backup exists if required
-	if requireBackup {
-		backupPath := filePath + ".bak"
-		if _, err := os.Stat(backupPath); os.IsNotExist(err) {
-			t.Errorf("backup file not created: %s", backupPath)
-		}
-	}
-
-	// Read and validate file content
-	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
-	if err != nil {
-		t.Fatalf(TestMsgFailedReadFile, filePath, err)
-	}
-
-	if validator != nil {
-		if err := validator(string(content)); err != nil {
-			t.Errorf("validation failed for %s: %v", filePath, err)
-		}
-	}
-}
-
 // ValidateRollback validates that a file was successfully rolled back to original content.
 func ValidateRollback(t *testing.T, filePath, originalContent string) {
 	t.Helper()
@@ -942,43 +914,18 @@ func ValidateRollback(t *testing.T, filePath, originalContent string) {
 	}
 }
 
-// AssertFileContains checks that a file contains the expected substring.
-func AssertFileContains(t *testing.T, filePath, expectedSubstring string) {
-	t.Helper()
-
-	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
-	if err != nil {
-		t.Fatalf(TestMsgFailedReadFile, filePath, err)
-	}
-
-	if !strings.Contains(string(content), expectedSubstring) {
-		t.Errorf("file %s does not contain expected substring: %q", filePath, expectedSubstring)
-		t.Logf(TestMsgFileContent, string(content))
-	}
-}
-
-// AssertFileNotContains checks that a file does NOT contain the given substring.
-func AssertFileNotContains(t *testing.T, filePath, unexpectedSubstring string) {
-	t.Helper()
-
-	content, err := os.ReadFile(filePath) // #nosec G304 -- test file path validated by caller
-	if err != nil {
-		t.Fatalf(TestMsgFailedReadFile, filePath, err)
-	}
-
-	if strings.Contains(string(content), unexpectedSubstring) {
-		t.Errorf("file %s should not contain substring: %q", filePath, unexpectedSubstring)
-		t.Logf(TestMsgFileContent, string(content))
-	}
-}
-
 // AssertBackupNotExists checks that a backup file does not exist.
 // Used to verify backup cleanup after successful operations.
 func AssertBackupNotExists(t *testing.T, filePath string) {
 	t.Helper()
 
 	backupPath := filePath + ".bak"
-	AssertFileNotExists(t, backupPath)
+	_, err := os.Stat(backupPath)
+	if err == nil {
+		t.Fatalf("expected backup file not to exist: %s", backupPath)
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("error checking backup file existence: %v", err)
+	}
 }
 
 // AssertFileContentEquals compares file content with expected after trimming whitespace.

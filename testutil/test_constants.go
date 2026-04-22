@@ -581,9 +581,8 @@ const (
 // Config fixture path constants for reducing string duplication.
 const (
 	// Global configs.
-	TestConfigGlobalDefault = "configs/global-config-default.yml"
-	//nolint:gosec // G101: False positive - this is a test fixture path, not a credential
-	TestConfigGlobalBaseToken    = "configs/global-base-token.yml"
+	TestConfigGlobalDefault      = "configs/global-config-default.yml"
+	TestConfigGlobalBaseToken    = "configs/global-base-token.yml" // #nosec G101 -- fixture path, not a credential
 	TestConfigRepoGitHub         = "configs/repo-config-github.yml"
 	TestConfigRepoSimple         = "configs/repo-config-simple.yml"
 	TestConfigActionProfessional = "configs/action-config-professional.yml"

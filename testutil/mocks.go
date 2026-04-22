@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
@@ -120,17 +119,17 @@ func (c *CapturedOutput) AllMessages() []string {
 
 // ContainsMessage checks if any message in the consolidated list contains the needle.
 func (c *CapturedOutput) ContainsMessage(needle string) bool {
-	return ContainsInSlice(c.AllMessages(), needle)
+	return containsInSlice(c.AllMessages(), needle)
 }
 
 // ContainsError checks if any error message contains the needle.
 func (c *CapturedOutput) ContainsError(needle string) bool {
-	return ContainsInSlice(c.ErrorMessages, needle)
+	return containsInSlice(c.ErrorMessages, needle)
 }
 
 // ContainsWarning checks if any warning message contains the needle.
 func (c *CapturedOutput) ContainsWarning(needle string) bool {
-	return ContainsInSlice(c.WarningMessages, needle)
+	return containsInSlice(c.WarningMessages, needle)
 }
 
 // recordMessage is a helper that appends a formatted message to the specified message slice.
@@ -139,8 +138,8 @@ func (c *CapturedOutput) recordMessage(messageSlice *[]string, format string, ar
 	*messageSlice = append(*messageSlice, fmt.Sprintf(format, args...))
 }
 
-// ContainsInSlice checks if any string in the slice contains the substring.
-func ContainsInSlice(slice []string, substring string) bool {
+// containsInSlice checks if any string in the slice contains the substring.
+func containsInSlice(slice []string, substring string) bool {
 	for _, s := range slice {
 		if strings.Contains(s, substring) {
 			return true
@@ -148,13 +147,4 @@ func ContainsInSlice(slice []string, substring string) bool {
 	}
 
 	return false
-}
-
-// AssertSliceLength asserts that a slice has the expected length.
-func AssertSliceLength(t *testing.T, slice []string, expected int, label string) {
-	t.Helper()
-
-	if len(slice) != expected {
-		t.Errorf("%s length = %d, want %d", label, len(slice), expected)
-	}
 }

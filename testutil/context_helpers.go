@@ -48,12 +48,6 @@ func ContextWithConfigPath(path string) map[string]string {
 	return map[string]string{"config_path": path}
 }
 
-// ContextWithCommand creates a context with a command name.
-// Useful for command execution error suggestions.
-func ContextWithCommand(cmd string) map[string]string {
-	return map[string]string{"command": cmd}
-}
-
 // ContextWithField creates a context with a single field value.
 // Generic helper for any single-field context.
 func ContextWithField(key, value string) map[string]string {
