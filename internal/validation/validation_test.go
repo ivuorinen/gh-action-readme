@@ -1,7 +1,9 @@
 package validation
 
 import (
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/testutil"
@@ -244,66 +246,75 @@ func TestIsVersionPinned(t *testing.T) {
 	}
 }
 
+// initGitRepo creates a real git repository with one commit and returns the
+// default branch name (e.g. "main" or "master" depending on git config).
+func initGitRepo(t *testing.T, dir string) string {
+	t.Helper()
+
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...) // #nosec G204 -- test helper, args are hardcoded
+		cmd.Dir = dir
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("git command %v failed: %v", args, err)
+		}
+	}
+
+	run("git", "init")
+	run("git", "config", "user.email", "test@example.com")
+	run("git", "config", "user.name", "Test")
+	testutil.WriteTestFile(t, filepath.Join(dir, "README.md"), "# test")
+	run("git", "add", ".")
+	run("git", "commit", "-m", "init")
+
+	out, err := exec.Command("git", "-C", dir, "branch", "--show-current").Output() // #nosec G204
+	if err != nil {
+		t.Fatalf("git branch --show-current failed: %v", err)
+	}
+
+	return strings.TrimSpace(string(out))
+}
+
 func TestValidateGitBranch(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name      string
-		setupFunc func(t *testing.T, tmpDir string) (string, string)
-		expected  bool
-	}{
-		{
-			name: "valid git repository with main branch",
-			setupFunc: func(_ *testing.T, tmpDir string) (string, string) {
-				// Create a simple git repository
-				gitDir := testutil.SetupGitDirectory(t, tmpDir)
+	t.Run("existing branch returns true", func(t *testing.T) {
+		t.Parallel()
 
-				// Create a basic git config
-				configContent := `[core]
-	repositoryformatversion = 0
-	filemode = true
-	bare = false
-[branch testutil.TestBranchMain]
-	remote = origin
-	merge = refs/heads/main
-`
-				testutil.WriteTestFile(t, filepath.Join(gitDir, "config"), configContent)
+		tmpDir, cleanup := testutil.TempDir(t)
+		defer cleanup()
 
-				return tmpDir, testutil.TestBranchMain
-			},
-			expected: true, // This may vary based on actual git repo state
-		},
-		{
-			name: "non-git directory",
-			setupFunc: func(_ *testing.T, tmpDir string) (string, string) {
-				return tmpDir, testutil.TestBranchMain
-			},
-			expected: false,
-		},
-		{
-			name: "empty branch name",
-			setupFunc: func(_ *testing.T, tmpDir string) (string, string) {
-				return tmpDir, ""
-			},
-			expected: false,
-		},
-	}
+		branch := initGitRepo(t, tmpDir)
+		testutil.AssertEqual(t, true, ValidateGitBranch(tmpDir, branch))
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	t.Run("non-existent branch returns false", func(t *testing.T) {
+		t.Parallel()
 
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
+		tmpDir, cleanup := testutil.TempDir(t)
+		defer cleanup()
 
-			repoRoot, branch := tt.setupFunc(t, tmpDir)
-			result := ValidateGitBranch(repoRoot, branch)
+		initGitRepo(t, tmpDir)
+		testutil.AssertEqual(t, false, ValidateGitBranch(tmpDir, "definitely-nonexistent-branch"))
+	})
 
-			// Note: This test may have different results based on the actual git setup
-			// We'll accept the result and just verify it doesn't panic
-			_ = result
-		})
-	}
+	t.Run("non-git directory returns false", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir, cleanup := testutil.TempDir(t)
+		defer cleanup()
+
+		testutil.AssertEqual(t, false, ValidateGitBranch(tmpDir, testutil.TestBranchMain))
+	})
+
+	t.Run("empty branch name returns false", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir, cleanup := testutil.TempDir(t)
+		defer cleanup()
+
+		testutil.AssertEqual(t, false, ValidateGitBranch(tmpDir, ""))
+	})
 }
 
 func TestIsGitRepository(t *testing.T) {
