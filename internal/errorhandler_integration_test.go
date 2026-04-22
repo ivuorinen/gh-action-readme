@@ -147,6 +147,15 @@ func TestErrorHandlerIntegration(t *testing.T) {
 			expectedExit:   appconstants.ExitCodeError,
 			expectedStderr: "access error",
 		},
+		// Kills CONDITIONALS_NEGATION at errorhandler.go:53 (err != nil → err == nil).
+		// A negated mutation would call nil.Error() → panic → subprocess exits with signal,
+		// causing this test to fail (unexpected exit code or signal).
+		{
+			name:           "HandleSimpleError with nil error",
+			testType:       "handle_simple_error_nil_err",
+			expectedExit:   appconstants.ExitCodeError,
+			expectedStderr: "nil error message",
+		},
 	}
 
 	for _, tt := range tests {
@@ -157,62 +166,63 @@ func TestErrorHandlerIntegration(t *testing.T) {
 	}
 }
 
-// runSubprocessTest executes the actual error handler call based on TEST_TYPE.
-func runSubprocessTest() {
-	testType := os.Getenv(envTestType)
-	output := internal.NewColoredOutput(false) // quiet=false
-	handler := internal.NewErrorHandler(output)
-
+// runHandleErrorCases dispatches handle_error_* test cases.
+func runHandleErrorCases(handler *internal.ErrorHandler, testType string) bool {
 	switch testType {
 	case "handle_error_file_not_found":
 		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestErrFileNotFound)
 		handler.HandleError(err)
-
 	case "handle_error_validation":
 		err := apperrors.New(appconstants.ErrCodeValidation, "validation failed")
 		handler.HandleError(err)
-
 	case "handle_error_with_context":
-		err := apperrors.New(appconstants.ErrCodeConfiguration, "config file missing")
-		err = err.WithDetails(map[string]string{
-			"path": "/invalid/path/config.yaml",
-			"type": "application",
-		})
+		err := apperrors.New(appconstants.ErrCodeConfiguration, "config file missing").
+			WithDetails(map[string]string{"path": "/invalid/path/config.yaml", "type": "application"})
 		handler.HandleError(err)
-
 	case "handle_error_with_suggestions":
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, "file error occurred")
-		err = err.WithSuggestions("Check that the file exists", "Verify file permissions")
+		err := apperrors.New(appconstants.ErrCodeFileNotFound, "file error occurred").
+			WithSuggestions("Check that the file exists", "Verify file permissions")
 		handler.HandleError(err)
+	default:
+		return false
+	}
 
+	return true
+}
+
+// runSubprocessTest executes the actual error handler call based on TEST_TYPE.
+func runSubprocessTest() {
+	testType := os.Getenv(envTestType)
+	output := internal.NewColoredOutput(false)
+	handler := internal.NewErrorHandler(output)
+
+	if runHandleErrorCases(handler, testType) {
+		return
+	}
+
+	switch testType {
 	case "handle_fatal_error_permission":
 		handler.HandleFatalError(
 			appconstants.ErrCodePermission,
 			"permission denied accessing file",
 			map[string]string{"file": "/etc/passwd"},
 		)
-
 	case "handle_fatal_error_config":
 		handler.HandleFatalError(
 			appconstants.ErrCodeConfiguration,
 			"configuration error in settings",
-			map[string]string{
-				"section": "github",
-				"key":     "token",
-			},
+			map[string]string{"section": "github", "key": "token"},
 		)
-
 	case "handle_simple_error_generic":
 		handler.HandleSimpleError("operation failed", errors.New("generic error occurred"))
-
 	case "handle_simple_error_not_found":
 		handler.HandleSimpleError(testutil.TestErrFileError, errors.New("no such file or directory"))
-
 	case "handle_simple_error_permission":
 		handler.HandleSimpleError("access error", errors.New(testutil.TestErrPermissionDenied))
-
+	case "handle_simple_error_nil_err":
+		handler.HandleSimpleError("nil error message", nil)
 	default:
-		os.Exit(99) // Unexpected test type
+		os.Exit(99)
 	}
 }
 
