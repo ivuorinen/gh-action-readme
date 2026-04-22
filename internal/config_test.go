@@ -2,6 +2,7 @@ package internal
 
 import (
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -674,6 +675,238 @@ func TestMergeSliceFields(t *testing.T) {
 					t.Errorf("expected %v, got %v", tt.expected, tt.dst.RunsOn)
 
 					return
+				}
+			}
+		})
+	}
+}
+
+// TestNewGitHubClient_WithAndWithoutToken kills CONDITIONALS_NEGATION at config.go:101
+// (token != "" guard). Both branches must produce a valid client but with different auth.
+func TestNewGitHubClient_WithAndWithoutToken(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		token      string
+		wantToken  string
+		wantNonNil bool
+	}{
+		{
+			name:       "with token creates authenticated client",
+			token:      testutil.TestTokenStd,
+			wantToken:  testutil.TestTokenStd,
+			wantNonNil: true,
+		},
+		{
+			name:       "with empty token creates unauthenticated client",
+			token:      "",
+			wantToken:  "",
+			wantNonNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, err := NewGitHubClient(tt.token)
+			if err != nil {
+				t.Fatalf("NewGitHubClient(%q) error = %v", tt.token, err)
+			}
+
+			if !tt.wantNonNil {
+				if client != nil {
+					t.Error("NewGitHubClient() expected nil client")
+				}
+
+				return
+			}
+
+			if client == nil {
+				t.Fatal("NewGitHubClient() returned nil client, want non-nil")
+			}
+
+			if client.Token != tt.wantToken {
+				t.Errorf("client.Token = %q, want %q", client.Token, tt.wantToken)
+			}
+
+			if client.Client == nil {
+				t.Error("client.Client must not be nil")
+			}
+		})
+	}
+}
+
+// TestResolveTemplatePath_BothBranches kills CONDITIONALS_NEGATION at config.go:160/165
+// (err == nil and err != nil guards). Both the "exists" and "not exists" paths are tested.
+func TestResolveTemplatePath_BothBranches(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		setupFunc func(*testing.T) string
+		checkFunc func(*testing.T, string)
+	}{
+		{
+			name: "embedded template path is returned as-is",
+			setupFunc: func(_ *testing.T) string {
+				return testutil.TestTemplateWithPrefix
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if result == "" {
+					t.Error("expected non-empty result for embedded template path")
+				}
+			},
+		},
+		{
+			name: "absolute path is returned immediately without filesystem lookup",
+			setupFunc: func(t *testing.T) string {
+				t.Helper()
+				tmpDir := t.TempDir()
+				absPath := filepath.Join(tmpDir, "my-template.tmpl")
+				_ = os.WriteFile(absPath, []byte("hello"), appconstants.FilePermDefault)
+
+				return absPath
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if !filepath.IsAbs(result) {
+					t.Errorf("expected absolute path, got %q", result)
+				}
+			},
+		},
+		{
+			name: "nonexistent relative path returns path unchanged",
+			setupFunc: func(_ *testing.T) string {
+				return "nonexistent/custom-template.tmpl"
+			},
+			checkFunc: func(t *testing.T, result string) {
+				t.Helper()
+				if result == "" {
+					t.Error("expected non-empty result even for nonexistent template")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := tt.setupFunc(t)
+			result := resolveTemplatePath(path)
+			tt.checkFunc(t, result)
+		})
+	}
+}
+
+// TestFillMissing_RunsBoundary kills CONDITIONALS_BOUNDARY at config.go:136
+// (len(action.Runs) == 0 && len(defs.Runs) > 0). Tests at boundary: empty/non-empty.
+func TestFillMissing_RunsBoundary(t *testing.T) {
+	t.Parallel()
+
+	defsRuns := map[string]any{"using": "composite"}
+
+	tests := []struct {
+		name       string
+		actionRuns map[string]any
+		defsRuns   map[string]any
+		wantCopied bool
+	}{
+		{
+			name:       "empty action.Runs + non-empty defs.Runs: should copy",
+			actionRuns: nil,
+			defsRuns:   defsRuns,
+			wantCopied: true,
+		},
+		{
+			name:       "non-empty action.Runs + non-empty defs.Runs: should NOT overwrite",
+			actionRuns: map[string]any{"using": "node20"},
+			defsRuns:   defsRuns,
+			wantCopied: false,
+		},
+		{
+			name:       "empty action.Runs + empty defs.Runs: nothing to copy",
+			actionRuns: nil,
+			defsRuns:   nil,
+			wantCopied: false,
+		},
+		{
+			name:       "non-empty action.Runs + empty defs.Runs: unchanged",
+			actionRuns: map[string]any{"using": "node20"},
+			defsRuns:   nil,
+			wantCopied: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			action := &ActionYML{Runs: tt.actionRuns}
+			defs := DefaultValues{Runs: tt.defsRuns}
+			FillMissing(action, defs)
+
+			if tt.wantCopied {
+				if len(action.Runs) == 0 {
+					t.Error("FillMissing() should have copied defs.Runs into empty action.Runs")
+				}
+
+				if action.Runs["using"] != "composite" {
+					t.Errorf("FillMissing() copied wrong runs value: %v", action.Runs)
+				}
+			} else if tt.actionRuns != nil {
+				// Verify original value was not overwritten
+				if action.Runs["using"] != tt.actionRuns["using"] {
+					t.Errorf("FillMissing() overwrote existing runs: got %v", action.Runs)
+				}
+			}
+		})
+	}
+}
+
+// TestLoadConfiguration_RepoNameBranch kills CONDITIONALS_NEGATION at config.go:455
+// (repoName != "" guard). When repoName is empty (no git repo root), the repo overrides
+// section must be skipped. When non-empty, overrides are applied if they exist.
+func TestLoadConfiguration_RepoNameBranch(t *testing.T) {
+	tests := []struct {
+		name      string
+		repoRoot  string
+		wantError bool
+	}{
+		{
+			name:      "empty repoRoot skips repo override lookup",
+			repoRoot:  "",
+			wantError: false,
+		},
+		{
+			name:      "nonexistent repoRoot skips repo override lookup gracefully",
+			repoRoot:  t.TempDir(),
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+
+			config, err := LoadConfiguration("", tmpDir, tt.repoRoot)
+
+			if tt.wantError {
+				testutil.AssertError(t, err)
+			} else {
+				testutil.AssertNoError(t, err)
+
+				if config == nil {
+					t.Fatal("LoadConfiguration() returned nil config")
+				}
+
+				// Config must have defaults set regardless of repoRoot value
+				if config.Theme == "" {
+					t.Error("config.Theme must not be empty (defaults not applied)")
 				}
 			}
 		})

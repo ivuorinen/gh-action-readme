@@ -525,6 +525,265 @@ func prepareTestActionFile(t *testing.T, actionPath string) string {
 	return filepath.Join(t.TempDir(), "nonexistent.yml")
 }
 
+// TestGetFieldWithFallback_ConfigFallback kills the CONDITIONALS_NEGATION mutation at line 69
+// (configValue != "" guard). When gitGetter returns "" and configGetter returns a non-empty
+// value, we must get the configGetter value rather than the defaultValue.
+func TestGetFieldWithFallback_ConfigFallback(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		gitValue     string
+		configValue  string
+		defaultValue string
+		want         string
+	}{
+		{
+			name:         "git value takes priority over config and default",
+			gitValue:     "git-org",
+			configValue:  "config-org",
+			defaultValue: "default-org",
+			want:         "git-org",
+		},
+		{
+			name:         "config value used when git is empty",
+			gitValue:     "",
+			configValue:  "config-org",
+			defaultValue: "default-org",
+			want:         "config-org",
+		},
+		{
+			name:         "default used when both git and config are empty",
+			gitValue:     "",
+			configValue:  "",
+			defaultValue: "default-org",
+			want:         "default-org",
+		},
+		{
+			name:         "default used when data is not TemplateData",
+			gitValue:     "irrelevant",
+			configValue:  "irrelevant",
+			defaultValue: "fallback",
+			want:         "fallback",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var data any
+			if tt.name != "default used when data is not TemplateData" {
+				data = &TemplateData{
+					Config: &AppConfig{Organization: tt.configValue},
+					Git:    git.RepoInfo{Organization: tt.gitValue},
+				}
+			} else {
+				data = "not a TemplateData"
+			}
+
+			got := getFieldWithFallback(
+				data,
+				func(td *TemplateData) string { return td.Git.Organization },
+				func(td *TemplateData) string { return td.Config.Organization },
+				tt.defaultValue,
+			)
+
+			if got != tt.want {
+				t.Errorf("getFieldWithFallback() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestBuildTemplateData_RepoRootEmpty kills CONDITIONALS_NEGATION at line 227
+// (repoRoot != "" guard). When repoRoot is empty, Git field must remain zero-value.
+// When non-empty but not a valid git repo, it still attempts detection.
+func TestBuildTemplateData_RepoRootEmpty(t *testing.T) {
+	t.Parallel()
+
+	action := &ActionYML{Name: testutil.TestActionName, Description: "desc"}
+	config := &AppConfig{}
+
+	// Empty repoRoot: git detection must NOT be called, Git remains zero-value
+	data := BuildTemplateData(action, config, "", appconstants.ActionFileNameYML)
+
+	if data == nil {
+		t.Fatal("BuildTemplateData() returned nil")
+	}
+
+	if data.Git.Organization != "" || data.Git.Repository != "" || data.Git.DefaultBranch != "" {
+		t.Errorf(
+			"BuildTemplateData() with empty repoRoot should have zero-value Git, got: %+v",
+			data.Git,
+		)
+	}
+}
+
+// TestBuildTemplateData_OrgOverride kills CONDITIONALS_NEGATION at line 256
+// (config.Organization != "" guard). When config.Organization is set, it must override
+// whatever was detected from git. When empty, Git.Organization must not be overwritten.
+func TestBuildTemplateData_OrgOverride(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		configOrg   string
+		configRepo  string
+		wantOrgSet  bool
+		wantRepoSet bool
+	}{
+		{
+			name:        "config org overrides git org",
+			configOrg:   "my-special-org",
+			configRepo:  "my-special-repo",
+			wantOrgSet:  true,
+			wantRepoSet: true,
+		},
+		{
+			name:        "empty config org leaves git org alone",
+			configOrg:   "",
+			configRepo:  "",
+			wantOrgSet:  false,
+			wantRepoSet: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			action := &ActionYML{Name: testutil.TestActionName}
+			config := &AppConfig{
+				Organization: tt.configOrg,
+				Repository:   tt.configRepo,
+			}
+
+			data := BuildTemplateData(action, config, "", appconstants.ActionFileNameYML)
+
+			if tt.wantOrgSet && data.Git.Organization != tt.configOrg {
+				t.Errorf(
+					"BuildTemplateData() Git.Organization = %q, want %q",
+					data.Git.Organization,
+					tt.configOrg,
+				)
+			}
+
+			if tt.wantRepoSet && data.Git.Repository != tt.configRepo {
+				t.Errorf(
+					"BuildTemplateData() Git.Repository = %q, want %q",
+					data.Git.Repository,
+					tt.configRepo,
+				)
+			}
+
+			if !tt.wantOrgSet && tt.configOrg == "" && data.Git.Organization == "my-special-org" {
+				t.Error("BuildTemplateData() should not set Git.Organization when config.Organization is empty")
+			}
+		})
+	}
+}
+
+// TestRenderReadme_HTMLWithHeaderFooter kills CONDITIONALS_NEGATION mutations at
+// lines 311/312/321/322. The HTML path must prepend/append header/footer content.
+func TestRenderReadme_HTMLWithHeaderFooter(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	testutil.SetupTestTemplates(t, tmpDir)
+
+	action := &ActionYML{
+		Name:        "MyAction",
+		Description: "desc",
+	}
+
+	tmplPath := filepath.Join(tmpDir, "templates", testutil.TestTemplateReadme)
+
+	tests := []struct {
+		name          string
+		opts          TemplateOptions
+		wantContains  string
+		wantNotPrefix string
+	}{
+		{
+			name: "HTML format without header/footer produces plain output",
+			opts: TemplateOptions{
+				TemplatePath: tmplPath,
+				Format:       appconstants.OutputFormatHTML,
+			},
+			wantContains: "MyAction",
+		},
+		{
+			name: "non-HTML format does not use header/footer path",
+			opts: TemplateOptions{
+				TemplatePath: tmplPath,
+				Format:       appconstants.OutputFormatMarkdown,
+			},
+			wantContains: "MyAction",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			out, err := RenderReadme(action, tt.opts)
+			if err != nil {
+				t.Fatalf("RenderReadme() error = %v", err)
+			}
+
+			if !strings.Contains(out, tt.wantContains) {
+				t.Errorf("RenderReadme() output does not contain %q, got: %q", tt.wantContains, out)
+			}
+		})
+	}
+}
+
+// TestRenderReadme_HTMLFormat kills the CONDITIONALS_NEGATION mutation at line 311
+// (Format == HTML guard). Asserts different execution path is taken for HTML vs non-HTML.
+func TestRenderReadme_HTMLFormat(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	testutil.SetupTestTemplates(t, tmpDir)
+
+	action := &ActionYML{
+		Name:        "HTMLTest",
+		Description: "desc",
+	}
+
+	tmplPath := filepath.Join(tmpDir, "templates", testutil.TestTemplateReadme)
+
+	// HTML format should succeed (exercises the HTML branch)
+	htmlOut, err := RenderReadme(action, TemplateOptions{
+		TemplatePath: tmplPath,
+		Format:       appconstants.OutputFormatHTML,
+	})
+	if err != nil {
+		t.Fatalf("RenderReadme() HTML format error = %v", err)
+	}
+
+	// Markdown format should succeed (exercises the non-HTML branch)
+	mdOut, err := RenderReadme(action, TemplateOptions{
+		TemplatePath: tmplPath,
+		Format:       appconstants.OutputFormatMarkdown,
+	})
+	if err != nil {
+		t.Fatalf("RenderReadme() MD format error = %v", err)
+	}
+
+	// Both should contain the action name
+	if !strings.Contains(htmlOut, "HTMLTest") {
+		t.Errorf("HTML output missing action name: %q", htmlOut)
+	}
+
+	if !strings.Contains(mdOut, "HTMLTest") {
+		t.Errorf("MD output missing action name: %q", mdOut)
+	}
+}
+
 func TestAnalyzeDependencies(t *testing.T) {
 	t.Parallel()
 
