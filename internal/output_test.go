@@ -456,6 +456,70 @@ func TestFormatContextualError(t *testing.T) {
 	}
 }
 
+// assertSectionPresence is a helper that asserts section presence/absence in a formatted error.
+func assertSectionPresence(t *testing.T, got, section string, present bool) {
+	t.Helper()
+
+	has := strings.Contains(got, section)
+	if present && !has {
+		t.Errorf("expected %q section in output: %q", section, got)
+	}
+	if !present && has {
+		t.Errorf("unexpected %q section in output: %q", section, got)
+	}
+}
+
+// TestFormatContextualError_OnlyDetails kills the CONDITIONALS_BOUNDARY/NEGATION at
+// output.go:152 by asserting the details section appears but suggestions and helpURL do not.
+func TestFormatContextualError_OnlyDetails(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+		WithDetails(map[string]string{testutil.TestKeyFile: appconstants.ActionFileNameYML})
+	got := output.FormatContextualError(err)
+
+	assertSectionPresence(t, got, "Details:", true)
+	assertSectionPresence(t, got, "Suggestions:", false)
+	assertSectionPresence(t, got, "For more help", false)
+}
+
+// TestFormatContextualError_OnlySuggestions kills the CONDITIONALS_BOUNDARY/NEGATION at
+// output.go:157 by asserting the suggestions section appears but details and helpURL do not.
+func TestFormatContextualError_OnlySuggestions(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+		WithSuggestions(testutil.TestMsgCheckFilePath)
+	got := output.FormatContextualError(err)
+
+	assertSectionPresence(t, got, "Suggestions:", true)
+	assertSectionPresence(t, got, "Details:", false)
+	assertSectionPresence(t, got, "For more help", false)
+}
+
+// TestFormatContextualError_OnlyHelpURL kills the CONDITIONALS_NEGATION at output.go:162
+// by asserting the help URL section appears but details and suggestions do not.
+func TestFormatContextualError_OnlyHelpURL(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+		WithHelpURL(testutil.TestURLHelp)
+	got := output.FormatContextualError(err)
+
+	assertSectionPresence(t, got, "For more help", true)
+	assertSectionPresence(t, got, "Details:", false)
+	assertSectionPresence(t, got, "Suggestions:", false)
+}
+
+// TestFormatContextualError_NoSections asserts all three section headers are absent when
+// the error carries no details, suggestions, or help URL.
+func TestFormatContextualError_NoSections(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound)
+	got := output.FormatContextualError(err)
+
+	for _, absent := range []string{"Details:", "Suggestions:", "For more help"} {
+		assertSectionPresence(t, got, absent, false)
+	}
+}
+
 // TestFormatMainError tests main error message formatting.
 func TestFormatMainError(t *testing.T) {
 	tests := []struct {

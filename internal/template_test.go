@@ -11,6 +11,91 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+// TestGetFieldWithFallback_GitValueReturned kills the CONDITIONALS_NEGATION mutation at
+// template.go:69 (gitValue != "" → == "") by verifying that a non-empty gitValue is
+// returned directly, not the configValue or defaultValue.
+func TestGetFieldWithFallback_GitValueReturned(t *testing.T) {
+	td := &TemplateData{
+		ActionYML: &ActionYML{},
+		Git: git.RepoInfo{
+			Organization: "git-org",
+		},
+		Config: &AppConfig{
+			Organization: "config-org",
+		},
+	}
+
+	got := getFieldWithFallback(
+		td,
+		func(d *TemplateData) string { return d.Git.Organization },
+		func(d *TemplateData) string { return d.Config.Organization },
+		"default-org",
+	)
+
+	if got != "git-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "git-org")
+	}
+}
+
+// TestGetFieldWithFallback_ConfigFallback verifies that configValue is returned when
+// gitValue is empty but configValue is set.
+func TestGetFieldWithFallback_ConfigFallback(t *testing.T) {
+	td := &TemplateData{
+		ActionYML: &ActionYML{},
+		Git:       git.RepoInfo{},
+		Config: &AppConfig{
+			Organization: "config-org",
+		},
+	}
+
+	got := getFieldWithFallback(
+		td,
+		func(d *TemplateData) string { return d.Git.Organization },
+		func(d *TemplateData) string { return d.Config.Organization },
+		"default-org",
+	)
+
+	if got != "config-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "config-org")
+	}
+}
+
+// TestGetFieldWithFallback_DefaultValue verifies that the default is returned when both
+// git and config values are empty.
+func TestGetFieldWithFallback_DefaultValue(t *testing.T) {
+	td := &TemplateData{
+		ActionYML: &ActionYML{},
+		Git:       git.RepoInfo{},
+		Config:    &AppConfig{},
+	}
+
+	got := getFieldWithFallback(
+		td,
+		func(d *TemplateData) string { return d.Git.Organization },
+		func(d *TemplateData) string { return d.Config.Organization },
+		"default-org",
+	)
+
+	if got != "default-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "default-org")
+	}
+}
+
+// TestGetFieldWithFallback_NonTemplateData verifies the type-guard branch: passing a
+// non-*TemplateData value always returns the default value.
+func TestGetFieldWithFallback_NonTemplateData(t *testing.T) {
+	got := getFieldWithFallback(
+		"not-a-TemplateData",
+		func(_ *TemplateData) string { return "git-org" },
+		func(_ *TemplateData) string { return "config-org" },
+		"default-org",
+	)
+
+	if got != "default-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "default-org")
+	}
+}
+
 // templateDataParams holds parameters for creating test TemplateData.
 type templateDataParams struct {
 	actionName       string
