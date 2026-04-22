@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-github/v74/github"
+
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -280,5 +282,31 @@ func AssertConfigFields(t *testing.T, config *AppConfig, expected ExpectedConfig
 	testutil.AssertEqual(t, expected.Quiet, config.Quiet)
 	if expected.GitHubToken != "" {
 		testutil.AssertEqual(t, expected.GitHubToken, config.GitHubToken)
+	}
+}
+
+// assertGitHubClient validates GitHub client creation results.
+// This helper reduces test code duplication by centralizing
+// the client validation logic for github.Client instances.
+func assertGitHubClient(t *testing.T, client *github.Client, err error, expectError bool) {
+	t.Helper()
+
+	if expectError {
+		if err == nil {
+			t.Error(testutil.TestErrNoErrorGotNone)
+		}
+		if client != nil {
+			t.Error("expected nil client on error")
+		}
+
+		return
+	}
+
+	// Success case
+	if err != nil {
+		t.Errorf(testutil.TestErrUnexpected, err)
+	}
+	if client == nil {
+		t.Error("expected non-nil client")
 	}
 }

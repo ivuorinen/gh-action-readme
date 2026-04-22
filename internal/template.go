@@ -289,45 +289,39 @@ func analyzeDependencies(actionPath string, config *AppConfig, gitInfo git.RepoI
 	return deps
 }
 
+// parseReadmeTemplate parses raw template content into an executable template.
+func parseReadmeTemplate(content []byte) (*template.Template, error) {
+	return template.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(content))
+}
+
 // RenderReadme renders a README using a Go template and the parsed action.yml data.
 func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	tmplContent, err := templatesembed.ReadTemplate(opts.TemplatePath)
 	if err != nil {
 		return "", err
 	}
-	var tmpl *template.Template
-	if opts.Format == appconstants.OutputFormatHTML {
-		tmpl, err = template.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(tmplContent))
-		if err != nil {
-			return "", err
-		}
-		var head, foot string
-		if opts.HeaderPath != "" {
-			h, _ := templatesembed.ReadTemplate(opts.HeaderPath)
-			head = string(h)
-		}
-		if opts.FooterPath != "" {
-			f, _ := templatesembed.ReadTemplate(opts.FooterPath)
-			foot = string(f)
-		}
-		// Wrap template output in header/footer
-		buf := &bytes.Buffer{}
-		buf.WriteString(head)
-		if err := tmpl.Execute(buf, action); err != nil {
-			return "", err
-		}
-		buf.WriteString(foot)
 
-		return buf.String(), nil
-	}
-
-	tmpl, err = template.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(tmplContent))
+	tmpl, err := parseReadmeTemplate(tmplContent)
 	if err != nil {
 		return "", err
 	}
-	buf := &bytes.Buffer{}
-	if err := tmpl.Execute(buf, action); err != nil {
+
+	var buf bytes.Buffer
+
+	if opts.Format == appconstants.OutputFormatHTML && opts.HeaderPath != "" {
+		if h, e := templatesembed.ReadTemplate(opts.HeaderPath); e == nil {
+			buf.Write(h)
+		}
+	}
+
+	if err := tmpl.Execute(&buf, action); err != nil {
 		return "", err
+	}
+
+	if opts.Format == appconstants.OutputFormatHTML && opts.FooterPath != "" {
+		if f, e := templatesembed.ReadTemplate(opts.FooterPath); e == nil {
+			buf.Write(f)
+		}
 	}
 
 	return buf.String(), nil

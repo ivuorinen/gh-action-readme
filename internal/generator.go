@@ -217,12 +217,12 @@ func (g *Generator) ProcessBatch(paths []string) error {
 	}
 
 	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
-	errors, successCount := g.processFiles(paths, bar)
+	parseErrors, successCount := g.processFiles(paths, bar)
 	g.Progress.FinishProgressBarWithNewline(bar)
-	g.reportResults(successCount, errors)
+	g.reportResults(successCount, parseErrors)
 
-	if len(errors) > 0 {
-		return fmt.Errorf("encountered %d errors during batch processing", len(errors))
+	if len(parseErrors) > 0 {
+		return fmt.Errorf("encountered %d errors during batch processing", len(parseErrors))
 	}
 
 	return nil
@@ -235,11 +235,11 @@ func (g *Generator) ValidateFiles(paths []string) error {
 	}
 
 	bar := g.Progress.CreateProgressBarForFiles("Validating files", paths)
-	allResults, errors := g.validateFiles(paths, bar)
+	allResults, parseErrors := g.validateFiles(paths, bar)
 	g.Progress.FinishProgressBarWithNewline(bar)
 
 	if !g.Config.Quiet {
-		g.reportValidationResults(allResults, errors)
+		g.reportValidationResults(allResults, parseErrors)
 	}
 
 	// Count validation failures (files with missing required fields)
@@ -251,8 +251,8 @@ func (g *Generator) ValidateFiles(paths []string) error {
 		}
 	}
 
-	if len(errors) > 0 || validationFailures > 0 {
-		totalFailures := len(errors) + validationFailures
+	if len(parseErrors) > 0 || validationFailures > 0 {
+		totalFailures := len(parseErrors) + validationFailures
 
 		return fmt.Errorf("validation failed for %d files", totalFailures)
 	}
@@ -399,13 +399,13 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 
 // processFiles processes each file and tracks results.
 func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) ([]string, int) {
-	var errors []string
+	var parseErrors []string
 	successCount := 0
 
 	for _, path := range paths {
 		if err := g.GenerateFromFile(path); err != nil {
 			errorMsg := fmt.Sprintf("failed to process %s: %v", path, err)
-			errors = append(errors, errorMsg)
+			parseErrors = append(parseErrors, errorMsg)
 			if g.Config.Verbose {
 				g.Output.Error("%s", errorMsg)
 			}
@@ -416,20 +416,20 @@ func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) (
 		g.Progress.UpdateProgressBar(bar)
 	}
 
-	return errors, successCount
+	return parseErrors, successCount
 }
 
 // reportResults displays processing summary.
-func (g *Generator) reportResults(successCount int, errors []string) {
+func (g *Generator) reportResults(successCount int, parseErrors []string) {
 	if g.Config.Quiet {
 		return
 	}
 
-	g.Output.Bold("\nProcessing complete: %d successful, %d failed", successCount, len(errors))
+	g.Output.Bold("\nProcessing complete: %d successful, %d failed", successCount, len(parseErrors))
 
-	if len(errors) > 0 && g.Config.Verbose {
+	if len(parseErrors) > 0 && g.Config.Verbose {
 		g.Output.Error("\nErrors encountered:")
-		for _, errMsg := range errors {
+		for _, errMsg := range parseErrors {
 			g.Output.Printf("  - %s\n", errMsg)
 		}
 	}
@@ -550,7 +550,7 @@ func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath st
 // validateFiles processes each file for validation.
 func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) ([]ValidationResult, []string) {
 	allResults := make([]ValidationResult, 0, len(paths))
-	var errors []string
+	var parseErrors []string
 
 	for _, path := range paths {
 		if g.Config.Verbose && bar == nil {
@@ -560,7 +560,7 @@ func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) 
 		action, err := ParseActionYML(path)
 		if err != nil {
 			errorMsg := fmt.Sprintf("failed to parse %s: %v", path, err)
-			errors = append(errors, errorMsg)
+			parseErrors = append(parseErrors, errorMsg)
 
 			continue
 		}
@@ -572,17 +572,17 @@ func (g *Generator) validateFiles(paths []string, bar *progressbar.ProgressBar) 
 		g.Progress.UpdateProgressBar(bar)
 	}
 
-	return allResults, errors
+	return allResults, parseErrors
 }
 
 // reportValidationResults provides a summary of validation results.
-func (g *Generator) reportValidationResults(results []ValidationResult, errors []string) {
-	totalFiles := len(results) + len(errors)
+func (g *Generator) reportValidationResults(results []ValidationResult, parseErrors []string) {
+	totalFiles := len(results) + len(parseErrors)
 	validFiles, totalIssues := g.countValidationStats(results)
 
-	g.showValidationSummary(totalFiles, validFiles, totalIssues, len(results), len(errors))
+	g.showValidationSummary(totalFiles, validFiles, totalIssues, len(results), len(parseErrors))
 	g.showDetailedIssues(results, totalIssues)
-	g.showParseErrors(errors)
+	g.showParseErrors(parseErrors)
 }
 
 // countValidationStats counts valid files and total issues from results.
@@ -657,14 +657,14 @@ func (g *Generator) showFileIssues(result ValidationResult) {
 }
 
 // showParseErrors displays parse errors if any exist.
-func (g *Generator) showParseErrors(errors []string) {
-	if len(errors) == 0 {
+func (g *Generator) showParseErrors(parseErrors []string) {
+	if len(parseErrors) == 0 {
 		return
 	}
 
 	g.Output.Bold("\nParse Errors:")
 	g.Output.Printf("%s", "-"+strings.Repeat("-", 15)+"\n")
-	for _, errMsg := range errors {
+	for _, errMsg := range parseErrors {
 		g.Output.Error("  - %s", errMsg)
 	}
 }

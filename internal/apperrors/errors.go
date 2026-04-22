@@ -4,6 +4,7 @@ package apperrors
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -114,12 +115,7 @@ func Wrap(err error, code appconstants.ErrorCode, context string) *ContextualErr
 			Context:     ce.Context,
 			Suggestions: ce.Suggestions,
 			HelpURL:     ce.HelpURL,
-			Details:     make(map[string]string),
-		}
-
-		// Copy details map
-		for k, v := range ce.Details {
-			errCopy.Details[k] = v
+			Details:     maps.Clone(ce.Details),
 		}
 
 		// Only update if not already set
@@ -152,9 +148,7 @@ func (ce *ContextualError) WithDetails(details map[string]string) *ContextualErr
 	if ce.Details == nil {
 		ce.Details = make(map[string]string)
 	}
-	for k, v := range details {
-		ce.Details[k] = v
-	}
+	maps.Copy(ce.Details, details)
 
 	return ce
 }

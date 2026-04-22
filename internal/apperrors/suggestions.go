@@ -29,6 +29,8 @@ func getSuggestionHandler(code appconstants.ErrorCode) func(map[string]string) [
 		appconstants.ErrCodeInvalidAction:      getInvalidActionSuggestions,
 		appconstants.ErrCodeNoActionFiles:      getNoActionFilesSuggestions,
 		appconstants.ErrCodeGitHubAPI:          getGitHubAPISuggestions,
+		appconstants.ErrCodeGitHubRateLimit:    func(_ map[string]string) []string { return getGitHubRateLimitSuggestions() },
+		appconstants.ErrCodeGitHubAuth:         func(_ map[string]string) []string { return getGitHubAuthSuggestions() },
 		appconstants.ErrCodeConfiguration:      getConfigurationSuggestions,
 		appconstants.ErrCodeValidation:         getValidationSuggestions,
 		appconstants.ErrCodeTemplateRender:     getTemplateSuggestions,
@@ -37,15 +39,6 @@ func getSuggestionHandler(code appconstants.ErrorCode) func(map[string]string) [
 		appconstants.ErrCodeCacheAccess:        getCacheAccessSuggestions,
 	}
 
-	// Special cases for handlers without context
-	if code == appconstants.ErrCodeGitHubRateLimit {
-		return func(_ map[string]string) []string { return getGitHubRateLimitSuggestions() }
-	}
-	if code == appconstants.ErrCodeGitHubAuth {
-		return func(_ map[string]string) []string { return getGitHubAuthSuggestions() }
-	}
-
-	// All other cases are handled by the handlers map
 	return handlers[code]
 }
 
