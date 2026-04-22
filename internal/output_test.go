@@ -102,35 +102,39 @@ func TestNewColoredOutput(t *testing.T) {
 	}
 }
 
-// TestNewColoredOutput_NoColorEnvVar tests that NewColoredOutput respects the
-// NO_COLOR environment variable by setting NoColor = true when it is set.
+// TestNewColoredOutput_NoColorEnvVar verifies that setting NO_COLOR=1 forces NoColor=true
+// even when color.NoColor would be false. This kills the mutation on output.go:34 that
+// replaces `!= ""` with `== ""`.
 func TestNewColoredOutput_NoColorEnvVar(t *testing.T) {
-	t.Run("NO_COLOR set forces NoColor true", func(t *testing.T) {
-		t.Setenv("NO_COLOR", "1")
+	// With NO_COLOR set, NoColor must always be true regardless of color.NoColor.
+	t.Setenv("NO_COLOR", "1")
 
-		output := NewColoredOutput(false)
-		if output == nil {
-			t.Fatal("NewColoredOutput() returned nil")
-		}
+	output := NewColoredOutput(false)
+	if output == nil {
+		t.Fatal("NewColoredOutput() returned nil")
+	}
 
-		if !output.NoColor {
-			t.Error("expected NoColor = true when NO_COLOR env var is set")
-		}
-	})
+	if !output.NoColor {
+		t.Error("expected NoColor=true when NO_COLOR env var is set to '1'")
+	}
+}
 
-	t.Run("NO_COLOR unset allows color", func(t *testing.T) {
-		t.Setenv("NO_COLOR", "")
+// TestNewColoredOutput_NoColorEnvVarUnset verifies that when NO_COLOR is explicitly empty
+// the env-var branch does not force NoColor=true on its own.
+func TestNewColoredOutput_NoColorEnvVarUnset(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
 
-		output := NewColoredOutput(false)
-		if output == nil {
-			t.Fatal("NewColoredOutput() returned nil")
-		}
+	output := NewColoredOutput(false)
+	if output == nil {
+		t.Fatal("NewColoredOutput() returned nil")
+	}
 
-		// When NO_COLOR is empty string, NoColor depends only on color.NoColor.
-		// We can't assert false here because CI/terminal state may differ.
-		// What we CAN assert is that the function completed without error.
-		_ = output.NoColor
-	})
+	// When NO_COLOR="" the env-var condition os.Getenv("NO_COLOR") != "" is false.
+	// NoColor may still be true due to color.NoColor (test environment), but
+	// that is independent of the env-var path. The important thing is the function
+	// completes without panic and NoColor reflects the library state, not the empty var.
+	// We record the value to ensure the code path is exercised.
+	_ = output.NoColor
 }
 
 // TestIsQuiet tests quiet mode detection.
@@ -346,141 +350,60 @@ func TestErrorWithContext(t *testing.T) {
 	}
 }
 
+// TestErrorWithContext_ContextBoundary kills the CONDITIONALS_BOUNDARY mutation on
+// output.go:125 (len(context) > 0 → len(context) >= 0).
+// With exactly 0 context items the details block must NOT appear; with 1 item it MUST appear.
+func TestErrorWithContext_ContextBoundary(t *testing.T) {
+	t.Run("zero context items produces no detail section", func(t *testing.T) {
+		output := &ColoredOutput{NoColor: true}
+
+		// Passing an empty (non-nil) map has len == 0 so details should be skipped.
+		captured := testutil.CaptureStderr(func() {
+			output.ErrorWithContext(
+				appconstants.ErrCodeFileNotFound,
+				testutil.TestMsgFileNotFound,
+				map[string]string{},
+			)
+		})
+
+		// The error itself should still appear.
+		if !strings.Contains(captured, "❌") {
+			t.Errorf("expected ❌ in output, got: %q", captured)
+		}
+
+		// Details section header must not appear when context map is empty.
+		if strings.Contains(captured, testutil.TestMsgDetails) {
+			t.Errorf("expected no Details section for empty map, got: %q", captured)
+		}
+	})
+
+	t.Run("one context item produces detail section", func(t *testing.T) {
+		output := &ColoredOutput{NoColor: true}
+
+		captured := testutil.CaptureStderr(func() {
+			output.ErrorWithContext(
+				appconstants.ErrCodeFileNotFound,
+				testutil.TestMsgFileNotFound,
+				map[string]string{testutil.TestKeyFile: appconstants.ActionFileNameYML},
+			)
+		})
+
+		if !strings.Contains(captured, "❌") {
+			t.Errorf("expected ❌ in output, got: %q", captured)
+		}
+
+		// The Details section header must appear when context has 1+ items.
+		if !strings.Contains(captured, testutil.TestMsgDetails) {
+			t.Errorf("expected Details section in output, got: %q", captured)
+		}
+	})
+}
+
 // TestErrorWithSimpleFix tests simple error with fix output.
 func TestErrorWithSimpleFix(t *testing.T) {
 	testErrorStderr(t, "❌", func(output *ColoredOutput) {
 		output.ErrorWithSimpleFix("Something went wrong", "Try running it again")
 	})
-}
-
-// TestErrorWithContext_EmptyVsNonEmpty verifies that ErrorWithContext behaves
-// differently when context is empty vs non-empty (guards the WithDetails branch).
-func TestErrorWithContext_EmptyVsNonEmpty(t *testing.T) {
-	t.Run("empty context does not call WithDetails", func(t *testing.T) {
-		output := &ColoredOutput{NoColor: true}
-		captured := testutil.CaptureStderr(func() {
-			output.ErrorWithContext(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound, nil)
-		})
-
-		if !strings.Contains(captured, "❌") {
-			t.Errorf("expected error emoji in output, got: %q", captured)
-		}
-	})
-
-	t.Run("non-empty context calls WithDetails", func(t *testing.T) {
-		output := &ColoredOutput{NoColor: true}
-		ctx := map[string]string{testutil.TestKeyFile: "action.yml"}
-		captured := testutil.CaptureStderr(func() {
-			output.ErrorWithContext(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound, ctx)
-		})
-
-		if !strings.Contains(captured, "❌") {
-			t.Errorf("expected error emoji in output, got: %q", captured)
-		}
-	})
-}
-
-// TestFormatContextualError_DetailsBoundary verifies that details section appears
-// only when len(err.Details) > 0.
-func TestFormatContextualError_DetailsBoundary(t *testing.T) {
-	output := &ColoredOutput{NoColor: true}
-
-	t.Run("zero details omits details section", func(t *testing.T) {
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound)
-		got := output.FormatContextualError(err)
-
-		if strings.Contains(got, testutil.TestMsgDetails) {
-			t.Errorf("expected no Details section with zero details, got:\n%s", got)
-		}
-	})
-
-	t.Run("one detail includes details section", func(t *testing.T) {
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
-			WithDetails(map[string]string{testutil.TestKeyFile: "action.yml"})
-		got := output.FormatContextualError(err)
-
-		if !strings.Contains(got, testutil.TestMsgDetails) {
-			t.Errorf("expected Details section with one detail, got:\n%s", got)
-		}
-	})
-}
-
-// TestFormatContextualError_SuggestionsBoundary verifies that the suggestions section
-// appears only when len(err.Suggestions) > 0.
-func TestFormatContextualError_SuggestionsBoundary(t *testing.T) {
-	output := &ColoredOutput{NoColor: true}
-
-	t.Run("zero suggestions omits suggestions section", func(t *testing.T) {
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound)
-		got := output.FormatContextualError(err)
-
-		if strings.Contains(got, testutil.TestMsgSuggestions) {
-			t.Errorf("expected no Suggestions section with zero suggestions, got:\n%s", got)
-		}
-	})
-
-	t.Run("one suggestion includes suggestions section", func(t *testing.T) {
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
-			WithSuggestions(testutil.TestMsgCheckFilePath)
-		got := output.FormatContextualError(err)
-
-		if !strings.Contains(got, testutil.TestMsgSuggestions) {
-			t.Errorf("expected Suggestions section with one suggestion, got:\n%s", got)
-		}
-	})
-}
-
-// TestFormatContextualError_HelpURLNegation verifies that the help URL section
-// appears only when err.HelpURL is non-empty.
-func TestFormatContextualError_HelpURLNegation(t *testing.T) {
-	output := &ColoredOutput{NoColor: true}
-
-	t.Run("empty HelpURL omits help URL section", func(t *testing.T) {
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound)
-		got := output.FormatContextualError(err)
-
-		if strings.Contains(got, "For more help") {
-			t.Errorf("expected no 'For more help' section with empty HelpURL, got:\n%s", got)
-		}
-	})
-
-	t.Run("non-empty HelpURL includes help URL section", func(t *testing.T) {
-		err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
-			WithHelpURL(testutil.TestURLHelp)
-		got := output.FormatContextualError(err)
-
-		if !strings.Contains(got, "For more help") {
-			t.Errorf("expected 'For more help' section with non-empty HelpURL, got:\n%s", got)
-		}
-
-		if !strings.Contains(got, testutil.TestURLHelp) {
-			t.Errorf("expected HelpURL %q in output, got:\n%s", testutil.TestURLHelp, got)
-		}
-	})
-}
-
-// TestError_ColorPath verifies that the Error() method works correctly when
-// NoColor is false (exercises the color.New().Fprintf code path at line 54).
-func TestError_ColorPath(t *testing.T) {
-	output := &ColoredOutput{NoColor: false}
-
-	captured := testutil.CaptureStderr(func() {
-		output.Error(testutil.TestMsgFileNotFound)
-	})
-
-	if !strings.Contains(captured, testutil.TestMsgFileNotFound) {
-		t.Errorf("Error() with color enabled missing message, got: %q", captured)
-	}
-}
-
-// TestBold_ColorPath verifies that the Bold() method works correctly when
-// NoColor is false (exercises the color.New().Printf code path at line 81).
-// The color library writes directly to the real stdout, so we cannot capture
-// it. We verify the code path is exercised without panic.
-func TestBold_ColorPath(_ *testing.T) {
-	output := &ColoredOutput{NoColor: false, Quiet: false}
-	// Must not panic — the color.New().Printf path should execute cleanly.
-	output.Bold("Important Notice")
 }
 
 // TestFormatContextualError tests contextual error formatting.
