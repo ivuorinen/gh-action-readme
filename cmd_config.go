@@ -26,23 +26,25 @@ func resolveExportFormat(format string) wizard.ExportFormat {
 	return wizard.FormatYAML
 }
 
+func configRootHandler(_ *cobra.Command, _ []string) error {
+	output := internal.NewColoredOutput(globalConfig.Quiet)
+	path, err := internal.GetConfigPath()
+	if err != nil {
+		return fmt.Errorf("failed to get config path: %w", err)
+	}
+	output.Info("Configuration file location: %s", path)
+	if globalConfig.Verbose {
+		output.Info("Current config: %+v", globalConfig)
+	}
+
+	return nil
+}
+
 func newConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Configuration management commands",
-		Run: func(_ *cobra.Command, _ []string) {
-			output := internal.NewColoredOutput(globalConfig.Quiet)
-			path, err := internal.GetConfigPath()
-			if err != nil {
-				output.Error("Error getting config path: %v", err)
-
-				return
-			}
-			output.Info("Configuration file location: %s", path)
-			if globalConfig.Verbose {
-				output.Info("Current config: %+v", globalConfig)
-			}
-		},
+		Run:   wrapHandlerWithErrorHandling(configRootHandler),
 	}
 
 	// Add subcommands
@@ -65,13 +67,13 @@ func newConfigCmd() *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "show",
 		Short: "Show current configuration",
-		Run:   configShowHandler,
+		Run:   wrapHandlerWithErrorHandling(configShowHandler),
 	})
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "themes",
 		Short: "List available themes",
-		Run:   configThemesHandler,
+		Run:   wrapHandlerWithErrorHandling(configThemesHandler),
 	})
 
 	return cmd
@@ -104,7 +106,7 @@ func configInitHandler(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func configShowHandler(_ *cobra.Command, _ []string) {
+func configShowHandler(_ *cobra.Command, _ []string) error {
 	output := createOutputManager(globalConfig.Quiet)
 
 	output.Bold("Current Configuration:")
@@ -115,9 +117,11 @@ func configShowHandler(_ *cobra.Command, _ []string) {
 	output.Printf("Schema: %s\n", globalConfig.Schema)
 	output.Printf("Verbose: %t\n", globalConfig.Verbose)
 	output.Printf("Quiet: %t\n", globalConfig.Quiet)
+
+	return nil
 }
 
-func configThemesHandler(_ *cobra.Command, _ []string) {
+func configThemesHandler(_ *cobra.Command, _ []string) error {
 	output := createOutputManager(globalConfig.Quiet)
 
 	output.Bold("Available Themes:")
@@ -141,6 +145,8 @@ func configThemesHandler(_ *cobra.Command, _ []string) {
 	}
 
 	output.Info("\nUse --theme flag or set 'theme' in config file to change theme")
+
+	return nil
 }
 
 func configWizardHandler(cmd *cobra.Command, _ []string) error {

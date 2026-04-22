@@ -23,6 +23,12 @@ type InputReader interface {
 	ReadLine() (string, error)
 }
 
+// fileDep pairs a floating dependency with the file it was found in.
+type fileDep struct {
+	file string
+	dep  dependencies.Dependency
+}
+
 // StdinReader reads from actual stdin.
 type StdinReader struct{}
 
@@ -218,15 +224,9 @@ func analyzeSecurityDeps(
 	output *internal.ColoredOutput,
 	actionFiles []string,
 	analyzer *dependencies.Analyzer,
-) (int, []struct {
-	file string
-	dep  dependencies.Dependency
-}) {
+) (int, []fileDep) {
 	pinnedCount := 0
-	var floatingDeps []struct {
-		file string
-		dep  dependencies.Dependency
-	}
+	var floatingDeps []fileDep
 
 	output.Bold("Security Analysis of GitHub Action Dependencies:")
 
@@ -246,10 +246,7 @@ func analyzeSecurityDeps(
 				if dep.IsPinned {
 					pinnedCount++
 				} else {
-					floatingDeps = append(floatingDeps, struct {
-						file string
-						dep  dependencies.Dependency
-					}{actionFile, dep})
+					floatingDeps = append(floatingDeps, fileDep{file: actionFile, dep: dep})
 				}
 			}
 		},
@@ -263,10 +260,7 @@ func displaySecuritySummary(
 	output *internal.ColoredOutput,
 	currentDir string,
 	pinnedCount int,
-	floatingDeps []struct {
-		file string
-		dep  dependencies.Dependency
-	},
+	floatingDeps []fileDep,
 ) {
 	output.Success("\n🔒 Pinned versions: %d (Recommended for security)", pinnedCount)
 	floatingCount := len(floatingDeps)
@@ -284,10 +278,7 @@ func displaySecuritySummary(
 func displayFloatingDeps(
 	output *internal.ColoredOutput,
 	currentDir string,
-	floatingDeps []struct {
-		file string
-		dep  dependencies.Dependency
-	},
+	floatingDeps []fileDep,
 ) {
 	output.Bold("\nFloating dependencies that should be pinned:")
 	for _, fd := range floatingDeps {

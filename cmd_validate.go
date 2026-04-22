@@ -14,7 +14,7 @@ import (
 func newValidateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate",
-		Short: "Validate action.yml files and optionally autofill missing fields.",
+		Short: "Validate action.yml files.",
 		Run:   wrapHandlerWithErrorHandling(validateHandler),
 	}
 }
@@ -46,7 +46,7 @@ func validateHandler(_ *cobra.Command, _ []string) error {
 
 	// Validate the discovered files
 	if err := generator.ValidateFiles(actionFiles); err != nil {
-		return fmt.Errorf("validation failed for %d files: %w", len(actionFiles), err)
+		return err
 	}
 
 	generator.Output.Success("\nAll validations passed successfully!")
@@ -56,8 +56,5 @@ func validateHandler(_ *cobra.Command, _ []string) error {
 
 func schemaHandler(_ *cobra.Command, _ []string) {
 	output := internal.NewColoredOutput(globalConfig.Quiet)
-	if globalConfig.Verbose {
-		output.Info("Using schema: %s", globalConfig.Schema)
-	}
-	output.Printf("Schema: schemas/action.schema.json (replaceable, editable)")
+	output.Printf("Schema: %s (replaceable, editable)\n", globalConfig.Schema)
 }

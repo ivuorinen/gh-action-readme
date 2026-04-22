@@ -112,7 +112,7 @@ const (
 
 // defaultIgnoredDirectories lists directories to ignore during file discovery.
 var defaultIgnoredDirectories = []string{
-	DirGit, DirGitHub, DirGitLab, DirSVN, // VCS
+	DirGit, DirGitLab, DirSVN, // VCS; keep .github searchable for .github/actions
 	DirNodeModules, DirBowerComponents, // JavaScript
 	DirVendor,                                       // Go/PHP
 	DirVenvDot, DirVenv, DirEnv, DirTox, DirPycache, // Python

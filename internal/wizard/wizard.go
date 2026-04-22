@@ -145,7 +145,7 @@ func (w *ConfigWizard) configureOutputFormat() {
 
 	w.displayFormatOptions(formats)
 
-	formatChoice := w.promptWithDefault("Choose output format (1-4)", "1")
+	formatChoice := w.promptWithDefault(fmt.Sprintf("Choose output format (1-%d)", len(formats)), "1")
 	if choice, err := strconv.Atoi(formatChoice); err == nil && choice >= 1 && choice <= len(formats) {
 		w.config.OutputFormat = formats[choice-1]
 	}

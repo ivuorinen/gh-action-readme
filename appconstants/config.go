@@ -95,15 +95,21 @@ const (
 const (
 	// ConfigFilePatternHidden is the primary hidden config file pattern.
 	ConfigFilePatternHidden = ".ghreadme.yaml"
+	// ConfigFilePatternHiddenLegacy is the legacy hidden config file pattern.
+	ConfigFilePatternHiddenLegacy = ".gh-action-readme.yml"
+	// ConfigFilePatternHiddenLegacyYAML is the legacy hidden config YAML pattern.
+	ConfigFilePatternHiddenLegacyYAML = ".gh-action-readme.yaml"
 	// ConfigFilePatternConfig is the secondary config directory pattern.
-	ConfigFilePatternConfig = ".config/ghreadme.yaml"
+	ConfigFilePatternConfig = ".config/gh-action-readme/config.yaml"
 	// ConfigFilePatternGitHub is the GitHub ecosystem config pattern.
-	ConfigFilePatternGitHub = ".github/ghreadme.yaml"
+	ConfigFilePatternGitHub = ".github/gh-action-readme.yaml"
 )
 
 // configSearchPaths defines the order in which config files are searched (unexported to prevent modification).
 var configSearchPaths = []string{
 	ConfigFilePatternHidden,
+	ConfigFilePatternHiddenLegacy,
+	ConfigFilePatternHiddenLegacyYAML,
 	ConfigFilePatternConfig,
 	ConfigFilePatternGitHub,
 }

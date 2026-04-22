@@ -70,6 +70,8 @@ var supportedOutputFormats = []string{
 	OutputFormatMarkdown,
 	OutputFormatHTML,
 	OutputFormatJSON,
+	OutputFormatYAML,
+	OutputFormatTOML,
 	OutputFormatASCIIDoc,
 }
 

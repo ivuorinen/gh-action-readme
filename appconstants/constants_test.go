@@ -206,7 +206,10 @@ func TestGetSupportedOutputFormats(t *testing.T) {
 		t.Error("GetSupportedOutputFormats() returned empty slice")
 	}
 
-	expectedFormats := []string{OutputFormatMarkdown, OutputFormatHTML, OutputFormatJSON, OutputFormatASCIIDoc}
+	expectedFormats := []string{
+		OutputFormatMarkdown, OutputFormatHTML, OutputFormatJSON,
+		OutputFormatYAML, OutputFormatTOML, OutputFormatASCIIDoc,
+	}
 	for _, expected := range expectedFormats {
 		if !slices.Contains(formats, expected) {
 			t.Errorf("GetSupportedOutputFormats() missing expected format: %s", expected)

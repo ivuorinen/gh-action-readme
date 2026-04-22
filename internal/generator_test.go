@@ -1241,11 +1241,12 @@ func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name  string
-		token string
+		name          string
+		token         string
+		wantClientNil bool
 	}{
-		{name: "empty token skips client creation", token: ""},
-		{name: "non-empty token creates client", token: testutil.TestTokenValue},
+		{name: "empty token skips client creation", token: "", wantClientNil: true},
+		{name: "non-empty token creates client", token: testutil.TestTokenValue, wantClientNil: false},
 	}
 
 	for _, tt := range tests {
@@ -1261,6 +1262,12 @@ func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 			testutil.AssertNoError(t, err)
 			if analyzer == nil {
 				t.Error("expected analyzer to be non-nil")
+			}
+			if tt.wantClientNil && analyzer.GitHubClient != nil {
+				t.Error("expected GitHubClient to be nil for empty token")
+			}
+			if !tt.wantClientNil && analyzer.GitHubClient == nil {
+				t.Error("expected GitHubClient to be non-nil for non-empty token")
 			}
 		})
 	}

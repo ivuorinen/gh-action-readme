@@ -185,7 +185,7 @@ func TestCLICommands(t *testing.T) {
 			name:       "schema command",
 			args:       []string{"schema"},
 			wantExit:   0,
-			wantStdout: "schemas/action.schema.json",
+			wantStdout: "schemas/schema.json",
 		},
 		{
 			name:       "config command default",
@@ -845,11 +845,11 @@ func TestSchemaHandler(t *testing.T) {
 }
 
 func TestConfigThemesHandler(t *testing.T) {
-	testSimpleVoidHandler(t, configThemesHandler)
+	testSimpleHandler(t, configThemesHandler, "configThemesHandler")
 }
 
 func TestConfigShowHandler(t *testing.T) {
-	testSimpleVoidHandler(t, configShowHandler)
+	testSimpleHandler(t, configShowHandler, "configShowHandler")
 }
 
 func TestDepsGraphHandler(t *testing.T) {
@@ -1176,10 +1176,7 @@ func TestDisplayOutdatedResults(_ *testing.T) {
 func TestDisplayFloatingDeps(_ *testing.T) {
 
 	output := createOutputManager(true)
-	floatingDeps := []struct {
-		file string
-		dep  dependencies.Dependency
-	}{
+	floatingDeps := []fileDep{
 		{
 			file: testutil.TestTmpActionFile,
 			dep: dependencies.Dependency{
@@ -1198,10 +1195,7 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 	tests := []struct {
 		name         string
 		pinnedCount  int
-		floatingDeps []struct {
-			file string
-			dep  dependencies.Dependency
-		}
+		floatingDeps []fileDep
 	}{
 		{
 			name:         "all pinned",
@@ -1211,10 +1205,7 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 		{
 			name:        "with floating dependencies",
 			pinnedCount: 3,
-			floatingDeps: []struct {
-				file string
-				dep  dependencies.Dependency
-			}{
+			floatingDeps: []fileDep{
 				{
 					file: testutil.TestTmpActionFile,
 					dep: dependencies.Dependency{

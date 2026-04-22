@@ -128,8 +128,11 @@ func resolveAndValidateTargetPath(args []string) (string, os.FileInfo, error) {
 
 	// Check if target exists
 	info, err := os.Stat(absTargetPath)
+	if os.IsNotExist(err) {
+		return "", nil, fmt.Errorf("path does not exist: %s: %w", targetPath, err)
+	}
 	if err != nil {
-		return "", nil, fmt.Errorf("path does not exist: %s", targetPath)
+		return "", nil, fmt.Errorf("error stating path %s: %w", targetPath, err)
 	}
 
 	return absTargetPath, info, nil
@@ -164,21 +167,20 @@ func applyGlobalFlags(config *internal.AppConfig) {
 
 // applyCommandFlags applies command-specific flags.
 func applyCommandFlags(cmd *cobra.Command, config *internal.AppConfig) {
-	outputFormat, _ := cmd.Flags().GetString(appconstants.FlagOutputFormat)
-	outputDir, _ := cmd.Flags().GetString(appconstants.FlagOutputDir)
-	outputFilename, _ := cmd.Flags().GetString(appconstants.FlagOutput)
-	theme, _ := cmd.Flags().GetString(appconstants.ConfigKeyTheme)
-
-	if outputFormat != appconstants.OutputFormatMarkdown {
+	if cmd.Flags().Changed(appconstants.FlagOutputFormat) {
+		outputFormat, _ := cmd.Flags().GetString(appconstants.FlagOutputFormat)
 		config.OutputFormat = outputFormat
 	}
-	if outputDir != "." {
+	if cmd.Flags().Changed(appconstants.FlagOutputDir) {
+		outputDir, _ := cmd.Flags().GetString(appconstants.FlagOutputDir)
 		config.OutputDir = outputDir
 	}
-	if outputFilename != "" {
+	if cmd.Flags().Changed(appconstants.FlagOutput) {
+		outputFilename, _ := cmd.Flags().GetString(appconstants.FlagOutput)
 		config.OutputFilename = outputFilename
 	}
-	if theme != "" {
+	if cmd.Flags().Changed(appconstants.ConfigKeyTheme) {
+		theme, _ := cmd.Flags().GetString(appconstants.ConfigKeyTheme)
 		config.Theme = theme
 	}
 }

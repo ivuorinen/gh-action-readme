@@ -201,7 +201,7 @@ format-yaml: ## Format YAML files
 
 editorconfig: ## Check EditorConfig compliance
 	@echo "Checking EditorConfig compliance..."
-	$(EC) || true
+	$(EC)
 
 editorconfig-fix: ## Fix EditorConfig violations
 	@echo "EditorConfig violations cannot be automatically fixed by editorconfig-checker"
