@@ -472,9 +472,18 @@ done
 
 Mutation testing verifies test effectiveness by modifying source code and checking if tests catch the changes.
 
-**Status:** Mutation test files are implemented but currently disabled due to go-mutesting tool compatibility issues with Go 1.25+. The test code is ready for when compatibility is resolved.
+**Tool:** [gremlins](https://github.com/go-gremlins/gremlins) v0.6.0 (Go 1.25+ compatible, actively maintained). Replaced the unmaintained go-mutesting (last release 2021, incompatible with Go 1.24+).
 
-**Test files created:**
+```bash
+# Run all mutation tests
+make test-mutation
+
+# Run by component
+make test-mutation-parser      # internal package (permission parsing)
+make test-mutation-validation  # internal/validation package
+```
+
+**Test files:**
 
 - `internal/parser_mutation_test.go` - Permission parsing mutations
 - `internal/validation/validation_mutation_test.go` - Version validation mutations
@@ -485,7 +494,7 @@ Mutation testing verifies test effectiveness by modifying source code and checki
 - Parser: permission extraction, indentation logic, comment handling
 - Validation: version format checks, URL parsing, string sanitization
 
-**Expected results:** <5% mutation survival rate (>95% of mutations caught by tests)
+**Expected results:** gremlins prints a mutation score table per package. Some surviving mutations are normal; the goal is high kill rate on critical logic paths.
 
 #### Property-Based Testing
 
@@ -524,7 +533,7 @@ make test-coverage-html         # HTML coverage report + browser
 make test-coverage-check        # Verify coverage >= 72%
 ```
 
-**Note:** Mutation tests require go-mutesting (Go 1.22/1.23 compatible). Run `make test-mutation` if supported. Not included in `make test` by default for broad compatibility.
+**Note:** Mutation tests use gremlins and run separately from the standard test suite. Not included in `make test` by default as they take significantly longer.
 
 ### Linting and Quality
 

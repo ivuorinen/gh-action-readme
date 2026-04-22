@@ -1,16 +1,55 @@
 .PHONY: help test test-quick test-coverage test-coverage-html test-coverage-check \
 	test-mutation test-mutation-parser test-mutation-validation \
 	test-property test-property-validation test-property-parser \
-	lint build run example clean readme config-verify security vulncheck audit trivy gitleaks \
-	editorconfig editorconfig-fix format devtools pre-commit-install pre-commit-update \
+	lint build run example clean readme config-verify \
+	security vulncheck gosec audit trivy gitleaks \
+	editorconfig editorconfig-fix format format-yaml devtools \
+	pre-commit-install pre-commit-update \
 	deps-check deps-update deps-update-all
 
 all: help
 
 # Coverage threshold (align with SonarCloud)
 # Note: SonarCloud checks NEW code coverage (≥80%), this checks overall coverage
-# Current overall coverage: 72.9% - working towards 80% target
+# Current overall coverage: 73.7% - working towards 80% target
 COVERAGE_THRESHOLD := 72.0
+
+# Tool versions (managed by Renovate)
+# renovate: datasource=go depName=golang.org/x/vuln
+GOVULNCHECK_VERSION := v1.2.0
+# renovate: datasource=go depName=github.com/golangci/golangci-lint/v2
+GOLANGCI_LINT_VERSION := v2.11.4
+# renovate: datasource=go depName=github.com/editorconfig-checker/editorconfig-checker/v3
+EDITORCONFIG_CHECKER_VERSION := v3.6.1
+# renovate: datasource=go depName=github.com/oligot/go-mod-upgrade
+GO_MOD_UPGRADE_VERSION := v0.12.0
+# renovate: datasource=go depName=github.com/securego/gosec/v2
+GOSEC_VERSION := v2.25.0
+# renovate: datasource=go depName=github.com/google/yamlfmt
+YAMLFMT_VERSION := v0.21.0
+# renovate: datasource=go depName=golang.org/x/tools
+GOIMPORTS_VERSION := v0.44.0
+# renovate: datasource=go depName=github.com/go-gremlins/gremlins
+GREMLINS_VERSION := v0.6.0
+
+# Tool command shortcuts (avoids long lines in recipes)
+EC_MODULE := github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker
+GOLANGCI_MODULE := github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+GOVULNCHECK_MODULE := golang.org/x/vuln/cmd/govulncheck
+GOSEC_MODULE := github.com/securego/gosec/v2/cmd/gosec
+YAMLFMT_MODULE := github.com/google/yamlfmt/cmd/yamlfmt
+GOIMPORTS_MODULE := golang.org/x/tools/cmd/goimports
+GO_MOD_UPGRADE_MODULE := github.com/oligot/go-mod-upgrade
+GREMLINS_MODULE := github.com/go-gremlins/gremlins/cmd/gremlins
+
+EC := go run $(EC_MODULE)@$(EDITORCONFIG_CHECKER_VERSION)
+GOLANGCI := go run $(GOLANGCI_MODULE)@$(GOLANGCI_LINT_VERSION)
+GOVULNCHECK := go run $(GOVULNCHECK_MODULE)@$(GOVULNCHECK_VERSION)
+GOSEC := go run $(GOSEC_MODULE)@$(GOSEC_VERSION)
+YAMLFMT := go run $(YAMLFMT_MODULE)@$(YAMLFMT_VERSION)
+GOIMPORTS := go run $(GOIMPORTS_MODULE)@$(GOIMPORTS_VERSION)
+GO_MOD_UPGRADE := go run $(GO_MOD_UPGRADE_MODULE)@$(GO_MOD_UPGRADE_VERSION)
+GREMLINS := go run $(GREMLINS_MODULE)@$(GREMLINS_VERSION)
 
 help: ## Show this help message
 	@echo "GitHub Action README Generator - Available Make Targets:"
@@ -19,7 +58,7 @@ help: ## Show this help message
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Common workflows:"
-	@echo "  make devtools            # Install all development tools"
+	@echo "  make devtools            # Install system-only tools (trivy, gitleaks)"
 	@echo "  make pre-commit-install  # Install pre-commit hooks (run once)"
 	@echo "  make build               # Build the application binary"
 	@echo "  make test lint           # Run tests and all linters via pre-commit"
@@ -38,8 +77,7 @@ test: ## Run all tests (standard and property-based)
 	@echo ""
 	@echo "✅ All tests (standard + property) completed successfully!"
 	@echo ""
-	@echo "Note: Mutation tests require go-mutesting (compatible with Go 1.22/1.23 only)."
-	@echo "      Run 'make test-mutation' if you have a compatible Go version."
+	@echo "Note: Run 'make test-mutation' to execute mutation tests via gremlins."
 	@echo "      Run 'make test-quick' for fast iteration (unit tests only)."
 
 test-quick: ## Run only standard unit tests (fast)
@@ -94,27 +132,12 @@ test-coverage-check: ## Run tests with coverage check (overall >= 72%)
 test-mutation: test-mutation-parser test-mutation-validation ## Run all mutation tests
 
 test-mutation-parser: ## Run mutation tests on parser (permission parsing)
-	@echo "Running mutation tests on parser..."
-	@command -v go-mutesting >/dev/null 2>&1 || { \
-		echo "❌ go-mutesting not found. Installing..."; \
-		go install github.com/zimmski/go-mutesting/cmd/go-mutesting@latest; \
-	}
-	@go-mutesting --do-not-remove internal/parser.go -- \
-		go test -v ./internal -run "TestParse.*Permissions|TestMerge.*Permissions|TestProcess.*Permission"
+	@echo "Running mutation tests on parser (gremlins)..."
+	$(GREMLINS) unleash ./internal
 
 test-mutation-validation: ## Run mutation tests on validation (version and strings)
-	@echo "Running mutation tests on validation..."
-	@command -v go-mutesting >/dev/null 2>&1 || { \
-		echo "❌ go-mutesting not found. Installing..."; \
-		go install github.com/zimmski/go-mutesting/cmd/go-mutesting@latest; \
-	}
-	@echo "Testing version validation..."
-	@go-mutesting --do-not-remove internal/validation/validation.go -- \
-		go test -v ./internal/validation -run "TestIsCommitSHA|TestIsSemanticVersion|TestIsVersionPinned"
-	@echo ""
-	@echo "Testing string validation..."
-	@go-mutesting --do-not-remove internal/validation/strings.go -- \
-		go test -v ./internal/validation -run "TestParseGitHubURL|TestSanitize|TestFormat|TestClean"
+	@echo "Running mutation tests on validation (gremlins)..."
+	$(GREMLINS) unleash --timeout-coefficient 20 --workers 1 ./internal/validation
 
 .PHONY: test-property test-property-validation test-property-parser
 
@@ -151,7 +174,7 @@ build: ## Build the application
 	go build -o gh-action-readme .
 
 config-verify: ## Verify golangci-lint configuration
-	golangci-lint config verify --verbose
+	$(GOLANGCI) config verify --verbose
 
 run: ## Run the application
 	go run .
@@ -169,57 +192,26 @@ clean: ## Clean build artifacts
 # Code formatting and EditorConfig targets
 format: editorconfig-fix ## Format code and fix EditorConfig issues
 	@echo "Running all formatters..."
-	@command -v gofmt >/dev/null 2>&1 && gofmt -w -s . || echo "gofmt not available"
-	@command -v goimports >/dev/null 2>&1 && \
-		goimports -w -local github.com/ivuorinen/gh-action-readme . || \
-		echo "goimports not available"
+	gofmt -w -s .
+	$(GOIMPORTS) -w -local github.com/ivuorinen/gh-action-readme .
+
+format-yaml: ## Format YAML files
+	@echo "Formatting YAML files..."
+	$(YAMLFMT) .
 
 editorconfig: ## Check EditorConfig compliance
 	@echo "Checking EditorConfig compliance..."
-	@command -v editorconfig-checker >/dev/null 2>&1 || \
-		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
-	editorconfig-checker || true
+	$(EC) || true
 
 editorconfig-fix: ## Fix EditorConfig violations
 	@echo "EditorConfig violations cannot be automatically fixed by editorconfig-checker"
 	@echo "Please fix the reported issues manually or use your editor's EditorConfig plugin"
 	@echo "Running check to show issues..."
-	@command -v editorconfig-checker >/dev/null 2>&1 || \
-		{ echo "Please install editorconfig-checker or run 'make devtools'"; exit 1; }
-	editorconfig-checker
+	$(EC) || true
 
-# Development tools installation
-devtools: ## Install all development tools
+# Development tools installation (Go tools run via 'go run' — no install needed)
+devtools: ## Install system-only development tools (trivy, gitleaks, pre-commit)
 	@echo "Installing development tools..."
-	@echo ""
-	@echo "=== Go Tools ==="
-	@command -v golangci-lint >/dev/null 2>&1 || \
-		{ echo "Installing golangci-lint..."; \
-			curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-			sh -s -- -b $(go env GOPATH)/bin; }
-	@command -v govulncheck >/dev/null 2>&1 || \
-		{ echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
-	@command -v editorconfig-checker >/dev/null 2>&1 || \
-		{ echo "Installing editorconfig-checker..."; \
-			go install github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@latest; }
-	@command -v yamlfmt >/dev/null 2>&1 || \
-		{ echo "Installing yamlfmt..."; go install github.com/google/yamlfmt/cmd/yamlfmt@latest; }
-	@command -v go-mod-upgrade >/dev/null 2>&1 || \
-		{ echo "Installing go-mod-upgrade..."; \
-			go install github.com/oligot/go-mod-upgrade@latest; }
-	@echo "✓ Go tools installed"
-	@echo ""
-	@echo "=== Node.js Tools ==="
-	@command -v npm >/dev/null 2>&1 || \
-		{ echo "❌ npm not found. Please install Node.js first."; exit 1; }
-	@echo "✓ Node.js tools installed"
-	@echo ""
-	@echo "=== Python Tools ==="
-	@command -v python3 >/dev/null 2>&1 || \
-		{ echo "❌ python3 not found. Please install Python 3 first."; exit 1; }
-	@command -v pre-commit >/dev/null 2>&1 || \
-		{ echo "Installing pre-commit..."; pip install pre-commit; }
-	@echo "✓ Python tools installed"
 	@echo ""
 	@echo "=== System Tools ==="
 	@command -v trivy >/dev/null 2>&1 || \
@@ -228,23 +220,32 @@ devtools: ## Install all development tools
 		{ echo "❌ gitleaks not found. Please install manually: https://github.com/gitleaks/gitleaks"; }
 	@echo "✓ System tools check completed"
 	@echo ""
-	@echo "🎉 Development tools installation completed!"
+	@echo "=== Python Tools ==="
+	@command -v python3 >/dev/null 2>&1 || \
+		{ echo "❌ python3 not found. Please install Python 3 first."; exit 1; }
+	@command -v pre-commit >/dev/null 2>&1 || \
+		{ echo "Installing pre-commit..."; pip install pre-commit; }
+	@echo "✓ Python tools installed"
+	@echo ""
+	@echo "✅ Development tools setup completed!"
+	@echo "   Go tools (golangci-lint, govulncheck, etc.) run via 'go run' automatically."
 	@echo "   Run 'make test lint' to verify everything works."
 
 # Security targets
-security: vulncheck trivy gitleaks ## Run all security scans
+security: vulncheck gosec trivy gitleaks ## Run all security scans
 	@echo "All security scans completed"
 
 vulncheck: ## Run Go vulnerability check
 	@echo "Running Go vulnerability check..."
-	@command -v govulncheck >/dev/null 2>&1 || \
-		{ echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
-	govulncheck ./...
+	$(GOVULNCHECK) ./...
+
+gosec: ## Run gosec security scanner
+	@echo "Running gosec security scanner..."
+	$(GOSEC) ./...
 
 audit: trivy gitleaks vulncheck ## Run comprehensive security audit
 	@echo "Running comprehensive security audit..."
 	go list -json -deps ./... | jq -r '.Module | select(.Path != null) | .Path + "@" + .Version' | sort -u
-
 
 trivy: ## Run Trivy filesystem scan
 	@echo "Running Trivy filesystem scan..."
@@ -265,9 +266,7 @@ deps-check: ## Show outdated dependencies
 
 deps-update: ## Update dependencies interactively
 	@echo "Starting interactive dependency update..."
-	@command -v go-mod-upgrade >/dev/null 2>&1 || \
-		{ echo "Please install go-mod-upgrade or run 'make devtools'"; exit 1; }
-	go-mod-upgrade
+	$(GO_MOD_UPGRADE)
 	@echo "Running go mod tidy..."
 	go mod tidy
 
