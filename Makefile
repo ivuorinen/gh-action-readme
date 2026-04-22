@@ -133,7 +133,7 @@ test-mutation: test-mutation-parser test-mutation-validation ## Run all mutation
 
 test-mutation-parser: ## Run mutation tests on parser (permission parsing)
 	@echo "Running mutation tests on parser (gremlins)..."
-	$(GREMLINS) unleash ./internal
+	$(GREMLINS) unleash --timeout-coefficient 10 --workers 1 ./internal
 
 test-mutation-validation: ## Run mutation tests on validation (version and strings)
 	@echo "Running mutation tests on validation (gremlins)..."
