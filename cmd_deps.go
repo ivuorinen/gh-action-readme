@@ -2,8 +2,10 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -33,10 +35,9 @@ type fileDep struct {
 type StdinReader struct{}
 
 func (r *StdinReader) ReadLine() (string, error) {
-	var response string
-	_, err := fmt.Scanln(&response)
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
 
-	return strings.TrimSpace(response), err
+	return strings.TrimSpace(line), err
 }
 
 func newDepsCmd() *cobra.Command {
@@ -439,12 +440,12 @@ func setupDepsUpgrade(
 	currentDir string,
 	config *internal.AppConfig,
 ) (*dependencies.Analyzer, []string, error) {
-	// Default to globalConfig if not provided (backward compatible)
 	if config == nil {
-		if globalConfig == nil {
-			globalConfig = internal.DefaultAppConfig()
+		if globalConfig != nil {
+			config = globalConfig
+		} else {
+			config = internal.DefaultAppConfig()
 		}
-		config = globalConfig
 	}
 
 	generator := internal.NewGenerator(config)

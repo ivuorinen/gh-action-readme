@@ -1,0 +1,8 @@
+name: My Action
+description: A test action with outputs
+outputs:
+  result:
+    description: The result value
+runs:
+  using: composite
+  steps: []

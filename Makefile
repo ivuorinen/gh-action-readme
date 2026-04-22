@@ -243,7 +243,7 @@ gosec: ## Run gosec security scanner
 	@echo "Running gosec security scanner..."
 	$(GOSEC) ./...
 
-audit: trivy gitleaks vulncheck ## Run comprehensive security audit
+audit: trivy gitleaks vulncheck gosec ## Run comprehensive security audit
 	@echo "Running comprehensive security audit..."
 	go list -json -deps ./... | jq -r '.Module | select(.Path != null) | .Path + "@" + .Version' | sort -u
 

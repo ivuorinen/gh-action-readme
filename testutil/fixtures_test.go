@@ -633,14 +633,16 @@ func TestMustReadAnalyzerFixture(t *testing.T) {
 // TestPackageLevelLoadConfigFixture tests the package-level LoadConfigFixture.
 func TestPackageLevelLoadConfigFixture(t *testing.T) {
 	t.Parallel()
-	// The global fixture manager uses testdata/yaml-fixtures/configs/
-	// which may or may not have fixtures — test that the function at least doesn't panic on valid input
+
 	fixture, err := LoadConfigFixture("default.yml")
 	if err != nil {
-		// It's acceptable that the config fixture doesn't exist; the important thing is the function runs
-		t.Logf("LoadConfigFixture returned error (may be expected): %v", err)
-	} else if fixture == nil {
-		t.Error("expected fixture object, got nil")
+		t.Fatalf("LoadConfigFixture returned error: %v", err)
+	}
+	if fixture == nil {
+		t.Fatal("expected fixture object, got nil")
+	}
+	if fixture.Content == "" {
+		t.Error("expected non-empty fixture content")
 	}
 }
 
@@ -681,9 +683,17 @@ func TestValidateConfigContent(t *testing.T) {
 		content  string
 		expected bool
 	}{
-		{"valid yaml", "theme: default\noutput_format: md", true},
-		{"invalid yaml", "key: [unclosed bracket", false},
-		{"empty content", "{}", true},
+		{
+			"valid yaml",
+			MustReadFixture(TestConfigValidSimple),
+			true,
+		},
+		{
+			"invalid yaml",
+			MustReadFixture(TestConfigInvalidMalformed),
+			false,
+		},
+		{"empty content", TestConfigEmpty, true},
 	}
 
 	for _, tt := range tests {

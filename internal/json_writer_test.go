@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 // newTestJSONWriter creates a JSONWriter with a default config for testing.
@@ -13,55 +15,50 @@ func newTestJSONWriter() *JSONWriter {
 	return NewJSONWriter(DefaultAppConfig())
 }
 
-// actionWithNoInputsOutputs returns an ActionYML with no inputs or outputs.
-func actionWithNoInputsOutputs() *ActionYML {
-	return &ActionYML{
-		Name:        "My Action",
-		Description: "A test action",
-		Runs:        map[string]any{"using": "composite", "steps": []any{}},
+// parseFixtureAction loads and parses an action YAML fixture by its fixture path.
+func parseFixtureAction(t *testing.T, fixturePath string) *ActionYML {
+	t.Helper()
+
+	tmpFile := filepath.Join(t.TempDir(), "action.yml")
+	testutil.WriteTestFile(t, tmpFile, testutil.MustReadFixture(fixturePath))
+
+	action, err := ParseActionYML(tmpFile)
+	if err != nil {
+		t.Fatalf("parseFixtureAction(%q): %v", fixturePath, err)
 	}
+
+	return action
+}
+
+// actionWithNoInputsOutputs returns an ActionYML with no inputs or outputs.
+func actionWithNoInputsOutputs(t *testing.T) *ActionYML {
+	t.Helper()
+
+	return parseFixtureAction(t, testutil.TestFixtureJSONWriterNoInputsOutputs)
 }
 
 // actionWithInputs returns an ActionYML with one input, optionally with a default value.
-func actionWithInputs(withDefault bool) *ActionYML {
-	var defaultVal any
+func actionWithInputs(t *testing.T, withDefault bool) *ActionYML {
+	t.Helper()
 	if withDefault {
-		defaultVal = "my-default"
+		return parseFixtureAction(t, testutil.TestFixtureJSONWriterWithInputsDefault)
 	}
 
-	return &ActionYML{
-		Name:        "My Action",
-		Description: "A test action with inputs",
-		Inputs: map[string]ActionInput{
-			"token": {
-				Description: "The token to use",
-				Required:    true,
-				Default:     defaultVal,
-			},
-		},
-		Runs: map[string]any{"using": "composite", "steps": []any{}},
-	}
+	return parseFixtureAction(t, testutil.TestFixtureJSONWriterWithInputsNoDefault)
 }
 
 // actionWithOutputs returns an ActionYML with one output.
-func actionWithOutputs() *ActionYML {
-	return &ActionYML{
-		Name:        "My Action",
-		Description: "A test action with outputs",
-		Outputs: map[string]ActionOutput{
-			"result": {
-				Description: "The result value",
-			},
-		},
-		Runs: map[string]any{"using": "composite", "steps": []any{}},
-	}
+func actionWithOutputs(t *testing.T) *ActionYML {
+	t.Helper()
+
+	return parseFixtureAction(t, testutil.TestFixtureJSONWriterWithOutputs)
 }
 
 // TestConvertToJSONOutput_NoInputs verifies that an action with no inputs
 // produces a JSON output with no "inputs" section.
 func TestConvertToJSONOutput_NoInputs(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithNoInputsOutputs()
+	action := actionWithNoInputsOutputs(t)
 
 	out := jw.convertToJSONOutput(action)
 	if len(out.Action.Inputs) > 0 {
@@ -75,7 +72,7 @@ func TestConvertToJSONOutput_NoInputs(t *testing.T) {
 // produces a JSON output that includes an "inputs" section.
 func TestConvertToJSONOutput_WithInputs(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithInputs(false)
+	action := actionWithInputs(t, false)
 
 	out := jw.convertToJSONOutput(action)
 	if len(out.Action.Inputs) == 0 {
@@ -89,7 +86,7 @@ func TestConvertToJSONOutput_WithInputs(t *testing.T) {
 // produces a JSON output without an "outputs" section.
 func TestConvertToJSONOutput_NoOutputs(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithNoInputsOutputs()
+	action := actionWithNoInputsOutputs(t)
 
 	out := jw.convertToJSONOutput(action)
 	if len(out.Action.Outputs) > 0 {
@@ -103,7 +100,7 @@ func TestConvertToJSONOutput_NoOutputs(t *testing.T) {
 // produces a JSON output that includes an "outputs" section.
 func TestConvertToJSONOutput_WithOutputs(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithOutputs()
+	action := actionWithOutputs(t)
 
 	out := jw.convertToJSONOutput(action)
 	if len(out.Action.Outputs) == 0 {
@@ -117,7 +114,7 @@ func TestConvertToJSONOutput_WithOutputs(t *testing.T) {
 // inputs produces YAML that does not include a "with:" block.
 func TestGenerateBasicExample_NoInputs(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithNoInputsOutputs()
+	action := actionWithNoInputsOutputs(t)
 
 	example := jw.generateBasicExample(action)
 	if strings.Contains(example, "with:") {
@@ -129,7 +126,7 @@ func TestGenerateBasicExample_NoInputs(t *testing.T) {
 // includes a "with:" block in the YAML output.
 func TestGenerateBasicExample_WithInputs(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithInputs(false)
+	action := actionWithInputs(t, false)
 
 	example := jw.generateBasicExample(action)
 	if !strings.Contains(example, "with:") {
@@ -141,7 +138,7 @@ func TestGenerateBasicExample_WithInputs(t *testing.T) {
 // value, generateBasicExample uses that value instead of the placeholder "value".
 func TestGenerateBasicExample_InputWithDefault(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithInputs(true)
+	action := actionWithInputs(t, true)
 
 	example := jw.generateBasicExample(action)
 	if !strings.Contains(example, "my-default") {
@@ -153,7 +150,7 @@ func TestGenerateBasicExample_InputWithDefault(t *testing.T) {
 // Default == nil, generateBasicExample uses the placeholder "value".
 func TestGenerateBasicExample_InputWithNilDefault(t *testing.T) {
 	jw := newTestJSONWriter()
-	action := actionWithInputs(false)
+	action := actionWithInputs(t, false)
 
 	example := jw.generateBasicExample(action)
 	if !strings.Contains(example, `"value"`) {
@@ -161,27 +158,33 @@ func TestGenerateBasicExample_InputWithNilDefault(t *testing.T) {
 	}
 }
 
+type jsonWriterWriteCase struct {
+	name          string
+	buildAction   func(t *testing.T) *ActionYML
+	wantInputKey  string
+	wantOutputKey string
+}
+
 // TestJSONWriter_Write verifies end-to-end JSON file generation and validates
-// that inputs/outputs sections are correctly included or excluded.
+// that inputs/outputs sections are correctly included or excluded in the raw JSON.
 func TestJSONWriter_Write(t *testing.T) {
-	tests := []struct {
-		name          string
-		action        *ActionYML
-		wantInputKey  string
-		wantOutputKey string
-	}{
+	tests := []jsonWriterWriteCase{
 		{
-			name:   "action with no inputs or outputs",
-			action: actionWithNoInputsOutputs(),
+			name:        "action with no inputs or outputs",
+			buildAction: actionWithNoInputsOutputs,
 		},
 		{
-			name:         "action with inputs only",
-			action:       actionWithInputs(true),
+			name: "action with inputs only",
+			buildAction: func(t *testing.T) *ActionYML {
+				t.Helper()
+
+				return actionWithInputs(t, true)
+			},
 			wantInputKey: "token",
 		},
 		{
 			name:          "action with outputs only",
-			action:        actionWithOutputs(),
+			buildAction:   actionWithOutputs,
 			wantOutputKey: "result",
 		},
 	}
@@ -192,7 +195,7 @@ func TestJSONWriter_Write(t *testing.T) {
 			outputPath := filepath.Join(dir, "output.json")
 
 			jw := newTestJSONWriter()
-			if err := jw.Write(tt.action, outputPath); err != nil {
+			if err := jw.Write(tt.buildAction(t), outputPath); err != nil {
 				t.Fatalf("Write() error = %v", err)
 			}
 
@@ -206,18 +209,56 @@ func TestJSONWriter_Write(t *testing.T) {
 				t.Fatalf("failed to unmarshal JSON output: %v", err)
 			}
 
-			if tt.wantInputKey != "" {
-				if _, exists := out.Action.Inputs[tt.wantInputKey]; !exists {
-					t.Errorf("expected input key %q in JSON output", tt.wantInputKey)
-				}
-			}
-
-			if tt.wantOutputKey != "" {
-				if _, exists := out.Action.Outputs[tt.wantOutputKey]; !exists {
-					t.Errorf("expected output key %q in JSON output", tt.wantOutputKey)
-				}
-			}
+			rawAction := unmarshalRawAction(t, data)
+			assertRawJSONKey(t, rawAction, "inputs", tt.wantInputKey != "")
+			assertRawJSONKey(t, rawAction, "outputs", tt.wantOutputKey != "")
+			assertInputKey(t, out.Action.Inputs, tt.wantInputKey)
+			assertOutputKey(t, out.Action.Outputs, tt.wantOutputKey)
 		})
+	}
+}
+
+func unmarshalRawAction(t *testing.T, data []byte) map[string]json.RawMessage {
+	t.Helper()
+
+	var raw struct {
+		Action map[string]json.RawMessage `json:"action"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal raw JSON output: %v", err)
+	}
+
+	return raw.Action
+}
+
+func assertRawJSONKey(t *testing.T, obj map[string]json.RawMessage, key string, wantPresent bool) {
+	t.Helper()
+
+	_, exists := obj[key]
+	if exists != wantPresent {
+		t.Errorf("expected raw JSON key %q presence=%v, got %v", key, wantPresent, exists)
+	}
+}
+
+func assertInputKey(t *testing.T, inputs map[string]ActionInputForJSON, key string) {
+	t.Helper()
+
+	if key == "" {
+		return
+	}
+	if _, exists := inputs[key]; !exists {
+		t.Errorf("expected input key %q in JSON output", key)
+	}
+}
+
+func assertOutputKey(t *testing.T, outputs map[string]ActionOutputForJSON, key string) {
+	t.Helper()
+
+	if key == "" {
+		return
+	}
+	if _, exists := outputs[key]; !exists {
+		t.Errorf("expected output key %q in JSON output", key)
 	}
 }
 

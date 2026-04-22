@@ -119,24 +119,6 @@ func TestNewColoredOutput_NoColorEnvVar(t *testing.T) {
 	}
 }
 
-// TestNewColoredOutput_NoColorEnvVarUnset verifies that when NO_COLOR is explicitly empty
-// the env-var branch does not force NoColor=true on its own.
-func TestNewColoredOutput_NoColorEnvVarUnset(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
-
-	output := NewColoredOutput(false)
-	if output == nil {
-		t.Fatal("NewColoredOutput() returned nil")
-	}
-
-	// When NO_COLOR="" the env-var condition os.Getenv("NO_COLOR") != "" is false.
-	// NoColor may still be true due to color.NoColor (test environment), but
-	// that is independent of the env-var path. The important thing is the function
-	// completes without panic and NoColor reflects the library state, not the empty var.
-	// We record the value to ensure the code path is exercised.
-	_ = output.NoColor
-}
-
 // TestIsQuiet tests quiet mode detection.
 func TestIsQuiet(t *testing.T) {
 	tests := []struct {

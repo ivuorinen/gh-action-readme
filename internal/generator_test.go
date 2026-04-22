@@ -1349,7 +1349,7 @@ func TestValidateFiles_SumErrorCounts(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from ValidateFiles, got nil")
 	}
-	if !strings.Contains(err.Error(), "2") {
+	if !strings.Contains(err.Error(), "for 2 files") {
 		t.Errorf("expected total failure count 2 in error message, got: %v", err)
 	}
 }

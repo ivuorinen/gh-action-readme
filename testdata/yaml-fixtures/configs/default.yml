@@ -1,0 +1,4 @@
+theme: default
+output_format: md
+verbose: false
+quiet: false

@@ -595,6 +595,16 @@ const (
 	TestConfigProfessionalSimple = "configs/professional-simple.yml"
 	TestConfigMinimalDist        = "configs/minimal-dist.yml"
 
+	// Valid/default configs.
+	TestConfigValidSimple = "configs/valid-simple.yml"
+	TestConfigDefault     = "configs/default.yml"
+
+	// JSON writer action fixtures.
+	TestFixtureJSONWriterNoInputsOutputs     = "actions/json-writer/no-inputs-outputs.yml"
+	TestFixtureJSONWriterWithInputsDefault   = "actions/json-writer/with-inputs-default.yml"
+	TestFixtureJSONWriterWithInputsNoDefault = "actions/json-writer/with-inputs-no-default.yml"
+	TestFixtureJSONWriterWithOutputs         = "actions/json-writer/with-outputs.yml"
+
 	// Invalid/error configs.
 	TestConfigInvalidMalformed  = "configs/invalid-config-malformed.yml"
 	TestConfigInvalidIncomplete = "configs/invalid-config-incomplete.yml"
