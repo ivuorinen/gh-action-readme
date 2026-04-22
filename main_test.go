@@ -2772,36 +2772,20 @@ func TestConfigWizardHandlerInitialization(t *testing.T) {
 		origConfig := globalConfig
 		defer func() { globalConfig = origConfig }()
 
-		// Set to nil
 		globalConfig = nil
 
-		// wrapHandlerWithErrorHandling is responsible for initializing globalConfig before
-		// calling the handler. Verify it does so by using a probe handler.
+		// Use a probe that returns nil so the wrapper never calls os.Exit.
+		// The wrapper initializes globalConfig before invoking the handler,
+		// so capturedConfig must be non-nil if the wrapper works correctly.
 		var capturedConfig *internal.AppConfig
 		probe := func(_ *cobra.Command, _ []string) error {
 			capturedConfig = globalConfig
 
-			return errors.New("probe exit")
+			return nil
 		}
 
 		cmd := &cobra.Command{}
-		cmd.Flags().String(appconstants.FlagFormat, "yaml", "")
-		cmd.Flags().String(appconstants.FlagOutput, "", "")
-
-		// The wrapper calls os.Exit on error, so call the inner logic directly via wrapHandlerWithErrorHandling
-		// by directly invoking setupDepsUpgrade which also contains the nil-safe config path.
-		// Instead, test indirectly: confirm globalConfig is nil, call the wrapper's captured logic.
-		_ = probe // suppress unused warning
-
-		// Direct test: wrapHandlerWithErrorHandling sets globalConfig before the handler runs.
-		// We cannot call it without os.Exit, so test that globalConfig stays non-nil after
-		// the wrapper initializes it in place.
-		func() {
-			if globalConfig == nil {
-				globalConfig = internal.DefaultAppConfig()
-			}
-			capturedConfig = globalConfig
-		}()
+		wrapHandlerWithErrorHandling(probe)(cmd, []string{})
 
 		if capturedConfig == nil {
 			t.Error("wrapHandlerWithErrorHandling should initialize globalConfig when nil")

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/internal/cache"
+	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -1273,22 +1276,46 @@ func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 	}
 }
 
-// TestCreateDependencyAnalyzer_CacheSelectionBranches exercises both branches of
-// the depCache != nil guard (lines 114 and 121): successful cache creation uses
-// CacheAdapter; failed cache creation falls through to NoOpCache. Both must yield
-// a valid analyzer without error so the two paths are observably different only in
-// internal type — confirming both branches are reachable and non-nil.
+// TestCreateDependencyAnalyzer_CacheSelectionBranches exercises the success branch
+// of the depCache guard (line 122): when cache creation succeeds, a CacheAdapter
+// is selected and wrapped in the returned Analyzer.
 func TestCreateDependencyAnalyzer_CacheSelectionBranches(t *testing.T) {
 	t.Parallel()
 
 	config := defaultTestConfig()
 	gen := NewGenerator(config)
 
-	// Normal path: cache creation succeeds → CacheAdapter selected.
 	analyzer, err := gen.CreateDependencyAnalyzer()
 	testutil.AssertNoError(t, err)
 	if analyzer == nil {
-		t.Error("expected non-nil analyzer when cache succeeds")
+		t.Fatal("expected non-nil analyzer when cache succeeds")
+	}
+	if _, ok := analyzer.Cache.(*dependencies.CacheAdapter); !ok {
+		t.Errorf("expected CacheAdapter when cache creation succeeds, got %T", analyzer.Cache)
+	}
+}
+
+// TestCreateDependencyAnalyzer_NoOpCacheOnCacheFailure exercises the failure branch
+// of the depCache guard: when cache creation fails, the analyzer falls through to
+// NoOpCache so the caller still gets a valid, usable analyzer.
+func TestCreateDependencyAnalyzer_NoOpCacheOnCacheFailure(t *testing.T) {
+	// Temporarily replace newCacheFunc to simulate cache creation failure.
+	orig := newCacheFunc
+	newCacheFunc = func(*cache.Config) (*cache.Cache, error) {
+		return nil, errors.New("injected cache failure")
+	}
+	defer func() { newCacheFunc = orig }()
+
+	config := defaultTestConfig()
+	gen := NewGenerator(config)
+
+	analyzer, err := gen.CreateDependencyAnalyzer()
+	testutil.AssertNoError(t, err)
+	if analyzer == nil {
+		t.Fatal("expected non-nil analyzer even when cache creation fails")
+	}
+	if _, ok := analyzer.Cache.(*dependencies.NoOpCache); !ok {
+		t.Errorf("expected NoOpCache when cache creation fails, got %T", analyzer.Cache)
 	}
 }
 

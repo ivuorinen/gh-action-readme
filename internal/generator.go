@@ -18,6 +18,10 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
+// newCacheFunc is the function used to create a cache instance.
+// It is a variable so tests can replace it to simulate cache-creation failures.
+var newCacheFunc = cache.NewCache
+
 // Generator orchestrates the documentation generation process.
 // It uses focused interfaces to reduce coupling and improve testability.
 type Generator struct {
@@ -110,7 +114,7 @@ func (g *Generator) CreateDependencyAnalyzer() (*dependencies.Analyzer, error) {
 	}
 
 	// Create cache
-	depCache, err := cache.NewCache(cache.DefaultConfig())
+	depCache, err := newCacheFunc(cache.DefaultConfig())
 	if err != nil {
 		// Continue without cache
 		depCache = nil
