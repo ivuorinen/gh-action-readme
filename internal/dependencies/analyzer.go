@@ -17,6 +17,14 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
+// Package-level compiled regexps for performance (compiled once at startup).
+var (
+	reUsesStatement   = regexp.MustCompile(`^([^/]+)/([^@]+)@(.+)$`)
+	reGitSHA          = regexp.MustCompile(appconstants.RegexGitSHA)
+	reSemanticVersion = regexp.MustCompile(`^v?\d+(\.\d+)*(\.\d+)?(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
+	rePinnedVersion   = regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
+)
+
 // VersionType represents the type of version specification used.
 type VersionType string
 
@@ -380,8 +388,7 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 	}
 
 	// Standard GitHub action format: owner/repo@version
-	re := regexp.MustCompile(`^([^/]+)/([^@]+)@(.+)$`)
-	matches := re.FindStringSubmatch(uses)
+	matches := reUsesStatement.FindStringSubmatch(uses)
 	if len(matches) != 4 {
 		return "", "", "", LocalPath
 	}
@@ -406,17 +413,13 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 // isCommitSHA checks if a version string is a commit SHA.
 func (a *Analyzer) isCommitSHA(version string) bool {
 	// Check if it's a 40-character hex string (full SHA) or 7+ character hex (short SHA)
-	re := regexp.MustCompile(appconstants.RegexGitSHA)
-
-	return len(version) >= appconstants.MinSHALength && re.MatchString(version)
+	return len(version) >= appconstants.MinSHALength && reGitSHA.MatchString(version)
 }
 
 // isSemanticVersion checks if a version string follows semantic versioning.
 func (a *Analyzer) isSemanticVersion(version string) bool {
 	// Check for vX, vX.Y, vX.Y.Z format
-	re := regexp.MustCompile(`^v?\d+(\.\d+)*(\.\d+)?(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
-
-	return re.MatchString(version)
+	return reSemanticVersion.MatchString(version)
 }
 
 // isVersionPinned checks if a semantic version is pinned to a specific version.
@@ -426,9 +429,8 @@ func (a *Analyzer) isVersionPinned(version string) bool {
 	if len(version) == appconstants.FullSHALength {
 		return true
 	}
-	re := regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
 
-	return re.MatchString(version)
+	return rePinnedVersion.MatchString(version)
 }
 
 // convertWithParams converts with parameters to string map.

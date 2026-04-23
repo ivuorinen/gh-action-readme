@@ -549,6 +549,28 @@ func TestCacheEstimateSize(t *testing.T) {
 	}
 }
 
+// TestCacheClose_NilTicker kills the CONDITIONALS_NEGATION at cache.go:187
+// (c.ticker != nil → c.ticker == nil). A negated mutation calls c.ticker.Stop()
+// on a nil ticker, causing a nil pointer panic. This test verifies that Close()
+// completes without panic when ticker is nil.
+func TestCacheClose_NilTicker(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	c := &Cache{
+		path: tmpDir,
+		data: make(map[string]Entry),
+		done: make(chan bool, 1),
+		// ticker is nil (zero value)
+	}
+
+	err := c.Close()
+	if err != nil {
+		t.Errorf("Close() with nil ticker unexpected error: %v", err)
+	}
+}
+
 // createTestCache creates a cache instance for testing.
 func createTestCache(t *testing.T, tmpDir string) *Cache {
 	t.Helper()

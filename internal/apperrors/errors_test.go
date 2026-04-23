@@ -122,6 +122,71 @@ func TestContextualErrorError(t *testing.T) {
 	}
 }
 
+// TestContextualErrorError_SectionsAbsent kills CONDITIONALS_BOUNDARY at errors.go:52 and
+// errors.go:60 by asserting that "Details:" and "Suggestions:" are absent when those
+// fields are nil/empty. A boundary mutation (>0 → >=0) would always include the sections.
+func TestContextualErrorError_SectionsAbsent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no details - Details section absent", func(t *testing.T) {
+		t.Parallel()
+
+		err := &ContextualError{
+			Code: appconstants.ErrCodeFileNotFound,
+			Err:  errors.New("file not found"),
+		}
+		result := err.Error()
+
+		if strings.Contains(result, "Details:") {
+			t.Errorf("expected no Details section when Details is nil, got: %q", result)
+		}
+	})
+
+	t.Run("no suggestions - Suggestions section absent", func(t *testing.T) {
+		t.Parallel()
+
+		err := &ContextualError{
+			Code: appconstants.ErrCodeFileNotFound,
+			Err:  errors.New("file not found"),
+		}
+		result := err.Error()
+
+		if strings.Contains(result, "Suggestions:") {
+			t.Errorf("expected no Suggestions section when Suggestions is nil, got: %q", result)
+		}
+	})
+
+	t.Run("empty details map - Details section absent", func(t *testing.T) {
+		t.Parallel()
+
+		err := &ContextualError{
+			Code:    appconstants.ErrCodeFileNotFound,
+			Err:     errors.New("file not found"),
+			Details: map[string]string{},
+		}
+		result := err.Error()
+
+		if strings.Contains(result, "Details:") {
+			t.Errorf("expected no Details section when Details is empty map, got: %q", result)
+		}
+	})
+
+	t.Run("empty suggestions slice - Suggestions section absent", func(t *testing.T) {
+		t.Parallel()
+
+		err := &ContextualError{
+			Code:        appconstants.ErrCodeFileNotFound,
+			Err:         errors.New("file not found"),
+			Suggestions: []string{},
+		}
+		result := err.Error()
+
+		if strings.Contains(result, "Suggestions:") {
+			t.Errorf("expected no Suggestions section when Suggestions is empty, got: %q", result)
+		}
+	})
+}
+
 func TestContextualErrorUnwrap(t *testing.T) {
 	t.Parallel()
 

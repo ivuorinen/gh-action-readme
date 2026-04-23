@@ -885,7 +885,7 @@ func CreateGitHubMockSuite(scenarios []string) *MockSuite {
 func AssertFixtureValid(t *testing.T, fixtureName string) {
 	t.Helper()
 
-	fixture := MustLoadActionFixture(t, fixtureName)
+	fixture := mustLoadActionFixture(t, fixtureName)
 
 	if !fixture.IsValid {
 		t.Errorf("fixture %s should be valid but failed validation", fixtureName)

@@ -6,134 +6,191 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-// TestDefaultTestConfig_Helper tests the defaultTestConfig helper function.
-func TestDefaultTestConfigHelper(t *testing.T) {
+// testFormatGeneration is a generic helper for testing format generation methods.
+// It consolidates the common pattern across HTML, JSON, and AsciiDoc generation tests.
+func testFormatGeneration(
+	t *testing.T,
+	generateFunc func(*Generator, *ActionYML, string, string) error,
+	expectedFile, formatName string,
+	needsActionPath bool,
+) {
+	t.Helper()
 	t.Parallel()
 
-	// Call the helper multiple times to verify consistency
-	cfg1 := defaultTestConfig()
-	cfg2 := defaultTestConfig()
+	tmpDir := t.TempDir()
+	action := createTestAction()
+	gen := createQuietGenerator()
 
-	// Verify expected defaults
-	if cfg1.Quiet != true {
-		t.Error("expected Quiet=true for test config")
-	}
-	if cfg1.Theme != appconstants.ThemeDefault {
-		t.Errorf("expected default theme, got %s", cfg1.Theme)
-	}
-	if cfg1.OutputFormat != appconstants.OutputFormatMarkdown {
-		t.Errorf("expected markdown format, got %s", cfg1.OutputFormat)
-	}
-	if cfg1.OutputDir != "." {
-		t.Errorf("expected OutputDir='.', got %s", cfg1.OutputDir)
+	var err error
+	if needsActionPath {
+		actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+		err = generateFunc(gen, action, tmpDir, actionPath)
+	} else {
+		// For JSON which doesn't need actionPath
+		err = generateFunc(gen, action, tmpDir, "")
 	}
 
-	// Verify immutability - modifying one shouldn't affect others
-	cfg1.Quiet = false
-	cfg1.Theme = "custom"
-
-	if cfg2.Quiet != true {
-		t.Error("defaultTestConfig should return independent configs")
-	}
-	if cfg2.Theme != appconstants.ThemeDefault {
-		t.Error("defaultTestConfig should return independent configs")
+	if err != nil {
+		t.Errorf("%s generation unexpected error = %v", formatName, err)
 	}
 
-	// Verify getting a fresh config after modification
-	cfg3 := defaultTestConfig()
-	if cfg3.Quiet != true {
-		t.Error("defaultTestConfig should always return Quiet=true")
+	verifyFileExists(t, filepath.Join(tmpDir, expectedFile), expectedFile)
+}
+
+// testHTMLGeneration tests HTML generation creates the expected output file.
+func testHTMLGeneration(t *testing.T) {
+	t.Helper()
+
+	testFormatGeneration(
+		t,
+		func(g *Generator, a *ActionYML, out, path string) error {
+			return g.generateHTML(a, out, path)
+		},
+		"Test Action.html",
+		"HTML",
+		true, // needs actionPath
+	)
+}
+
+// testJSONGeneration tests JSON generation creates the expected output file.
+func testJSONGeneration(t *testing.T) {
+	t.Helper()
+
+	testFormatGeneration(
+		t,
+		func(g *Generator, a *ActionYML, out, _ string) error {
+			return g.generateJSON(a, out)
+		},
+		"action-docs.json",
+		"JSON",
+		false, // doesn't need actionPath
+	)
+}
+
+// testASCIIDocGeneration tests AsciiDoc generation creates the expected output file.
+func testASCIIDocGeneration(t *testing.T) {
+	t.Helper()
+
+	testFormatGeneration(
+		t,
+		func(g *Generator, a *ActionYML, out, path string) error {
+			return g.generateASCIIDoc(a, out, path)
+		},
+		"README.adoc",
+		"AsciiDoc",
+		true, // needs actionPath
+	)
+}
+
+// createTestAction creates a basic test action for generator tests.
+func createTestAction() *ActionYML {
+	return &ActionYML{
+		Name:        testutil.TestActionName,
+		Description: testutil.TestActionDesc,
+		Runs:        map[string]any{"using": "composite"},
 	}
 }
 
-// TestAssertActionFiles_Helper tests the assertActionFiles helper function.
-func TestAssertActionFilesHelper(t *testing.T) {
-	t.Parallel()
+// createQuietGenerator creates a generator with quiet output for testing.
+func createQuietGenerator() *Generator {
+	config := DefaultAppConfig()
+	config.Quiet = true
 
-	tests := []struct {
-		name    string
-		files   []string
-		setup   func(*testing.T) []string
-		wantErr bool
-	}{
-		{
-			name: "empty file list",
-			setup: func(t *testing.T) []string {
-				t.Helper()
+	return NewGenerator(config)
+}
 
-				return []string{}
-			},
-		},
-		{
-			name: "valid action.yml files",
-			setup: func(t *testing.T) []string {
-				t.Helper()
-				tmpDir1 := t.TempDir()
-				tmpDir2 := t.TempDir()
-				file1 := filepath.Join(tmpDir1, appconstants.ActionFileNameYML)
-				file2 := filepath.Join(tmpDir2, appconstants.ActionFileNameYML)
+// verifyFileExists checks that a file was created at the expected path.
+func verifyFileExists(t *testing.T, fullPath, expectedFileName string) {
+	t.Helper()
 
-				err := os.WriteFile(file1, []byte("name: test"), appconstants.FilePermDefault)
-				if err != nil {
-					t.Fatalf("failed to write file1: %v", err)
-				}
-
-				err = os.WriteFile(file2, []byte("name: test2"), appconstants.FilePermDefault)
-				if err != nil {
-					t.Fatalf("failed to write file2: %v", err)
-				}
-
-				return []string{file1, file2}
-			},
-		},
-		{
-			name: "valid action.yaml files",
-			setup: func(t *testing.T) []string {
-				t.Helper()
-				tmpDir := t.TempDir()
-				file := filepath.Join(tmpDir, "action.yaml")
-
-				err := os.WriteFile(file, []byte("name: test"), appconstants.FilePermDefault)
-				if err != nil {
-					t.Fatalf("failed to write file: %v", err)
-				}
-
-				return []string{file}
-			},
-		},
-		{
-			name: "mixed yml and yaml extensions",
-			setup: func(t *testing.T) []string {
-				t.Helper()
-				tmpDir1 := t.TempDir()
-				tmpDir2 := t.TempDir()
-				file1 := filepath.Join(tmpDir1, appconstants.ActionFileNameYML)
-				file2 := filepath.Join(tmpDir2, "action.yaml")
-
-				_ = os.WriteFile(file1, []byte("name: test1"), appconstants.FilePermDefault)
-
-				_ = os.WriteFile(file2, []byte("name: test2"), appconstants.FilePermDefault)
-
-				return []string{file1, file2}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			files := tt.setup(t)
-
-			// Call the helper - it will verify files exist and have correct extensions
-			// For invalid files, it will call t.Error (which is expected)
-			assertActionFiles(t, files)
-		})
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		t.Errorf("Expected %s to be created", expectedFileName)
 	}
 }
 
-// Note: Invalid test cases (wrong extensions, nonexistent files) are not included
-// because testing error paths would require mocking testing.T, which is complex.
-// The helper is already well-tested through the main test suite for error cases.
+// createTestDirs creates multiple test directories with given names.
+func createTestDirs(t *testing.T, tmpDir string, names ...string) []string {
+	t.Helper()
+	dirs := make([]string, len(names))
+	for i, name := range names {
+		dirPath := filepath.Join(tmpDir, name)
+		testutil.CreateTestDir(t, dirPath)
+		dirs[i] = dirPath
+	}
+
+	return dirs
+}
+
+// createMultiActionSetup creates a setupFunc for batch processing tests with multiple actions.
+// It generates separate directories for each action and writes the specified fixtures.
+func createMultiActionSetup(dirNames, fixtures []string) func(t *testing.T, tmpDir string) []string {
+	return func(t *testing.T, tmpDir string) []string {
+		t.Helper()
+
+		// Create separate directories for each action
+		dirs := createTestDirs(t, tmpDir, dirNames...)
+
+		// Build file paths and write fixtures
+		files := make([]string, len(dirs))
+		for i, dir := range dirs {
+			files[i] = filepath.Join(dir, appconstants.ActionFileNameYML)
+			testutil.WriteTestFile(t, files[i], testutil.MustReadFixture(fixtures[i]))
+		}
+
+		return files
+	}
+}
+
+// setupNonexistentFiles returns a setupFunc that creates paths to nonexistent files.
+// This is used in multiple tests to verify error handling for missing files.
+func setupNonexistentFiles(filename string) func(*testing.T, string) []string {
+	return func(_ *testing.T, tmpDir string) []string {
+		return []string{filepath.Join(tmpDir, filename)}
+	}
+}
+
+// validationSummaryTestCase defines a test case for validation summary tests.
+// This helper reduces duplication in test case definitions by providing
+// a factory function with sensible defaults.
+type validationSummaryTestCase struct {
+	name        string
+	totalFiles  int
+	validFiles  int
+	totalIssues int
+	resultCount int
+	errorCount  int
+	wantBold    int
+	wantSuccess int
+	wantWarning int
+	wantError   int
+	wantInfo    int
+}
+
+// validationSummaryParams holds parameters for creating validation summary test cases.
+type validationSummaryParams struct {
+	name                                                         string
+	totalFiles, validFiles, totalIssues, resultCount, errorCount int
+	wantWarning, wantError, wantInfo                             int
+}
+
+// createValidationSummaryTest creates a validation summary test case with defaults.
+// Default values: wantBold=1, wantSuccess=1, wantWarning=0, wantError=0, wantInfo=0
+// Only provide the fields that differ from defaults.
+func createValidationSummaryTest(params validationSummaryParams) validationSummaryTestCase {
+	return validationSummaryTestCase{
+		name:        params.name,
+		totalFiles:  params.totalFiles,
+		validFiles:  params.validFiles,
+		totalIssues: params.totalIssues,
+		resultCount: params.resultCount,
+		errorCount:  params.errorCount,
+		wantBold:    1, // Always 1
+		wantSuccess: 1, // Always 1
+		wantWarning: params.wantWarning,
+		wantError:   params.wantError,
+		wantInfo:    params.wantInfo,
+	}
+}

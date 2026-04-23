@@ -12,18 +12,19 @@ import (
 )
 
 // testWizard creates a wizard with mocked input for testing.
-func testWizard(inputs string) *ConfigWizard {
-	// Create a scanner from the input string
+// It clears GitHub token env vars so tests are not affected by the host environment.
+func testWizard(t *testing.T, inputs string) *ConfigWizard {
+	t.Helper()
+	t.Setenv(appconstants.EnvGitHubToken, "")
+	t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+
 	scanner := bufio.NewScanner(strings.NewReader(inputs))
 
-	// Create wizard with quiet output to avoid console spam
-	wizard := &ConfigWizard{
+	return &ConfigWizard{
 		output:  &internal.ColoredOutput{NoColor: true, Quiet: true},
 		scanner: scanner,
 		config:  internal.DefaultAppConfig(),
 	}
-
-	return wizard
 }
 
 // Note: Output verification tests are simplified since ColoredOutput is a concrete type
@@ -77,7 +78,7 @@ func TestPromptWithDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			got := wizard.promptWithDefault(tt.prompt, tt.defaultValue)
 
 			if got != tt.want {
@@ -163,7 +164,7 @@ func TestPromptYesNo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			got := wizard.promptYesNo(tt.prompt, tt.defaultValue)
 
 			if got != tt.want {
@@ -203,7 +204,7 @@ func TestPromptSensitive(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			got := wizard.promptSensitive(tt.prompt)
 
 			if got != tt.want {
@@ -249,7 +250,7 @@ func TestConfigureBasicSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.inputs)
+			wizard := testWizard(t, tt.inputs)
 			wizard.configureBasicSettings()
 
 			if wizard.config.Organization != tt.wantOrg {
@@ -311,7 +312,7 @@ func TestConfigureThemeSelection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			wizard.configureThemeSelection()
 
 			if wizard.config.Theme != tt.wantTheme {
@@ -344,9 +345,19 @@ func TestConfigureOutputFormat(t *testing.T) {
 			wantFormat: appconstants.OutputFormatJSON,
 		},
 		{
-			name:       "select asciidoc (4)",
+			name:       "select yaml (4)",
 			input:      "4\n",
-			wantFormat: "asciidoc",
+			wantFormat: appconstants.OutputFormatYAML,
+		},
+		{
+			name:       "select toml (5)",
+			input:      "5\n",
+			wantFormat: appconstants.OutputFormatTOML,
+		},
+		{
+			name:       "select asciidoc (6)",
+			input:      "6\n",
+			wantFormat: appconstants.OutputFormatASCIIDoc,
 		},
 		{
 			name:       "invalid choice keeps default",
@@ -357,7 +368,7 @@ func TestConfigureOutputFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			wizard.configureOutputFormat()
 
 			if wizard.config.OutputFormat != tt.wantFormat {
@@ -403,7 +414,7 @@ func TestConfigureFeatures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.inputs)
+			wizard := testWizard(t, tt.inputs)
 			wizard.configureFeatures()
 
 			if wizard.config.AnalyzeDependencies != tt.wantAnalyzeDeps {
@@ -418,7 +429,7 @@ func TestConfigureFeatures(t *testing.T) {
 
 // TestGetAvailableThemes tests the theme list function.
 func TestGetAvailableThemes(t *testing.T) {
-	wizard := testWizard("")
+	wizard := testWizard(t, "")
 	themes := wizard.getAvailableThemes()
 
 	if len(themes) != 5 {
@@ -442,7 +453,7 @@ func TestGetAvailableThemes(t *testing.T) {
 
 // TestFindActionFiles tests action file discovery.
 func TestFindActionFiles(t *testing.T) {
-	wizard := testWizard("")
+	wizard := testWizard(t, "")
 
 	t.Run("non-existent directory", func(t *testing.T) {
 		files := wizard.findActionFiles("/nonexistent/path")
@@ -537,7 +548,7 @@ func TestConfigureOutputDirectory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			wizard.config.OutputDir = tt.initial
 			wizard.configureOutputDirectory()
 
@@ -584,7 +595,7 @@ func TestConfigureTemplateSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.inputs)
+			wizard := testWizard(t, tt.inputs)
 			wizard.configureTemplateSettings()
 
 			if wizard.config.Theme != tt.wantTheme {
@@ -655,9 +666,7 @@ func TestConfigureGitHubIntegration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(appconstants.EnvGitHubTokenStandard, "")
-			t.Setenv(appconstants.EnvGitHubToken, "")
-			wizard := testWizard(tt.inputs)
+			wizard := testWizard(t, tt.inputs)
 			if tt.existingToken != "" {
 				wizard.config.GitHubToken = tt.existingToken
 			}
@@ -757,7 +766,7 @@ func TestShowSummaryAndConfirm(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			wizard.config = tt.config
 
 			err := wizard.showSummaryAndConfirm()
@@ -977,7 +986,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "gitlab theme with asciidoc format",
 			inputs: "gitlab-org\nmy-project\nv2.5.0\n" + // Basic
-				"3\n4\n" + testutil.TestDirDocs + "\n" + // GitLab theme, AsciiDoc format
+				"3\n6\n" + testutil.TestDirDocs + "\n" + // GitLab theme, AsciiDoc format (6th in list)
 				"yes\nno\n" + // Features: deps yes, security no
 				testutil.WizardInputNo + // GitHub: skip
 				"yes\n", // Confirm with 'yes'
@@ -998,9 +1007,7 @@ func TestRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(appconstants.EnvGitHubTokenStandard, "")
-			t.Setenv(appconstants.EnvGitHubToken, "")
-			wizard := testWizard(tt.inputs)
+			wizard := testWizard(t, tt.inputs)
 
 			config, err := wizard.Run()
 
@@ -1012,7 +1019,7 @@ func TestRun(t *testing.T) {
 // TestDetectProjectSettings tests project settings auto-detection.
 func TestDetectProjectSettings(t *testing.T) {
 	t.Run("detect in non-git directory", func(t *testing.T) {
-		wizard := testWizard("")
+		wizard := testWizard(t, "")
 
 		// Should not error even if not in git repo
 		err := wizard.detectProjectSettings()
@@ -1030,7 +1037,7 @@ func TestDetectProjectSettings(t *testing.T) {
 	})
 
 	t.Run("sets action directory", func(t *testing.T) {
-		wizard := testWizard("")
+		wizard := testWizard(t, "")
 
 		_ = wizard.detectProjectSettings()
 
@@ -1040,7 +1047,7 @@ func TestDetectProjectSettings(t *testing.T) {
 	})
 
 	t.Run("detects repo info when available", func(t *testing.T) {
-		wizard := testWizard("")
+		wizard := testWizard(t, "")
 
 		// This test runs in the project directory which is a git repo
 		err := wizard.detectProjectSettings()
@@ -1067,7 +1074,7 @@ func TestShowSummaryWithTokenFromEnv(t *testing.T) {
 	const defaultTheme = appconstants.ThemeDefault
 
 	// Test to improve showSummaryAndConfirm coverage
-	wizard := testWizard(testutil.WizardInputYes)
+	wizard := testWizard(t, testutil.WizardInputYes)
 	wizard.config = &internal.AppConfig{
 		Organization:        "test",
 		Repository:          "repo",
@@ -1091,7 +1098,7 @@ func TestShowSummaryWithTokenFromEnv(t *testing.T) {
 func TestPromptWithDefaultEdgeCases(t *testing.T) {
 	t.Run("scanner error returns default", func(t *testing.T) {
 		// Create a wizard with an input that will cause scanner to return false
-		wizard := testWizard("")
+		wizard := testWizard(t, "")
 		// Scanner will immediately return false since input is exhausted
 		result := wizard.promptWithDefault("test", appconstants.ThemeDefault)
 		if result != appconstants.ThemeDefault {
@@ -1103,7 +1110,7 @@ func TestPromptWithDefaultEdgeCases(t *testing.T) {
 // TestPromptYesNoEdgeCases tests edge cases for promptYesNo.
 func TestPromptYesNoEdgeCases(t *testing.T) {
 	t.Run("scanner error returns default", func(t *testing.T) {
-		wizard := testWizard("")
+		wizard := testWizard(t, "")
 		// Scanner will immediately return false since input is exhausted
 		result := wizard.promptYesNo("test", true)
 		if result != true {
@@ -1115,7 +1122,7 @@ func TestPromptYesNoEdgeCases(t *testing.T) {
 // TestPromptSensitiveEdgeCases tests edge cases for promptSensitive.
 func TestPromptSensitiveEdgeCases(t *testing.T) {
 	t.Run("scanner error returns empty string", func(t *testing.T) {
-		wizard := testWizard("")
+		wizard := testWizard(t, "")
 		// Scanner will immediately return false since input is exhausted
 		result := wizard.promptSensitive("test")
 		if result != "" {
@@ -1124,7 +1131,7 @@ func TestPromptSensitiveEdgeCases(t *testing.T) {
 	})
 
 	t.Run("whitespace is trimmed", func(t *testing.T) {
-		wizard := testWizard("  value  \n")
+		wizard := testWizard(t, "  value  \n")
 		result := wizard.promptSensitive("test")
 		if result != "value" {
 			t.Errorf("Expected trimmed value, got %q", result)
@@ -1134,7 +1141,7 @@ func TestPromptSensitiveEdgeCases(t *testing.T) {
 
 // TestDisplayThemeOptions tests theme display (verifies no panic).
 func TestDisplayThemeOptions(t *testing.T) {
-	wizard := testWizard("")
+	wizard := testWizard(t, "")
 	themes := wizard.getAvailableThemes()
 
 	// Should not panic
@@ -1149,7 +1156,7 @@ func TestDisplayThemeOptions(t *testing.T) {
 
 // TestDisplayFormatOptions tests format display (verifies no panic).
 func TestDisplayFormatOptions(t *testing.T) {
-	wizard := testWizard("")
+	wizard := testWizard(t, "")
 	formats := []string{
 		appconstants.OutputFormatMarkdown,
 		appconstants.OutputFormatHTML,
@@ -1193,7 +1200,7 @@ func TestConfirmConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wizard := testWizard(tt.input)
+			wizard := testWizard(t, tt.input)
 			err := wizard.confirmConfiguration()
 
 			if (err != nil) != tt.wantErr {

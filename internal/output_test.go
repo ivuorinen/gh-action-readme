@@ -102,6 +102,23 @@ func TestNewColoredOutput(t *testing.T) {
 	}
 }
 
+// TestNewColoredOutput_NoColorEnvVar verifies that setting NO_COLOR=1 forces NoColor=true
+// even when color.NoColor would be false. This kills the mutation on output.go:34 that
+// replaces `!= ""` with `== ""`.
+func TestNewColoredOutput_NoColorEnvVar(t *testing.T) {
+	// With NO_COLOR set, NoColor must always be true regardless of color.NoColor.
+	t.Setenv("NO_COLOR", "1")
+
+	output := NewColoredOutput(false)
+	if output == nil {
+		t.Fatal("NewColoredOutput() returned nil")
+	}
+
+	if !output.NoColor {
+		t.Error("expected NoColor=true when NO_COLOR env var is set to '1'")
+	}
+}
+
 // TestIsQuiet tests quiet mode detection.
 func TestIsQuiet(t *testing.T) {
 	tests := []struct {
@@ -315,6 +332,55 @@ func TestErrorWithContext(t *testing.T) {
 	}
 }
 
+// TestErrorWithContext_ContextBoundary kills the CONDITIONALS_BOUNDARY mutation on
+// output.go:125 (len(context) > 0 → len(context) >= 0).
+// With exactly 0 context items the details block must NOT appear; with 1 item it MUST appear.
+func TestErrorWithContext_ContextBoundary(t *testing.T) {
+	t.Run("zero context items produces no detail section", func(t *testing.T) {
+		output := &ColoredOutput{NoColor: true}
+
+		// Passing an empty (non-nil) map has len == 0 so details should be skipped.
+		captured := testutil.CaptureStderr(func() {
+			output.ErrorWithContext(
+				appconstants.ErrCodeFileNotFound,
+				testutil.TestMsgFileNotFound,
+				map[string]string{},
+			)
+		})
+
+		// The error itself should still appear.
+		if !strings.Contains(captured, "❌") {
+			t.Errorf("expected ❌ in output, got: %q", captured)
+		}
+
+		// Details section header must not appear when context map is empty.
+		if strings.Contains(captured, testutil.TestMsgDetails) {
+			t.Errorf("expected no Details section for empty map, got: %q", captured)
+		}
+	})
+
+	t.Run("one context item produces detail section", func(t *testing.T) {
+		output := &ColoredOutput{NoColor: true}
+
+		captured := testutil.CaptureStderr(func() {
+			output.ErrorWithContext(
+				appconstants.ErrCodeFileNotFound,
+				testutil.TestMsgFileNotFound,
+				map[string]string{testutil.TestKeyFile: appconstants.ActionFileNameYML},
+			)
+		})
+
+		if !strings.Contains(captured, "❌") {
+			t.Errorf("expected ❌ in output, got: %q", captured)
+		}
+
+		// The Details section header must appear when context has 1+ items.
+		if !strings.Contains(captured, testutil.TestMsgDetails) {
+			t.Errorf("expected Details section in output, got: %q", captured)
+		}
+	})
+}
+
 // TestErrorWithSimpleFix tests simple error with fix output.
 func TestErrorWithSimpleFix(t *testing.T) {
 	testErrorStderr(t, "❌", func(output *ColoredOutput) {
@@ -369,6 +435,70 @@ func TestFormatContextualError(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// assertSectionPresence is a helper that asserts section presence/absence in a formatted error.
+func assertSectionPresence(t *testing.T, got, section string, present bool) {
+	t.Helper()
+
+	has := strings.Contains(got, section)
+	if present && !has {
+		t.Errorf("expected %q section in output: %q", section, got)
+	}
+	if !present && has {
+		t.Errorf("unexpected %q section in output: %q", section, got)
+	}
+}
+
+// TestFormatContextualError_OnlyDetails kills the CONDITIONALS_BOUNDARY/NEGATION at
+// output.go:152 by asserting the details section appears but suggestions and helpURL do not.
+func TestFormatContextualError_OnlyDetails(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+		WithDetails(map[string]string{testutil.TestKeyFile: appconstants.ActionFileNameYML})
+	got := output.FormatContextualError(err)
+
+	assertSectionPresence(t, got, "Details:", true)
+	assertSectionPresence(t, got, "Suggestions:", false)
+	assertSectionPresence(t, got, "For more help", false)
+}
+
+// TestFormatContextualError_OnlySuggestions kills the CONDITIONALS_BOUNDARY/NEGATION at
+// output.go:157 by asserting the suggestions section appears but details and helpURL do not.
+func TestFormatContextualError_OnlySuggestions(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+		WithSuggestions(testutil.TestMsgCheckFilePath)
+	got := output.FormatContextualError(err)
+
+	assertSectionPresence(t, got, "Suggestions:", true)
+	assertSectionPresence(t, got, "Details:", false)
+	assertSectionPresence(t, got, "For more help", false)
+}
+
+// TestFormatContextualError_OnlyHelpURL kills the CONDITIONALS_NEGATION at output.go:162
+// by asserting the help URL section appears but details and suggestions do not.
+func TestFormatContextualError_OnlyHelpURL(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound).
+		WithHelpURL(testutil.TestURLHelp)
+	got := output.FormatContextualError(err)
+
+	assertSectionPresence(t, got, "For more help", true)
+	assertSectionPresence(t, got, "Details:", false)
+	assertSectionPresence(t, got, "Suggestions:", false)
+}
+
+// TestFormatContextualError_NoSections asserts all three section headers are absent when
+// the error carries no details, suggestions, or help URL.
+func TestFormatContextualError_NoSections(t *testing.T) {
+	output := &ColoredOutput{NoColor: true}
+	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound)
+	got := output.FormatContextualError(err)
+
+	for _, absent := range []string{"Details:", "Suggestions:", "For more help"} {
+		assertSectionPresence(t, got, absent, false)
 	}
 }
 

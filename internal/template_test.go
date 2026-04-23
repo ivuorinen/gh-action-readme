@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -9,6 +10,91 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
+
+// TestGetFieldWithFallback_GitValueReturned kills the CONDITIONALS_NEGATION mutation at
+// template.go:69 (gitValue != "" → == "") by verifying that a non-empty gitValue is
+// returned directly, not the configValue or defaultValue.
+func TestGetFieldWithFallback_GitValueReturned(t *testing.T) {
+	td := &TemplateData{
+		ActionYML: &ActionYML{},
+		Git: git.RepoInfo{
+			Organization: "git-org",
+		},
+		Config: &AppConfig{
+			Organization: "config-org",
+		},
+	}
+
+	got := getFieldWithFallback(
+		td,
+		func(d *TemplateData) string { return d.Git.Organization },
+		func(d *TemplateData) string { return d.Config.Organization },
+		"default-org",
+	)
+
+	if got != "git-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "git-org")
+	}
+}
+
+// TestGetFieldWithFallback_ConfigFallback verifies that configValue is returned when
+// gitValue is empty but configValue is set.
+func TestGetFieldWithFallback_ConfigFallback(t *testing.T) {
+	td := &TemplateData{
+		ActionYML: &ActionYML{},
+		Git:       git.RepoInfo{},
+		Config: &AppConfig{
+			Organization: "config-org",
+		},
+	}
+
+	got := getFieldWithFallback(
+		td,
+		func(d *TemplateData) string { return d.Git.Organization },
+		func(d *TemplateData) string { return d.Config.Organization },
+		"default-org",
+	)
+
+	if got != "config-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "config-org")
+	}
+}
+
+// TestGetFieldWithFallback_DefaultValue verifies that the default is returned when both
+// git and config values are empty.
+func TestGetFieldWithFallback_DefaultValue(t *testing.T) {
+	td := &TemplateData{
+		ActionYML: &ActionYML{},
+		Git:       git.RepoInfo{},
+		Config:    &AppConfig{},
+	}
+
+	got := getFieldWithFallback(
+		td,
+		func(d *TemplateData) string { return d.Git.Organization },
+		func(d *TemplateData) string { return d.Config.Organization },
+		"default-org",
+	)
+
+	if got != "default-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "default-org")
+	}
+}
+
+// TestGetFieldWithFallback_NonTemplateData verifies the type-guard branch: passing a
+// non-*TemplateData value always returns the default value.
+func TestGetFieldWithFallback_NonTemplateData(t *testing.T) {
+	got := getFieldWithFallback(
+		"not-a-TemplateData",
+		func(_ *TemplateData) string { return "git-org" },
+		func(_ *TemplateData) string { return "config-org" },
+		"default-org",
+	)
+
+	if got != "default-org" {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, "default-org")
+	}
+}
 
 // templateDataParams holds parameters for creating test TemplateData.
 type templateDataParams struct {
@@ -501,6 +587,105 @@ func assertTemplateData(
 	if config.AnalyzeDependencies && data.Dependencies == nil {
 		t.Error("BuildTemplateData() expected Dependencies to be set when AnalyzeDependencies is true")
 	}
+}
+
+// TestBuildTemplateData_RealGitRepo tests BuildTemplateData with a real git repo so that
+// mutations to the repoRoot != "" guard (line 227) and the err == nil guard (line 228)
+// produce observably different Git fields.
+func TestBuildTemplateData_RealGitRepo(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/testorg/testrepo.git")
+
+	action := &ActionYML{Name: "Test", Description: "test"}
+	config := &AppConfig{}
+
+	data := BuildTemplateData(action, config, tmpDir, filepath.Join(tmpDir, appconstants.ActionFileNameYML))
+
+	if data.Git.Organization != "testorg" {
+		t.Errorf("expected Git.Organization = %q, got %q", "testorg", data.Git.Organization)
+	}
+
+	if data.Git.Repository != "testrepo" {
+		t.Errorf("expected Git.Repository = %q, got %q", "testrepo", data.Git.Repository)
+	}
+}
+
+// TestRenderReadme_HTMLHeaderFooter tests that HTML rendering includes header and footer content
+// from files on the filesystem (kills mutations on lines 305 and 309 of template.go).
+func TestRenderReadme_HTMLHeaderFooter(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	testutil.SetupTestTemplates(t, tmpDir)
+
+	// Write header and footer as absolute-path files so ReadTemplate uses os.ReadFile
+	headerContent := "<html-header>"
+	footerContent := "<html-footer>"
+	headerPath := filepath.Join(tmpDir, "header.html")
+	footerPath := filepath.Join(tmpDir, "footer.html")
+
+	if err := os.WriteFile(headerPath, []byte(headerContent), 0o600); err != nil {
+		t.Fatalf("write header: %v", err)
+	}
+
+	if err := os.WriteFile(footerPath, []byte(footerContent), 0o600); err != nil {
+		t.Fatalf("write footer: %v", err)
+	}
+
+	tmplPath := filepath.Join(tmpDir, "templates", testutil.TestTemplateReadme)
+
+	action := &ActionYML{
+		Name:        "HTMLAction",
+		Description: "html test",
+	}
+
+	t.Run("with header and footer", func(t *testing.T) {
+		t.Parallel()
+
+		opts := TemplateOptions{
+			TemplatePath: tmplPath,
+			HeaderPath:   headerPath,
+			FooterPath:   footerPath,
+			Format:       appconstants.OutputFormatHTML,
+		}
+
+		out, err := RenderReadme(action, opts)
+		if err != nil {
+			t.Fatalf("RenderReadme failed: %v", err)
+		}
+
+		if !strings.Contains(out, headerContent) {
+			t.Errorf("output missing header content %q; got: %q", headerContent, out)
+		}
+
+		if !strings.Contains(out, footerContent) {
+			t.Errorf("output missing footer content %q; got: %q", footerContent, out)
+		}
+	})
+
+	t.Run("without header and footer", func(t *testing.T) {
+		t.Parallel()
+
+		opts := TemplateOptions{
+			TemplatePath: tmplPath,
+			Format:       appconstants.OutputFormatHTML,
+		}
+
+		out, err := RenderReadme(action, opts)
+		if err != nil {
+			t.Fatalf("RenderReadme failed: %v", err)
+		}
+
+		if strings.Contains(out, headerContent) {
+			t.Errorf("output should not contain header content %q when HeaderPath is empty", headerContent)
+		}
+
+		if strings.Contains(out, footerContent) {
+			t.Errorf("output should not contain footer content %q when FooterPath is empty", footerContent)
+		}
+	})
 }
 
 // TestAnalyzeDependencies tests the analyzeDependencies function.

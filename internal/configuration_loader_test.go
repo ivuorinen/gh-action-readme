@@ -372,6 +372,20 @@ func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 			expectError: true,
 			description: "Empty theme should error",
 		},
+		// This case kills the CONDITIONALS_NEGATION mutation at configuration_loader.go:192.
+		// With Theme="" and a valid OutputDir, the theme check must be SKIPPED (no error).
+		// The mutation changes != "" to == "", causing validateTheme("") to be called,
+		// which returns an error for empty theme — making this test fail.
+		{
+			name: "empty theme with valid outputdir - no error",
+			config: &AppConfig{
+				Theme:        "",
+				OutputFormat: "md",
+				OutputDir:    ".",
+			},
+			expectError: false,
+			description: "Empty theme with valid outputDir must not error (theme check is opt-in)",
+		},
 	}
 
 	for _, tt := range tests {

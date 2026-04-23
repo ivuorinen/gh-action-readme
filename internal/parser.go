@@ -74,14 +74,17 @@ func ParseActionYML(path string) (*ActionYML, error) {
 // mergePermissions combines comment and YAML permissions.
 // YAML permissions take precedence when both exist.
 func mergePermissions(action *ActionYML, commentPerms map[string]string) {
-	if action.Permissions == nil && commentPerms != nil && len(commentPerms) > 0 {
+	if len(commentPerms) == 0 {
+		return
+	}
+	if action.Permissions == nil {
 		action.Permissions = commentPerms
-	} else if action.Permissions != nil && commentPerms != nil && len(commentPerms) > 0 {
-		// Merge: YAML takes precedence, add missing from comments
-		for key, value := range commentPerms {
-			if _, exists := action.Permissions[key]; !exists {
-				action.Permissions[key] = value
-			}
+
+		return
+	}
+	for key, value := range commentPerms {
+		if _, exists := action.Permissions[key]; !exists {
+			action.Permissions[key] = value
 		}
 	}
 }

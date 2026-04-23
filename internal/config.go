@@ -185,30 +185,22 @@ func resolveAllTemplatePaths(config *AppConfig) {
 	config.Schema = resolveTemplatePath(config.Schema)
 }
 
+// themeTemplates maps theme names to their template paths.
+var themeTemplates = map[string]string{
+	appconstants.ThemeDefault:      appconstants.TemplatePathDefault,
+	appconstants.ThemeGitHub:       appconstants.TemplatePathGitHub,
+	appconstants.ThemeGitLab:       appconstants.TemplatePathGitLab,
+	appconstants.ThemeMinimal:      appconstants.TemplatePathMinimal,
+	appconstants.ThemeProfessional: appconstants.TemplatePathProfessional,
+}
+
 // resolveThemeTemplate resolves the template path based on the selected theme.
 func resolveThemeTemplate(theme string) string {
-	var templatePath string
-
-	switch theme {
-	case appconstants.ThemeDefault:
-		templatePath = appconstants.TemplatePathDefault
-	case appconstants.ThemeGitHub:
-		templatePath = appconstants.TemplatePathGitHub
-	case appconstants.ThemeGitLab:
-		templatePath = appconstants.TemplatePathGitLab
-	case appconstants.ThemeMinimal:
-		templatePath = appconstants.TemplatePathMinimal
-	case appconstants.ThemeProfessional:
-		templatePath = appconstants.TemplatePathProfessional
-	case "":
-		// Empty theme should return empty path
-		return ""
-	default:
-		// Unknown theme should return empty path
-		return ""
+	if path, ok := themeTemplates[theme]; ok {
+		return resolveTemplatePath(path)
 	}
 
-	return resolveTemplatePath(templatePath)
+	return ""
 }
 
 // DefaultAppConfig returns the default application configuration.
@@ -378,6 +370,20 @@ func loadRepoConfigInternal(repoRoot string) (*AppConfig, error) {
 	}
 
 	return &AppConfig{}, nil
+}
+
+// findFirstExistingConfig searches for the first existing config file
+// from a list of config names within a base directory.
+// Returns the full path to the first existing config file, or empty string if none exist.
+func findFirstExistingConfig(basePath string, configNames []string) (string, bool) {
+	for _, name := range configNames {
+		path := filepath.Join(basePath, name)
+		if _, err := os.Stat(path); err == nil {
+			return path, true
+		}
+	}
+
+	return "", false
 }
 
 // LoadActionConfig loads action-level configuration from config.yaml.

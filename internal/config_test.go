@@ -1122,6 +1122,12 @@ func TestResolveTemplatePathEdgeCases(t *testing.T) {
 				if result == "" {
 					t.Error(testutil.TestMsgExpectedNonEmpty)
 				}
+				// When the file exists in cwd, resolveTemplatePath must return the
+				// original relative name (not a binary-dir-resolved path).
+				// This assertion fails if the os.Stat branch is mutated to err != nil.
+				if result != "custom-template.tmpl" {
+					t.Errorf("expected %q (original path), got %q", "custom-template.tmpl", result)
+				}
 			},
 			description: "Templates in current directory should be found",
 		},

@@ -581,9 +581,8 @@ const (
 // Config fixture path constants for reducing string duplication.
 const (
 	// Global configs.
-	TestConfigGlobalDefault = "configs/global-config-default.yml"
-	//nolint:gosec // G101: False positive - this is a test fixture path, not a credential
-	TestConfigGlobalBaseToken    = "configs/global-base-token.yml"
+	TestConfigGlobalDefault      = "configs/global-config-default.yml"
+	TestConfigGlobalBaseToken    = "configs/global-base-token.yml" // #nosec G101 -- fixture path, not a credential
 	TestConfigRepoGitHub         = "configs/repo-config-github.yml"
 	TestConfigRepoSimple         = "configs/repo-config-simple.yml"
 	TestConfigActionProfessional = "configs/action-config-professional.yml"
@@ -595,6 +594,16 @@ const (
 	TestConfigMinimalSimple      = "configs/minimal-simple.yml"
 	TestConfigProfessionalSimple = "configs/professional-simple.yml"
 	TestConfigMinimalDist        = "configs/minimal-dist.yml"
+
+	// Valid/default configs.
+	TestConfigValidSimple = "configs/valid-simple.yml"
+	TestConfigDefault     = "configs/default.yml"
+
+	// JSON writer action fixtures.
+	TestFixtureJSONWriterNoInputsOutputs     = "actions/json-writer/no-inputs-outputs.yml"
+	TestFixtureJSONWriterWithInputsDefault   = "actions/json-writer/with-inputs-default.yml"
+	TestFixtureJSONWriterWithInputsNoDefault = "actions/json-writer/with-inputs-no-default.yml"
+	TestFixtureJSONWriterWithOutputs         = "actions/json-writer/with-outputs.yml"
 
 	// Invalid/error configs.
 	TestConfigInvalidMalformed  = "configs/invalid-config-malformed.yml"

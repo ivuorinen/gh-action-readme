@@ -1,0 +1,9 @@
+name: My Action
+description: A test action with inputs
+inputs:
+  token:
+    description: The token to use
+    required: true
+runs:
+  using: composite
+  steps: []

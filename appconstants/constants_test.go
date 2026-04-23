@@ -2,6 +2,7 @@ package appconstants
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -22,15 +23,7 @@ func TestGetSupportedThemes(t *testing.T) {
 	// Check that known themes are included
 	expectedThemes := []string{ThemeDefault, ThemeGitHub, ThemeMinimal, ThemeProfessional}
 	for _, expected := range expectedThemes {
-		found := false
-		for _, theme := range themes {
-			if theme == expected {
-				found = true
-
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(themes, expected) {
 			t.Errorf("GetSupportedThemes() missing expected theme: %s", expected)
 		}
 	}
@@ -116,15 +109,7 @@ func TestGetDefaultIgnoredDirectories(t *testing.T) {
 	// Check that known ignored directories are included
 	expectedDirs := []string{DirGit, DirNodeModules, DirVendor, DirDist}
 	for _, expected := range expectedDirs {
-		found := false
-		for _, dir := range dirs {
-			if dir == expected {
-				found = true
-
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(dirs, expected) {
 			t.Errorf("GetDefaultIgnoredDirectories() missing expected directory: %s", expected)
 		}
 	}
@@ -208,5 +193,40 @@ func TestConfigurationSourceString(t *testing.T) {
 				t.Errorf("ConfigurationSource.String() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestGetSupportedOutputFormats tests the GetSupportedOutputFormats function.
+func TestGetSupportedOutputFormats(t *testing.T) {
+	t.Parallel()
+
+	formats := GetSupportedOutputFormats()
+
+	if len(formats) == 0 {
+		t.Error("GetSupportedOutputFormats() returned empty slice")
+	}
+
+	expectedFormats := []string{
+		OutputFormatMarkdown, OutputFormatHTML, OutputFormatJSON,
+		OutputFormatYAML, OutputFormatTOML, OutputFormatASCIIDoc,
+	}
+	for _, expected := range expectedFormats {
+		if !slices.Contains(formats, expected) {
+			t.Errorf("GetSupportedOutputFormats() missing expected format: %s", expected)
+		}
+	}
+
+	formats1 := GetSupportedOutputFormats()
+	formats2 := GetSupportedOutputFormats()
+	if len(formats1) != len(formats2) {
+		t.Error("GetSupportedOutputFormats() not returning consistent results")
+	}
+
+	if len(formats1) > 0 {
+		formats1[0] = testModifiedValue
+		formats3 := GetSupportedOutputFormats()
+		if formats3[0] == testModifiedValue {
+			t.Error("GetSupportedOutputFormats() not returning a copy - original was modified")
+		}
 	}
 }

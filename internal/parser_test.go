@@ -769,6 +769,36 @@ func TestWalkFuncErrorHandling(t *testing.T) {
 	}
 }
 
+// TestDiscoverActionFiles_YAMLExtension kills the CONDITIONALS_NEGATION at parser.go:245
+// by creating a directory with only "action.yaml" (not "action.yml") and asserting it is
+// discovered. The mutation negates the second operand of the || condition, preventing
+// "action.yaml" files from being collected.
+func TestDiscoverActionFiles_YAMLExtension(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	yamlPath := filepath.Join(tmpDir, appconstants.ActionFileNameYAML)
+	if err := os.WriteFile(yamlPath, []byte("name: Test\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	files, err := DiscoverActionFiles(tmpDir, true, nil)
+	if err != nil {
+		t.Fatalf("DiscoverActionFiles() error: %v", err)
+	}
+
+	if len(files) != 1 {
+		t.Errorf("DiscoverActionFiles() = %d files, want 1", len(files))
+
+		return
+	}
+
+	if files[0] != yamlPath {
+		t.Errorf("DiscoverActionFiles() found %q, want %q", files[0], yamlPath)
+	}
+}
+
 // TestParseActionYMLOnlyComments tests file with only comments.
 func TestParseActionYMLOnlyComments(t *testing.T) {
 	t.Parallel()

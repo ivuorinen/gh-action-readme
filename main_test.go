@@ -39,6 +39,22 @@ const (
 	testMsgUsesGlobalCfg = "uses globalConfig when config parameter is nil"
 )
 
+// TestInputReader allows injecting test responses for testing.
+type TestInputReader struct {
+	responses []string
+	index     int
+}
+
+func (r *TestInputReader) ReadLine() (string, error) {
+	if r.index >= len(r.responses) {
+		return "", errors.New("no more test responses")
+	}
+	response := r.responses[r.index]
+	r.index++
+
+	return response, nil
+}
+
 // createFixtureTestCase creates a test table entry for tests that load a fixture
 // and expect a specific error outcome. This helper reduces duplication by standardizing
 // the creation of test structures that follow the "load fixture, write to tmpDir, expect error" pattern.
@@ -169,7 +185,7 @@ func TestCLICommands(t *testing.T) {
 			name:       "schema command",
 			args:       []string{"schema"},
 			wantExit:   0,
-			wantStdout: "schemas/action.schema.json",
+			wantStdout: "schemas/schema.json",
 		},
 		{
 			name:       "config command default",
@@ -829,11 +845,11 @@ func TestSchemaHandler(t *testing.T) {
 }
 
 func TestConfigThemesHandler(t *testing.T) {
-	testSimpleVoidHandler(t, configThemesHandler)
+	testSimpleHandler(t, configThemesHandler, "configThemesHandler")
 }
 
 func TestConfigShowHandler(t *testing.T) {
-	testSimpleVoidHandler(t, configShowHandler)
+	testSimpleHandler(t, configShowHandler, "configShowHandler")
 }
 
 func TestDepsGraphHandler(t *testing.T) {
@@ -1160,10 +1176,7 @@ func TestDisplayOutdatedResults(_ *testing.T) {
 func TestDisplayFloatingDeps(_ *testing.T) {
 
 	output := createOutputManager(true)
-	floatingDeps := []struct {
-		file string
-		dep  dependencies.Dependency
-	}{
+	floatingDeps := []fileDep{
 		{
 			file: testutil.TestTmpActionFile,
 			dep: dependencies.Dependency{
@@ -1182,10 +1195,7 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 	tests := []struct {
 		name         string
 		pinnedCount  int
-		floatingDeps []struct {
-			file string
-			dep  dependencies.Dependency
-		}
+		floatingDeps []fileDep
 	}{
 		{
 			name:         "all pinned",
@@ -1195,10 +1205,7 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 		{
 			name:        "with floating dependencies",
 			pinnedCount: 3,
-			floatingDeps: []struct {
-				file string
-				dep  dependencies.Dependency
-			}{
+			floatingDeps: []fileDep{
 				{
 					file: testutil.TestTmpActionFile,
 					dep: dependencies.Dependency{
@@ -2760,25 +2767,28 @@ func validateDepsUpgradeError(t *testing.T, err error, wantErr bool, errContain 
 func TestConfigWizardHandlerInitialization(t *testing.T) {
 	// Note: Cannot use t.Parallel() because test modifies shared globalConfig
 
-	t.Run("initializes globalConfig when nil", func(t *testing.T) {
+	t.Run("wrapHandlerWithErrorHandling initializes globalConfig when nil", func(t *testing.T) {
 		// Save and restore
 		origConfig := globalConfig
 		defer func() { globalConfig = origConfig }()
 
-		// Set to nil
 		globalConfig = nil
 
-		// Create minimal command
+		// Use a probe that returns nil so the wrapper never calls os.Exit.
+		// The wrapper initializes globalConfig before invoking the handler,
+		// so capturedConfig must be non-nil if the wrapper works correctly.
+		var capturedConfig *internal.AppConfig
+		probe := func(_ *cobra.Command, _ []string) error {
+			capturedConfig = globalConfig
+
+			return nil
+		}
+
 		cmd := &cobra.Command{}
-		cmd.Flags().String(appconstants.FlagFormat, "yaml", "")
-		cmd.Flags().String(appconstants.FlagOutput, "", "")
+		wrapHandlerWithErrorHandling(probe)(cmd, []string{})
 
-		// Call handler (will error on wizard.Run, but should initialize config first)
-		_ = configWizardHandler(cmd, []string{})
-
-		// Verify globalConfig was initialized
-		if globalConfig == nil {
-			t.Error("configWizardHandler should initialize globalConfig when nil")
+		if capturedConfig == nil {
+			t.Error("wrapHandlerWithErrorHandling should initialize globalConfig when nil")
 		}
 	})
 }

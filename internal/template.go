@@ -2,9 +2,11 @@ package internal
 
 import (
 	"bytes"
+	htmltemplate "html/template"
+	"io"
 	"path/filepath"
 	"strings"
-	"text/template"
+	texttemplate "text/template"
 
 	"github.com/google/go-github/v74/github"
 
@@ -47,8 +49,8 @@ type TemplateData struct {
 }
 
 // templateFuncs returns a map of custom template functions.
-func templateFuncs() template.FuncMap {
-	return template.FuncMap{
+func templateFuncs() texttemplate.FuncMap {
+	return texttemplate.FuncMap{
 		"lower":         strings.ToLower,
 		"upper":         strings.ToUpper,
 		"replace":       strings.ReplaceAll,
@@ -289,45 +291,51 @@ func analyzeDependencies(actionPath string, config *AppConfig, gitInfo git.RepoI
 	return deps
 }
 
+// executableTemplate is a common interface for html/template and text/template.
+type executableTemplate interface {
+	Execute(io.Writer, any) error
+}
+
+// parseReadmeTemplate parses raw template content into an executable template.
+// HTML format uses html/template for automatic XSS-safe escaping.
+func parseReadmeTemplate(content []byte, format string) (executableTemplate, error) {
+	if format == appconstants.OutputFormatHTML {
+		funcs := htmltemplate.FuncMap(templateFuncs())
+
+		return htmltemplate.New(appconstants.TemplateNameReadme).Funcs(funcs).Parse(string(content))
+	}
+
+	return texttemplate.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(content))
+}
+
 // RenderReadme renders a README using a Go template and the parsed action.yml data.
 func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	tmplContent, err := templatesembed.ReadTemplate(opts.TemplatePath)
 	if err != nil {
 		return "", err
 	}
-	var tmpl *template.Template
-	if opts.Format == appconstants.OutputFormatHTML {
-		tmpl, err = template.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(tmplContent))
-		if err != nil {
-			return "", err
-		}
-		var head, foot string
-		if opts.HeaderPath != "" {
-			h, _ := templatesembed.ReadTemplate(opts.HeaderPath)
-			head = string(h)
-		}
-		if opts.FooterPath != "" {
-			f, _ := templatesembed.ReadTemplate(opts.FooterPath)
-			foot = string(f)
-		}
-		// Wrap template output in header/footer
-		buf := &bytes.Buffer{}
-		buf.WriteString(head)
-		if err := tmpl.Execute(buf, action); err != nil {
-			return "", err
-		}
-		buf.WriteString(foot)
 
-		return buf.String(), nil
-	}
-
-	tmpl, err = template.New(appconstants.TemplateNameReadme).Funcs(templateFuncs()).Parse(string(tmplContent))
+	tmpl, err := parseReadmeTemplate(tmplContent, opts.Format)
 	if err != nil {
 		return "", err
 	}
-	buf := &bytes.Buffer{}
-	if err := tmpl.Execute(buf, action); err != nil {
+
+	var buf bytes.Buffer
+
+	if opts.Format == appconstants.OutputFormatHTML && opts.HeaderPath != "" {
+		if h, e := templatesembed.ReadTemplate(opts.HeaderPath); e == nil {
+			buf.Write(h)
+		}
+	}
+
+	if err := tmpl.Execute(&buf, action); err != nil {
 		return "", err
+	}
+
+	if opts.Format == appconstants.OutputFormatHTML && opts.FooterPath != "" {
+		if f, e := templatesembed.ReadTemplate(opts.FooterPath); e == nil {
+			buf.Write(f)
+		}
 	}
 
 	return buf.String(), nil

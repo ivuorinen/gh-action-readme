@@ -21,19 +21,6 @@ func SetupGitDirectory(t *testing.T, tmpDir string) string {
 	return gitDir
 }
 
-// SetupGitConfig creates a git config file with the given remote URL.
-// The config file is created in the specified gitDir.
-// Used in git detector tests to reduce duplication.
-func SetupGitConfig(t *testing.T, gitDir, remoteURL string) {
-	t.Helper()
-	configPath := filepath.Join(gitDir, TestCmdConfig)
-	config := fmt.Sprintf(`[remote "origin"]
-	url = %s
-	fetch = +refs/heads/*:refs/remotes/origin/*
-`, remoteURL)
-	WriteTestFile(t, configPath, config)
-}
-
 // CreateGitConfigWithRemote creates a git config file with remote and branch configuration.
 // Consolidates 6+ duplicated git config setups in detector_test.go.
 // Returns the path to the created config file.

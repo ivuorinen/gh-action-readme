@@ -4,6 +4,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -273,10 +274,7 @@ func (c *Cache) loadFromDisk() error {
 // saveToDisk persists cache data to disk.
 func (c *Cache) saveToDisk() error {
 	c.mutex.RLock()
-	data := make(map[string]Entry)
-	for k, v := range c.data {
-		data[k] = v
-	}
+	data := maps.Clone(c.data)
 	c.mutex.RUnlock()
 
 	jsonData, err := json.MarshalIndent(data, "", "  ")
