@@ -54,7 +54,7 @@ func createRepoOverrideTestCase(params repoOverrideTestParams) repoOverrideTestC
 
 			config := &AppConfig{
 				Theme:        testutil.TestThemeDefault,
-				OutputFormat: "md",
+				OutputFormat: testLoaderFormatMD,
 				RepoOverrides: map[string]AppConfig{
 					params.overrideKey: {
 						Theme:        params.overrideTheme,

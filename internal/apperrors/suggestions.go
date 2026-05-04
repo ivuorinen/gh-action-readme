@@ -8,7 +8,14 @@ import (
 	"strings"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
-	"github.com/ivuorinen/gh-action-readme/testutil"
+)
+
+// suggestion string constants to avoid repeated string literals.
+const (
+	suggestionCheckConfigSyntax   = "Check configuration file syntax"
+	suggestionEnsureConfigExists  = "Ensure configuration file exists"
+	suggestionCheckTemplateSyntax = "Check template syntax"
+	suggestionEnsureTemplateVars  = "Ensure all template variables are defined"
 )
 
 // GetSuggestions returns context-aware suggestions for the given error code.
@@ -70,7 +77,7 @@ func getFileNotFoundSuggestions(context map[string]string) []string {
 		}
 
 		// Suggest common file names if looking for action files
-		if strings.Contains(path, testutil.ConfigFieldAction) {
+		if strings.Contains(path, appconstants.ActionFilenamePrefix) {
 			suggestions = append(suggestions,
 				"Common action file names: action.yml, action.yaml",
 				"Check if the file is in a subdirectory",
@@ -259,8 +266,8 @@ func getGitHubAuthSuggestions() []string {
 
 func getConfigurationSuggestions(context map[string]string) []string {
 	suggestions := []string{
-		"Check configuration file syntax",
-		"Ensure configuration file exists",
+		suggestionCheckConfigSyntax,
+		suggestionEnsureConfigExists,
 		"Use 'gh-action-readme config init' to create default config",
 		"Valid config locations: .gh-action-readme.yml, ~/.config/gh-action-readme/config.yaml",
 	}
@@ -319,8 +326,8 @@ func getValidationSuggestions(context map[string]string) []string {
 
 func getTemplateSuggestions(context map[string]string) []string {
 	suggestions := []string{
-		"Check template syntax",
-		"Ensure all template variables are defined",
+		suggestionCheckTemplateSyntax,
+		suggestionEnsureTemplateVars,
 		"Verify custom template path is correct",
 	}
 

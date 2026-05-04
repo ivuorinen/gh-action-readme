@@ -6,7 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
+)
+
+const (
+	testValidationOrgOwner = "owner"
+	testValidationRepoRepo = "repo"
 )
 
 func TestValidateActionYMLPath(t *testing.T) {
@@ -161,7 +167,7 @@ func TestIsSemanticVersion(t *testing.T) {
 		},
 		{
 			name:     testutil.TestCaseNameMajorVersionOnly,
-			version:  "v1",
+			version:  appconstants.VersionTagV1,
 			expected: false,
 		},
 		{
@@ -211,7 +217,7 @@ func TestIsVersionPinned(t *testing.T) {
 		},
 		{
 			name:     testutil.TestCaseNameMajorVersionOnly,
-			version:  "v1",
+			version:  appconstants.VersionTagV1,
 			expected: false,
 		},
 		{
@@ -431,21 +437,21 @@ func TestParseGitHubURL(t *testing.T) {
 	}{
 		{
 			name:         "HTTPS GitHub URL",
-			url:          "https://github.com/owner/repo",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			url:          "https://github.com/" + testValidationOrgOwner + "/" + testValidationRepoRepo,
+			expectedOrg:  testValidationOrgOwner,
+			expectedRepo: testValidationRepoRepo,
 		},
 		{
 			name:         "GitHub URL with .git suffix",
-			url:          "https://github.com/owner/repo.git",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			url:          "https://github.com/" + testValidationOrgOwner + "/" + testValidationRepoRepo + ".git",
+			expectedOrg:  testValidationOrgOwner,
+			expectedRepo: testValidationRepoRepo,
 		},
 		{
 			name:         testutil.TestCaseNameSSHGitHub,
-			url:          "git@github.com:owner/repo.git",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			url:          "git@github.com:" + testValidationOrgOwner + "/" + testValidationRepoRepo + ".git",
+			expectedOrg:  testValidationOrgOwner,
+			expectedRepo: testValidationRepoRepo,
 		},
 		{
 			name:         "Invalid URL",

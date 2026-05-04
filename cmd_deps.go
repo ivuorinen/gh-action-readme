@@ -32,23 +32,29 @@ type fileDep struct {
 }
 
 // StdinReader reads from actual stdin.
-type StdinReader struct{}
+type StdinReader struct {
+	reader *bufio.Reader
+}
 
 func (r *StdinReader) ReadLine() (string, error) {
-	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if r.reader == nil {
+		r.reader = bufio.NewReader(os.Stdin)
+	}
+
+	line, err := r.reader.ReadString('\n')
 
 	return strings.TrimSpace(line), err
 }
 
 func newDepsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "deps",
+		Use:   appconstants.CommandDeps,
 		Short: "Dependency management commands",
 		Long:  "Analyze and manage GitHub Action dependencies",
 	}
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "list",
+		Use:   appconstants.CommandList,
 		Short: "List all dependencies in action files",
 		Run:   wrapHandlerWithErrorHandling(depsListHandler),
 	})
@@ -324,7 +330,7 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) error {
 
 // validateGitHubToken checks if GitHub token is available.
 func validateGitHubToken(output *internal.ColoredOutput) bool {
-	if globalConfig.GitHubToken == "" {
+	if internal.GetGitHubToken(globalConfig) == "" {
 		contextualErr := apperrors.New(appconstants.ErrCodeGitHubAuth, "GitHub token not found").
 			WithSuggestions(apperrors.GetSuggestions(appconstants.ErrCodeGitHubAuth, map[string]string{})...).
 			WithHelpURL(apperrors.GetHelpURL(appconstants.ErrCodeGitHubAuth))

@@ -9,8 +9,18 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/testutil"
+)
+
+const (
+	testWizardOrg      = "testorg"
+	testWizardRepo     = "testrepo"
+	testWizardVersion  = "1.0.0"
+	testWizardThemeGH  = appconstants.ThemeGitHub
+	testWizardFormatMD = appconstants.OutputFormatMarkdown
+	testWizardThemeDef = appconstants.ThemeDefault
 )
 
 func TestConfigExporterExportConfig(t *testing.T) {
@@ -43,16 +53,16 @@ func TestConfigExporterExportConfig(t *testing.T) {
 // createTestConfig creates a test configuration for testing.
 func createTestConfig() *internal.AppConfig {
 	return &internal.AppConfig{
-		Organization:        "testorg",
-		Repository:          "testrepo",
-		Version:             "1.0.0",
-		Theme:               "github",
-		OutputFormat:        "md",
+		Organization:        testWizardOrg,
+		Repository:          testWizardRepo,
+		Version:             testWizardVersion,
+		Theme:               testWizardThemeGH,
+		OutputFormat:        testWizardFormatMD,
 		OutputDir:           ".",
 		AnalyzeDependencies: true,
 		ShowSecurityInfo:    false,
 		Variables:           map[string]string{"TEST_VAR": "test_value"},
-		Permissions:         map[string]string{"contents": "read"},
+		Permissions:         map[string]string{permScopeContents: permissionRead},
 		RunsOn:              []string{"ubuntu-latest"},
 	}
 }
@@ -159,10 +169,10 @@ func verifyTOMLContent(t *testing.T, outputPath string) {
 	}
 
 	content := string(data)
-	if !strings.Contains(content, `organization = "testorg"`) {
+	if !strings.Contains(content, `organization = "`+testWizardOrg+`"`) {
 		t.Error("TOML should contain organization field")
 	}
-	if !strings.Contains(content, `theme = "github"`) {
+	if !strings.Contains(content, `theme = "`+testWizardThemeGH+`"`) {
 		t.Error("TOML should contain theme field")
 	}
 }
@@ -173,11 +183,11 @@ func TestConfigExporterSanitizeConfig(t *testing.T) {
 	exporter := NewConfigExporter(output)
 
 	config := &internal.AppConfig{
-		Organization: "testorg",
-		Repository:   "testrepo",
+		Organization: testWizardOrg,
+		Repository:   testWizardRepo,
 		GitHubToken:  "ghp_secret_token",
 		RepoOverrides: map[string]internal.AppConfig{
-			"test/repo": {Theme: "github"},
+			"test/repo": {Theme: testWizardThemeGH},
 		},
 	}
 

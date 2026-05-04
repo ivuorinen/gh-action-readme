@@ -213,8 +213,8 @@ func DefaultAppConfig() *AppConfig {
 		UseDefaultBranch: true, // Use detected default branch (main/master) in usage examples
 
 		// Template Settings
-		Theme:        "default", // default, github, gitlab, minimal, professional
-		OutputFormat: "md",
+		Theme:        appconstants.ThemeDefault, // default, github, gitlab, minimal, professional
+		OutputFormat: appconstants.OutputFormatMarkdown,
 		OutputDir:    ".",
 
 		// Legacy template fields (backward compatibility)
@@ -244,11 +244,11 @@ func DefaultAppConfig() *AppConfig {
 
 		// Default values for action.yml files (legacy)
 		Defaults: DefaultValues{
-			Name:        "GitHub Action",
+			Name:        appconstants.LabelGitHubAction,
 			Description: "A reusable GitHub Action.",
 			Runs:        map[string]any{},
 			Branding: Branding{
-				Icon:  "activity",
+				Icon:  appconstants.ActivityWorkflowType,
 				Color: "blue",
 			},
 		},

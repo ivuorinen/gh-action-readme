@@ -10,20 +10,19 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
+var (
+	reCommitSHA       = regexp.MustCompile(appconstants.RegexGitSHA)
+	reSemanticVersion = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
+)
+
 // IsCommitSHA checks if a version string is a commit SHA.
 func IsCommitSHA(version string) bool {
-	// Check if it's a 40-character hex string (full SHA) or 7+ character hex (short SHA)
-	re := regexp.MustCompile(appconstants.RegexGitSHA)
-
-	return len(version) >= 7 && re.MatchString(version)
+	return len(version) >= 7 && reCommitSHA.MatchString(version)
 }
 
 // IsSemanticVersion checks if a version string follows semantic versioning.
 func IsSemanticVersion(version string) bool {
-	// Check for vX.Y.Z format (requires major.minor.patch)
-	re := regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
-
-	return re.MatchString(version)
+	return reSemanticVersion.MatchString(version)
 }
 
 // IsVersionPinned checks if a semantic version is pinned to a specific version.

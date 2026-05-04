@@ -3,6 +3,14 @@ package validation
 import (
 	"regexp"
 	"strings"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
+)
+
+var (
+	reGitHubURLFull   = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/.]+)(?:\.git)?`)
+	reGitHubURLSimple = regexp.MustCompile(`^([^/]+)/([^/.]+)$`)
+	reWhitespace      = regexp.MustCompile(`\s+`)
 )
 
 // CleanVersionString removes common prefixes and normalizes version strings.
@@ -14,14 +22,7 @@ func CleanVersionString(version string) string {
 
 // ParseGitHubURL extracts organization and repository from a GitHub URL.
 func ParseGitHubURL(url string) (organization, repository string) {
-	// Handle different GitHub URL formats
-	patterns := []string{
-		`github\.com[:/]([^/]+)/([^/.]+)(?:\.git)?`,
-		`^([^/]+)/([^/.]+)$`, // Simple org/repo format
-	}
-
-	for _, pattern := range patterns {
-		re := regexp.MustCompile(pattern)
+	for _, re := range []*regexp.Regexp{reGitHubURLFull, reGitHubURLSimple} {
 		matches := re.FindStringSubmatch(url)
 		if len(matches) >= 3 {
 			return matches[1], matches[2]
@@ -39,10 +40,7 @@ func SanitizeActionName(name string) string {
 
 // TrimAndNormalize removes extra whitespace and normalizes strings.
 func TrimAndNormalize(input string) string {
-	// Remove leading/trailing whitespace and normalize internal whitespace
-	re := regexp.MustCompile(`\s+`)
-
-	return re.ReplaceAllString(strings.TrimSpace(input), " ")
+	return reWhitespace.ReplaceAllString(strings.TrimSpace(input), " ")
 }
 
 // FormatUsesStatement creates a properly formatted GitHub Action uses statement.
@@ -52,7 +50,7 @@ func FormatUsesStatement(org, repo, version string) string {
 	}
 
 	if version == "" {
-		version = "v1"
+		version = appconstants.VersionTagV1
 	}
 
 	// Ensure version starts with @

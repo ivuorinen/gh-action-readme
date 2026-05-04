@@ -12,6 +12,9 @@ const (
 	ActionFileNameYML = "action.yml"
 	// ActionFileNameYAML is the alternative action file name.
 	ActionFileNameYAML = "action.yaml"
+
+	// ActionFilenamePrefix is the filename prefix for GitHub Action files.
+	ActionFilenamePrefix = "action"
 )
 
 // File permission constants.

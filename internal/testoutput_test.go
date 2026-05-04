@@ -75,7 +75,7 @@ func TestNullProgressManager(t *testing.T) {
 
 	// Test ProcessWithProgressBar executes function for each item
 	var count int
-	items := []string{"item1", "item2", "item3"}
+	items := []string{testGenItem1, testGenItem2, testGenItem3}
 	npm.ProcessWithProgressBar("test", items, func(_ string, _ *progressbar.ProgressBar) {
 		count++
 	})

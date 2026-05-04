@@ -9,6 +9,15 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testGenThemeDefault = appconstants.ThemeDefault
+	testGenThemeGitHub  = appconstants.ThemeGitHub
+	testGenThemeMinimal = appconstants.ThemeMinimal
+	testGenFormatMD     = appconstants.OutputFormatMarkdown
+	testGenFormatHTML   = appconstants.OutputFormatHTML
+	testGenFormatJSON   = appconstants.OutputFormatJSON
+)
+
 // TestGeneratorComprehensiveGeneration demonstrates the new table-driven testing framework
 // by testing generation across all fixtures, themes, and formats systematically.
 func TestGeneratorComprehensiveGeneration(t *testing.T) {
@@ -20,9 +29,9 @@ func TestGeneratorComprehensiveGeneration(t *testing.T) {
 	filteredCases := make([]testutil.GeneratorTestCase, 0)
 	for _, testCase := range cases {
 		// Only test a few combinations for demonstration
-		if (testCase.Theme == "default" && testCase.OutputFormat == "md") ||
-			(testCase.Theme == "github" && testCase.OutputFormat == "html") ||
-			(testCase.Theme == "minimal" && testCase.OutputFormat == "json") {
+		if (testCase.Theme == testGenThemeDefault && testCase.OutputFormat == testGenFormatMD) ||
+			(testCase.Theme == testGenThemeGitHub && testCase.OutputFormat == testGenFormatHTML) ||
+			(testCase.Theme == testGenThemeMinimal && testCase.OutputFormat == testGenFormatJSON) {
 			// Add custom executor for generator tests
 			testCase.Executor = createGeneratorTestExecutor()
 			filteredCases = append(filteredCases, testCase)
@@ -48,8 +57,8 @@ func TestGeneratorAllValidFixtures(t *testing.T) {
 
 			// Test with default configuration
 			config := &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
+				Theme:        testGenThemeDefault,
+				OutputFormat: testGenFormatMD,
 				OutputDir:    ".",
 				Quiet:        true,
 			}
@@ -90,8 +99,8 @@ func TestGeneratorAllInvalidFixtures(t *testing.T) {
 
 			// Test with default configuration
 			config := &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
+				Theme:        testGenThemeDefault,
+				OutputFormat: testGenFormatMD,
 				OutputDir:    ".",
 				Quiet:        true,
 			}
@@ -118,7 +127,7 @@ func TestGeneratorAllThemes(t *testing.T) {
 
 		config := &AppConfig{
 			Theme:        theme,
-			OutputFormat: "md",
+			OutputFormat: testGenFormatMD,
 			OutputDir:    ".",
 			Quiet:        true,
 		}
@@ -140,7 +149,7 @@ func TestGeneratorAllFormats(t *testing.T) {
 		actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
 
 		config := &AppConfig{
-			Theme:        "default",
+			Theme:        testGenThemeDefault,
 			OutputFormat: format,
 			OutputDir:    ".",
 			Quiet:        true,
@@ -177,8 +186,8 @@ func TestGeneratorByActionType(t *testing.T) {
 			actionPath := testutil.CreateTemporaryAction(t, fixture)
 
 			config := &AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
+				Theme:        testGenThemeDefault,
+				OutputFormat: testGenFormatMD,
 				OutputDir:    ".",
 				Quiet:        true,
 			}
@@ -216,8 +225,8 @@ func TestGeneratorWithMockEnvironment(t *testing.T) {
 	}
 
 	config := &AppConfig{
-		Theme:        "github",
-		OutputFormat: "md",
+		Theme:        testGenThemeGitHub,
+		OutputFormat: testGenFormatMD,
 		OutputDir:    ".",
 		Quiet:        true,
 	}
@@ -309,8 +318,8 @@ func createGeneratorTestExecutor() testutil.TestExecutor {
 // createGeneratorConfigFromTestConfig converts TestConfig to AppConfig.
 func createGeneratorConfigFromTestConfig(testConfig *testutil.TestConfig, outputDir string) *AppConfig {
 	config := &AppConfig{
-		Theme:        "default",
-		OutputFormat: "md",
+		Theme:        testGenThemeDefault,
+		OutputFormat: testGenFormatMD,
 		OutputDir:    outputDir,
 		Template:     "templates/readme.tmpl",
 		Schema:       "schemas/schema.json",

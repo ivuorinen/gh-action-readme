@@ -120,7 +120,7 @@ func TestProgressBarManagerProcessWithProgressBar(t *testing.T) {
 	t.Parallel()
 	// Use NullProgressManager to avoid cluttering test output
 	pm := NewNullProgressManager()
-	items := []string{"item1", "item2", "item3"}
+	items := []string{testGenItem1, testGenItem2, testGenItem3}
 
 	processedItems := make([]string, 0)
 	processFunc := func(item string, _ *progressbar.ProgressBar) {
@@ -143,7 +143,7 @@ func TestProgressBarManagerProcessWithProgressBar(t *testing.T) {
 func TestProgressBarManagerProcessWithProgressBarQuietMode(t *testing.T) {
 	t.Parallel()
 	pm := NewProgressBarManager(true) // quiet mode
-	items := []string{"item1", "item2"}
+	items := []string{testGenItem1, testGenItem2}
 
 	processedItems := make([]string, 0)
 	processFunc := func(item string, bar *progressbar.ProgressBar) {

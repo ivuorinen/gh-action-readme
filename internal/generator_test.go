@@ -15,6 +15,24 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testGenErrMsg1     = "error1"
+	testGenErrMsg2     = "error2"
+	testGenErrMsg3     = "error3"
+	testGenFileFoo     = "file: foo.yml"
+	testGenFieldName   = "name"
+	testGenFieldDesc   = "description"
+	testGenFieldRuns   = "runs"
+	testGenShortDesc   = "desc"
+	testGenTokenKey    = "token"
+	testGenHelpSection = "For more help"
+	testGenItem1       = "item1"
+	testGenItem2       = "item2"
+	testGenItem3       = "item3"
+	testGenRunsUsing   = "using"
+	testGenActionName  = "Action"
+)
+
 // defaultTestConfig returns an AppConfig with sensible test defaults.
 // Sets Quiet: true to suppress output during tests.
 func defaultTestConfig() *AppConfig {
@@ -1082,13 +1100,13 @@ func TestGeneratorReportResultsEdgeCases(t *testing.T) {
 		{
 			name:         "all failed",
 			successCount: 0,
-			errors:       []string{"error1", "error2"},
+			errors:       []string{testGenErrMsg1, testGenErrMsg2},
 			wantPanic:    false,
 		},
 		{
 			name:         "mixed results",
 			successCount: 3,
-			errors:       []string{"error1"},
+			errors:       []string{testGenErrMsg1},
 			wantPanic:    false,
 		},
 		{
@@ -1178,7 +1196,7 @@ func TestGeneratorReportResultsOutput(t *testing.T) {
 			quiet:        true,
 			verbose:      false,
 			successCount: 5,
-			errors:       []string{"error1"},
+			errors:       []string{testGenErrMsg1},
 			wantBold:     false,
 			wantError:    false,
 		},
@@ -1196,7 +1214,7 @@ func TestGeneratorReportResultsOutput(t *testing.T) {
 			quiet:        false,
 			verbose:      true,
 			successCount: 3,
-			errors:       []string{"error1", "error2"},
+			errors:       []string{testGenErrMsg1, testGenErrMsg2},
 			wantBold:     true,
 			wantError:    true,
 		},
@@ -1205,7 +1223,7 @@ func TestGeneratorReportResultsOutput(t *testing.T) {
 			quiet:        false,
 			verbose:      false,
 			successCount: 2,
-			errors:       []string{"error1"},
+			errors:       []string{testGenErrMsg1},
 			wantBold:     true,
 			wantError:    false,
 		},
@@ -1570,7 +1588,7 @@ func TestShowFileIssues_Boundary(t *testing.T) {
 		{
 			name: "no missing fields no suggestions",
 			result: ValidationResult{
-				MissingFields: []string{"file: foo.yml"},
+				MissingFields: []string{testGenFileFoo},
 				Suggestions:   nil,
 			},
 			wantErrOutput: false, wantSuggestion: false,
@@ -1578,7 +1596,7 @@ func TestShowFileIssues_Boundary(t *testing.T) {
 		{
 			name: "one missing field emits error",
 			result: ValidationResult{
-				MissingFields: []string{"file: foo.yml", "name"},
+				MissingFields: []string{testGenFileFoo, testGenFieldName},
 				Suggestions:   nil,
 			},
 			wantErrOutput: true, wantSuggestion: false,
@@ -1586,7 +1604,7 @@ func TestShowFileIssues_Boundary(t *testing.T) {
 		{
 			name: "one suggestion emits suggestion output",
 			result: ValidationResult{
-				MissingFields: []string{"file: foo.yml"},
+				MissingFields: []string{testGenFileFoo},
 				Suggestions:   []string{"add a name field"},
 			},
 			wantErrOutput: false, wantSuggestion: true,
@@ -1594,7 +1612,7 @@ func TestShowFileIssues_Boundary(t *testing.T) {
 		{
 			name: "two missing fields and suggestion",
 			result: ValidationResult{
-				MissingFields: []string{"file: foo.yml", "name", "description"},
+				MissingFields: []string{testGenFileFoo, testGenFieldName, testGenFieldDesc},
 				Suggestions:   []string{"fix it"},
 			},
 			wantErrOutput: true, wantSuggestion: true,

@@ -35,20 +35,35 @@ type ValidationWarning struct {
 	Value   string
 }
 
+// Permission level constants for GitHub Actions permissions.
+const (
+	permissionRead  = "read"
+	permissionWrite = "write"
+)
+
+// Permission scope key constants for GitHub Actions.
+const (
+	permScopeContents = "contents"
+	permScopeIssues   = "issues"
+)
+
+// Config key for GitHub token field.
+const configKeyGitHubToken = "github_token"
+
 // validPermissionsMap defines valid GitHub Actions permissions and their allowed values.
 var validPermissionsMap = map[string][]string{
-	"actions":             {"read", "write"},
-	"checks":              {"read", "write"},
-	"contents":            {"read", "write"},
-	"deployments":         {"read", "write"},
-	"id-token":            {"write"},
-	"issues":              {"read", "write"},
-	"discussions":         {"read", "write"},
-	"packages":            {"read", "write"},
-	"pull-requests":       {"read", "write"},
-	"repository-projects": {"read", "write"},
-	"security-events":     {"read", "write"},
-	"statuses":            {"read", "write"},
+	"actions":             {permissionRead, permissionWrite},
+	"checks":              {permissionRead, permissionWrite},
+	permScopeContents:     {permissionRead, permissionWrite},
+	"deployments":         {permissionRead, permissionWrite},
+	"id-token":            {permissionWrite},
+	permScopeIssues:       {permissionRead, permissionWrite},
+	"discussions":         {permissionRead, permissionWrite},
+	"packages":            {permissionRead, permissionWrite},
+	"pull-requests":       {permissionRead, permissionWrite},
+	"repository-projects": {permissionRead, permissionWrite},
+	"security-events":     {permissionRead, permissionWrite},
+	"statuses":            {permissionRead, permissionWrite},
 }
 
 // ConfigValidator handles configuration validation with immediate feedback.
@@ -112,7 +127,7 @@ func (v *ConfigValidator) ValidateField(fieldName, value string) *ValidationResu
 		v.validateOutputFormat(value, result)
 	case appconstants.ConfigKeyOutputDir:
 		v.validateOutputDir(value, result)
-	case "github_token":
+	case configKeyGitHubToken:
 		v.validateGitHubToken(value, result)
 	default:
 		result.Warnings = append(result.Warnings, ValidationWarning{

@@ -41,8 +41,8 @@ func TestSetupGeneratorContext(t *testing.T) {
 		{
 			name: "basic config",
 			config: &internal.AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
+				Theme:        testHelperThemeDefault,
+				OutputFormat: testHelperFormatMD,
 				OutputDir:    ".",
 				Verbose:      false,
 				Quiet:        false,

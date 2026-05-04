@@ -27,16 +27,28 @@ const (
 	testCmdDeps          = "deps"
 	testCmdList          = "list"
 	testCmdShow          = "show"
+	testCmdCache         = "cache"
+	testCmdThemes        = "themes"
+	testCmdSchema        = "schema"
+	testCmdWizard        = "wizard"
+	testCmdStats         = "stats"
 	testFormatJSON       = "json"
 	testFormatHTML       = "html"
+	testFormatMD         = "md"
+	testFormatASCIIDoc   = "asciidoc"
 	testThemeGitHub      = "github"
 	testThemePro         = "professional"
+	testThemeDefault     = "default"
+	testThemeMinimal     = "minimal"
 	testFlagOutputFmt    = "--output-format"
 	testFlagTheme        = "--theme"
 	testActionBasic      = "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
 	testErrExpectedShort = "expected Short description to be non-empty"
 	testErrExpectedRunFn = "expected command to have a Run or RunE function"
 	testMsgUsesGlobalCfg = "uses globalConfig when config parameter is nil"
+	testErrNoActionFiles = "no GitHub Action files found"
+	testTmpDir           = "/tmp"
+	testVersionV4        = "v4"
 )
 
 // TestInputReader allows injecting test responses for testing.
@@ -140,7 +152,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "gen command with valid action",
-			args: []string{testCmdGen, testFlagOutputFmt, "md"},
+			args: []string{testCmdGen, testFlagOutputFmt, testFormatMD},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -183,7 +195,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "schema command",
-			args:       []string{"schema"},
+			args:       []string{testCmdSchema},
 			wantExit:   0,
 			wantStdout: "schemas/schema.json",
 		},
@@ -201,7 +213,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "config themes command",
-			args:       []string{testCmdConfig, "themes"},
+			args:       []string{testCmdConfig, testCmdThemes},
 			wantExit:   0,
 			wantStdout: "Available Themes:",
 		},
@@ -223,13 +235,13 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "cache path command",
-			args:       []string{"cache", "path"},
+			args:       []string{testCmdCache, "path"},
 			wantExit:   0,
 			wantStdout: "Cache Directory:",
 		},
 		{
 			name:       "cache stats command",
-			args:       []string{"cache", "stats"},
+			args:       []string{testCmdCache, testCmdStats},
 			wantExit:   0,
 			wantStdout: "Cache Statistics:",
 		},
@@ -426,7 +438,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			args:      []string{testCmdGen},
 			setupFunc: nil, // Empty directory
 			wantExit:  1,
-			wantError: "no GitHub Action files found",
+			wantError: testErrNoActionFiles,
 		},
 		{
 			name: "gen with malformed YAML syntax",
@@ -711,7 +723,7 @@ func TestNewSchemaCmd(t *testing.T) {
 	t.Parallel()
 	cmd := newSchemaCmd()
 
-	if cmd.Use != "schema" {
+	if cmd.Use != testCmdSchema {
 		t.Errorf("expected Use to be 'schema', got %q", cmd.Use)
 	}
 
@@ -967,7 +979,7 @@ func TestApplyCommandFlags(t *testing.T) {
 	}{
 		{
 			name:      "with theme flag only",
-			theme:     "github",
+			theme:     testThemeGitHub,
 			format:    appconstants.OutputFormatMarkdown, // Must set format to avoid empty string
 			wantTheme: testThemeGitHub,
 			wantFmt:   appconstants.OutputFormatMarkdown,
@@ -976,15 +988,15 @@ func TestApplyCommandFlags(t *testing.T) {
 			name:      "with format flag",
 			theme:     "",
 			format:    testFormatHTML,
-			wantTheme: "default", // Default from DefaultAppConfig
-			wantFmt:   "html",
+			wantTheme: testThemeDefault, // Default from DefaultAppConfig
+			wantFmt:   testFormatHTML,
 		},
 		{
 			name:      "with both flags",
 			theme:     testThemePro,
 			format:    testFormatJSON,
 			wantTheme: testThemePro,
-			wantFmt:   "json",
+			wantFmt:   testFormatJSON,
 		},
 	}
 
@@ -1038,6 +1050,10 @@ func TestValidateGitHubToken(t *testing.T) {
 			// Save original global config
 			origConfig := globalConfig
 			defer func() { globalConfig = origConfig }()
+
+			// Clear env vars so GetGitHubToken only sees the config struct token.
+			t.Setenv(appconstants.EnvGitHubToken, "")
+			t.Setenv(appconstants.EnvGitHubTokenStandard, "")
 
 			// Set test token
 			globalConfig = &internal.AppConfig{
@@ -1144,7 +1160,7 @@ func TestDisplayOutdatedResults(_ *testing.T) {
 						Name:    testutil.TestActionCheckout,
 						Version: "v3",
 					},
-					LatestVersion: "v4",
+					LatestVersion: testVersionV4,
 					UpdateType:    "major",
 				},
 			},
@@ -1181,13 +1197,13 @@ func TestDisplayFloatingDeps(_ *testing.T) {
 			file: testutil.TestTmpActionFile,
 			dep: dependencies.Dependency{
 				Name:    testutil.TestActionCheckout,
-				Version: "v4",
+				Version: testVersionV4,
 			},
 		},
 	}
 
 	// Just call it to ensure it doesn't panic
-	displayFloatingDeps(output, "/tmp", floatingDeps)
+	displayFloatingDeps(output, testTmpDir, floatingDeps)
 }
 
 // TestDisplaySecuritySummary tests security summary display.
@@ -1210,7 +1226,7 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 					file: testutil.TestTmpActionFile,
 					dep: dependencies.Dependency{
 						Name:    testutil.TestActionCheckout,
-						Version: "v4",
+						Version: testVersionV4,
 					},
 				},
 			},
@@ -1225,7 +1241,7 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 	for _, tt := range tests {
 		output := createOutputManager(true)
 		// Just call it to ensure it doesn't panic
-		displaySecuritySummary(output, "/tmp", tt.pinnedCount, tt.floatingDeps)
+		displaySecuritySummary(output, testTmpDir, tt.pinnedCount, tt.floatingDeps)
 	}
 }
 
@@ -1241,7 +1257,7 @@ func TestShowPendingUpdates(t *testing.T) {
 		{
 			name:       "no updates",
 			updates:    []dependencies.PinnedUpdate{},
-			currentDir: "/tmp",
+			currentDir: testTmpDir,
 		},
 		{
 			name: "single update",
@@ -1250,10 +1266,10 @@ func TestShowPendingUpdates(t *testing.T) {
 					FilePath:   testutil.TestTmpActionFile,
 					OldUses:    testutil.TestActionCheckoutV3,
 					NewUses:    testutil.TestActionCheckoutV4,
-					UpdateType: "major",
+					UpdateType: appconstants.UpdateTypeMajor,
 				},
 			},
-			currentDir: "/tmp",
+			currentDir: testTmpDir,
 		},
 		{
 			name: "multiple updates",
@@ -1262,16 +1278,16 @@ func TestShowPendingUpdates(t *testing.T) {
 					FilePath:   testutil.TestTmpActionFile,
 					OldUses:    testutil.TestActionCheckoutV3,
 					NewUses:    testutil.TestActionCheckoutV4,
-					UpdateType: "major",
+					UpdateType: appconstants.UpdateTypeMajor,
 				},
 				{
-					FilePath:   "/tmp/workflow.yml",
+					FilePath:   testTmpDir + "/workflow.yml",
 					OldUses:    "actions/setup-node@v2",
 					NewUses:    testutil.TestActionSetupNodeV3,
-					UpdateType: "major",
+					UpdateType: appconstants.UpdateTypeMajor,
 				},
 			},
-			currentDir: "/tmp",
+			currentDir: testTmpDir,
 		},
 	}
 
@@ -1409,13 +1425,13 @@ func TestNewConfigCmd(t *testing.T) {
 
 	t.Run("has all expected subcommands", func(t *testing.T) {
 		cmd := newConfigCmd()
-		expectedSubcommands := []string{"init", "wizard", testCmdShow, "themes"}
+		expectedSubcommands := []string{"init", testCmdWizard, testCmdShow, testCmdThemes}
 		verifySubcommandsExist(t, cmd, expectedSubcommands)
 	})
 
 	t.Run("wizard subcommand has required flags", func(t *testing.T) {
 		cmd := newConfigCmd()
-		wizardCmd, _, err := cmd.Find([]string{"wizard"})
+		wizardCmd, _, err := cmd.Find([]string{testCmdWizard})
 		if err != nil {
 			t.Fatalf("Failed to find wizard subcommand: %v", err)
 		}
@@ -1451,7 +1467,7 @@ func TestNewCacheCmd(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("newCacheCmd() returned nil")
 	}
-	if cmd.Use != "cache" {
+	if cmd.Use != testCmdCache {
 		t.Errorf("newCacheCmd().Use = %v, want 'cache'", cmd.Use)
 	}
 }
@@ -1819,7 +1835,7 @@ func TestLoadGenConfigIntegration(t *testing.T) {
 
 				return tmpDir, tmpDir
 			},
-			wantTheme: "default",
+			wantTheme: testThemeDefault,
 		},
 		{
 			name: "loads repo-specific config",

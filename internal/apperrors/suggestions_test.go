@@ -382,8 +382,8 @@ func TestGetConfigurationSuggestions(t *testing.T) {
 			name:    "basic configuration suggestions",
 			context: map[string]string{},
 			expectedContains: []string{
-				"Check configuration file syntax",
-				"Ensure configuration file exists",
+				suggestionCheckConfigSyntax,
+				suggestionEnsureConfigExists,
 				"Use 'gh-action-readme config init'",
 			},
 		},
@@ -447,8 +447,8 @@ func TestGetTemplateSuggestions(t *testing.T) {
 			name:    "basic template suggestions",
 			context: map[string]string{},
 			expectedContains: []string{
-				"Check template syntax",
-				"Ensure all template variables are defined",
+				suggestionCheckTemplateSyntax,
+				suggestionEnsureTemplateVars,
 				"Verify custom template path is correct",
 			},
 		},

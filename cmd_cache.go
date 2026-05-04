@@ -13,7 +13,7 @@ import (
 
 func newCacheCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cache",
+		Use:   appconstants.CommandCache,
 		Short: "Cache management commands",
 		Long:  "Manage the XDG-compliant dependency cache",
 	}
@@ -25,7 +25,7 @@ func newCacheCmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "stats",
+		Use:   appconstants.CommandStats,
 		Short: "Show cache statistics",
 		Run:   wrapHandlerWithErrorHandling(cacheStatsHandler),
 	})

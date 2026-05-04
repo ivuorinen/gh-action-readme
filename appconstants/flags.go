@@ -20,6 +20,30 @@ const (
 
 	// CommandPin is the pin command name.
 	CommandPin = "pin"
+	// CommandGen is the gen command name.
+	CommandGen = "gen"
+	// CommandCache is the cache command name.
+	CommandCache = "cache"
+	// CommandStats is the stats subcommand name.
+	CommandStats = "stats"
+	// CommandConfig is the config command name.
+	CommandConfig = "config"
+	// CommandWizard is the wizard subcommand name.
+	CommandWizard = "wizard"
+	// CommandShow is the show subcommand name.
+	CommandShow = "show"
+	// CommandThemes is the themes subcommand name.
+	CommandThemes = "themes"
+	// CommandDeps is the deps command name.
+	CommandDeps = "deps"
+	// CommandList is the list subcommand name.
+	CommandList = "list"
+	// CommandValidate is the validate command name.
+	CommandValidate = "validate"
+	// CommandSchema is the schema command name.
+	CommandSchema = "schema"
+	// CommandVersion is the version command name.
+	CommandVersion = "version"
 
 	// CacheStatsKeyDir is the cache stats key for directory.
 	CacheStatsKeyDir = "cache_dir"

@@ -57,16 +57,16 @@ func TestConfigValidatorValidateConfig(t *testing.T) {
 		{
 			name: "valid config",
 			config: &internal.AppConfig{
-				Organization:        "testorg",
-				Repository:          "testrepo",
-				Version:             "1.0.0",
-				Theme:               "github",
-				OutputFormat:        "md",
+				Organization:        testWizardOrg,
+				Repository:          testWizardRepo,
+				Version:             testWizardVersion,
+				Theme:               testWizardThemeGH,
+				OutputFormat:        testWizardFormatMD,
 				OutputDir:           ".",
 				AnalyzeDependencies: true,
 				ShowSecurityInfo:    false,
 				RunsOn:              []string{"ubuntu-latest"},
-				Permissions:         map[string]string{"contents": "read"},
+				Permissions:         map[string]string{permScopeContents: permissionRead},
 			},
 			expectValid:    true,
 			expectErrors:   0,
@@ -75,8 +75,8 @@ func TestConfigValidatorValidateConfig(t *testing.T) {
 		{
 			name: "invalid theme and format",
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
+				Organization: testWizardOrg,
+				Repository:   testWizardRepo,
 				Theme:        "invalid-theme",
 				OutputFormat: "invalid-format",
 				OutputDir:    ".",
@@ -87,7 +87,7 @@ func TestConfigValidatorValidateConfig(t *testing.T) {
 		{
 			name: "empty required fields",
 			config: &internal.AppConfig{
-				Theme:        "default",
+				Theme:        testWizardThemeDef,
 				OutputFormat: "md",
 				OutputDir:    "",
 			},
@@ -97,9 +97,9 @@ func TestConfigValidatorValidateConfig(t *testing.T) {
 		{
 			name: "invalid permissions",
 			config: &internal.AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
-				Theme:        "github",
+				Organization: testWizardOrg,
+				Repository:   testWizardRepo,
+				Theme:        testWizardThemeGH,
 				OutputFormat: "md",
 				OutputDir:    ".",
 				Permissions:  map[string]string{"contents": "invalid-value"},
@@ -139,13 +139,13 @@ func TestConfigValidatorValidateField(t *testing.T) {
 		value       string
 		expectValid bool
 	}{
-		{"valid organization", "organization", "testorg", true},
+		{"valid organization", "organization", testWizardOrg, true},
 		{"invalid organization", "organization", "test@org", false},
 		{"valid repository", "repository", "test-repo", true},
 		{"invalid repository", "repository", "test repo", false},
 		{"valid version", "version", "1.0.0", true},
 		{"invalid version", "version", "not-a-version", true}, // warning only
-		{"valid theme", "theme", "github", true},
+		{"valid theme", "theme", testWizardThemeGH, true},
 		{"invalid theme", "theme", "nonexistent", false},
 		{"valid format", "output_format", "json", true},
 		{"invalid format", "output_format", "xml", false},

@@ -180,7 +180,7 @@ func TestJSONWriter_Write(t *testing.T) {
 
 				return actionWithInputs(t, true)
 			},
-			wantInputKey: "token",
+			wantInputKey: testGenTokenKey,
 		},
 		{
 			name:          "action with outputs only",

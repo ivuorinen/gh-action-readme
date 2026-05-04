@@ -6,6 +6,13 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testStrOrgActions   = "actions"
+	testStrRepoCheckout = "checkout"
+	testStrInput        = "test"
+	testStrVersionV3    = "v3"
+)
+
 // TestTrimAndNormalize tests the TrimAndNormalize function.
 func TestTrimAndNormalize(t *testing.T) {
 	t.Parallel()
@@ -13,13 +20,13 @@ func TestTrimAndNormalize(t *testing.T) {
 	tests := []testutil.StringTestCase{
 		{
 			Name:  "no whitespace",
-			Input: "test",
-			Want:  "test",
+			Input: testStrInput,
+			Want:  testStrInput,
 		},
 		{
 			Name:  "leading and trailing whitespace",
 			Input: "  test  ",
-			Want:  "test",
+			Want:  testStrInput,
 		},
 		{
 			Name:  "multiple internal spaces",
@@ -69,28 +76,28 @@ func TestFormatUsesStatement(t *testing.T) {
 	}{
 		{
 			name:    "full statement with version",
-			org:     "actions",
-			repo:    "checkout",
-			version: "v3",
+			org:     testStrOrgActions,
+			repo:    testStrRepoCheckout,
+			version: testStrVersionV3,
 			want:    testutil.TestActionCheckoutV3,
 		},
 		{
 			name:    "without version defaults to v1",
-			org:     "actions",
+			org:     testStrOrgActions,
 			repo:    "setup-node",
 			version: "",
 			want:    "actions/setup-node@v1",
 		},
 		{
 			name:    "version with @ prefix",
-			org:     "actions",
+			org:     testStrOrgActions,
 			repo:    "cache",
 			version: "@v2",
 			want:    "actions/cache@v2",
 		},
 		{
 			name:    "version without @ prefix",
-			org:     "actions",
+			org:     testStrOrgActions,
 			repo:    "upload-artifact",
 			version: "v4",
 			want:    "actions/upload-artifact@v4",
@@ -98,35 +105,35 @@ func TestFormatUsesStatement(t *testing.T) {
 		{
 			name:    "empty org returns empty",
 			org:     "",
-			repo:    "checkout",
-			version: "v3",
+			repo:    testStrRepoCheckout,
+			version: testStrVersionV3,
 			want:    "",
 		},
 		{
 			name:    "empty repo returns empty",
-			org:     "actions",
+			org:     testStrOrgActions,
 			repo:    "",
-			version: "v3",
+			version: testStrVersionV3,
 			want:    "",
 		},
 		{
 			name:    "both org and repo empty",
 			org:     "",
 			repo:    "",
-			version: "v3",
+			version: testStrVersionV3,
 			want:    "",
 		},
 		{
 			name:    "sha as version",
-			org:     "actions",
-			repo:    "checkout",
+			org:     testStrOrgActions,
+			repo:    testStrRepoCheckout,
 			version: "abc123def456",
 			want:    "actions/checkout@abc123def456",
 		},
 		{
 			name:    "main branch as version",
-			org:     "actions",
-			repo:    "checkout",
+			org:     testStrOrgActions,
+			repo:    testStrRepoCheckout,
 			version: "main",
 			want:    "actions/checkout@main",
 		},

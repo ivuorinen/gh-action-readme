@@ -7,6 +7,14 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testGitOrgOwner   = "owner"
+	testGitRepoRepo   = "repo"
+	testGitOrgActions = "actions"
+	testGitRepoChkout = "checkout"
+	testGitBranchMain = "main"
+)
+
 func TestFindRepositoryRoot(t *testing.T) {
 	t.Parallel()
 
@@ -126,9 +134,9 @@ func TestDetectGitRepository(t *testing.T) {
 	remote = origin
 	merge = refs/heads/main
 `,
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
-			expectedURL:  "https://github.com/owner/repo.git",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
+			expectedURL:  "https://github.com/" + testGitOrgOwner + "/" + testGitRepoRepo + ".git",
 		}),
 		createGitRepoTestCase(gitTestCase{
 			name: "SSH remote URL",
@@ -136,9 +144,9 @@ func TestDetectGitRepository(t *testing.T) {
 	url = git@github.com:owner/repo.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
 `,
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
-			expectedURL:  "git@github.com:owner/repo.git",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
+			expectedURL:  "git@github.com:" + testGitOrgOwner + "/" + testGitRepoRepo + ".git",
 		}),
 		{
 			name: testutil.TestCaseNameNoGitRepository,
@@ -194,21 +202,21 @@ func TestParseGitHubURL(t *testing.T) {
 	}{
 		{
 			name:         "HTTPS GitHub URL",
-			remoteURL:    "https://github.com/owner/repo.git",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			remoteURL:    "https://github.com/" + testGitOrgOwner + "/" + testGitRepoRepo + ".git",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
 		},
 		{
 			name:         testutil.TestCaseNameSSHGitHub,
-			remoteURL:    "git@github.com:owner/repo.git",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			remoteURL:    "git@github.com:" + testGitOrgOwner + "/" + testGitRepoRepo + ".git",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
 		},
 		{
 			name:         "GitHub URL without .git suffix",
-			remoteURL:    "https://github.com/owner/repo",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			remoteURL:    "https://github.com/" + testGitOrgOwner + "/" + testGitRepoRepo,
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
 		},
 		{
 			name:         "Invalid URL",
@@ -252,22 +260,22 @@ func TestRepoInfoGetRepositoryName(t *testing.T) {
 		{
 			name: "only organization set",
 			repoInfo: RepoInfo{
-				Organization: "owner",
+				Organization: testGitOrgOwner,
 			},
 			expected: "",
 		},
 		{
 			name: "only repository set",
 			repoInfo: RepoInfo{
-				Repository: "repo",
+				Repository: testGitRepoRepo,
 			},
 			expected: "",
 		},
 		{
 			name: "both organization and repository set",
 			repoInfo: RepoInfo{
-				Organization: "owner",
-				Repository:   "repo",
+				Organization: testGitOrgOwner,
+				Repository:   testGitRepoRepo,
 			},
 			expected: "owner/repo",
 		},
@@ -297,8 +305,8 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 		{
 			name: "repository-level action",
 			repoInfo: &RepoInfo{
-				Organization: "actions",
-				Repository:   "checkout",
+				Organization: testGitOrgActions,
+				Repository:   testGitRepoChkout,
 			},
 			actionName: "",
 			version:    "v3",
@@ -307,17 +315,17 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 		{
 			name: "repository-level action with same name",
 			repoInfo: &RepoInfo{
-				Organization: "actions",
-				Repository:   "checkout",
+				Organization: testGitOrgActions,
+				Repository:   testGitRepoChkout,
 			},
-			actionName: "checkout",
+			actionName: testGitRepoChkout,
 			version:    "v3",
 			expected:   testutil.TestActionCheckoutV3,
 		},
 		{
 			name: testutil.TestCaseNameSubdirAction,
 			repoInfo: &RepoInfo{
-				Organization: "actions",
+				Organization: testGitOrgActions,
 				Repository:   "toolkit",
 			},
 			actionName: "cache",
@@ -347,8 +355,8 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 		{
 			name: "with SHA version",
 			repoInfo: &RepoInfo{
-				Organization: "actions",
-				Repository:   "checkout",
+				Organization: testGitOrgActions,
+				Repository:   testGitRepoChkout,
 			},
 			actionName: "",
 			version:    "abc123def456",
@@ -357,11 +365,11 @@ func TestRepoInfoGenerateUsesStatement(t *testing.T) {
 		{
 			name: "with main branch",
 			repoInfo: &RepoInfo{
-				Organization: "actions",
+				Organization: testGitOrgActions,
 				Repository:   "setup-node",
 			},
 			actionName: "",
-			version:    "main",
+			version:    testGitBranchMain,
 			expected:   "actions/setup-node@main",
 		},
 	}
@@ -387,18 +395,18 @@ func TestGetDefaultBranchFallbacks(t *testing.T) {
 	}{
 		createDefaultBranchTestCase(defaultBranchTestCase{
 			name:           "git config with main branch",
-			branch:         "main",
-			expectedBranch: "main",
+			branch:         testGitBranchMain,
+			expectedBranch: testGitBranchMain,
 		}),
 		createDefaultBranchTestCase(defaultBranchTestCase{
 			name:           "git config with master branch - returns main fallback",
 			branch:         "master",
-			expectedBranch: "main",
+			expectedBranch: testGitBranchMain,
 		}),
 		createDefaultBranchTestCase(defaultBranchTestCase{
 			name:           "git config with develop branch - returns main fallback",
 			branch:         "develop",
-			expectedBranch: "main",
+			expectedBranch: testGitBranchMain,
 		}),
 		{
 			name: "no git config - returns main fallback",
@@ -408,7 +416,7 @@ func TestGetDefaultBranchFallbacks(t *testing.T) {
 
 				return tmpDir
 			},
-			expectedBranch: "main", // Falls back to "main" when git command fails
+			expectedBranch: testGitBranchMain, // Falls back to "main" when git command fails
 		},
 		{
 			name: "malformed git config - returns main fallback",
@@ -422,7 +430,7 @@ func TestGetDefaultBranchFallbacks(t *testing.T) {
 
 				return tmpDir
 			},
-			expectedBranch: "main", // Falls back to "main" when git command fails
+			expectedBranch: testGitBranchMain, // Falls back to "main" when git command fails
 		},
 	}
 
@@ -752,36 +760,36 @@ func TestParseGitHubURLEdgeCases(t *testing.T) {
 		{
 			name:         "ssh url without git suffix",
 			remoteURL:    "git@github.com:owner/repo",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
 			description:  "SSH URL without .git suffix",
 		},
 		{
 			name:         "url with trailing slash",
 			remoteURL:    "https://github.com/owner/repo/",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
 			description:  "Handles trailing slash",
 		},
 		{
 			name:         "url with query parameters",
 			remoteURL:    "https://github.com/owner/repo?param=value",
-			expectedOrg:  "owner",
+			expectedOrg:  testGitOrgOwner,
 			expectedRepo: "repo?param=value", // Regex doesn't strip query params
 			description:  "Query parameters are not stripped by regex",
 		},
 		{
 			name:         "malformed ssh url",
 			remoteURL:    "git@github.com/owner/repo.git",
-			expectedOrg:  "owner",
-			expectedRepo: "repo", // Actually matches the pattern
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo, // Actually matches the pattern
 			description:  "Malformed SSH URL still matches pattern",
 		},
 		{
 			name:         "url with username",
 			remoteURL:    "https://user@github.com/owner/repo.git",
-			expectedOrg:  "owner",
-			expectedRepo: "repo",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
 			description:  "Handles URL with username",
 		},
 		{
@@ -794,8 +802,8 @@ func TestParseGitHubURLEdgeCases(t *testing.T) {
 		{
 			name:         "short ssh format",
 			remoteURL:    "github.com:owner/repo.git",
-			expectedOrg:  "owner",
-			expectedRepo: "repo", // Actually matches the pattern with ':'
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo, // Actually matches the pattern with ':'
 			description:  "Short SSH format matches the regex pattern",
 		},
 	}

@@ -265,7 +265,7 @@ func setupConfigurationHierarchyWorkflow(t *testing.T, tmpDir string) {
 	testutil.WriteTestFile(t, filepath.Join(githubDir, testutil.TestFileGHActionReadme), actionConfig)
 
 	// Environment variables (highest priority before CLI flags)
-	t.Setenv("GH_ACTION_README_THEME", "minimal")
+	t.Setenv("GH_ACTION_README_THEME", testThemeMinimal)
 	t.Setenv("GH_ACTION_README_QUIET", "false")
 }
 
@@ -406,8 +406,13 @@ func TestServiceIntegration(t *testing.T) {
 			setupFunc: setupConfigurationHierarchy,
 			workflow: []workflowStep{
 				{
-					name:          "generate with verbose progress indicators",
-					cmd:           []string{"gen", testutil.TestFlagVerbose, testutil.TestFlagTheme, "github"},
+					name: "generate with verbose progress indicators",
+					cmd: []string{
+						testCmdGen,
+						testutil.TestFlagVerbose,
+						testutil.TestFlagTheme,
+						testThemeGitHub,
+					},
 					expectSuccess: true,
 					expectOutput:  testutil.TestMsgProcessingFile,
 				},
@@ -430,10 +435,10 @@ func TestServiceIntegration(t *testing.T) {
 				{
 					name: "discover and process multiple actions recursively",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagRecursive,
 						testutil.TestFlagTheme,
-						"professional",
+						testThemePro,
 						testutil.TestFlagVerbose,
 					},
 					expectSuccess: true,
@@ -457,13 +462,13 @@ func TestServiceIntegration(t *testing.T) {
 				{
 					name: "full workflow with all services",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagRecursive,
 						testutil.TestFlagVerbose,
 						testutil.TestFlagTheme,
-						"github",
+						testThemeGitHub,
 						testutil.TestFlagOutputFormat,
-						"html",
+						testFormatHTML,
 					},
 					expectSuccess: true,
 				},
@@ -516,34 +521,34 @@ func TestEndToEndWorkflows(t *testing.T) {
 			workflow: []workflowStep{
 				{
 					name:          "validate action file",
-					cmd:           []string{"validate"},
+					cmd:           []string{testCmdValidate},
 					expectSuccess: true,
 					expectOutput:  "All validations passed",
 				},
 				{
 					name:          "generate with default theme",
-					cmd:           []string{"gen", testutil.TestFlagTheme, "default"},
+					cmd:           []string{testCmdGen, testutil.TestFlagTheme, testThemeDefault},
 					expectSuccess: true,
 				},
 				{
 					name: "generate with github theme",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagTheme,
-						"github",
+						testThemeGitHub,
 						testutil.TestFlagOutputFormat,
-						"html",
+						testFormatHTML,
 					},
 					expectSuccess: true,
 				},
 				{
 					name:          "list dependencies",
-					cmd:           []string{"deps", "list"},
+					cmd:           []string{testCmdDeps, testCmdList},
 					expectSuccess: true,
 				},
 				{
 					name:          "check cache statistics",
-					cmd:           []string{"cache", "stats"},
+					cmd:           []string{testCmdCache, testCmdStats},
 					expectSuccess: true,
 					expectOutput:  "Cache Statistics",
 				},
@@ -555,22 +560,22 @@ func TestEndToEndWorkflows(t *testing.T) {
 			workflow: []workflowStep{
 				{
 					name:          "validate all actions recursively",
-					cmd:           []string{"validate"},
+					cmd:           []string{testCmdValidate},
 					expectSuccess: true,
 				},
 				{
 					name: "generate docs for all actions",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagRecursive,
 						testutil.TestFlagTheme,
-						"professional",
+						testThemePro,
 					},
 					expectSuccess: true,
 				},
 				{
 					name:          "check all dependencies",
-					cmd:           []string{"deps", "list"},
+					cmd:           []string{testCmdDeps, testCmdList},
 					expectSuccess: true,
 				},
 			},
@@ -581,19 +586,19 @@ func TestEndToEndWorkflows(t *testing.T) {
 			workflow: []workflowStep{
 				{
 					name:          "show current config",
-					cmd:           []string{"config", "show"},
+					cmd:           []string{testCmdConfig, testCmdShow},
 					expectSuccess: true,
 					expectOutput:  testutil.TestMsgCurrentConfig,
 				},
 				{
 					name:          "list available themes",
-					cmd:           []string{"config", "themes"},
+					cmd:           []string{testCmdConfig, testCmdThemes},
 					expectSuccess: true,
 					expectOutput:  "Available Themes",
 				},
 				{
 					name:          "generate with custom theme",
-					cmd:           []string{"gen", testutil.TestFlagTheme, "minimal"},
+					cmd:           []string{testCmdGen, testutil.TestFlagTheme, testThemeMinimal},
 					expectSuccess: true,
 				},
 			},
@@ -605,38 +610,38 @@ func TestEndToEndWorkflows(t *testing.T) {
 				{
 					name: "generate markdown documentation",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagOutputFormat,
-						"md",
+						testFormatMD,
 						testutil.TestFlagTheme,
-						"github",
+						testThemeGitHub,
 					},
 					expectSuccess: true,
 				},
 				{
 					name: "generate HTML documentation",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagOutputFormat,
-						"html",
+						testFormatHTML,
 						testutil.TestFlagTheme,
-						"professional",
+						testThemePro,
 					},
 					expectSuccess: true,
 				},
 				{
 					name:          "generate JSON documentation",
-					cmd:           []string{"gen", testutil.TestFlagOutputFormat, "json"},
+					cmd:           []string{testCmdGen, testutil.TestFlagOutputFormat, testFormatJSON},
 					expectSuccess: true,
 				},
 				{
 					name: "generate AsciiDoc documentation",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagOutputFormat,
-						"asciidoc",
+						testFormatASCIIDoc,
 						testutil.TestFlagTheme,
-						"minimal",
+						testThemeMinimal,
 					},
 					expectSuccess: true,
 				},
@@ -648,18 +653,23 @@ func TestEndToEndWorkflows(t *testing.T) {
 			workflow: []workflowStep{
 				{
 					name:          "analyze composite action dependencies",
-					cmd:           []string{"deps", "list", testutil.TestFlagVerbose},
+					cmd:           []string{testCmdDeps, testCmdList, testutil.TestFlagVerbose},
 					expectSuccess: true,
 					expectOutput:  testutil.TestMsgDependenciesFound,
 				},
 				{
 					name:          "check for dependency updates",
-					cmd:           []string{"deps", "check"},
+					cmd:           []string{testCmdDeps, "check"},
 					expectSuccess: true,
 				},
 				{
-					name:          "generate documentation with dependency info",
-					cmd:           []string{"gen", testutil.TestFlagTheme, "github", testutil.TestFlagVerbose},
+					name: "generate documentation with dependency info",
+					cmd: []string{
+						testCmdGen,
+						testutil.TestFlagTheme,
+						testThemeGitHub,
+						testutil.TestFlagVerbose,
+					},
 					expectSuccess: true,
 				},
 			},
@@ -676,17 +686,17 @@ func TestEndToEndWorkflows(t *testing.T) {
 				},
 				{
 					name:          "generate with hierarchical config",
-					cmd:           []string{"gen", testutil.TestFlagVerbose},
+					cmd:           []string{testCmdGen, testutil.TestFlagVerbose},
 					expectSuccess: true,
 				},
 				{
 					name: "override with CLI flags",
 					cmd: []string{
-						"gen",
+						testCmdGen,
 						testutil.TestFlagTheme,
-						"minimal",
+						testThemeMinimal,
 						testutil.TestFlagOutputFormat,
-						"html",
+						testFormatHTML,
 						testutil.TestFlagVerbose,
 					},
 					expectSuccess: true,
@@ -705,14 +715,14 @@ func TestEndToEndWorkflows(t *testing.T) {
 				},
 				{
 					name:          "attempt generation with invalid action",
-					cmd:           []string{"gen"},
+					cmd:           []string{testCmdGen},
 					expectSuccess: false,
 				},
 				{
 					name:          "show schema for reference",
-					cmd:           []string{"schema"},
+					cmd:           []string{testCmdSchema},
 					expectSuccess: true,
-					expectOutput:  "schema",
+					expectOutput:  testCmdSchema,
 				},
 			},
 		},
@@ -793,12 +803,12 @@ func testProjectSetup(t *testing.T, binaryPath, tmpDir string) {
 // testDocumentationGeneration tests generation with different themes.
 func testDocumentationGeneration(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
-	themes := []string{"default", "github", "minimal"}
+	themes := []string{testThemeDefault, testThemeGitHub, testThemeMinimal}
 
 	for _, theme := range themes {
 		cmd := exec.Command(
 			binaryPath,
-			"gen",
+			testCmdGen,
 			testutil.TestFlagTheme,
 			theme,
 		) // #nosec G204 -- controlled test input
@@ -827,7 +837,7 @@ func testDependencyManagement(t *testing.T, binaryPath, tmpDir string) {
 		testutil.MustReadFixture(testutil.TestFixtureCompositeBasic))
 
 	// List dependencies
-	output, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, "deps", "list")
+	output, err := testutil.RunBinaryCommand(t, binaryPath, tmpDir, testCmdDeps, testCmdList)
 	testutil.AssertNoError(t, err)
 	if !strings.Contains(output, testutil.TestMsgDependenciesFound) {
 		t.Error("expected dependency listing output")
@@ -837,12 +847,12 @@ func testDependencyManagement(t *testing.T, binaryPath, tmpDir string) {
 // testOutputFormats tests generation with different output formats.
 func testOutputFormats(t *testing.T, binaryPath, tmpDir string) {
 	t.Helper()
-	formats := []string{"md", "html", "json"}
+	formats := []string{testFormatMD, testFormatHTML, testFormatJSON}
 
 	for _, format := range formats {
 		cmd := exec.Command(
 			binaryPath,
-			"gen",
+			testCmdGen,
 			testutil.TestFlagOutputFormat,
 			format,
 		) // #nosec G204 -- controlled test input
@@ -853,12 +863,12 @@ func testOutputFormats(t *testing.T, binaryPath, tmpDir string) {
 		// Verify output was created with correct naming patterns
 		var pattern string
 		switch format {
-		case "md":
+		case testFormatMD:
 			pattern = testutil.TestPatternREADME
-		case "html":
+		case testFormatHTML:
 			// HTML files are named after the action name (e.g., "Example Action.html")
 			pattern = testutil.TestPatternHTML
-		case "json":
+		case testFormatJSON:
 			// JSON files have a fixed name
 			pattern = "action-docs.json"
 		}
@@ -940,10 +950,10 @@ func TestMultiFormatIntegration(t *testing.T) {
 		extension string
 		theme     string
 	}{
-		{"md", testutil.TestPatternREADME, "github"},
-		{"html", testutil.TestPatternHTML, "professional"},
-		{"json", "action-docs.json", "default"},
-		{"asciidoc", "*.adoc", "minimal"},
+		{testFormatMD, testutil.TestPatternREADME, testThemeGitHub},
+		{testFormatHTML, testutil.TestPatternHTML, testThemePro},
+		{testFormatJSON, "action-docs.json", testThemeDefault},
+		{testFormatASCIIDoc, "*.adoc", testThemeMinimal},
 	}
 
 	for _, fmt := range formats {
@@ -978,7 +988,7 @@ func runGenerationCommand(t *testing.T, binaryPath, tmpDir, format, theme string
 	t.Helper()
 	cmd := exec.Command(
 		binaryPath,
-		"gen",
+		testCmdGen,
 		testutil.TestFlagOutputFormat,
 		format,
 		testutil.TestFlagTheme,
@@ -1057,12 +1067,12 @@ func validateGeneratedFiles(t *testing.T, files []string, format string) {
 func validateFormatSpecificContent(t *testing.T, file string, content []byte, format string) {
 	t.Helper()
 	switch format {
-	case "json":
+	case testFormatJSON:
 		var jsonData any
 		if err := json.Unmarshal(content, &jsonData); err != nil {
 			t.Errorf("generated JSON file %s is invalid: %v", file, err)
 		}
-	case "html":
+	case testFormatHTML:
 		contentStr := string(content)
 		if !strings.Contains(contentStr, "<html") || !strings.Contains(contentStr, "</html>") {
 			t.Errorf("generated HTML file %s doesn't contain proper HTML structure", file)
@@ -1085,12 +1095,12 @@ func TestErrorScenarioIntegration(t *testing.T) {
 			setupFunc: setupTemplateErrorScenario,
 			scenarios: []errorScenario{
 				{
-					cmd:           []string{"gen", testutil.TestFlagTheme, "nonexistent"},
+					cmd:           []string{testCmdGen, testutil.TestFlagTheme, "nonexistent"},
 					expectFailure: true,
 					expectError:   "batch processing",
 				},
 				{
-					cmd:           []string{"gen", "--template", "/nonexistent/template.tmpl"},
+					cmd:           []string{testCmdGen, "--template", "/nonexistent/template.tmpl"},
 					expectFailure: true,
 					expectError:   "template",
 				},
@@ -1106,7 +1116,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 					expectError:   "",
 				},
 				{
-					cmd:           []string{"gen", testutil.TestFlagVerbose},
+					cmd:           []string{testCmdGen, testutil.TestFlagVerbose},
 					expectFailure: false, // Should use defaults
 					expectError:   "",
 				},
@@ -1117,14 +1127,14 @@ func TestErrorScenarioIntegration(t *testing.T) {
 			setupFunc: setupFileDiscoveryErrorScenario,
 			scenarios: []errorScenario{
 				{
-					cmd:           []string{"validate"},
+					cmd:           []string{testCmdValidate},
 					expectFailure: true,
-					expectError:   "no GitHub Action files found",
+					expectError:   testErrNoActionFiles,
 				},
 				{
-					cmd:           []string{"gen"},
+					cmd:           []string{testCmdGen},
 					expectFailure: true,
-					expectError:   "no GitHub Action files found",
+					expectError:   testErrNoActionFiles,
 				},
 			},
 		},
@@ -1133,7 +1143,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 			setupFunc: setupServiceIntegrationErrorScenario,
 			scenarios: []errorScenario{
 				{
-					cmd:           []string{"gen", testutil.TestFlagRecursive, testutil.TestFlagVerbose},
+					cmd:           []string{testCmdGen, testutil.TestFlagRecursive, testutil.TestFlagVerbose},
 					expectFailure: true, // Mixed valid/invalid files
 					expectError:   "",   // May partially succeed
 				},
@@ -1177,10 +1187,10 @@ func TestStressTestWorkflow(t *testing.T) {
 	// Test recursive processing
 	cmd := exec.Command(
 		binaryPath,
-		"gen",
+		testCmdGen,
 		testutil.TestFlagRecursive,
 		testutil.TestFlagTheme,
-		"github",
+		testThemeGitHub,
 	) // #nosec G204 -- controlled test input
 	cmd.Dir = tmpDir
 	err := cmd.Run()
@@ -1212,28 +1222,28 @@ func TestProgressBarIntegration(t *testing.T) {
 		{
 			name:      "Single action progress",
 			setupFunc: setupCompleteWorkflow,
-			cmd:       []string{"gen", testutil.TestFlagVerbose, testutil.TestFlagTheme, "github"},
+			cmd:       []string{testCmdGen, testutil.TestFlagVerbose, testutil.TestFlagTheme, testThemeGitHub},
 		},
 		{
 			name:      "Multiple actions progress",
 			setupFunc: setupMultiActionWithTemplates,
 			cmd: []string{
-				"gen",
+				testCmdGen,
 				testutil.TestFlagRecursive,
 				testutil.TestFlagVerbose,
 				testutil.TestFlagTheme,
-				"professional",
+				testThemePro,
 			},
 		},
 		{
 			name:      "Dependency analysis progress",
 			setupFunc: setupDependencyAnalysisWorkflow,
-			cmd:       []string{"deps", "list", testutil.TestFlagVerbose},
+			cmd:       []string{testCmdDeps, testCmdList, testutil.TestFlagVerbose},
 		},
 		{
 			name:      "Multi-format generation progress",
 			setupFunc: setupCompleteWorkflow,
-			cmd:       []string{"gen", testutil.TestFlagOutputFormat, "html", testutil.TestFlagVerbose},
+			cmd:       []string{testCmdGen, testutil.TestFlagOutputFormat, testFormatHTML, testutil.TestFlagVerbose},
 		},
 	}
 
@@ -1341,7 +1351,7 @@ func TestErrorRecoveryWorkflow(t *testing.T) {
 	}
 
 	// Test generation with mixed files - should generate docs for valid ones
-	_, _ = testutil.RunBinaryCommand(t, binaryPath, tmpDir, "gen", testutil.TestFlagRecursive)
+	_, _ = testutil.RunBinaryCommand(t, binaryPath, tmpDir, testCmdGen, testutil.TestFlagRecursive)
 	// Generation might fail due to invalid files, but check what was generated
 	readmeFiles, _ := findFilesRecursive(tmpDir, testutil.TestPatternREADME)
 
@@ -1386,12 +1396,12 @@ func TestConfigurationWorkflow(t *testing.T) {
 	}
 
 	// Test with different configuration options
-	cmd = exec.Command(binaryPath, testutil.TestFlagVerbose, "gen") // #nosec G204 -- controlled test input
+	cmd = exec.Command(binaryPath, testutil.TestFlagVerbose, testCmdGen) // #nosec G204 -- controlled test input
 	cmd.Dir = tmpDir
 	err = cmd.Run()
 	testutil.AssertNoError(t, err)
 
-	cmd = exec.Command(binaryPath, "--quiet", "gen") // #nosec G204 -- controlled test input
+	cmd = exec.Command(binaryPath, "--quiet", testCmdGen) // #nosec G204 -- controlled test input
 	cmd.Dir = tmpDir
 	err = cmd.Run()
 	testutil.AssertNoError(t, err)
@@ -1460,7 +1470,7 @@ func verifyFileDiscovery(t *testing.T, tmpDir string) {
 		filepath.Join(tmpDir, appconstants.ActionFileNameYML),
 		filepath.Join(tmpDir, "actions", "composite", appconstants.ActionFileNameYML),
 		filepath.Join(tmpDir, "actions", "docker", appconstants.ActionFileNameYML),
-		filepath.Join(tmpDir, "actions", "minimal", appconstants.ActionFileNameYML),
+		filepath.Join(tmpDir, "actions", testThemeMinimal, appconstants.ActionFileNameYML),
 	}
 
 	// Verify action files were set up correctly and exist

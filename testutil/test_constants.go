@@ -10,6 +10,7 @@ const (
 	CacheTestKey1      = "key1"
 	CacheTestKey2      = "key2"
 	CacheTestValue1    = "value1"
+	CacheTestValue2    = "value2"
 	CacheShortLivedKey = "short-lived"
 	CacheExpiringKey   = "expiring-key"
 )
@@ -374,6 +375,9 @@ const (
 	TestURLGitHubUserRepo = "https://github.com/user/repo"
 	TestKeyFile           = "file"
 	TestKeyPath           = "path"
+	TestKeyError          = "error"
+	TestKeyStatusCode     = "status_code"
+	TestKeySingle         = "key"
 )
 
 // Test repository and organization values - moved from appconstants.

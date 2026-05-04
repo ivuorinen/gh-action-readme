@@ -481,8 +481,8 @@ func TestAssertEqual(t *testing.T) {
 
 	t.Run("passes with equal string maps", func(t *testing.T) {
 		t.Parallel()
-		map1 := map[string]string{"key1": "value1", "key2": "value2"}
-		map2 := map[string]string{"key1": "value1", "key2": "value2"}
+		map1 := map[string]string{CacheTestKey1: CacheTestValue1, CacheTestKey2: CacheTestValue2}
+		map2 := map[string]string{CacheTestKey1: CacheTestValue1, CacheTestKey2: CacheTestValue2}
 		AssertEqual(t, map1, map2)
 	})
 

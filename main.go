@@ -82,7 +82,7 @@ func wrapHandlerWithErrorHandling(handler func(*cobra.Command, []string) error) 
 		if err := handler(cmd, args); err != nil {
 			output := createOutputManager(globalConfig.Quiet)
 			output.Error(err.Error())
-			os.Exit(1)
+			os.Exit(appconstants.ExitCodeError)
 		}
 	}
 }
@@ -129,7 +129,7 @@ func main() {
 	rootCmd.AddCommand(newValidateCmd())
 	rootCmd.AddCommand(newSchemaCmd())
 	rootCmd.AddCommand(&cobra.Command{
-		Use:   "version",
+		Use:   appconstants.CommandVersion,
 		Short: "Print the version number",
 		Long:  "Print the version number and build information",
 		Run: func(cmd *cobra.Command, _ []string) {

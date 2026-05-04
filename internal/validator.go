@@ -44,7 +44,16 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 				result.Suggestions = append(
 					result.Suggestions,
 					fmt.Sprintf(
-						"Invalid runtime '%s'. Valid runtimes: node12, node16, node20, docker, composite",
+						"Invalid runtime '%s'. Valid runtimes: node20, docker, composite",
+						using,
+					),
+				)
+			} else if isDeprecatedRuntime(using) {
+				result.Warnings = append(result.Warnings, appconstants.FieldRunsUsing)
+				result.Suggestions = append(
+					result.Suggestions,
+					fmt.Sprintf(
+						"Runtime '%s' is deprecated and no longer supported by GitHub Actions; migrate to node20",
 						using,
 					),
 				)
@@ -81,16 +90,33 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 // isValidRuntime checks if the given runtime is valid for GitHub Actions.
 func isValidRuntime(runtime string) bool {
 	validRuntimes := []string{
-		"node12",    // Legacy Node.js runtime (deprecated)
-		"node16",    // Legacy Node.js runtime (deprecated)
-		"node20",    // Current Node.js runtime
-		"docker",    // Docker container runtime
-		"composite", // Composite action runtime
+		appconstants.NodeRuntimeNode12,   // Deprecated Node.js runtime
+		appconstants.NodeRuntimeNode16,   // Deprecated Node.js runtime
+		appconstants.NodeRuntimeNode20,   // Current Node.js runtime
+		"docker",                         // Docker container runtime
+		appconstants.ActionTypeComposite, // Composite action runtime
 	}
 
 	runtime = strings.TrimSpace(strings.ToLower(runtime))
 	for _, valid := range validRuntimes {
 		if runtime == valid {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isDeprecatedRuntime checks if the given runtime is deprecated.
+func isDeprecatedRuntime(runtime string) bool {
+	deprecatedRuntimes := []string{
+		appconstants.NodeRuntimeNode12,
+		appconstants.NodeRuntimeNode16,
+	}
+
+	runtime = strings.TrimSpace(strings.ToLower(runtime))
+	for _, deprecated := range deprecatedRuntimes {
+		if runtime == deprecated {
 			return true
 		}
 	}

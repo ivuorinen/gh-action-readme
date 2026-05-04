@@ -31,22 +31,15 @@ type Generator struct {
 }
 
 // isUnitTestEnvironment detects if we're running unit tests (not integration tests).
+// Integration tests compile and exec a production binary; unit tests run inside a *.test binary.
 func isUnitTestEnvironment() bool {
-	// Only enable for unit tests, not integration tests
-	// Integration tests need real output to verify CLI behavior
-
-	// Check if we're in the internal package tests
-	if strings.Contains(os.Args[0], "internal.test") ||
-		strings.Contains(os.Args[0], "T/go-build") && strings.Contains(os.Args[0], "internal") {
+	// All Go test binaries have the ".test" suffix (or ".test.exe" on Windows).
+	if strings.HasSuffix(os.Args[0], ".test") || strings.HasSuffix(os.Args[0], ".test.exe") {
 		return true
 	}
 
-	// Check for explicit unit test environment variable
-	if os.Getenv("UNIT_TEST_MODE") != "" {
-		return true
-	}
-
-	return false
+	// Explicit opt-in for environments where argv[0] is non-standard.
+	return os.Getenv("UNIT_TEST_MODE") != ""
 }
 
 // NewGenerator creates a new generator instance with the provided configuration.
@@ -105,8 +98,8 @@ func (g *Generator) CreateDependencyAnalyzer() (*dependencies.Analyzer, error) {
 
 	// Create GitHub client if token is available
 	var githubClient *github.Client
-	if g.Config.GitHubToken != "" {
-		clientWrapper, err := NewGitHubClient(g.Config.GitHubToken)
+	if token := GetGitHubToken(g.Config); token != "" {
+		clientWrapper, err := NewGitHubClient(token)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create GitHub client: %w", err)
 		}
@@ -336,7 +329,7 @@ func (g *Generator) generateSimpleFormat(
 func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
-		"md", appconstants.ReadmeMarkdown, "Generated README.md",
+		appconstants.OutputFormatMarkdown, appconstants.ReadmeMarkdown, "Generated README.md",
 	)
 }
 

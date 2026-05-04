@@ -3,8 +3,15 @@ package helpers
 import (
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/testutil"
+)
+
+const (
+	testHelperThemeDefault = appconstants.ThemeDefault
+	testHelperFormatMD     = appconstants.OutputFormatMarkdown
+	testHelperFakeToken    = "fake_token"
 )
 
 func TestCreateAnalyzer(t *testing.T) {
@@ -20,12 +27,12 @@ func TestCreateAnalyzer(t *testing.T) {
 			name: "successful analyzer creation with valid config",
 			setupConfig: func() *internal.AppConfig {
 				return &internal.AppConfig{
-					Theme:        "default",
-					OutputFormat: "md",
+					Theme:        testHelperThemeDefault,
+					OutputFormat: testHelperFormatMD,
 					OutputDir:    ".",
 					Verbose:      false,
 					Quiet:        false,
-					GitHubToken:  "fake_token", // Provide token for analyzer creation
+					GitHubToken:  testHelperFakeToken, // Provide token for analyzer creation
 				}
 			},
 			expectAnalyzer: true,
@@ -35,8 +42,8 @@ func TestCreateAnalyzer(t *testing.T) {
 			name: "analyzer creation without GitHub token",
 			setupConfig: func() *internal.AppConfig {
 				return &internal.AppConfig{
-					Theme:        "default",
-					OutputFormat: "md",
+					Theme:        testHelperThemeDefault,
+					OutputFormat: testHelperFormatMD,
 					OutputDir:    ".",
 					Verbose:      false,
 					Quiet:        false,
@@ -83,12 +90,12 @@ func TestCreateAnalyzerOrExit(t *testing.T) {
 	// Only test success case since failure case calls os.Exit
 	t.Run("successful analyzer creation", func(t *testing.T) {
 		config := &internal.AppConfig{
-			Theme:        "default",
-			OutputFormat: "md",
+			Theme:        testHelperThemeDefault,
+			OutputFormat: testHelperFormatMD,
 			OutputDir:    ".",
 			Verbose:      false,
 			Quiet:        false,
-			GitHubToken:  "fake_token",
+			GitHubToken:  testHelperFakeToken,
 		}
 
 		generator := internal.NewGenerator(config)
@@ -116,12 +123,12 @@ func TestCreateAnalyzerIntegration(t *testing.T) {
 	defer cleanup()
 
 	config := &internal.AppConfig{
-		Theme:        "default",
-		OutputFormat: "md",
+		Theme:        testHelperThemeDefault,
+		OutputFormat: testHelperFormatMD,
 		OutputDir:    tmpDir,
 		Verbose:      false,
 		Quiet:        true, // Keep quiet to avoid output noise
-		GitHubToken:  "fake_token",
+		GitHubToken:  testHelperFakeToken,
 	}
 
 	generator := internal.NewGenerator(config)

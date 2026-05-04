@@ -11,7 +11,13 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-const testPermissionWrite = "write"
+const (
+	testPermissionRead     = "read"
+	testPermissionWrite    = "write"
+	testPermissionContents = "contents"
+	testPermissionIssues   = "issues"
+	testPermissionActions  = "actions"
+)
 
 // parseActionFromContent creates a temporary action.yml file with the given content and parses it.
 func parseActionFromContent(t *testing.T, content string) (*ActionYML, error) {
@@ -263,7 +269,7 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "single permission with dash format",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsDashSingle)),
 			want: map[string]string{
-				"contents": "read",
+				testPermissionContents: testPermissionRead,
 			},
 			wantErr: false,
 		},
@@ -271,9 +277,9 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "multiple permissions",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsDashMultiple)),
 			want: map[string]string{
-				"contents":      "read",
-				"issues":        "write",
-				"pull-requests": "write",
+				testPermissionContents: testPermissionRead,
+				testPermissionIssues:   testPermissionWrite,
+				"pull-requests":        testPermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -281,8 +287,8 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "permissions without dash",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsObject)),
 			want: map[string]string{
-				"contents": "read",
-				"issues":   "write",
+				testPermissionContents: testPermissionRead,
+				testPermissionIssues:   testPermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -296,8 +302,8 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "permissions with inline comments",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsInlineComments)),
 			want: map[string]string{
-				"contents": "read",
-				"issues":   "write",
+				testPermissionContents: testPermissionRead,
+				testPermissionIssues:   testPermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -311,8 +317,8 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "permissions with mixed formats",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsMixed)),
 			want: map[string]string{
-				"contents": "read",
-				"issues":   "write",
+				testPermissionContents: testPermissionRead,
+				testPermissionIssues:   testPermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -359,7 +365,7 @@ func TestParseActionYMLWithCommentPermissions(t *testing.T) {
 		t.Fatal("Expected permissions to be parsed from comments")
 	}
 
-	if action.Permissions["contents"] != "read" {
+	if action.Permissions[testPermissionContents] != "read" {
 		t.Errorf("Expected contents: read, got %v", action.Permissions)
 	}
 }
@@ -385,10 +391,10 @@ func TestParseActionYMLYAMLPermissionsOverrideComments(t *testing.T) {
 	}
 
 	// YAML should override comment
-	if action.Permissions["contents"] != testPermissionWrite {
+	if action.Permissions[testPermissionContents] != testPermissionWrite {
 		t.Errorf(
 			"Expected YAML permissions to override comment permissions, got contents: %v",
-			action.Permissions["contents"],
+			action.Permissions[testPermissionContents],
 		)
 	}
 
@@ -423,7 +429,7 @@ func TestParseActionYMLOnlyYAMLPermissions(t *testing.T) {
 		t.Fatal("Expected permissions to be parsed from YAML")
 	}
 
-	if action.Permissions["contents"] != "read" {
+	if action.Permissions[testPermissionContents] != "read" {
 		t.Errorf("Expected contents: read, got %v", action.Permissions)
 	}
 
@@ -492,7 +498,7 @@ func TestParsePermissionLineEdgeCases(t *testing.T) {
 			name:      "comment at start is parsed",
 			input:     "#contents: read",
 			wantKey:   "#contents",
-			wantValue: "read",
+			wantValue: testPermissionRead,
 			wantOK:    true,
 		},
 		{
@@ -512,15 +518,15 @@ func TestParsePermissionLineEdgeCases(t *testing.T) {
 		{
 			name:      "valid with inline comment",
 			input:     "contents: read # required",
-			wantKey:   "contents",
-			wantValue: "read",
+			wantKey:   testPermissionContents,
+			wantValue: testPermissionRead,
 			wantOK:    true,
 		},
 		{
 			name:      "valid with leading dash",
 			input:     "- issues: write",
 			wantKey:   "issues",
-			wantValue: "write",
+			wantValue: testPermissionWrite,
 			wantOK:    true,
 		},
 		{
@@ -631,7 +637,7 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 			content: testutil.TestPermissionsHeader +
 				testutil.TestContentsRead +
 				"#   contents: write\n",
-			wantPerms:   map[string]string{"contents": "write"},
+			wantPerms:   map[string]string{testPermissionContents: testPermissionWrite},
 			wantErr:     false,
 			description: "last value wins",
 		},
@@ -641,7 +647,10 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 				testutil.TestContentsRead +
 				"#   invalid-line-no-value\n" +
 				"#   issues: write\n",
-			wantPerms:   map[string]string{"contents": "read", "issues": "write"},
+			wantPerms: map[string]string{
+				testPermissionContents: testPermissionRead,
+				testPermissionIssues:   testPermissionWrite,
+			},
 			wantErr:     false,
 			description: "invalid lines skipped",
 		},
@@ -651,7 +660,7 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 				testutil.TestContentsRead +
 				testutil.TestActionNameLine +
 				"#   issues: write\n",
-			wantPerms:   map[string]string{"contents": "read"},
+			wantPerms:   map[string]string{testPermissionContents: testPermissionRead},
 			wantErr:     false,
 			description: "stops at first non-comment",
 		},
@@ -709,9 +718,12 @@ func TestMergePermissionsEdgeCases(t *testing.T) {
 		},
 		{
 			name:         "yaml has value, comments override",
-			yamlPerms:    map[string]string{"contents": "read"},
-			commentPerms: map[string]string{"issues": "write"},
-			wantPerms:    map[string]string{"contents": "read", "issues": "write"},
+			yamlPerms:    map[string]string{testPermissionContents: testPermissionRead},
+			commentPerms: map[string]string{testPermissionIssues: testPermissionWrite},
+			wantPerms: map[string]string{
+				testPermissionContents: testPermissionRead,
+				testPermissionIssues:   testPermissionWrite,
+			},
 		},
 	}
 

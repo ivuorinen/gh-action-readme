@@ -10,6 +10,10 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testDetectorLangGo = "Go"
+)
+
 func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
 	t.Parallel()
 	// Create temporary directory for testing
@@ -35,7 +39,7 @@ func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
 
 	// Test that a language is detected (either Go or testutil.TestLangJavaScriptTypeScript is valid)
 	language := characteristics["language"]
-	if language != "Go" && language != testutil.TestLangJavaScriptTypeScript {
+	if language != testDetectorLangGo && language != testutil.TestLangJavaScriptTypeScript {
 		t.Errorf("Expected language 'Go' or '%s', got '%s'", testutil.TestLangJavaScriptTypeScript, language)
 	}
 
@@ -54,7 +58,7 @@ func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
 		t.Errorf("Expected type to be one of %v, got '%s'", validTypes, projectType)
 	}
 
-	if characteristics["framework"] != "Next.js" {
+	if characteristics["framework"] != frameworkNextJS {
 		t.Errorf("Expected framework 'Next.js', got '%s'", characteristics["framework"])
 	}
 }
@@ -184,21 +188,21 @@ func TestProjectDetectorSuggestConfiguration(t *testing.T) {
 			settings: &DetectedSettings{
 				HasDockerfile: true,
 			},
-			expected: "github",
+			expected: testWizardThemeGH,
 		},
 		{
 			name: "go project",
 			settings: &DetectedSettings{
-				Language: "Go",
+				Language: testDetectorLangGo,
 			},
 			expected: "minimal",
 		},
 		{
 			name: "with framework",
 			settings: &DetectedSettings{
-				Framework: "Next.js",
+				Framework: frameworkNextJS,
 			},
-			expected: "github",
+			expected: testWizardThemeGH,
 		},
 		{
 			name:     "default case",
@@ -246,7 +250,7 @@ func TestProjectDetectorSuggestRunsOn(t *testing.T) {
 		{
 			name: "go project",
 			settings: &DetectedSettings{
-				Language:        "Go",
+				Language:        testDetectorLangGo,
 				SuggestedRunsOn: []string{testutil.RunnerUbuntuLatest},
 			},
 			expected: []string{testutil.RunnerUbuntuLatest},
@@ -354,7 +358,7 @@ func TestProjectDetectorSuggestPermissions(t *testing.T) {
 				SuggestedPermissions: nil,
 			},
 			expected: map[string]string{
-				"contents": "read",
+				permScopeContents: permissionRead,
 			},
 		},
 		{
@@ -362,13 +366,13 @@ func TestProjectDetectorSuggestPermissions(t *testing.T) {
 			settings: &DetectedSettings{
 				IsGitHubAction: true,
 				SuggestedPermissions: map[string]string{
-					"contents": "write",
-					"issues":   "read",
+					permScopeContents: permissionWrite,
+					permScopeIssues:   permissionRead,
 				},
 			},
 			expected: map[string]string{
-				"contents": "write",
-				"issues":   "read",
+				permScopeContents: permissionWrite,
+				permScopeIssues:   permissionRead,
 			},
 		},
 		{
@@ -386,7 +390,7 @@ func TestProjectDetectorSuggestPermissions(t *testing.T) {
 				SuggestedPermissions: map[string]string{},
 			},
 			expected: map[string]string{
-				"contents": "read",
+				permScopeContents: permissionRead,
 			},
 		},
 	}

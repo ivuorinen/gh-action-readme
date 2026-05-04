@@ -159,9 +159,9 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 	}
 	badges = append(badges,
 		BadgeInfo{
-			Name: "GitHub Action",
+			Name: appconstants.LabelGitHubAction,
 			URL:  "https://img.shields.io/badge/GitHub%20Action-" + action.Name + "-blue",
-			Alt:  "GitHub Action",
+			Alt:  appconstants.LabelGitHubAction,
 		},
 		BadgeInfo{
 			Name: "License",

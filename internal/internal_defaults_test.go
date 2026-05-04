@@ -1,6 +1,10 @@
 package internal
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
+)
 
 func TestFillMissing(t *testing.T) {
 	t.Parallel()
@@ -9,7 +13,7 @@ func TestFillMissing(t *testing.T) {
 	defs := DefaultValues{
 		Name:        "Default Name",
 		Description: "Default Desc",
-		Runs:        map[string]any{"using": "node20"},
+		Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
 		Branding:    Branding{Icon: "zap", Color: "yellow"},
 	}
 	FillMissing(a, defs)
@@ -19,7 +23,7 @@ func TestFillMissing(t *testing.T) {
 	if a.Branding == nil || a.Branding.Icon != "zap" {
 		t.Error("branding default not set")
 	}
-	if a.Runs["using"] != "node20" {
+	if a.Runs["using"] != appconstants.NodeRuntimeNode20 {
 		t.Error("runs default not set")
 	}
 }
@@ -31,17 +35,17 @@ func TestFillMissing_RunsNotOverwritten(t *testing.T) {
 	t.Parallel()
 
 	a := &ActionYML{
-		Runs: map[string]any{"using": "composite"},
+		Runs: map[string]any{testGenRunsUsing: appconstants.ActionTypeComposite},
 	}
 	defs := DefaultValues{
-		Runs: map[string]any{"using": "node20"},
+		Runs: map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
 	}
 
 	FillMissing(a, defs)
 
-	if a.Runs["using"] != "composite" {
+	if a.Runs["using"] != appconstants.ActionTypeComposite {
 		t.Errorf("FillMissing() must not overwrite non-empty Runs; got %q, want %q",
-			a.Runs["using"], "composite")
+			a.Runs["using"], appconstants.ActionTypeComposite)
 	}
 }
 

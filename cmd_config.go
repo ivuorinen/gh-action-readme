@@ -42,7 +42,7 @@ func configRootHandler(_ *cobra.Command, _ []string) error {
 
 func newConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "config",
+		Use:   appconstants.CommandConfig,
 		Short: "Configuration management commands",
 		Run:   wrapHandlerWithErrorHandling(configRootHandler),
 	}
@@ -55,7 +55,7 @@ func newConfigCmd() *cobra.Command {
 	})
 
 	initCmd := &cobra.Command{
-		Use:   "wizard",
+		Use:   appconstants.CommandWizard,
 		Short: "Interactive configuration wizard",
 		Long:  "Launch an interactive wizard to set up your configuration step by step",
 		Run:   wrapHandlerWithErrorHandling(configWizardHandler),
@@ -65,13 +65,13 @@ func newConfigCmd() *cobra.Command {
 	cmd.AddCommand(initCmd)
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "show",
+		Use:   appconstants.CommandShow,
 		Short: "Show current configuration",
 		Run:   wrapHandlerWithErrorHandling(configShowHandler),
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "themes",
+		Use:   appconstants.CommandThemes,
 		Short: "List available themes",
 		Run:   wrapHandlerWithErrorHandling(configThemesHandler),
 	})
