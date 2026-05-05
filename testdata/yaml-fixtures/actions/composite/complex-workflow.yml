@@ -26,12 +26,14 @@ runs:
   using: 'composite'
   steps:
     - name: Validate environment
+      shell: bash
+      env:
+        TARGET_ENV: ${{ inputs.environment }}
       run: |
-        if [[ ! "${{ inputs.environment }}" =~ ^(dev|staging|prod)$ ]]; then
-          echo "Invalid environment: ${{ inputs.environment }}"
+        if [[ ! "$TARGET_ENV" =~ ^(dev|staging|prod)$ ]]; then
+          echo "Invalid environment: $TARGET_ENV"
           exit 1
         fi
-      shell: bash
 
     - name: Setup build environment
       uses: actions/setup-node@v4
@@ -53,12 +55,13 @@ runs:
 
     - name: Build application
       id: build
-      run: |
-        npm run build:${{ inputs.environment }}
-        echo "status=success" >> $GITHUB_OUTPUT
       shell: bash
       env:
         NODE_ENV: ${{ inputs.environment }}
+        TARGET_ENV: ${{ inputs.environment }}
+      run: |
+        npm run "build:$TARGET_ENV"
+        echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload build artifacts
       id: upload
@@ -71,24 +74,32 @@ runs:
     - name: Deploy to environment
       id: deploy
       if: inputs.deploy == 'true'
-      run: |
-        echo "Deploying to ${{ inputs.environment }}"
-        # Deployment logic would go here
-        echo "url=https://${{ inputs.environment }}.example.com" >> $GITHUB_OUTPUT
       shell: bash
+      env:
+        TARGET_ENV: ${{ inputs.environment }}
+      run: |
+        echo "Deploying to $TARGET_ENV"
+        # Deployment logic would go here
+        echo "url=https://$TARGET_ENV.example.com" >> $GITHUB_OUTPUT
 
     - name: Notify Slack on success
       if: success() && inputs.slack-webhook != ''
+      shell: bash
+      env:
+        TARGET_ENV: ${{ inputs.environment }}
+        SLACK_WEBHOOK: ${{ inputs.slack-webhook }}
       run: |
         curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"✅ Deployment to ${{ inputs.environment }} successful"}' \
-          ${{ inputs.slack-webhook }}
-      shell: bash
+          --data "{\"text\":\"✅ Deployment to $TARGET_ENV successful\"}" \
+          "$SLACK_WEBHOOK"
 
     - name: Notify Slack on failure
       if: failure() && inputs.slack-webhook != ''
+      shell: bash
+      env:
+        TARGET_ENV: ${{ inputs.environment }}
+        SLACK_WEBHOOK: ${{ inputs.slack-webhook }}
       run: |
         curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"❌ Deployment to ${{ inputs.environment }} failed"}' \
-          ${{ inputs.slack-webhook }}
-      shell: bash
+          --data "{\"text\":\"❌ Deployment to $TARGET_ENV failed\"}" \
+          "$SLACK_WEBHOOK"

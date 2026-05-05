@@ -17,9 +17,11 @@ runs:
       run: echo "Setting up environment"
       shell: bash
     - name: Main task
-      run: echo "Running main task in ${{ inputs.working-directory }}"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        WORKING_DIR: ${{ inputs.working-directory }}
+      run: echo "Running main task in $WORKING_DIR"
     - name: Final step
       id: final
       run: echo "status=success" >> $GITHUB_OUTPUT

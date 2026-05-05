@@ -1,2 +1,3 @@
+# checkov:skip=CKV_SECRET_6:test fixture - fake token for testing
 theme: minimal
 github_token: config-token
