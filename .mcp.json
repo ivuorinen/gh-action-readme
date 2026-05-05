@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": ".claude/hooks/github-mcp-server.sh"
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@2.2.4"
+      ]
+    }
+  }
+}
