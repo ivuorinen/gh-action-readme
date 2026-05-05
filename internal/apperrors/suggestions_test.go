@@ -418,8 +418,8 @@ func TestGetConfigurationSuggestions(t *testing.T) {
 			name:    testutil.TestCaseNamePathTraversal,
 			context: testutil.ContextWithConfigPath("../../../etc/passwd"),
 			expectedContains: []string{
-				"Check configuration file syntax",
-				"Ensure configuration file exists",
+				suggestionCheckConfigSyntax,
+				suggestionEnsureConfigExists,
 			},
 		},
 	}
@@ -484,8 +484,8 @@ func TestGetTemplateSuggestions(t *testing.T) {
 			name:    testutil.TestCaseNamePathTraversal,
 			context: testutil.ContextWithField("template_path", "../../../../../../etc/passwd"),
 			expectedContains: []string{
-				"Check template syntax",
-				"Ensure all template variables are defined",
+				suggestionCheckTemplateSyntax,
+				suggestionEnsureTemplateVars,
 			},
 		},
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 const testFormatString = "test %s %d"
@@ -75,7 +76,7 @@ func TestNullProgressManager(t *testing.T) {
 
 	// Test ProcessWithProgressBar executes function for each item
 	var count int
-	items := []string{testGenItem1, testGenItem2, testGenItem3}
+	items := []string{testutil.TestItem1, testutil.TestItem2, testutil.TestItem3}
 	npm.ProcessWithProgressBar("test", items, func(_ string, _ *progressbar.ProgressBar) {
 		count++
 	})

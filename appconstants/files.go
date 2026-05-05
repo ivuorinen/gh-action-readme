@@ -48,7 +48,7 @@ const (
 	// ConfigFileName is the primary configuration file name.
 	ConfigFileName = "config"
 	// ConfigFileExtYAML is the configuration file extension.
-	ConfigFileExtYAML = ".yaml"
+	ConfigFileExtYAML = ActionFileExtYAML
 	// ConfigFileNameFull is the full configuration file name.
 	ConfigFileNameFull = ConfigFileName + ConfigFileExtYAML
 )

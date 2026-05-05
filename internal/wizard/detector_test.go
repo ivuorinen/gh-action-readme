@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	testDetectorLangGo = "Go"
+	testDetectorLangGo = appconstants.LangGo
 )
 
 func TestProjectDetectorAnalyzeProjectFiles(t *testing.T) {
@@ -358,7 +358,7 @@ func TestProjectDetectorSuggestPermissions(t *testing.T) {
 				SuggestedPermissions: nil,
 			},
 			expected: map[string]string{
-				permScopeContents: permissionRead,
+				appconstants.PermScopeContents: appconstants.PermissionRead,
 			},
 		},
 		{
@@ -366,13 +366,13 @@ func TestProjectDetectorSuggestPermissions(t *testing.T) {
 			settings: &DetectedSettings{
 				IsGitHubAction: true,
 				SuggestedPermissions: map[string]string{
-					permScopeContents: permissionWrite,
-					permScopeIssues:   permissionRead,
+					appconstants.PermScopeContents: appconstants.PermissionWrite,
+					appconstants.PermScopeIssues:   appconstants.PermissionRead,
 				},
 			},
 			expected: map[string]string{
-				permScopeContents: permissionWrite,
-				permScopeIssues:   permissionRead,
+				appconstants.PermScopeContents: appconstants.PermissionWrite,
+				appconstants.PermScopeIssues:   appconstants.PermissionRead,
 			},
 		},
 		{
@@ -390,7 +390,7 @@ func TestProjectDetectorSuggestPermissions(t *testing.T) {
 				SuggestedPermissions: map[string]string{},
 			},
 			expected: map[string]string{
-				permScopeContents: permissionRead,
+				appconstants.PermScopeContents: appconstants.PermissionRead,
 			},
 		},
 	}

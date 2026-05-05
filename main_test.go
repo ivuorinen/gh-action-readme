@@ -21,33 +21,10 @@ import (
 )
 
 const (
-	testCmdGen           = "gen"
-	testCmdConfig        = "config"
-	testCmdValidate      = "validate"
-	testCmdDeps          = "deps"
-	testCmdList          = "list"
-	testCmdShow          = "show"
-	testCmdCache         = "cache"
-	testCmdThemes        = "themes"
-	testCmdSchema        = "schema"
-	testCmdWizard        = "wizard"
-	testCmdStats         = "stats"
-	testFormatJSON       = "json"
-	testFormatHTML       = "html"
-	testFormatMD         = "md"
-	testFormatASCIIDoc   = "asciidoc"
-	testThemeGitHub      = "github"
-	testThemePro         = "professional"
-	testThemeDefault     = "default"
-	testThemeMinimal     = "minimal"
-	testFlagOutputFmt    = "--output-format"
-	testFlagTheme        = "--theme"
-	testActionBasic      = "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
 	testErrExpectedShort = "expected Short description to be non-empty"
 	testErrExpectedRunFn = "expected command to have a Run or RunE function"
 	testMsgUsesGlobalCfg = "uses globalConfig when config parameter is nil"
 	testErrNoActionFiles = "no GitHub Action files found"
-	testTmpDir           = "/tmp"
 	testVersionV4        = "v4"
 )
 
@@ -152,7 +129,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "gen command with valid action",
-			args: []string{testCmdGen, testFlagOutputFmt, testFormatMD},
+			args: []string{appconstants.CommandGen, testutil.TestFlagOutputFormat, appconstants.OutputFormatMarkdown},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -161,7 +138,13 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "gen command with theme flag",
-			args: []string{testCmdGen, testFlagTheme, testThemeGitHub, testFlagOutputFmt, testFormatJSON},
+			args: []string{
+				appconstants.CommandGen,
+				testutil.TestFlagTheme,
+				appconstants.ThemeGitHub,
+				testutil.TestFlagOutputFormat,
+				appconstants.OutputFormatJSON,
+			},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -170,13 +153,13 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "gen command with no action files",
-			args:       []string{testCmdGen},
+			args:       []string{appconstants.CommandGen},
 			wantExit:   1,
 			wantStderr: "no GitHub Action files found for documentation generation [NO_ACTION_FILES]",
 		},
 		{
 			name: "validate command with valid action",
-			args: []string{testCmdValidate},
+			args: []string{appconstants.CommandValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -186,7 +169,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name: "validate command with invalid action",
-			args: []string{testCmdValidate},
+			args: []string{appconstants.CommandValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureInvalidMissingDescription)
@@ -195,37 +178,37 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "schema command",
-			args:       []string{testCmdSchema},
+			args:       []string{appconstants.CommandSchema},
 			wantExit:   0,
 			wantStdout: "schemas/schema.json",
 		},
 		{
 			name:       "config command default",
-			args:       []string{testCmdConfig},
+			args:       []string{appconstants.CommandConfig},
 			wantExit:   0,
 			wantStdout: "Configuration file location:",
 		},
 		{
 			name:       "config show command",
-			args:       []string{testCmdConfig, testCmdShow},
+			args:       []string{appconstants.CommandConfig, appconstants.CommandShow},
 			wantExit:   0,
 			wantStdout: "Current Configuration:",
 		},
 		{
 			name:       "config themes command",
-			args:       []string{testCmdConfig, testCmdThemes},
+			args:       []string{appconstants.CommandConfig, appconstants.CommandThemes},
 			wantExit:   0,
 			wantStdout: "Available Themes:",
 		},
 		{
 			name:       "deps list command no files",
-			args:       []string{testCmdDeps, testCmdList},
+			args:       []string{appconstants.CommandDeps, appconstants.CommandList},
 			wantExit:   0, // Changed: deps list now outputs warning instead of error when no files found
 			wantStdout: "no action files found",
 		},
 		{
 			name: "deps list command with composite action",
-			args: []string{testCmdDeps, testCmdList},
+			args: []string{appconstants.CommandDeps, appconstants.CommandList},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
@@ -235,13 +218,13 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:       "cache path command",
-			args:       []string{testCmdCache, "path"},
+			args:       []string{appconstants.CommandCache, "path"},
 			wantExit:   0,
 			wantStdout: "Cache Directory:",
 		},
 		{
 			name:       "cache stats command",
-			args:       []string{testCmdCache, testCmdStats},
+			args:       []string{appconstants.CommandCache, appconstants.CommandStats},
 			wantExit:   0,
 			wantStdout: "Cache Statistics:",
 		},
@@ -284,18 +267,18 @@ func TestCLIFlags(t *testing.T) {
 	}{
 		{
 			name:     "verbose flag",
-			args:     []string{"--verbose", testCmdConfig, testCmdShow},
+			args:     []string{"--verbose", appconstants.CommandConfig, appconstants.CommandShow},
 			wantExit: 0,
 			contains: "Current Configuration:",
 		},
 		{
 			name:     "quiet flag",
-			args:     []string{"--quiet", testCmdConfig, testCmdShow},
+			args:     []string{"--quiet", appconstants.CommandConfig, appconstants.CommandShow},
 			wantExit: 0,
 		},
 		{
 			name:     "config file flag",
-			args:     []string{"--config", "nonexistent.yml", testCmdConfig, testCmdShow},
+			args:     []string{"--config", "nonexistent.yml", appconstants.CommandConfig, appconstants.CommandShow},
 			wantExit: 1,
 		},
 		{
@@ -353,13 +336,18 @@ func TestCLIRecursiveFlag(t *testing.T) {
 	}{
 		{
 			name:     "without recursive flag",
-			args:     []string{testCmdGen, testFlagOutputFmt, testFormatJSON},
+			args:     []string{appconstants.CommandGen, testutil.TestFlagOutputFormat, appconstants.OutputFormatJSON},
 			wantExit: 0,
 			minFiles: 1, // should only process root action.yml
 		},
 		{
-			name:     "with recursive flag",
-			args:     []string{testCmdGen, "--recursive", testFlagOutputFmt, testFormatJSON},
+			name: "with recursive flag",
+			args: []string{
+				appconstants.CommandGen,
+				"--recursive",
+				testutil.TestFlagOutputFormat,
+				appconstants.OutputFormatJSON,
+			},
 			wantExit: 0,
 			minFiles: 2, // should process both action.yml files
 		},
@@ -393,7 +381,7 @@ func TestCLIErrorHandling(t *testing.T) {
 	}{
 		{
 			name: "permission denied on output directory",
-			args: []string{testCmdGen, "--output-dir", "/root/restricted"},
+			args: []string{appconstants.CommandGen, "--output-dir", "/root/restricted"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -403,7 +391,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "invalid YAML in action file",
-			args: []string{testCmdValidate},
+			args: []string{appconstants.CommandValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -416,7 +404,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "unknown output format",
-			args: []string{testCmdGen, testFlagOutputFmt, "unknown"},
+			args: []string{appconstants.CommandGen, testutil.TestFlagOutputFormat, "unknown"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -425,7 +413,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "unknown theme",
-			args: []string{testCmdGen, testFlagTheme, "nonexistent-theme"},
+			args: []string{appconstants.CommandGen, testutil.TestFlagTheme, "nonexistent-theme"},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				createTestActionFile(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
@@ -435,14 +423,14 @@ func TestCLIErrorHandling(t *testing.T) {
 		// Phase 5: Additional error path tests for gen handler
 		{
 			name:      "gen with empty directory (no action.yml)",
-			args:      []string{testCmdGen},
+			args:      []string{appconstants.CommandGen},
 			setupFunc: nil, // Empty directory
 			wantExit:  1,
 			wantError: testErrNoActionFiles,
 		},
 		{
 			name: "gen with malformed YAML syntax",
-			args: []string{testCmdGen},
+			args: []string{appconstants.CommandGen},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -456,7 +444,7 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name: "gen with invalid action path",
-			args: []string{testCmdGen, "/nonexistent/path/action.yml"},
+			args: []string{appconstants.CommandGen, "/nonexistent/path/action.yml"},
 			setupFunc: func(t *testing.T, _ string) {
 				t.Helper()
 			},
@@ -466,14 +454,14 @@ func TestCLIErrorHandling(t *testing.T) {
 		// Phase 5: Additional error path tests for validate handler
 		{
 			name:      "validate with missing required field (description)",
-			args:      []string{testCmdValidate},
+			args:      []string{appconstants.CommandValidate},
 			setupFunc: setupFixtureInDir(testutil.TestFixtureInvalidMissingDescription),
 			wantExit:  1,
 			wantError: "validation failed",
 		},
 		{
 			name: "validate with missing runs field",
-			args: []string{testCmdValidate},
+			args: []string{appconstants.CommandValidate},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -488,21 +476,21 @@ func TestCLIErrorHandling(t *testing.T) {
 		// Phase 5: Additional error path tests for deps commands
 		{
 			name: "deps list with no dependencies",
-			args: []string{testCmdDeps, testCmdList},
+			args: []string{appconstants.CommandDeps, appconstants.CommandList},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				// Create an action with no dependencies
 				testutil.WriteTestFile(
 					t,
 					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-					testActionBasic,
+					testutil.TestMinimalAction,
 				)
 			},
 			wantExit: 0, // Not an error, just no dependencies
 		},
 		{
 			name: "deps list with malformed action - graceful handling",
-			args: []string{testCmdDeps, testCmdList},
+			args: []string{appconstants.CommandDeps, appconstants.CommandList},
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				testutil.WriteTestFile(
@@ -535,7 +523,7 @@ func TestCLIErrorHandling(t *testing.T) {
 			if tt.wantError != "" {
 				output := result.stdout + result.stderr
 				if !strings.Contains(strings.ToLower(output), strings.ToLower(tt.wantError)) {
-					t.Errorf("expected error containing %q, got: %s", tt.wantError, output)
+					t.Errorf(testutil.TestErrExpectedErrorContaining, tt.wantError, output)
 				}
 			}
 		})
@@ -551,7 +539,7 @@ func TestCLIConfigInitialization(t *testing.T) {
 	defer cleanup()
 
 	// Test config init command
-	cmd := exec.Command(binaryPath, testCmdConfig, "init") // #nosec G204 -- controlled test input
+	cmd := exec.Command(binaryPath, appconstants.CommandConfig, "init") // #nosec G204 -- controlled test input
 	cmd.Dir = tmpDir
 
 	// Set XDG_CONFIG_HOME to temp directory
@@ -706,7 +694,7 @@ func TestNewValidateCmd(t *testing.T) {
 	t.Parallel()
 	cmd := newValidateCmd()
 
-	if cmd.Use != testCmdValidate {
+	if cmd.Use != appconstants.CommandValidate {
 		t.Errorf("expected Use to be 'validate', got %q", cmd.Use)
 	}
 
@@ -723,7 +711,7 @@ func TestNewSchemaCmd(t *testing.T) {
 	t.Parallel()
 	cmd := newSchemaCmd()
 
-	if cmd.Use != testCmdSchema {
+	if cmd.Use != appconstants.CommandSchema {
 		t.Errorf("expected Use to be 'schema', got %q", cmd.Use)
 	}
 
@@ -979,24 +967,24 @@ func TestApplyCommandFlags(t *testing.T) {
 	}{
 		{
 			name:      "with theme flag only",
-			theme:     testThemeGitHub,
+			theme:     appconstants.ThemeGitHub,
 			format:    appconstants.OutputFormatMarkdown, // Must set format to avoid empty string
-			wantTheme: testThemeGitHub,
+			wantTheme: appconstants.ThemeGitHub,
 			wantFmt:   appconstants.OutputFormatMarkdown,
 		},
 		{
 			name:      "with format flag",
 			theme:     "",
-			format:    testFormatHTML,
-			wantTheme: testThemeDefault, // Default from DefaultAppConfig
-			wantFmt:   testFormatHTML,
+			format:    appconstants.OutputFormatHTML,
+			wantTheme: appconstants.ThemeDefault, // Default from DefaultAppConfig
+			wantFmt:   appconstants.OutputFormatHTML,
 		},
 		{
 			name:      "with both flags",
-			theme:     testThemePro,
-			format:    testFormatJSON,
-			wantTheme: testThemePro,
-			wantFmt:   testFormatJSON,
+			theme:     appconstants.ThemeProfessional,
+			format:    appconstants.OutputFormatJSON,
+			wantTheme: appconstants.ThemeProfessional,
+			wantFmt:   appconstants.OutputFormatJSON,
 		},
 	}
 
@@ -1203,7 +1191,7 @@ func TestDisplayFloatingDeps(_ *testing.T) {
 	}
 
 	// Just call it to ensure it doesn't panic
-	displayFloatingDeps(output, testTmpDir, floatingDeps)
+	displayFloatingDeps(output, testutil.TestTmpDir, floatingDeps)
 }
 
 // TestDisplaySecuritySummary tests security summary display.
@@ -1241,7 +1229,7 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 	for _, tt := range tests {
 		output := createOutputManager(true)
 		// Just call it to ensure it doesn't panic
-		displaySecuritySummary(output, testTmpDir, tt.pinnedCount, tt.floatingDeps)
+		displaySecuritySummary(output, testutil.TestTmpDir, tt.pinnedCount, tt.floatingDeps)
 	}
 }
 
@@ -1257,7 +1245,7 @@ func TestShowPendingUpdates(t *testing.T) {
 		{
 			name:       "no updates",
 			updates:    []dependencies.PinnedUpdate{},
-			currentDir: testTmpDir,
+			currentDir: testutil.TestTmpDir,
 		},
 		{
 			name: "single update",
@@ -1269,7 +1257,7 @@ func TestShowPendingUpdates(t *testing.T) {
 					UpdateType: appconstants.UpdateTypeMajor,
 				},
 			},
-			currentDir: testTmpDir,
+			currentDir: testutil.TestTmpDir,
 		},
 		{
 			name: "multiple updates",
@@ -1281,13 +1269,13 @@ func TestShowPendingUpdates(t *testing.T) {
 					UpdateType: appconstants.UpdateTypeMajor,
 				},
 				{
-					FilePath:   testTmpDir + "/workflow.yml",
+					FilePath:   testutil.TestTmpDir + "/workflow.yml",
 					OldUses:    "actions/setup-node@v2",
 					NewUses:    testutil.TestActionSetupNodeV3,
 					UpdateType: appconstants.UpdateTypeMajor,
 				},
 			},
-			currentDir: testTmpDir,
+			currentDir: testutil.TestTmpDir,
 		},
 	}
 
@@ -1418,20 +1406,25 @@ func TestNewConfigCmd(t *testing.T) {
 		if cmd == nil {
 			t.Fatal("newConfigCmd() returned nil")
 		}
-		if cmd.Use != testCmdConfig {
+		if cmd.Use != appconstants.CommandConfig {
 			t.Errorf("newConfigCmd().Use = %v, want 'config'", cmd.Use)
 		}
 	})
 
 	t.Run("has all expected subcommands", func(t *testing.T) {
 		cmd := newConfigCmd()
-		expectedSubcommands := []string{"init", testCmdWizard, testCmdShow, testCmdThemes}
+		expectedSubcommands := []string{
+			"init",
+			appconstants.CommandWizard,
+			appconstants.CommandShow,
+			appconstants.CommandThemes,
+		}
 		verifySubcommandsExist(t, cmd, expectedSubcommands)
 	})
 
 	t.Run("wizard subcommand has required flags", func(t *testing.T) {
 		cmd := newConfigCmd()
-		wizardCmd, _, err := cmd.Find([]string{testCmdWizard})
+		wizardCmd, _, err := cmd.Find([]string{appconstants.CommandWizard})
 		if err != nil {
 			t.Fatalf("Failed to find wizard subcommand: %v", err)
 		}
@@ -1455,7 +1448,7 @@ func TestNewDepsCmd(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("newDepsCmd() returned nil")
 	}
-	if cmd.Use != testCmdDeps {
+	if cmd.Use != appconstants.CommandDeps {
 		t.Errorf("newDepsCmd().Use = %v, want 'deps'", cmd.Use)
 	}
 }
@@ -1467,7 +1460,7 @@ func TestNewCacheCmd(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("newCacheCmd() returned nil")
 	}
-	if cmd.Use != testCmdCache {
+	if cmd.Use != appconstants.CommandCache {
 		t.Errorf("newCacheCmd().Use = %v, want 'cache'", cmd.Use)
 	}
 }
@@ -1491,7 +1484,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
 			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, testFormatHTML)
+				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, appconstants.OutputFormatHTML)
 			},
 		},
 		{
@@ -1499,7 +1492,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
 			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, testFormatJSON)
+				_ = cmd.Flags().Set(appconstants.FlagOutputFormat, appconstants.OutputFormatJSON)
 			},
 		},
 		{
@@ -1507,7 +1500,7 @@ func TestGenHandlerIntegration(t *testing.T) {
 			setupFunc: setupWithSingleFixture(testutil.TestFixtureJavaScriptSimple),
 			wantErr:   false,
 			setFlags: func(cmd *cobra.Command) {
-				_ = cmd.Flags().Set("theme", testThemeGitHub)
+				_ = cmd.Flags().Set("theme", appconstants.ThemeGitHub)
 			},
 		},
 		{
@@ -1554,12 +1547,12 @@ func TestGenHandlerIntegration(t *testing.T) {
 		},
 		// Error scenarios using fixtures
 		createFixtureTestCaseWithPaths(
-			"returns error for invalid YAML syntax",
+			testutil.TestCaseNameReturnsErrInvalidYAML,
 			testutil.TestErrorScenarioInvalidYAML,
 			true,
 		),
 		createFixtureTestCaseWithPaths(
-			"returns error for missing required fields",
+			testutil.TestCaseNameReturnsErrMissingFields,
 			testutil.TestErrorScenarioMissingFields,
 			true,
 		),
@@ -1665,12 +1658,12 @@ func TestValidateHandlerIntegration(t *testing.T) {
 		},
 		// Error scenarios using fixtures
 		createFixtureTestCase(
-			"returns error for invalid YAML syntax",
+			testutil.TestCaseNameReturnsErrInvalidYAML,
 			testutil.TestErrorScenarioInvalidYAML,
 			true,
 		),
 		createFixtureTestCase(
-			"returns error for missing required fields",
+			testutil.TestCaseNameReturnsErrMissingFields,
 			testutil.TestErrorScenarioMissingFields,
 			true,
 		),
@@ -1760,7 +1753,7 @@ func TestConfigInitHandlerIntegration(t *testing.T) {
 			validate: func(t *testing.T, _ string, err error) {
 				t.Helper()
 				if err != nil {
-					t.Errorf("unexpected error: %v", err)
+					t.Errorf(testutil.TestErrUnexpected, err)
 				}
 				// Note: Since configInitHandler uses internal.GetConfigPath() which points to real
 				// user config directory, we can only verify no error occurred.
@@ -1785,7 +1778,7 @@ func TestConfigInitHandlerIntegration(t *testing.T) {
 				t.Helper()
 				// No error expected - handler just warns if config exists
 				if err != nil {
-					t.Errorf("unexpected error: %v", err)
+					t.Errorf(testutil.TestErrUnexpected, err)
 				}
 			},
 		},
@@ -1835,7 +1828,7 @@ func TestLoadGenConfigIntegration(t *testing.T) {
 
 				return tmpDir, tmpDir
 			},
-			wantTheme: testThemeDefault,
+			wantTheme: appconstants.ThemeDefault,
 		},
 		{
 			name: "loads repo-specific config",
@@ -1846,7 +1839,7 @@ func TestLoadGenConfigIntegration(t *testing.T) {
 
 				return tmpDir, tmpDir
 			},
-			wantTheme: testThemePro,
+			wantTheme: appconstants.ThemeProfessional,
 		},
 	}
 
@@ -2263,7 +2256,7 @@ func TestCheckAllOutdated(t *testing.T) {
 		},
 		{
 			name:            testutil.TestScenarioNoDeps,
-			setupFunc:       setupWithActionContent(testActionBasic),
+			setupFunc:       setupWithActionContent(testutil.TestMinimalAction),
 			mockAnalyzer:    true,
 			wantOutdatedCnt: 0,
 		},
@@ -2335,7 +2328,7 @@ func TestAnalyzeSecurityDeps(t *testing.T) {
 		},
 		{
 			name:       testutil.TestScenarioNoDeps,
-			setupFunc:  setupWithActionContent(testActionBasic),
+			setupFunc:  setupWithActionContent(testutil.TestMinimalAction),
 			wantPinned: 0,
 		},
 		{
@@ -2422,7 +2415,7 @@ func TestCollectAllUpdates(t *testing.T) {
 		},
 		{
 			name:          testutil.TestScenarioNoDeps,
-			setupFunc:     setupWithActionContent(testActionBasic),
+			setupFunc:     setupWithActionContent(testutil.TestMinimalAction),
 			wantUpdateCnt: 0,
 		},
 	}
@@ -2600,7 +2593,7 @@ func TestApplyUpdates(t *testing.T) {
 
 				// Verify reader was used
 				if reader.index != 1 {
-					t.Errorf("InputReader was not used, index = %d, want 1", reader.index)
+					t.Errorf(testutil.TestErrInputReaderNotUsed, reader.index)
 				}
 			})
 		}
@@ -2649,7 +2642,7 @@ func TestApplyUpdates(t *testing.T) {
 
 		// Verify reader was actually used (index should be 1 after reading first response)
 		if reader.index != 1 {
-			t.Errorf("InputReader was not used, index = %d, want 1", reader.index)
+			t.Errorf(testutil.TestErrInputReaderNotUsed, reader.index)
 		}
 	})
 
@@ -2689,6 +2682,10 @@ func TestSetupDepsUpgrade(t *testing.T) {
 				// Create a valid action file
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV4)
 
+				// Clear env vars so GetGitHubToken returns "" regardless of CI environment
+				t.Setenv(appconstants.EnvGitHubToken, "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+
 				config := internal.DefaultAppConfig()
 				config.GitHubToken = "" // No token
 
@@ -2706,7 +2703,7 @@ func TestSetupDepsUpgrade(t *testing.T) {
 				testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureActionWithCheckoutV4)
 
 				config := internal.DefaultAppConfig()
-				config.GitHubToken = "test-token-123"
+				config.GitHubToken = testutil.TestToken123
 
 				return tmpDir, config
 			},
@@ -2718,7 +2715,7 @@ func TestSetupDepsUpgrade(t *testing.T) {
 				t.Helper()
 				tmpDir := t.TempDir() // Empty directory
 				config := internal.DefaultAppConfig()
-				config.GitHubToken = "test-token-123"
+				config.GitHubToken = testutil.TestToken123
 
 				return tmpDir, config
 			},
@@ -2747,16 +2744,15 @@ func TestSetupDepsUpgrade(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Note: Cannot use t.Parallel() for testMsgUsesGlobalCfg
-			// because it mutates shared globalConfig
-			if tt.name != testMsgUsesGlobalCfg {
+			// Note: Cannot use t.Parallel() for cases that mutate env vars or globalConfig
+			serialCases := tt.name == testMsgUsesGlobalCfg || tt.name == testutil.TestMsgNoGitHubToken
+			if !serialCases {
 				t.Parallel()
 			}
 
 			currentDir, config := tt.setupFunc(t)
-			output := createOutputManager(true)
 
-			_, _, err := setupDepsUpgrade(output, currentDir, config)
+			_, _, err := setupDepsUpgrade(currentDir, config)
 
 			validateDepsUpgradeError(t, err, tt.wantErr, tt.errContain)
 		})
@@ -2807,4 +2803,49 @@ func TestConfigWizardHandlerInitialization(t *testing.T) {
 			t.Error("wrapHandlerWithErrorHandling should initialize globalConfig when nil")
 		}
 	})
+}
+
+func TestDepsUpgradeHandlerErrorPaths(t *testing.T) {
+	// Note: Cannot use t.Parallel() — test modifies env vars and globalConfig.
+
+	origConfig := globalConfig
+	defer func() { globalConfig = origConfig }()
+
+	t.Run("returns error when no GitHub token", func(t *testing.T) {
+		t.Setenv(appconstants.EnvGitHubToken, "")
+		t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+
+		globalConfig = internal.DefaultAppConfig()
+		globalConfig.GitHubToken = ""
+		globalConfig.Quiet = true
+
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool(appconstants.FlagCI, false, "")
+		cmd.Flags().Bool(appconstants.InputAll, false, "")
+		cmd.Flags().Bool(appconstants.InputDryRun, false, "")
+
+		err := depsUpgradeHandler(cmd, []string{})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "no GitHub token") {
+			t.Errorf("expected 'no GitHub token' error, got: %v", err)
+		}
+	})
+}
+
+func TestConfigRootHandler(t *testing.T) {
+	t.Parallel()
+
+	origConfig := globalConfig
+	t.Cleanup(func() { globalConfig = origConfig })
+
+	globalConfig = internal.DefaultAppConfig()
+	globalConfig.Quiet = true
+
+	cmd := &cobra.Command{}
+	err := configRootHandler(cmd, []string{})
+	if err != nil {
+		t.Errorf("configRootHandler() unexpected error: %v", err)
+	}
 }

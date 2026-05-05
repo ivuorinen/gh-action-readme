@@ -35,44 +35,29 @@ type ValidationWarning struct {
 	Value   string
 }
 
-// Permission level constants for GitHub Actions permissions.
-const (
-	permissionRead  = "read"
-	permissionWrite = "write"
-)
-
-// Permission scope key constants for GitHub Actions.
-const (
-	permScopeContents = "contents"
-	permScopeIssues   = "issues"
-)
-
-// Config key for GitHub token field.
-const configKeyGitHubToken = "github_token"
-
 // validPermissionsMap defines valid GitHub Actions permissions and their allowed values.
 var validPermissionsMap = map[string][]string{
-	"actions":             {permissionRead, permissionWrite},
-	"checks":              {permissionRead, permissionWrite},
-	permScopeContents:     {permissionRead, permissionWrite},
-	"deployments":         {permissionRead, permissionWrite},
-	"id-token":            {permissionWrite},
-	permScopeIssues:       {permissionRead, permissionWrite},
-	"discussions":         {permissionRead, permissionWrite},
-	"packages":            {permissionRead, permissionWrite},
-	"pull-requests":       {permissionRead, permissionWrite},
-	"repository-projects": {permissionRead, permissionWrite},
-	"security-events":     {permissionRead, permissionWrite},
-	"statuses":            {permissionRead, permissionWrite},
+	appconstants.PermScopeActions:            {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeChecks:             {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeContents:           {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeDeployments:        {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeIDToken:            {appconstants.PermissionWrite},
+	appconstants.PermScopeIssues:             {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeDiscussions:        {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopePackages:           {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopePullRequests:       {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeRepositoryProjects: {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeSecurityEvents:     {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeStatuses:           {appconstants.PermissionRead, appconstants.PermissionWrite},
 }
 
 // ConfigValidator handles configuration validation with immediate feedback.
 type ConfigValidator struct {
-	output *internal.ColoredOutput
+	output internal.MessagingOutput
 }
 
 // NewConfigValidator creates a new configuration validator.
-func NewConfigValidator(output *internal.ColoredOutput) *ConfigValidator {
+func NewConfigValidator(output internal.MessagingOutput) *ConfigValidator {
 	return &ConfigValidator{
 		output: output,
 	}
@@ -127,7 +112,7 @@ func (v *ConfigValidator) ValidateField(fieldName, value string) *ValidationResu
 		v.validateOutputFormat(value, result)
 	case appconstants.ConfigKeyOutputDir:
 		v.validateOutputDir(value, result)
-	case configKeyGitHubToken:
+	case appconstants.ConfigKeyGitHubToken:
 		v.validateGitHubToken(value, result)
 	default:
 		result.Warnings = append(result.Warnings, ValidationWarning{

@@ -201,19 +201,11 @@ func processPermissionEntry(line, content string, expectedItemIndent *int, permi
 	return false
 }
 
-// shouldIgnoreDirectory checks if a directory name matches the ignore list.
+// shouldIgnoreDirectory checks if a directory name exactly matches the ignore list.
 func shouldIgnoreDirectory(dirName string, ignoredDirs []string) bool {
 	for _, ignored := range ignoredDirs {
-		if strings.HasPrefix(ignored, ".") {
-			// Pattern match: ".git" matches ".git", ".github", etc.
-			if strings.HasPrefix(dirName, ignored) {
-				return true
-			}
-		} else {
-			// Exact match for non-hidden dirs
-			if dirName == ignored {
-				return true
-			}
+		if dirName == ignored {
+			return true
 		}
 	}
 
@@ -229,6 +221,10 @@ type actionFileWalker struct {
 // walkFunc is the callback function for filepath.Walk.
 func (w *actionFileWalker) walkFunc(path string, info os.FileInfo, err error) error {
 	if err != nil {
+		if os.IsPermission(err) {
+			return filepath.SkipDir
+		}
+
 		return err
 	}
 

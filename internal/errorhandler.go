@@ -12,11 +12,11 @@ import (
 
 // ErrorHandler provides centralized error handling and exit management.
 type ErrorHandler struct {
-	output *ColoredOutput
+	output ErrorReporter
 }
 
 // NewErrorHandler creates a new error handler.
-func NewErrorHandler(output *ColoredOutput) *ErrorHandler {
+func NewErrorHandler(output ErrorReporter) *ErrorHandler {
 	return &ErrorHandler{
 		output: output,
 	}

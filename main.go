@@ -11,7 +11,6 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	"github.com/ivuorinen/gh-action-readme/internal/helpers"
 )
 
 var (
@@ -67,7 +66,7 @@ func setupOutputAndErrorHandling() (*internal.ColoredOutput, *internal.ErrorHand
 }
 
 func createAnalyzer(generator *internal.Generator, output *internal.ColoredOutput) *dependencies.Analyzer {
-	return helpers.CreateAnalyzer(generator, output)
+	return internal.CreateAnalyzer(generator, output)
 }
 
 // wrapHandlerWithErrorHandling converts error-returning handler to Cobra handler.
@@ -157,7 +156,7 @@ func main() {
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(appconstants.ExitCodeError)
 	}
 }
 

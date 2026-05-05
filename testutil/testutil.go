@@ -237,10 +237,13 @@ func CreateTestDir(t *testing.T, path string) {
 //	if !strings.Contains(output, "Generated") {
 //	    t.Error("expected success message in output")
 //	}
+//
+// RunBinaryCommand executes the compiled binary under test with the given args.
+// TEST-ONLY: binaryPath is always the compiled test binary, never user-supplied input.
 func RunBinaryCommand(t *testing.T, binaryPath, dir string, args ...string) (output string, err error) {
 	t.Helper()
 
-	cmd := exec.Command(binaryPath, args...) // #nosec G204 -- controlled test input
+	cmd := exec.Command(binaryPath, args...) // #nosec G204 -- test-only: binaryPath is always the compiled test binary
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 

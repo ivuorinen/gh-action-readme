@@ -28,6 +28,10 @@ func GetEmbeddedTemplate(templatePath string) ([]byte, error) {
 		cleanPath = appconstants.DirTemplates + cleanPath
 	}
 
+	if strings.Contains(cleanPath, "..") {
+		return nil, filepath.ErrBadPattern
+	}
+
 	return embeddedTemplates.ReadFile(cleanPath)
 }
 
@@ -41,6 +45,10 @@ func IsEmbeddedTemplateAvailable(templatePath string) bool {
 	cleanPath := strings.TrimPrefix(filepath.ToSlash(templatePath), "/")
 	if !strings.HasPrefix(cleanPath, appconstants.DirTemplates) {
 		cleanPath = appconstants.DirTemplates + cleanPath
+	}
+
+	if strings.Contains(cleanPath, "..") {
+		return false
 	}
 
 	_, err := embeddedTemplates.ReadFile(cleanPath)

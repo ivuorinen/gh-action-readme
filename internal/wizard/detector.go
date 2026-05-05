@@ -23,13 +23,13 @@ const (
 
 // ProjectDetector handles auto-detection of project settings.
 type ProjectDetector struct {
-	output     *internal.ColoredOutput
+	output     internal.MessageLogger
 	currentDir string
 	repoRoot   string
 }
 
 // NewProjectDetector creates a new project detector.
-func NewProjectDetector(output *internal.ColoredOutput) (*ProjectDetector, error) {
+func NewProjectDetector(output internal.MessageLogger) (*ProjectDetector, error) {
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToGetCurrentDir, err)

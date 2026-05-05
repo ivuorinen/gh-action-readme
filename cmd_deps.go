@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -42,8 +43,14 @@ func (r *StdinReader) ReadLine() (string, error) {
 	}
 
 	line, err := r.reader.ReadString('\n')
+	trimmed := strings.TrimSpace(line)
 
-	return strings.TrimSpace(line), err
+	// EOF on last line with no trailing newline — data is still valid input
+	if err == io.EOF && trimmed != "" {
+		return trimmed, nil
+	}
+
+	return trimmed, err
 }
 
 func newDepsCmd() *cobra.Command {
@@ -119,6 +126,10 @@ func depsListHandler(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if len(actionFiles) == 0 {
+		return nil
+	}
+
 	analyzer := createAnalyzer(generator, output)
 	totalDeps := analyzeDependencies(output, actionFiles, analyzer)
 
@@ -131,7 +142,7 @@ func depsListHandler(_ *cobra.Command, _ []string) error {
 
 // analyzeDependencies analyzes and displays dependencies.
 func analyzeDependencies(
-	output *internal.ColoredOutput,
+	output internal.OutputWriter,
 	actionFiles []string,
 	analyzer *dependencies.Analyzer,
 ) int {
@@ -157,7 +168,7 @@ func analyzeDependencies(
 
 // analyzeActionFileDeps analyzes dependencies in a single action file.
 func analyzeActionFileDeps(
-	output *internal.ColoredOutput,
+	output internal.MessageLogger,
 	actionFile string,
 	analyzer *dependencies.Analyzer,
 ) int {
@@ -228,7 +239,7 @@ func depsSecurityHandler(_ *cobra.Command, _ []string) error {
 
 // analyzeSecurityDeps analyzes dependencies for security issues.
 func analyzeSecurityDeps(
-	output *internal.ColoredOutput,
+	output internal.OutputWriter,
 	actionFiles []string,
 	analyzer *dependencies.Analyzer,
 ) (int, []fileDep) {
@@ -264,7 +275,7 @@ func analyzeSecurityDeps(
 
 // displaySecuritySummary shows security analysis results.
 func displaySecuritySummary(
-	output *internal.ColoredOutput,
+	output internal.MessageLogger,
 	currentDir string,
 	pinnedCount int,
 	floatingDeps []fileDep,
@@ -283,7 +294,7 @@ func displaySecuritySummary(
 
 // displayFloatingDeps shows floating dependencies details.
 func displayFloatingDeps(
-	output *internal.ColoredOutput,
+	output internal.MessageLogger,
 	currentDir string,
 	floatingDeps []fileDep,
 ) {
@@ -329,7 +340,7 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) error {
 }
 
 // validateGitHubToken checks if GitHub token is available.
-func validateGitHubToken(output *internal.ColoredOutput) bool {
+func validateGitHubToken(output internal.MessageLogger) bool {
 	if internal.GetGitHubToken(globalConfig) == "" {
 		contextualErr := apperrors.New(appconstants.ErrCodeGitHubAuth, "GitHub token not found").
 			WithSuggestions(apperrors.GetSuggestions(appconstants.ErrCodeGitHubAuth, map[string]string{})...).
@@ -345,7 +356,7 @@ func validateGitHubToken(output *internal.ColoredOutput) bool {
 
 // checkAllOutdated checks all action files for outdated dependencies.
 func checkAllOutdated(
-	output *internal.ColoredOutput,
+	output internal.MessageLogger,
 	actionFiles []string,
 	analyzer *dependencies.Analyzer,
 ) []dependencies.OutdatedDependency {
@@ -374,7 +385,7 @@ func checkAllOutdated(
 }
 
 // displayOutdatedResults shows outdated dependency results.
-func displayOutdatedResults(output *internal.ColoredOutput, allOutdated []dependencies.OutdatedDependency) {
+func displayOutdatedResults(output internal.MessageLogger, allOutdated []dependencies.OutdatedDependency) {
 	if len(allOutdated) == 0 {
 		output.Success("✅ All dependencies are up to date!")
 
@@ -404,7 +415,7 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Setup and validation
-	analyzer, actionFiles, err := setupDepsUpgrade(output, currentDir, nil)
+	analyzer, actionFiles, err := setupDepsUpgrade(currentDir, nil)
 	if err != nil {
 		// setupDepsUpgrade returns descriptive errors, so just pass them through
 		return err
@@ -442,7 +453,6 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) error {
 // setupDepsUpgrade handles initial setup and validation for dependency upgrades.
 // The config parameter allows injection for testing (pass nil to use globalConfig).
 func setupDepsUpgrade(
-	_ *internal.ColoredOutput,
 	currentDir string,
 	config *internal.AppConfig,
 ) (*dependencies.Analyzer, []string, error) {
@@ -452,6 +462,10 @@ func setupDepsUpgrade(
 		} else {
 			config = internal.DefaultAppConfig()
 		}
+	}
+
+	if internal.GetGitHubToken(config) == "" {
+		return nil, nil, errors.New("no GitHub token found, set GITHUB_TOKEN environment variable")
 	}
 
 	generator := internal.NewGenerator(config)
@@ -469,15 +483,11 @@ func setupDepsUpgrade(
 		return nil, nil, fmt.Errorf("could not create dependency analyzer: %w", err)
 	}
 
-	if config.GitHubToken == "" {
-		return nil, nil, errors.New("no GitHub token found, set GITHUB_TOKEN environment variable")
-	}
-
 	return analyzer, actionFiles, nil
 }
 
 // showUpgradeMode displays the current upgrade mode to the user.
-func showUpgradeMode(output *internal.ColoredOutput, ciMode, isPinCmd bool) {
+func showUpgradeMode(output internal.MessageLogger, ciMode, isPinCmd bool) {
 	switch {
 	case ciMode:
 		output.Bold("🤖 CI/CD Mode: Automated dependency updates with pinned commit SHAs")
@@ -490,7 +500,7 @@ func showUpgradeMode(output *internal.ColoredOutput, ciMode, isPinCmd bool) {
 
 // collectAllUpdates gathers all available updates from action files.
 func collectAllUpdates(
-	output *internal.ColoredOutput,
+	output internal.MessageLogger,
 	analyzer *dependencies.Analyzer,
 	actionFiles []string,
 ) []dependencies.PinnedUpdate {
@@ -532,7 +542,7 @@ func collectAllUpdates(
 
 // showPendingUpdates displays what updates will be applied.
 func showPendingUpdates(
-	output *internal.ColoredOutput,
+	output internal.MessageLogger,
 	allUpdates []dependencies.PinnedUpdate,
 	currentDir string,
 ) {
@@ -548,7 +558,7 @@ func showPendingUpdates(
 // applyUpdates applies the collected updates either automatically or interactively.
 // The reader parameter allows injection of input for testing (pass nil to use stdin).
 func applyUpdates(
-	output *internal.ColoredOutput,
+	output internal.MessageLogger,
 	analyzer *dependencies.Analyzer,
 	allUpdates []dependencies.PinnedUpdate,
 	automatic bool,

@@ -12,11 +12,7 @@ import (
 )
 
 const (
-	testPermissionRead     = "read"
-	testPermissionWrite    = "write"
-	testPermissionContents = "contents"
-	testPermissionIssues   = "issues"
-	testPermissionActions  = "actions"
+	testPermissionActions = appconstants.PermScopeActions
 )
 
 // parseActionFromContent creates a temporary action.yml file with the given content and parses it.
@@ -90,15 +86,21 @@ func TestShouldIgnoreDirectory(t *testing.T) {
 			want:        true,
 		},
 		{
-			name:        "dot prefix pattern match - .github",
+			name:        ".github not ignored when only .git in list",
 			dirName:     appconstants.DirGitHub,
 			ignoredDirs: []string{appconstants.DirGit},
-			want:        true,
+			want:        false,
 		},
 		{
-			name:        "dot prefix pattern match - .gitlab",
+			name:        ".gitlab not ignored when only .git in list",
 			dirName:     appconstants.DirGitLab,
 			ignoredDirs: []string{appconstants.DirGit},
+			want:        false,
+		},
+		{
+			name:        ".github ignored when .github is explicitly in list",
+			dirName:     appconstants.DirGitHub,
+			ignoredDirs: []string{appconstants.DirGitHub},
 			want:        true,
 		},
 		{
@@ -269,7 +271,7 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "single permission with dash format",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsDashSingle)),
 			want: map[string]string{
-				testPermissionContents: testPermissionRead,
+				testutil.PermissionContents: testutil.PermissionRead,
 			},
 			wantErr: false,
 		},
@@ -277,9 +279,9 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "multiple permissions",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsDashMultiple)),
 			want: map[string]string{
-				testPermissionContents: testPermissionRead,
-				testPermissionIssues:   testPermissionWrite,
-				"pull-requests":        testPermissionWrite,
+				testutil.PermissionContents:        testutil.PermissionRead,
+				testutil.PermissionIssues:          testutil.PermissionWrite,
+				appconstants.PermScopePullRequests: testutil.PermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -287,8 +289,8 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "permissions without dash",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsObject)),
 			want: map[string]string{
-				testPermissionContents: testPermissionRead,
-				testPermissionIssues:   testPermissionWrite,
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -302,8 +304,8 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "permissions with inline comments",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsInlineComments)),
 			want: map[string]string{
-				testPermissionContents: testPermissionRead,
-				testPermissionIssues:   testPermissionWrite,
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -317,8 +319,8 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			name:    "permissions with mixed formats",
 			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsMixed)),
 			want: map[string]string{
-				testPermissionContents: testPermissionRead,
-				testPermissionIssues:   testPermissionWrite,
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
 			},
 			wantErr: false,
 		},
@@ -365,7 +367,7 @@ func TestParseActionYMLWithCommentPermissions(t *testing.T) {
 		t.Fatal("Expected permissions to be parsed from comments")
 	}
 
-	if action.Permissions[testPermissionContents] != "read" {
+	if action.Permissions[testutil.PermissionContents] != "read" {
 		t.Errorf("Expected contents: read, got %v", action.Permissions)
 	}
 }
@@ -391,15 +393,15 @@ func TestParseActionYMLYAMLPermissionsOverrideComments(t *testing.T) {
 	}
 
 	// YAML should override comment
-	if action.Permissions[testPermissionContents] != testPermissionWrite {
+	if action.Permissions[testutil.PermissionContents] != testutil.PermissionWrite {
 		t.Errorf(
 			"Expected YAML permissions to override comment permissions, got contents: %v",
-			action.Permissions[testPermissionContents],
+			action.Permissions[testutil.PermissionContents],
 		)
 	}
 
 	// Comment permission should be merged in
-	if action.Permissions["issues"] != testPermissionWrite {
+	if action.Permissions["issues"] != testutil.PermissionWrite {
 		t.Errorf(
 			"Expected comment permissions to be merged with YAML permissions, got issues: %v",
 			action.Permissions["issues"],
@@ -429,11 +431,11 @@ func TestParseActionYMLOnlyYAMLPermissions(t *testing.T) {
 		t.Fatal("Expected permissions to be parsed from YAML")
 	}
 
-	if action.Permissions[testPermissionContents] != "read" {
+	if action.Permissions[testutil.PermissionContents] != "read" {
 		t.Errorf("Expected contents: read, got %v", action.Permissions)
 	}
 
-	if action.Permissions["issues"] != testPermissionWrite {
+	if action.Permissions["issues"] != testutil.PermissionWrite {
 		t.Errorf("Expected issues: write, got %v", action.Permissions)
 	}
 }
@@ -498,7 +500,7 @@ func TestParsePermissionLineEdgeCases(t *testing.T) {
 			name:      "comment at start is parsed",
 			input:     "#contents: read",
 			wantKey:   "#contents",
-			wantValue: testPermissionRead,
+			wantValue: testutil.PermissionRead,
 			wantOK:    true,
 		},
 		{
@@ -518,15 +520,15 @@ func TestParsePermissionLineEdgeCases(t *testing.T) {
 		{
 			name:      "valid with inline comment",
 			input:     "contents: read # required",
-			wantKey:   testPermissionContents,
-			wantValue: testPermissionRead,
+			wantKey:   testutil.PermissionContents,
+			wantValue: testutil.PermissionRead,
 			wantOK:    true,
 		},
 		{
 			name:      "valid with leading dash",
 			input:     "- issues: write",
 			wantKey:   "issues",
-			wantValue: testPermissionWrite,
+			wantValue: testutil.PermissionWrite,
 			wantOK:    true,
 		},
 		{
@@ -637,7 +639,7 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 			content: testutil.TestPermissionsHeader +
 				testutil.TestContentsRead +
 				"#   contents: write\n",
-			wantPerms:   map[string]string{testPermissionContents: testPermissionWrite},
+			wantPerms:   map[string]string{testutil.PermissionContents: testutil.PermissionWrite},
 			wantErr:     false,
 			description: "last value wins",
 		},
@@ -648,8 +650,8 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 				"#   invalid-line-no-value\n" +
 				"#   issues: write\n",
 			wantPerms: map[string]string{
-				testPermissionContents: testPermissionRead,
-				testPermissionIssues:   testPermissionWrite,
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
 			},
 			wantErr:     false,
 			description: "invalid lines skipped",
@@ -660,7 +662,7 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 				testutil.TestContentsRead +
 				testutil.TestActionNameLine +
 				"#   issues: write\n",
-			wantPerms:   map[string]string{testPermissionContents: testPermissionRead},
+			wantPerms:   map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			wantErr:     false,
 			description: "stops at first non-comment",
 		},
@@ -718,11 +720,11 @@ func TestMergePermissionsEdgeCases(t *testing.T) {
 		},
 		{
 			name:         "yaml has value, comments override",
-			yamlPerms:    map[string]string{testPermissionContents: testPermissionRead},
-			commentPerms: map[string]string{testPermissionIssues: testPermissionWrite},
+			yamlPerms:    map[string]string{testutil.PermissionContents: testutil.PermissionRead},
+			commentPerms: map[string]string{testutil.PermissionIssues: testutil.PermissionWrite},
 			wantPerms: map[string]string{
-				testPermissionContents: testPermissionRead,
-				testPermissionIssues:   testPermissionWrite,
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
 			},
 		},
 	}

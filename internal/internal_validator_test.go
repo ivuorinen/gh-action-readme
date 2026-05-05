@@ -34,6 +34,19 @@ func TestValidateActionYMLValid(t *testing.T) {
 	}
 }
 
+// assertHasDeprecationSuggestion fails if no suggestion mentions runtime and "deprecated".
+func assertHasDeprecationSuggestion(t *testing.T, suggestions []string, runtime string) {
+	t.Helper()
+
+	for _, s := range suggestions {
+		if strings.Contains(s, runtime) && strings.Contains(s, "deprecated") {
+			return
+		}
+	}
+
+	t.Errorf("expected deprecation suggestion mentioning %q, got: %v", runtime, suggestions)
+}
+
 // TestValidateActionYML_DeprecatedRuntime verifies that node12 and node16 produce
 // a deprecation warning but are still considered valid (not in MissingFields).
 func TestValidateActionYML_DeprecatedRuntime(t *testing.T) {
@@ -59,17 +72,7 @@ func TestValidateActionYML_DeprecatedRuntime(t *testing.T) {
 				t.Errorf("expected deprecation warning for runtime %q, got warnings: %v", runtime, res.Warnings)
 			}
 
-			found := false
-			for _, s := range res.Suggestions {
-				if strings.Contains(s, runtime) && strings.Contains(s, "deprecated") {
-					found = true
-
-					break
-				}
-			}
-			if !found {
-				t.Errorf("expected deprecation suggestion mentioning %q, got: %v", runtime, res.Suggestions)
-			}
+			assertHasDeprecationSuggestion(t, res.Suggestions, runtime)
 		})
 	}
 }

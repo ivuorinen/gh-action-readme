@@ -30,7 +30,7 @@ func configRootHandler(_ *cobra.Command, _ []string) error {
 	output := internal.NewColoredOutput(globalConfig.Quiet)
 	path, err := internal.GetConfigPath()
 	if err != nil {
-		return fmt.Errorf("failed to get config path: %w", err)
+		return fmt.Errorf(appconstants.ErrFailedToGetConfigPath, err)
 	}
 	output.Info("Configuration file location: %s", path)
 	if globalConfig.Verbose {
@@ -85,7 +85,7 @@ func configInitHandler(_ *cobra.Command, _ []string) error {
 	// Check if config already exists
 	configPath, err := internal.GetConfigPath()
 	if err != nil {
-		return fmt.Errorf("failed to get config path: %w", err)
+		return fmt.Errorf(appconstants.ErrFailedToGetConfigPath, err)
 	}
 
 	if _, err := os.Stat(configPath); err == nil {

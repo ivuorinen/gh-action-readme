@@ -417,7 +417,7 @@ func TestAnalyzerCompareVersions(t *testing.T) {
 			name:         "minor version difference",
 			current:      testutil.TestVersionV4_0_0,
 			latest:       "v4.1.0",
-			expectedType: "minor",
+			expectedType: appconstants.UpdateTypeMinor,
 		},
 		{
 			name:         "patch version difference",
@@ -732,6 +732,24 @@ func TestCacheAdapterSet(t *testing.T) {
 }
 
 // TestIsCompositeAction tests composite action detection.
+func TestValidateActionType(t *testing.T) {
+	t.Parallel()
+
+	analyzer, cleanup := newTestAnalyzer(t)
+	defer cleanup()
+
+	validTypes := []string{"node24", "node20", "node16", "node12", "docker", "composite"}
+	for _, typ := range validTypes {
+		if err := analyzer.validateActionType(typ); err != nil {
+			t.Errorf("validateActionType(%q) unexpected error: %v", typ, err)
+		}
+	}
+
+	if err := analyzer.validateActionType("node18"); err == nil {
+		t.Error("validateActionType(\"node18\") expected error, got nil")
+	}
+}
+
 func TestIsCompositeAction(t *testing.T) {
 	t.Parallel()
 

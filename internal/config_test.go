@@ -16,7 +16,7 @@ const (
 	testConfigFormatHTML     = appconstants.OutputFormatHTML
 	testConfigCustomTemplate = "custom-template.tmpl"
 	testConfigPermRead       = testutil.PermissionRead
-	testConfigPermWrite      = "write"
+	testConfigPermWrite      = testutil.PermissionWrite
 	testConfigPermExisting   = testutil.ExistingOrgName
 	testConfigPermNew        = testutil.NewOrgName
 	testConfigVarName        = "VAR1"

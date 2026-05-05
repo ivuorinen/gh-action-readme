@@ -18,7 +18,7 @@ import (
 
 // ConfigWizard handles interactive configuration setup.
 type ConfigWizard struct {
-	output    *internal.ColoredOutput
+	output    internal.MessageLogger
 	scanner   *bufio.Scanner
 	config    *internal.AppConfig
 	repoInfo  *git.RepoInfo
@@ -26,7 +26,7 @@ type ConfigWizard struct {
 }
 
 // NewConfigWizard creates a new configuration wizard instance.
-func NewConfigWizard(output *internal.ColoredOutput) *ConfigWizard {
+func NewConfigWizard(output internal.MessageLogger) *ConfigWizard {
 	return &ConfigWizard{
 		output:  output,
 		scanner: bufio.NewScanner(os.Stdin),

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
 )
 
@@ -17,23 +16,6 @@ func GetCurrentDir() (string, error) {
 	}
 
 	return currentDir, nil
-}
-
-// SetupGeneratorContext creates a generator with proper setup and current directory.
-func SetupGeneratorContext(config *internal.AppConfig) (*internal.Generator, string, error) {
-	generator := internal.NewGenerator(config)
-	output := generator.Output
-
-	if config.Verbose {
-		output.Info("Using config: %+v", config)
-	}
-
-	currentDir, err := GetCurrentDir()
-	if err != nil {
-		return nil, "", err
-	}
-
-	return generator, currentDir, nil
 }
 
 // FindGitRepoRoot finds git repository root with standardized error handling.

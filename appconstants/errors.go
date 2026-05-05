@@ -70,6 +70,8 @@ const (
 	ErrFailedToGetXDGConfigFile = "failed to get XDG config file path: %w"
 	// ErrFailedToCreateRateLimiter is the failed to create rate limiter error.
 	ErrFailedToCreateRateLimiter = "failed to create rate limiter: %w"
+	// ErrFailedToGetConfigPath is the failed to get config path error.
+	ErrFailedToGetConfigPath = "failed to get config path: %w"
 	// ErrFailedToGetCurrentDir is the failed to get current directory error.
 	ErrFailedToGetCurrentDir = "failed to get current directory: %w"
 	// ErrCouldNotCreateDependencyAnalyzer is the could not create dependency analyzer error.

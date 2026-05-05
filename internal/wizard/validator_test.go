@@ -3,6 +3,7 @@ package wizard
 import (
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 )
 
@@ -66,7 +67,7 @@ func TestConfigValidatorValidateConfig(t *testing.T) {
 				AnalyzeDependencies: true,
 				ShowSecurityInfo:    false,
 				RunsOn:              []string{"ubuntu-latest"},
-				Permissions:         map[string]string{permScopeContents: permissionRead},
+				Permissions:         map[string]string{appconstants.PermScopeContents: appconstants.PermissionRead},
 			},
 			expectValid:    true,
 			expectErrors:   0,

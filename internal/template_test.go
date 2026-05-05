@@ -12,14 +12,15 @@ import (
 )
 
 const (
-	testTplTestOrg    = "testorg"
-	testTplTestRepo   = "testrepo"
-	testTplGitOrg     = "git-org"
-	testTplConfigOrg  = "config-org"
-	testTplRepoRoot   = "/repo"
-	testTplOrgName    = "ivuorinen"
-	testTplRefMain    = "@main"
-	testTplBranchMain = "main"
+	testTplTestOrg     = testutil.WizardOrgTest
+	testTplTestRepo    = testutil.WizardRepoTest
+	testTplGitOrg      = "git-org"
+	testTplConfigOrg   = "config-org"
+	testTplRepoRoot    = "/repo"
+	testTplOrgName     = "ivuorinen"
+	testTplRefMain     = "@main"
+	testTplBranchMain  = "main"
+	testTplActionsRepo = "actions"
 )
 
 // TestGetFieldWithFallback_GitValueReturned kills the CONDITIONALS_NEGATION mutation at
@@ -234,7 +235,7 @@ func TestBuildUsesString(t *testing.T) {
 				RepoRoot:   testTplRepoRoot,
 			},
 			org:     testTplOrgName,
-			repo:    testPermissionActions,
+			repo:    testTplActionsRepo,
 			version: testTplRefMain,
 			want:    "ivuorinen/actions/actions/csharp-build@main",
 		},
@@ -256,7 +257,7 @@ func TestBuildUsesString(t *testing.T) {
 				RepoRoot:   testTplRepoRoot,
 			},
 			org:     "",
-			repo:    testPermissionActions,
+			repo:    testTplActionsRepo,
 			version: testTplRefMain,
 			want:    "your-org/your-action@v1",
 		},
@@ -278,7 +279,7 @@ func TestBuildUsesString(t *testing.T) {
 				RepoRoot:   "",
 			},
 			org:     testTplOrgName,
-			repo:    testPermissionActions,
+			repo:    testTplActionsRepo,
 			version: appconstants.VersionRefV1,
 			want:    "ivuorinen/actions@v1",
 		},
@@ -377,7 +378,7 @@ func TestGetGitUsesString(t *testing.T) {
 				useDefaultBranch: true,
 				defaultBranch:    testTplBranchMain,
 				org:              testTplOrgName,
-				repo:             testPermissionActions,
+				repo:             testTplActionsRepo,
 				actionPath:       "/repo/csharp-build/action.yml",
 				repoRoot:         testTplRepoRoot,
 			}),
@@ -391,7 +392,7 @@ func TestGetGitUsesString(t *testing.T) {
 				useDefaultBranch: true,
 				defaultBranch:    testTplBranchMain,
 				org:              "org",
-				repo:             testPermissionActions,
+				repo:             testTplActionsRepo,
 				actionPath:       testutil.TestRepoBuildActionPath,
 				repoRoot:         testTplRepoRoot,
 			}),
@@ -616,11 +617,11 @@ func TestBuildTemplateData_RealGitRepo(t *testing.T) {
 
 	data := BuildTemplateData(action, config, tmpDir, filepath.Join(tmpDir, appconstants.ActionFileNameYML))
 
-	if data.Git.Organization != "testorg" {
+	if data.Git.Organization != testTplTestOrg {
 		t.Errorf("expected Git.Organization = %q, got %q", testTplTestOrg, data.Git.Organization)
 	}
 
-	if data.Git.Repository != "testrepo" {
+	if data.Git.Repository != testTplTestRepo {
 		t.Errorf("expected Git.Repository = %q, got %q", testTplTestRepo, data.Git.Repository)
 	}
 }

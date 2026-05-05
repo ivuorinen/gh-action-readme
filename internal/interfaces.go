@@ -57,6 +57,12 @@ type ProgressManager interface {
 	)
 }
 
+// MessagingOutput combines message logging and error reporting for components that need both.
+type MessagingOutput interface {
+	MessageLogger
+	ErrorReporter
+}
+
 // OutputWriter combines message logging and progress reporting for general output needs.
 type OutputWriter interface {
 	MessageLogger

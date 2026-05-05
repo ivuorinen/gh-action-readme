@@ -26,9 +26,6 @@ const (
 	testGenShortDesc   = "desc"
 	testGenTokenKey    = "token"
 	testGenHelpSection = "For more help"
-	testGenItem1       = "item1"
-	testGenItem2       = "item2"
-	testGenItem3       = "item3"
 	testGenRunsUsing   = "using"
 	testGenActionName  = "Action"
 )

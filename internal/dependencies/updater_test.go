@@ -153,8 +153,8 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "name: Test Action",
-					NewUses:    "invalid:::yaml",
+					OldUses:    "actions/checkout@v4",
+					NewUses:    "{unclosed",
 					CommitSHA:  "",
 					Version:    "",
 					UpdateType: appconstants.UpdateTypeNone,
@@ -438,7 +438,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 			name: "no tags available",
 			mockSetup: func() *Analyzer {
 				mockClient := testutil.MockGitHubClient(map[string]string{
-					"GET https://api.github.com/repos/test/repo/tags": "[]",
+					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "[]",
 				})
 				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
 
@@ -467,7 +467,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 			name: "malformed tag response",
 			mockSetup: func() *Analyzer {
 				mockClient := testutil.MockGitHubClient(map[string]string{
-					"GET https://api.github.com/repos/test/repo/tags": "invalid json",
+					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "invalid json",
 				})
 				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
 
@@ -651,11 +651,11 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		analyzer, cleanupAnalyzer := newTestAnalyzer(t)
 		defer cleanupAnalyzer()
 
-		// Create an update that breaks YAML
+		// Create an update that produces unparseable YAML (unclosed flow mapping)
 		updates := []PinnedUpdate{
 			{
-				OldUses: "name: Test",
-				NewUses: "invalid::yaml::syntax:",
+				OldUses: "actions/checkout@v4",
+				NewUses: "{unclosed",
 			},
 		}
 

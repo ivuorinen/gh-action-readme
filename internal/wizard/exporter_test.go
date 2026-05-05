@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	testWizardOrg      = "testorg"
-	testWizardRepo     = "testrepo"
+	testWizardOrg      = testutil.WizardOrgTest
+	testWizardRepo     = testutil.WizardRepoTest
 	testWizardVersion  = "1.0.0"
 	testWizardThemeGH  = appconstants.ThemeGitHub
 	testWizardFormatMD = appconstants.OutputFormatMarkdown
@@ -62,7 +62,7 @@ func createTestConfig() *internal.AppConfig {
 		AnalyzeDependencies: true,
 		ShowSecurityInfo:    false,
 		Variables:           map[string]string{"TEST_VAR": "test_value"},
-		Permissions:         map[string]string{permScopeContents: permissionRead},
+		Permissions:         map[string]string{appconstants.PermScopeContents: appconstants.PermissionRead},
 		RunsOn:              []string{"ubuntu-latest"},
 	}
 }
