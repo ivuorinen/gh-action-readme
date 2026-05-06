@@ -154,7 +154,7 @@ func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 				return configPath, "", ""
 			},
 			expectError: false,
-			checkFunc:   checkThemeAndFormat(testutil.TestThemeGitHub, "html"),
+			checkFunc:   checkThemeAndFormat(testutil.TestThemeGitHub, appconstants.OutputFormatHTML),
 			description: "Should load global config only",
 		},
 		{
@@ -176,7 +176,7 @@ func TestConfigurationLoaderLoadConfiguration(t *testing.T) {
 				return globalPath, repoRoot, ""
 			},
 			expectError: false,
-			checkFunc:   checkThemeAndFormat(testutil.TestThemeMinimal, "md"),
+			checkFunc:   checkThemeAndFormat(testutil.TestThemeMinimal, appconstants.OutputFormatMarkdown),
 			description: "Repo config should override global",
 		},
 		{
@@ -270,7 +270,7 @@ func TestConfigurationLoaderLoadGlobalConfig(t *testing.T) {
 			checkFunc: func(t *testing.T, config *AppConfig) {
 				t.Helper()
 				testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme)
-				testutil.AssertEqual(t, "html", config.OutputFormat)
+				testutil.AssertEqual(t, appconstants.OutputFormatHTML, config.OutputFormat)
 				testutil.AssertEqual(t, true, config.Verbose)
 			},
 			description: "Should load valid global config",
@@ -348,7 +348,7 @@ func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 			name: "valid configuration",
 			config: &AppConfig{
 				Theme:        testutil.TestThemeDefault,
-				OutputFormat: "md",
+				OutputFormat: appconstants.OutputFormatMarkdown,
 				OutputDir:    ".",
 			},
 			expectError: false,
@@ -358,7 +358,7 @@ func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 			name: "invalid theme",
 			config: &AppConfig{
 				Theme:        "invalid-theme",
-				OutputFormat: "md",
+				OutputFormat: appconstants.OutputFormatMarkdown,
 			},
 			expectError: true,
 			description: "Invalid theme should error",
@@ -367,7 +367,7 @@ func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 			name: testutil.TestCaseNameEmptyTheme,
 			config: &AppConfig{
 				Theme:        "",
-				OutputFormat: "md",
+				OutputFormat: appconstants.OutputFormatMarkdown,
 			},
 			expectError: true,
 			description: "Empty theme should error",
@@ -380,7 +380,7 @@ func TestConfigurationLoaderValidateConfiguration(t *testing.T) {
 			name: "empty theme with valid outputdir - no error",
 			config: &AppConfig{
 				Theme:        "",
-				OutputFormat: "md",
+				OutputFormat: appconstants.OutputFormatMarkdown,
 				OutputDir:    ".",
 			},
 			expectError: false,
@@ -560,9 +560,9 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 			remoteURL:      "https://github.com/test/repo.git",
 			overrideKey:    testutil.TestRepoTestRepo,
 			overrideTheme:  testutil.TestThemeProfessional,
-			overrideFormat: "html",
+			overrideFormat: appconstants.OutputFormatHTML,
 			expectedTheme:  testutil.TestThemeProfessional,
-			expectedFormat: "html",
+			expectedFormat: appconstants.OutputFormatHTML,
 			description:    "Matching repo override should be applied",
 		}),
 		createRepoOverrideTestCase(repoOverrideTestParams{
@@ -570,9 +570,9 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 			remoteURL:      "https://github.com/different/repo.git",
 			overrideKey:    testutil.TestRepoTestRepo,
 			overrideTheme:  testutil.TestThemeProfessional,
-			overrideFormat: "html",
+			overrideFormat: appconstants.OutputFormatHTML,
 			expectedTheme:  testutil.TestThemeDefault,
-			expectedFormat: "md",
+			expectedFormat: appconstants.OutputFormatMarkdown,
 			description:    "No override when repo doesn't match",
 		}),
 		{
@@ -583,11 +583,11 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 
 				config := &AppConfig{
 					Theme:        testutil.TestThemeDefault,
-					OutputFormat: "md",
+					OutputFormat: appconstants.OutputFormatMarkdown,
 					RepoOverrides: map[string]AppConfig{
 						testutil.TestRepoTestRepo: {
 							Theme:        testutil.TestThemeProfessional,
-							OutputFormat: "html",
+							OutputFormat: appconstants.OutputFormatHTML,
 						},
 					},
 				}
@@ -595,7 +595,7 @@ func TestConfigurationLoaderApplyRepoOverrides(t *testing.T) {
 				return config, tmpDir
 			},
 			expectedTheme:  testutil.TestThemeDefault,
-			expectedFormat: "md",
+			expectedFormat: appconstants.OutputFormatMarkdown,
 			description:    "No override when not a git repository",
 		},
 	}
@@ -726,12 +726,12 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 	tests := []repoOverrideTestCase{
 		createRepoOverrideTestCase(repoOverrideTestParams{
 			name:           "override applied with valid repo root",
-			remoteURL:      "https://github.com/myorg/myrepo.git",
-			overrideKey:    "myorg/myrepo",
+			remoteURL:      testutil.TestURLGitHubMyorgMyrepo,
+			overrideKey:    testutil.TestRepoMyorgMyrepo,
 			overrideTheme:  testutil.TestThemeGitHub,
-			overrideFormat: "json",
-			expectedTheme:  "github",
-			expectedFormat: "json",
+			overrideFormat: appconstants.OutputFormatJSON,
+			expectedTheme:  testutil.TestThemeGitHub,
+			expectedFormat: appconstants.OutputFormatJSON,
 			description:    "Should apply repo override for detected repository",
 		}),
 		{
@@ -741,11 +741,11 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 
 				config := &AppConfig{
 					Theme:        testutil.TestThemeDefault,
-					OutputFormat: "md",
+					OutputFormat: appconstants.OutputFormatMarkdown,
 					RepoOverrides: map[string]AppConfig{
-						"myorg/myrepo": {
+						testutil.TestRepoMyorgMyrepo: {
 							Theme:        testutil.TestThemeGitHub,
-							OutputFormat: "json",
+							OutputFormat: appconstants.OutputFormatJSON,
 						},
 					},
 				}
@@ -753,7 +753,7 @@ func TestConfigurationLoaderApplyRepoOverridesWithRepoRoot(t *testing.T) {
 				return config, ""
 			},
 			expectedTheme:  testutil.TestThemeDefault,
-			expectedFormat: "md",
+			expectedFormat: appconstants.OutputFormatMarkdown,
 			description:    "Should not apply override when repo root is empty",
 		},
 	}

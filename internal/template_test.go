@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,18 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testTplTestOrg     = testutil.WizardOrgTest
+	testTplTestRepo    = testutil.WizardRepoTest
+	testTplGitOrg      = "git-org"
+	testTplConfigOrg   = "config-org"
+	testTplRepoRoot    = "/repo"
+	testTplOrgName     = "ivuorinen"
+	testTplRefMain     = "@main"
+	testTplBranchMain  = "main"
+	testTplActionsRepo = "actions"
+)
+
 // TestGetFieldWithFallback_GitValueReturned kills the CONDITIONALS_NEGATION mutation at
 // template.go:69 (gitValue != "" → == "") by verifying that a non-empty gitValue is
 // returned directly, not the configValue or defaultValue.
@@ -18,10 +31,10 @@ func TestGetFieldWithFallback_GitValueReturned(t *testing.T) {
 	td := &TemplateData{
 		ActionYML: &ActionYML{},
 		Git: git.RepoInfo{
-			Organization: "git-org",
+			Organization: testTplGitOrg,
 		},
 		Config: &AppConfig{
-			Organization: "config-org",
+			Organization: testTplConfigOrg,
 		},
 	}
 
@@ -32,8 +45,8 @@ func TestGetFieldWithFallback_GitValueReturned(t *testing.T) {
 		"default-org",
 	)
 
-	if got != "git-org" {
-		t.Errorf("getFieldWithFallback() = %q, want %q", got, "git-org")
+	if got != testTplGitOrg {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, testTplGitOrg)
 	}
 }
 
@@ -44,7 +57,7 @@ func TestGetFieldWithFallback_ConfigFallback(t *testing.T) {
 		ActionYML: &ActionYML{},
 		Git:       git.RepoInfo{},
 		Config: &AppConfig{
-			Organization: "config-org",
+			Organization: testTplConfigOrg,
 		},
 	}
 
@@ -55,8 +68,8 @@ func TestGetFieldWithFallback_ConfigFallback(t *testing.T) {
 		"default-org",
 	)
 
-	if got != "config-org" {
-		t.Errorf("getFieldWithFallback() = %q, want %q", got, "config-org")
+	if got != testTplConfigOrg {
+		t.Errorf("getFieldWithFallback() = %q, want %q", got, testTplConfigOrg)
 	}
 }
 
@@ -86,8 +99,8 @@ func TestGetFieldWithFallback_DefaultValue(t *testing.T) {
 func TestGetFieldWithFallback_NonTemplateData(t *testing.T) {
 	got := getFieldWithFallback(
 		"not-a-TemplateData",
-		func(_ *TemplateData) string { return "git-org" },
-		func(_ *TemplateData) string { return "config-org" },
+		func(_ *TemplateData) string { return testTplGitOrg },
+		func(_ *TemplateData) string { return testTplConfigOrg },
 		"default-org",
 	)
 
@@ -146,31 +159,31 @@ func TestExtractActionSubdirectory(t *testing.T) {
 		{
 			name:       testutil.TestCaseNameSubdirAction,
 			actionPath: "/repo/actions/csharp-build/action.yml",
-			repoRoot:   "/repo",
+			repoRoot:   testTplRepoRoot,
 			want:       "actions/csharp-build",
 		},
 		{
 			name:       "single level subdirectory",
 			actionPath: testutil.TestRepoBuildActionPath,
-			repoRoot:   "/repo",
+			repoRoot:   testTplRepoRoot,
 			want:       "build",
 		},
 		{
 			name:       "deeply nested subdirectory",
 			actionPath: "/repo/a/b/c/d/action.yml",
-			repoRoot:   "/repo",
+			repoRoot:   testTplRepoRoot,
 			want:       "a/b/c/d",
 		},
 		{
 			name:       testutil.TestCaseNameRootAction,
 			actionPath: testutil.TestRepoActionPath,
-			repoRoot:   "/repo",
+			repoRoot:   testTplRepoRoot,
 			want:       "",
 		},
 		{
 			name:       "empty action path",
 			actionPath: "",
-			repoRoot:   "/repo",
+			repoRoot:   testTplRepoRoot,
 			want:       "",
 		},
 		{
@@ -220,44 +233,44 @@ func TestBuildUsesString(t *testing.T) {
 			name: "monorepo with subdirectory",
 			td: &TemplateData{
 				ActionPath: "/repo/actions/csharp-build/action.yml",
-				RepoRoot:   "/repo",
+				RepoRoot:   testTplRepoRoot,
 			},
-			org:     "ivuorinen",
-			repo:    "actions",
-			version: "@main",
+			org:     testTplOrgName,
+			repo:    testTplActionsRepo,
+			version: testTplRefMain,
 			want:    "ivuorinen/actions/actions/csharp-build@main",
 		},
 		{
 			name: testutil.TestCaseNameRootAction,
 			td: &TemplateData{
 				ActionPath: testutil.TestRepoActionPath,
-				RepoRoot:   "/repo",
+				RepoRoot:   testTplRepoRoot,
 			},
-			org:     "ivuorinen",
+			org:     testTplOrgName,
 			repo:    "my-action",
-			version: "@main",
+			version: testTplRefMain,
 			want:    "ivuorinen/my-action@main",
 		},
 		{
 			name: "empty org",
 			td: &TemplateData{
 				ActionPath: testutil.TestRepoBuildActionPath,
-				RepoRoot:   "/repo",
+				RepoRoot:   testTplRepoRoot,
 			},
 			org:     "",
-			repo:    "actions",
-			version: "@main",
+			repo:    testTplActionsRepo,
+			version: testTplRefMain,
 			want:    "your-org/your-action@v1",
 		},
 		{
 			name: "empty repo",
 			td: &TemplateData{
 				ActionPath: testutil.TestRepoBuildActionPath,
-				RepoRoot:   "/repo",
+				RepoRoot:   testTplRepoRoot,
 			},
-			org:     "ivuorinen",
+			org:     testTplOrgName,
 			repo:    "",
-			version: "@main",
+			version: testTplRefMain,
 			want:    "your-org/your-action@v1",
 		},
 		{
@@ -266,9 +279,9 @@ func TestBuildUsesString(t *testing.T) {
 				ActionPath: "",
 				RepoRoot:   "",
 			},
-			org:     "ivuorinen",
-			repo:    "actions",
-			version: "@v1",
+			org:     testTplOrgName,
+			repo:    testTplActionsRepo,
+			version: appconstants.VersionRefV1,
 			want:    "ivuorinen/actions@v1",
 		},
 	}
@@ -301,13 +314,15 @@ func TestGetActionVersion(t *testing.T) {
 	}{
 		{
 			name: "config version override",
-			data: newTemplateData(templateDataParams{version: "v2.0.0", useDefaultBranch: true, defaultBranch: "main"}),
+			data: newTemplateData(
+				templateDataParams{version: "v2.0.0", useDefaultBranch: true, defaultBranch: testTplBranchMain},
+			),
 			want: "v2.0.0",
 		},
 		{
 			name: "use default branch when enabled",
-			data: newTemplateData(templateDataParams{useDefaultBranch: true, defaultBranch: "main"}),
-			want: "main",
+			data: newTemplateData(templateDataParams{useDefaultBranch: true, defaultBranch: testTplBranchMain}),
+			want: testTplBranchMain,
 		},
 		{
 			name: "use default branch master",
@@ -316,23 +331,23 @@ func TestGetActionVersion(t *testing.T) {
 		},
 		{
 			name: "fallback to v1 when default branch disabled",
-			data: newTemplateData(templateDataParams{useDefaultBranch: false, defaultBranch: "main"}),
-			want: "v1",
+			data: newTemplateData(templateDataParams{useDefaultBranch: false, defaultBranch: testTplBranchMain}),
+			want: appconstants.VersionTagV1,
 		},
 		{
 			name: "fallback to v1 when default branch not detected",
 			data: newTemplateData(templateDataParams{useDefaultBranch: true}),
-			want: "v1",
+			want: appconstants.VersionTagV1,
 		},
 		{
 			name: "fallback to v1 when data is invalid",
 			data: "invalid",
-			want: "v1",
+			want: appconstants.VersionTagV1,
 		},
 		{
 			name: "fallback to v1 when data is nil",
 			data: nil,
-			want: "v1",
+			want: appconstants.VersionTagV1,
 		},
 	}
 
@@ -362,11 +377,11 @@ func TestGetGitUsesString(t *testing.T) {
 			data: newTemplateData(templateDataParams{
 				actionName:       "C# Build",
 				useDefaultBranch: true,
-				defaultBranch:    "main",
-				org:              "ivuorinen",
-				repo:             "actions",
+				defaultBranch:    testTplBranchMain,
+				org:              testTplOrgName,
+				repo:             testTplActionsRepo,
 				actionPath:       "/repo/csharp-build/action.yml",
-				repoRoot:         "/repo",
+				repoRoot:         testTplRepoRoot,
 			}),
 			want: "ivuorinen/actions/csharp-build@main",
 		},
@@ -376,11 +391,11 @@ func TestGetGitUsesString(t *testing.T) {
 				actionName:       "Build Action",
 				version:          "v1.0.0",
 				useDefaultBranch: true,
-				defaultBranch:    "main",
+				defaultBranch:    testTplBranchMain,
 				org:              "org",
-				repo:             "actions",
+				repo:             testTplActionsRepo,
 				actionPath:       testutil.TestRepoBuildActionPath,
-				repoRoot:         "/repo",
+				repoRoot:         testTplRepoRoot,
 			}),
 			want: "org/actions/build@v1.0.0",
 		},
@@ -393,7 +408,7 @@ func TestGetGitUsesString(t *testing.T) {
 				org:              "user",
 				repo:             "my-action",
 				actionPath:       testutil.TestRepoActionPath,
-				repoRoot:         "/repo",
+				repoRoot:         testTplRepoRoot,
 			}),
 			want: "user/my-action@develop",
 		},
@@ -402,11 +417,11 @@ func TestGetGitUsesString(t *testing.T) {
 			data: newTemplateData(templateDataParams{
 				actionName:       testutil.TestActionName,
 				useDefaultBranch: false,
-				defaultBranch:    "main",
+				defaultBranch:    testTplBranchMain,
 				org:              "org",
 				repo:             "test",
 				actionPath:       testutil.TestRepoActionPath,
-				repoRoot:         "/repo",
+				repoRoot:         testTplRepoRoot,
 			}),
 			want: "org/test@v1",
 		},
@@ -441,12 +456,12 @@ func TestFormatVersion(t *testing.T) {
 		{
 			name:    "empty version",
 			version: "",
-			want:    "@v1",
+			want:    appconstants.VersionRefV1,
 		},
 		{
 			name:    "whitespace only version",
 			version: "   ",
-			want:    "@v1",
+			want:    appconstants.VersionRefV1,
 		},
 		{
 			name:    "version without @",
@@ -460,8 +475,8 @@ func TestFormatVersion(t *testing.T) {
 		},
 		{
 			name:    "main branch",
-			version: "main",
-			want:    "@main",
+			version: testTplBranchMain,
+			want:    testTplRefMain,
 		},
 		{
 			name:    "version with @ and spaces",
@@ -507,13 +522,13 @@ func TestBuildTemplateData(t *testing.T) {
 				Description: "Test description",
 			},
 			config: &AppConfig{
-				Organization: "testorg",
-				Repository:   "testrepo",
+				Organization: testTplTestOrg,
+				Repository:   testTplTestRepo,
 			},
 			repoRoot:   ".",
 			actionPath: appconstants.ActionFileNameYML,
-			wantOrg:    "testorg",
-			wantRepo:   "testrepo",
+			wantOrg:    testTplTestOrg,
+			wantRepo:   testTplTestRepo,
 		},
 		{
 			name: "action without config overrides",
@@ -596,19 +611,23 @@ func TestBuildTemplateData_RealGitRepo(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/testorg/testrepo.git")
+	testutil.CreateGitRepoWithRemote(
+		t,
+		tmpDir,
+		fmt.Sprintf("https://github.com/%s/%s.git", testTplTestOrg, testTplTestRepo),
+	)
 
 	action := &ActionYML{Name: "Test", Description: "test"}
 	config := &AppConfig{}
 
 	data := BuildTemplateData(action, config, tmpDir, filepath.Join(tmpDir, appconstants.ActionFileNameYML))
 
-	if data.Git.Organization != "testorg" {
-		t.Errorf("expected Git.Organization = %q, got %q", "testorg", data.Git.Organization)
+	if data.Git.Organization != testTplTestOrg {
+		t.Errorf("expected Git.Organization = %q, got %q", testTplTestOrg, data.Git.Organization)
 	}
 
-	if data.Git.Repository != "testrepo" {
-		t.Errorf("expected Git.Repository = %q, got %q", "testrepo", data.Git.Repository)
+	if data.Git.Repository != testTplTestRepo {
+		t.Errorf("expected Git.Repository = %q, got %q", testTplTestRepo, data.Git.Repository)
 	}
 }
 
@@ -764,8 +783,8 @@ func TestAnalyzeDependencies(t *testing.T) {
 			actionPath := prepareTestActionFile(t, tt.actionPath)
 
 			gitInfo := git.RepoInfo{
-				Organization: "testorg",
-				Repository:   "testrepo",
+				Organization: testTplTestOrg,
+				Repository:   testTplTestRepo,
 			}
 
 			result := analyzeDependencies(actionPath, tt.config, gitInfo)

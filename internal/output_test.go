@@ -461,7 +461,7 @@ func TestFormatContextualError_OnlyDetails(t *testing.T) {
 
 	assertSectionPresence(t, got, "Details:", true)
 	assertSectionPresence(t, got, "Suggestions:", false)
-	assertSectionPresence(t, got, "For more help", false)
+	assertSectionPresence(t, got, testGenHelpSection, false)
 }
 
 // TestFormatContextualError_OnlySuggestions kills the CONDITIONALS_BOUNDARY/NEGATION at
@@ -474,7 +474,7 @@ func TestFormatContextualError_OnlySuggestions(t *testing.T) {
 
 	assertSectionPresence(t, got, "Suggestions:", true)
 	assertSectionPresence(t, got, "Details:", false)
-	assertSectionPresence(t, got, "For more help", false)
+	assertSectionPresence(t, got, testGenHelpSection, false)
 }
 
 // TestFormatContextualError_OnlyHelpURL kills the CONDITIONALS_NEGATION at output.go:162
@@ -485,7 +485,7 @@ func TestFormatContextualError_OnlyHelpURL(t *testing.T) {
 		WithHelpURL(testutil.TestURLHelp)
 	got := output.FormatContextualError(err)
 
-	assertSectionPresence(t, got, "For more help", true)
+	assertSectionPresence(t, got, testGenHelpSection, true)
 	assertSectionPresence(t, got, "Details:", false)
 	assertSectionPresence(t, got, "Suggestions:", false)
 }
@@ -497,7 +497,7 @@ func TestFormatContextualError_NoSections(t *testing.T) {
 	err := apperrors.New(appconstants.ErrCodeFileNotFound, testutil.TestMsgFileNotFound)
 	got := output.FormatContextualError(err)
 
-	for _, absent := range []string{"Details:", "Suggestions:", "For more help"} {
+	for _, absent := range []string{"Details:", "Suggestions:", testGenHelpSection} {
 		assertSectionPresence(t, got, absent, false)
 	}
 }
@@ -647,13 +647,13 @@ func TestFormatHelpURLSection(t *testing.T) {
 			name:         testutil.TestScenarioColorDisabled,
 			noColor:      true,
 			helpURL:      testutil.TestURLHelp,
-			wantContains: []string{"For more help", testutil.TestURLHelp},
+			wantContains: []string{testGenHelpSection, testutil.TestURLHelp},
 		},
 		{
 			name:         testutil.TestScenarioColorEnabled,
 			noColor:      false,
 			helpURL:      "https://docs.example.com",
-			wantContains: []string{"For more help", "https://docs.example.com"},
+			wantContains: []string{testGenHelpSection, "https://docs.example.com"},
 		},
 	}
 

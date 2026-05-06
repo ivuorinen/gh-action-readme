@@ -11,6 +11,20 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testConfigFormatMD       = appconstants.OutputFormatMarkdown
+	testConfigFormatHTML     = appconstants.OutputFormatHTML
+	testConfigCustomTemplate = "custom-template.tmpl"
+	testConfigPermRead       = testutil.PermissionRead
+	testConfigPermWrite      = testutil.PermissionWrite
+	testConfigPermExisting   = testutil.ExistingOrgName
+	testConfigPermNew        = testutil.NewOrgName
+	testConfigVarName        = "VAR1"
+	testConfigVarName2       = "VAR2"
+	testConfigVarValue1      = "value1"
+	testConfigVarValue2      = "value2"
+)
+
 func TestInitConfig(t *testing.T) {
 
 	tests := []struct {
@@ -26,7 +40,7 @@ func TestInitConfig(t *testing.T) {
 			setupFunc:  nil,
 			expected: &AppConfig{
 				Theme:        testutil.TestThemeDefault,
-				OutputFormat: "md",
+				OutputFormat: testConfigFormatMD,
 				OutputDir:    ".",
 				Template:     testutil.TestTemplateWithPrefix,
 				Schema:       "schemas/schema.json",
@@ -49,9 +63,9 @@ func TestInitConfig(t *testing.T) {
 			},
 			expected: &AppConfig{
 				Theme:        testutil.TestThemeProfessional,
-				OutputFormat: "html",
+				OutputFormat: testConfigFormatHTML,
 				OutputDir:    "docs",
-				Template:     "custom-template.tmpl",
+				Template:     testConfigCustomTemplate,
 				Schema:       "custom-schema.json",
 				Verbose:      true,
 				Quiet:        false,
@@ -150,7 +164,7 @@ func TestLoadConfiguration(t *testing.T) {
 				testutil.AssertEqual(t, testutil.TestThemeProfessional, config.Theme)
 				testutil.AssertEqual(t, "output", config.OutputDir)
 				// Should inherit from repo level
-				testutil.AssertEqual(t, "html", config.OutputFormat)
+				testutil.AssertEqual(t, testConfigFormatHTML, config.OutputFormat)
 				// Should inherit GitHub token from global config
 				testutil.AssertEqual(t, testutil.TestTokenStd, config.GitHubToken)
 			},
@@ -316,7 +330,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 
 	// Should have default values
 	testutil.AssertEqual(t, testutil.TestThemeDefault, config.Theme)
-	testutil.AssertEqual(t, "md", config.OutputFormat)
+	testutil.AssertEqual(t, testConfigFormatMD, config.OutputFormat)
 	testutil.AssertEqual(t, ".", config.OutputDir)
 }
 
@@ -450,11 +464,11 @@ func TestConfigMerging(t *testing.T) {
 	testutil.AssertNoError(t, err)
 
 	// Should have merged values
-	testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme) // from repo config
-	testutil.AssertEqual(t, "html", config.OutputFormat)            // from repo config
-	testutil.AssertEqual(t, true, config.Verbose)                   // from repo config
-	testutil.AssertEqual(t, "base-token", config.GitHubToken)       // from global config
-	testutil.AssertEqual(t, "schemas/schema.json", config.Schema)   // default value
+	testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme)    // from repo config
+	testutil.AssertEqual(t, testConfigFormatHTML, config.OutputFormat) // from repo config
+	testutil.AssertEqual(t, true, config.Verbose)                      // from repo config
+	testutil.AssertEqual(t, "base-token", config.GitHubToken)          // from global config
+	testutil.AssertEqual(t, "schemas/schema.json", config.Schema)      // default value
 }
 
 // TestGetGitHubToken tests GitHub token resolution with different priority levels.
@@ -538,55 +552,58 @@ func TestMergeMapFields(t *testing.T) {
 		createMapMergeTest(
 			"merge permissions into empty dst",
 			nil,
-			map[string]string{"read": "read", "write": "write"},
-			map[string]string{"read": "read", "write": "write"},
+			map[string]string{testConfigPermRead: testConfigPermRead, testConfigPermWrite: testConfigPermWrite},
+			map[string]string{testConfigPermRead: testConfigPermRead, testConfigPermWrite: testConfigPermWrite},
 			true, // isPermissions
 		),
 		createMapMergeTest(
 			"merge permissions into existing dst",
-			map[string]string{"read": "existing"},
-			map[string]string{"read": "new", "write": "write"},
-			map[string]string{"read": "new", "write": "write"},
+			map[string]string{testConfigPermRead: testConfigPermExisting},
+			map[string]string{testConfigPermRead: testConfigPermNew, testConfigPermWrite: testConfigPermWrite},
+			map[string]string{testConfigPermRead: testConfigPermNew, testConfigPermWrite: testConfigPermWrite},
 			true, // isPermissions
 		),
 		createMapMergeTest(
 			"merge variables into empty dst",
 			nil,
-			map[string]string{"VAR1": "value1", "VAR2": "value2"},
-			map[string]string{"VAR1": "value1", "VAR2": "value2"},
+			map[string]string{testConfigVarName: testConfigVarValue1, testConfigVarName2: testConfigVarValue2},
+			map[string]string{testConfigVarName: testConfigVarValue1, testConfigVarName2: testConfigVarValue2},
 			false, // isPermissions
 		),
 		createMapMergeTest(
 			"merge variables into existing dst",
-			map[string]string{"VAR1": "existing"},
-			map[string]string{"VAR1": "new", "VAR2": "value2"},
-			map[string]string{"VAR1": "new", "VAR2": "value2"},
+			map[string]string{testConfigVarName: testConfigPermExisting},
+			map[string]string{testConfigVarName: testConfigPermNew, testConfigVarName2: testConfigVarValue2},
+			map[string]string{testConfigVarName: testConfigPermNew, testConfigVarName2: testConfigVarValue2},
 			false, // isPermissions
 		),
 		{
 			name: "merge both permissions and variables",
 			dst: &AppConfig{
-				Permissions: map[string]string{"read": "existing"},
+				Permissions: map[string]string{testConfigPermRead: testConfigPermExisting},
 			},
 			src: &AppConfig{
-				Permissions: map[string]string{"write": "write"},
-				Variables:   map[string]string{"VAR1": "value1"},
+				Permissions: map[string]string{testConfigPermWrite: testConfigPermWrite},
+				Variables:   map[string]string{testConfigVarName: testConfigVarValue1},
 			},
 			expected: &AppConfig{
-				Permissions: map[string]string{"read": "existing", "write": "write"},
-				Variables:   map[string]string{"VAR1": "value1"},
+				Permissions: map[string]string{
+					testConfigPermRead:  testConfigPermExisting,
+					testConfigPermWrite: testConfigPermWrite,
+				},
+				Variables: map[string]string{testConfigVarName: testConfigVarValue1},
 			},
 		},
 		{
 			name: "empty src does not affect dst",
 			dst: &AppConfig{
-				Permissions: map[string]string{"read": "read"},
-				Variables:   map[string]string{"VAR1": "value1"},
+				Permissions: map[string]string{testConfigPermRead: testConfigPermRead},
+				Variables:   map[string]string{testConfigVarName: testConfigVarValue1},
 			},
 			src: &AppConfig{},
 			expected: &AppConfig{
-				Permissions: map[string]string{"read": "read"},
-				Variables:   map[string]string{"VAR1": "value1"},
+				Permissions: map[string]string{testConfigPermRead: testConfigPermRead},
+				Variables:   map[string]string{testConfigVarName: testConfigVarValue1},
 			},
 		},
 	}
@@ -1109,7 +1126,7 @@ func TestResolveTemplatePathEdgeCases(t *testing.T) {
 				t.Helper()
 				tmpDir, cleanup := testutil.TempDir(t)
 				// Create template in current directory
-				templateName := "custom-template.tmpl"
+				templateName := testConfigCustomTemplate
 				testutil.WriteFileInDir(t, tmpDir, templateName, "custom template")
 
 				// Change to tmpDir
@@ -1125,8 +1142,8 @@ func TestResolveTemplatePathEdgeCases(t *testing.T) {
 				// When the file exists in cwd, resolveTemplatePath must return the
 				// original relative name (not a binary-dir-resolved path).
 				// This assertion fails if the os.Stat branch is mutated to err != nil.
-				if result != "custom-template.tmpl" {
-					t.Errorf("expected %q (original path), got %q", "custom-template.tmpl", result)
+				if result != testConfigCustomTemplate {
+					t.Errorf("expected %q (original path), got %q", testConfigCustomTemplate, result)
 				}
 			},
 			description: "Templates in current directory should be found",

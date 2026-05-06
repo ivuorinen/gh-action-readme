@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -29,78 +28,6 @@ func TestGetCurrentDir(t *testing.T) {
 		// Verify the directory actually exists
 		testutil.AssertFileExists(t, currentDir)
 	})
-}
-
-func TestSetupGeneratorContext(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name   string
-		config *internal.AppConfig
-	}{
-		{
-			name: "basic config",
-			config: &internal.AppConfig{
-				Theme:        "default",
-				OutputFormat: "md",
-				OutputDir:    ".",
-				Verbose:      false,
-				Quiet:        false,
-			},
-		},
-		{
-			name: "verbose config",
-			config: &internal.AppConfig{
-				Theme:        "github",
-				OutputFormat: "html",
-				OutputDir:    "/tmp",
-				Verbose:      true,
-				Quiet:        false,
-			},
-		},
-		{
-			name: "quiet config",
-			config: &internal.AppConfig{
-				Theme:        "minimal",
-				OutputFormat: "json",
-				OutputDir:    ".",
-				Verbose:      false,
-				Quiet:        true,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			generator, currentDir, err := SetupGeneratorContext(tt.config)
-
-			// Verify no error occurred
-			testutil.AssertNoError(t, err)
-
-			// Verify generator was created
-			if generator == nil {
-				t.Error("expected generator to be created")
-
-				return
-			}
-
-			// Verify current directory is returned
-			if currentDir == "" {
-				t.Error("expected non-empty current directory")
-			}
-
-			if !filepath.IsAbs(currentDir) {
-				t.Errorf("expected absolute path, got: %s", currentDir)
-			}
-
-			// Verify generator has the correct config
-			if generator.Config != tt.config {
-				t.Error("expected generator to have the provided config")
-			}
-		})
-	}
 }
 
 func TestFindGitRepoRoot(t *testing.T) {

@@ -14,6 +14,11 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
+var (
+	reGitHubURLNoSuffix   = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/\.]+)`)
+	reGitHubURLWithSuffix = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/]+)\.git$`)
+)
+
 // RepoInfo contains information about a Git repository.
 type RepoInfo struct {
 	Organization  string `json:"organization"`
@@ -199,23 +204,12 @@ func branchExists(repoRoot, branch string) bool {
 
 // parseGitHubURL extracts organization and repository name from various GitHub URL formats.
 func parseGitHubURL(url string) (organization, repository string) {
-	// Common GitHub URL patterns
-	patterns := []string{
-		`github\.com[:/]([^/]+)/([^/\.]+)`,     // github.com:org/repo or github.com/org/repo
-		`github\.com[:/]([^/]+)/([^/]+)\.git$`, // github.com:org/repo.git or github.com/org/repo.git
-	}
-
-	for _, pattern := range patterns {
-		re := regexp.MustCompile(pattern)
+	for _, re := range []*regexp.Regexp{reGitHubURLWithSuffix, reGitHubURLNoSuffix} {
 		matches := re.FindStringSubmatch(url)
 		if len(matches) >= 3 {
-			org := matches[1]
-			repo := matches[2]
+			repo := strings.TrimSuffix(matches[2], appconstants.DirGit)
 
-			// Remove .git suffix if present
-			repo = strings.TrimSuffix(repo, appconstants.DirGit)
-
-			return org, repo
+			return matches[1], repo
 		}
 	}
 

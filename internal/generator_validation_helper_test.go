@@ -41,7 +41,7 @@ func TestAssertMessageCountsHelper(t *testing.T) {
 					BoldMessages:    []string{"bold1", "bold2"},
 					SuccessMessages: []string{"success1"},
 					WarningMessages: []string{},
-					ErrorMessages:   []string{"error1", "error2", "error3"},
+					ErrorMessages:   []string{testGenErrMsg1, testGenErrMsg2, testGenErrMsg3},
 					InfoMessages:    []string{"info1"},
 				},
 			},

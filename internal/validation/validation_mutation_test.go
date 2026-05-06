@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
+
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -299,7 +301,13 @@ func TestIsVersionPinnedMutationResistance(t *testing.T) {
 		),
 
 		// Major-only versions (not pinned)
-		makePinnedTestCase("major_only_not_pinned", "v1", false, true, "v1 not semver, not pinned"),
+		makePinnedTestCase(
+			"major_only_not_pinned",
+			appconstants.VersionTagV1,
+			false,
+			true,
+			"v1 not semver, not pinned",
+		),
 		makePinnedTestCase(
 			"major_minor_not_pinned",
 			"v1.2",
@@ -404,7 +412,7 @@ func TestVersionValidationLogicCombinations(t *testing.T) {
 		},
 		{
 			name:        "v1_not_semver_not_pinned",
-			version:     "v1",
+			version:     appconstants.VersionTagV1,
 			isSHA:       false,
 			isSemver:    false,
 			isPinned:    false,

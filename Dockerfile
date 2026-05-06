@@ -16,6 +16,12 @@ COPY schemas /usr/local/share/gh-action-readme/schemas
 # Set environment variable for schema path
 ENV GH_ACTION_README_SCHEMA_PATH=/usr/local/share/gh-action-readme/schemas
 
+# Run as non-root (numeric UID required for scratch/distroless images with no /etc/passwd)
+USER 65532:65532
+
+# No health check — this is a CLI tool, not a long-running service
+HEALTHCHECK NONE
+
 # Set the binary as entrypoint
 ENTRYPOINT ["/usr/local/bin/gh-action-readme"]
 

@@ -134,3 +134,71 @@ const (
 	// MsgConfigurationExportedTo is the configuration exported to success message.
 	MsgConfigurationExportedTo = "Configuration exported to: %s"
 )
+
+// Version tag constants.
+const (
+	// VersionTagV1 is the default version tag fallback.
+	VersionTagV1 = "v1"
+	// VersionRefV1 is the default version reference with @ prefix.
+	VersionRefV1 = "@v1"
+)
+
+// GitHub Actions permission level constants.
+const (
+	// PermissionRead is the read permission level.
+	PermissionRead = "read"
+	// PermissionWrite is the write permission level.
+	PermissionWrite = "write"
+	// PermScopeActions is the actions permission scope.
+	PermScopeActions = "actions"
+	// PermScopeChecks is the checks permission scope.
+	PermScopeChecks = "checks"
+	// PermScopeContents is the contents permission scope.
+	PermScopeContents = "contents"
+	// PermScopeDeployments is the deployments permission scope.
+	PermScopeDeployments = "deployments"
+	// PermScopeIssues is the issues permission scope.
+	PermScopeIssues = "issues"
+	// PermScopePackages is the packages permission scope.
+	PermScopePackages = "packages"
+	// PermScopePages is the pages permission scope.
+	PermScopePages = "pages"
+	// PermScopePullRequests is the pull-requests permission scope.
+	PermScopePullRequests = "pull-requests"
+	// PermScopeRepositoryProjects is the repository-projects permission scope.
+	PermScopeRepositoryProjects = "repository-projects"
+	// PermScopeSecurityEvents is the security-events permission scope.
+	PermScopeSecurityEvents = "security-events"
+	// PermScopeStatuses is the statuses permission scope.
+	PermScopeStatuses = "statuses"
+	// PermScopeAttestations is the attestations permission scope.
+	PermScopeAttestations = "attestations"
+	// PermScopeDiscussions is the discussions permission scope.
+	PermScopeDiscussions = "discussions"
+	// PermScopeIDToken is the id-token permission scope.
+	PermScopeIDToken = "id-token"
+)
+
+// Node runtime constants.
+const (
+	// NodeRuntimeNode12 is the legacy Node.js 12 runtime (removed by GitHub January 2024).
+	NodeRuntimeNode12 = "node12"
+	// NodeRuntimeNode16 is the legacy Node.js 16 runtime (deprecated by GitHub).
+	NodeRuntimeNode16 = "node16"
+	// NodeRuntimeNode20 is the current Node.js 20 runtime identifier.
+	NodeRuntimeNode20 = "node20"
+	// NodeRuntimeNode24 is the Node.js 24 runtime identifier.
+	NodeRuntimeNode24 = "node24"
+)
+
+// Label constants.
+const (
+	// LabelGitHubAction is the label for GitHub Action badges and metadata.
+	LabelGitHubAction = "GitHub Action"
+)
+
+// Workflow type constants.
+const (
+	// ActivityWorkflowType is the activity icon used in default branding.
+	ActivityWorkflowType = "activity"
+)

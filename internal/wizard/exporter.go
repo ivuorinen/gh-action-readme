@@ -27,11 +27,15 @@ const (
 
 // ConfigExporter handles exporting configuration to various formats.
 type ConfigExporter struct {
-	output *internal.ColoredOutput
+	output internal.MessageLogger
 }
 
 // NewConfigExporter creates a new configuration exporter.
-func NewConfigExporter(output *internal.ColoredOutput) *ConfigExporter {
+func NewConfigExporter(output internal.MessageLogger) *ConfigExporter {
+	if output == nil {
+		output = internal.NewColoredOutput(false)
+	}
+
 	return &ConfigExporter{
 		output: output,
 	}

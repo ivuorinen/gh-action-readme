@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -26,73 +27,85 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 
 	return []permissionParsingTestCase{
 		{
-			name:     "off_by_one_indent_two_items",
-			yaml:     testutil.MustReadFixture(fixtureDir + "off-by-one-indent-two-items.yaml"),
-			expected: map[string]string{"contents": "read", "issues": "write"},
+			name: "off_by_one_indent_two_items",
+			yaml: testutil.MustReadFixture(fixtureDir + "off-by-one-indent-two-items.yaml"),
+			expected: map[string]string{
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
+			},
 			critical: true,
 		},
 		{
 			name: "off_by_one_indent_three_items",
 			yaml: testutil.MustReadFixture(fixtureDir + "off-by-one-indent-three-items.yaml"),
 			expected: map[string]string{
-				"contents":                       "read",
-				"issues":                         "write",
-				testutil.TestFixturePullRequests: "read",
+				testutil.PermissionContents:      testutil.PermissionRead,
+				testutil.PermissionIssues:        testutil.PermissionWrite,
+				testutil.TestFixturePullRequests: testutil.PermissionRead,
 			},
 			critical: true,
 		},
 		{
 			name:     "comment_position_at_boundary",
 			yaml:     testutil.MustReadFixture(fixtureDir + "comment-position-at-boundary.yaml"),
-			expected: map[string]string{"contents": "read"},
+			expected: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical: true,
 		},
 		{
 			name:     "comment_at_position_zero_parses",
 			yaml:     testutil.MustReadFixture(fixtureDir + "comment-at-position-zero-parses.yaml"),
-			expected: map[string]string{"contents": "read"},
+			expected: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical: true,
 		},
 		{
-			name:     "dash_prefix_with_spaces",
-			yaml:     testutil.MustReadFixture(fixtureDir + "dash-prefix-with-spaces.yaml"),
-			expected: map[string]string{"contents": "read", "issues": "write"},
+			name: "dash_prefix_with_spaces",
+			yaml: testutil.MustReadFixture(fixtureDir + "dash-prefix-with-spaces.yaml"),
+			expected: map[string]string{
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
+			},
 			critical: true,
 		},
 		{
-			name:     "mixed_dash_and_no_dash",
-			yaml:     testutil.MustReadFixture(fixtureDir + "mixed-dash-and-no-dash.yaml"),
-			expected: map[string]string{"contents": "read", "issues": "write"},
+			name: "mixed_dash_and_no_dash",
+			yaml: testutil.MustReadFixture(fixtureDir + "mixed-dash-and-no-dash.yaml"),
+			expected: map[string]string{
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
+			},
 			critical: true,
 		},
 		{
 			name:     "dedent_stops_parsing",
 			yaml:     testutil.MustReadFixture(fixtureDir + "dedent-stops-parsing.yaml"),
-			expected: map[string]string{"contents": "read"},
+			expected: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical: true,
 		},
 		{
-			name:     "empty_line_in_block_continues",
-			yaml:     testutil.MustReadFixture(fixtureDir + "empty-line-in-block-continues.yaml"),
-			expected: map[string]string{"contents": "read", "issues": "write"},
+			name: "empty_line_in_block_continues",
+			yaml: testutil.MustReadFixture(fixtureDir + "empty-line-in-block-continues.yaml"),
+			expected: map[string]string{
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
+			},
 			critical: false,
 		},
 		{
 			name:     "non_comment_line_stops_parsing",
 			yaml:     testutil.MustReadFixture(fixtureDir + "non-comment-line-stops-parsing.yaml"),
-			expected: map[string]string{"contents": "read"},
+			expected: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical: true,
 		},
 		{
 			name:     "exact_expected_indent",
 			yaml:     testutil.MustReadFixture(fixtureDir + "exact-expected-indent.yaml"),
-			expected: map[string]string{"contents": "read"},
+			expected: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical: true,
 		},
 		{
 			name:     "colon_in_value_preserved",
 			yaml:     testutil.MustReadFixture(fixtureDir + "colon-in-value-preserved.yaml"),
-			expected: map[string]string{"contents": "read:write"},
+			expected: map[string]string{testutil.PermissionContents: "read:write"},
 			critical: true,
 		},
 		{
@@ -122,7 +135,7 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 		{
 			name:     "inline_comment_removal",
 			yaml:     testutil.MustReadFixture(fixtureDir + "inline-comment-removal.yaml"),
-			expected: map[string]string{"contents": "read"},
+			expected: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical: true,
 		},
 		{
@@ -132,9 +145,12 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 			critical: true,
 		},
 		{
-			name:     "deeply_nested_indent",
-			yaml:     testutil.MustReadFixture(fixtureDir + "deeply-nested-indent.yaml"),
-			expected: map[string]string{"contents": "read", "issues": "write"},
+			name: "deeply_nested_indent",
+			yaml: testutil.MustReadFixture(fixtureDir + "deeply-nested-indent.yaml"),
+			expected: map[string]string{
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
+			},
 			critical: true,
 		},
 		{
@@ -147,20 +163,20 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 			name: "maximum_realistic_permissions",
 			yaml: testutil.MustReadFixture(fixtureDir + "maximum-realistic-permissions.yaml"),
 			expected: map[string]string{
-				"actions":                        "write",
-				"attestations":                   "write",
-				"checks":                         "write",
-				"contents":                       "write",
-				"deployments":                    "write",
-				"discussions":                    "write",
-				"id-token":                       "write",
-				"issues":                         "write",
-				"packages":                       "write",
-				"pages":                          "write",
-				testutil.TestFixturePullRequests: "write",
-				"repository-projects":            "write",
-				"security-events":                "write",
-				"statuses":                       "write",
+				testPermissionActions:                    testutil.PermissionWrite,
+				appconstants.PermScopeAttestations:       testutil.PermissionWrite,
+				appconstants.PermScopeChecks:             testutil.PermissionWrite,
+				testutil.PermissionContents:              testutil.PermissionWrite,
+				appconstants.PermScopeDeployments:        testutil.PermissionWrite,
+				appconstants.PermScopeDiscussions:        testutil.PermissionWrite,
+				appconstants.PermScopeIDToken:            testutil.PermissionWrite,
+				testutil.PermissionIssues:                testutil.PermissionWrite,
+				appconstants.PermScopePackages:           testutil.PermissionWrite,
+				appconstants.PermScopePages:              testutil.PermissionWrite,
+				appconstants.PermScopePullRequests:       testutil.PermissionWrite,
+				appconstants.PermScopeRepositoryProjects: testutil.PermissionWrite,
+				appconstants.PermScopeSecurityEvents:     testutil.PermissionWrite,
+				appconstants.PermScopeStatuses:           testutil.PermissionWrite,
 			},
 			critical: false,
 		},
@@ -243,16 +259,16 @@ func TestMergePermissionsMutationResistance(t *testing.T) {
 		{
 			name:         "nil_yaml_with_comment",
 			yamlPerms:    nil,
-			commentPerms: map[string]string{"contents": "read"},
-			expected:     map[string]string{"contents": "read"},
+			commentPerms: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
+			expected:     map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical:     true,
 			description:  "Nil YAML replaced by comment perms (first condition)",
 		},
 		{
 			name:         "yaml_with_nil_comment",
-			yamlPerms:    map[string]string{"contents": "write"},
+			yamlPerms:    map[string]string{testutil.PermissionContents: testutil.PermissionWrite},
 			commentPerms: nil,
-			expected:     map[string]string{"contents": "write"},
+			expected:     map[string]string{testutil.PermissionContents: testutil.PermissionWrite},
 			critical:     true,
 			description:  "Nil comment keeps YAML perms (second condition)",
 		},
@@ -266,34 +282,37 @@ func TestMergePermissionsMutationResistance(t *testing.T) {
 		},
 		{
 			name:         "yaml_overrides_comment_same_key",
-			yamlPerms:    map[string]string{"contents": "write"},
-			commentPerms: map[string]string{"contents": "read"},
-			expected:     map[string]string{"contents": "write"},
+			yamlPerms:    map[string]string{testutil.PermissionContents: testutil.PermissionWrite},
+			commentPerms: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
+			expected:     map[string]string{testutil.PermissionContents: testutil.PermissionWrite},
 			critical:     true,
 			description:  "YAML value wins conflict (exists check critical)",
 		},
 		{
 			name:         "non_conflicting_keys_merged",
-			yamlPerms:    map[string]string{"contents": "write"},
-			commentPerms: map[string]string{"issues": "read"},
-			expected:     map[string]string{"contents": "write", "issues": "read"},
-			critical:     true,
-			description:  "Non-conflicting keys both included",
+			yamlPerms:    map[string]string{testutil.PermissionContents: testutil.PermissionWrite},
+			commentPerms: map[string]string{testutil.PermissionIssues: testutil.PermissionRead},
+			expected: map[string]string{
+				testutil.PermissionContents: testutil.PermissionWrite,
+				testutil.PermissionIssues:   testutil.PermissionRead,
+			},
+			critical:    true,
+			description: "Non-conflicting keys both included",
 		},
 		{
 			name: "multiple_yaml_override_multiple_comment",
 			yamlPerms: map[string]string{
-				"contents": "write",
-				"issues":   "write",
+				testutil.PermissionContents: testutil.PermissionWrite,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
 			},
 			commentPerms: map[string]string{
-				"contents":                       "read",
-				testutil.TestFixturePullRequests: "read",
+				testutil.PermissionContents:      testutil.PermissionRead,
+				testutil.TestFixturePullRequests: testutil.PermissionRead,
 			},
 			expected: map[string]string{
-				"contents":                       "write", // YAML wins
-				"issues":                         "write", // Only in YAML
-				testutil.TestFixturePullRequests: "read",  // Only in comment
+				testutil.PermissionContents:      testutil.PermissionWrite, // YAML wins
+				testutil.PermissionIssues:        testutil.PermissionWrite, // Only in YAML
+				testutil.TestFixturePullRequests: testutil.PermissionRead,  // Only in comment
 			},
 			critical:    true,
 			description: "Complex merge with conflicts and unique keys",
@@ -431,8 +450,8 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 		{
 			name:        "basic_key_value",
 			content:     testutil.TestFixtureContentsRead,
-			expectKey:   "contents",
-			expectValue: "read",
+			expectKey:   testutil.PermissionContents,
+			expectValue: testutil.PermissionRead,
 			expectOk:    true,
 			critical:    true,
 			description: "Basic parsing",
@@ -440,8 +459,8 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 		{
 			name:        "with_leading_dash",
 			content:     "- contents: read",
-			expectKey:   "contents",
-			expectValue: "read",
+			expectKey:   testutil.PermissionContents,
+			expectValue: testutil.PermissionRead,
 			expectOk:    true,
 			critical:    true,
 			description: "TrimPrefix(\"-\") critical",
@@ -449,7 +468,7 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 		{
 			name:        "with_inline_comment_at_position_1",
 			content:     "contents: r#comment",
-			expectKey:   "contents",
+			expectKey:   testutil.PermissionContents,
 			expectValue: "r",
 			expectOk:    true,
 			critical:    true,
@@ -464,8 +483,8 @@ func TestParsePermissionLineMutationResistance(t *testing.T) {
 		{
 			name:        "comment_in_middle_of_line",
 			content:     "contents: read  # Required",
-			expectKey:   "contents",
-			expectValue: "read",
+			expectKey:   testutil.PermissionContents,
+			expectValue: testutil.PermissionRead,
 			expectOk:    true,
 			critical:    true,
 			description: "Comment removal before parse",
@@ -563,7 +582,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 			content:           testutil.TestFixtureContentsRead,
 			initialExpected:   -1,
 			expectBreak:       false,
-			expectPermissions: map[string]string{"contents": "read"},
+			expectPermissions: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical:          true,
 			description:       "*expectedItemIndent == -1 check",
 		},
@@ -573,7 +592,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 			content:           testutil.TestFixtureIssuesWrite,
 			initialExpected:   3,
 			expectBreak:       false,
-			expectPermissions: map[string]string{"issues": "write"},
+			expectPermissions: map[string]string{testutil.PermissionIssues: testutil.PermissionWrite},
 			critical:          true,
 			description:       "contentIndent == expectedItemIndent",
 		},
@@ -603,7 +622,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 			content:           testutil.TestFixtureIssuesWrite,
 			initialExpected:   3,
 			expectBreak:       false,
-			expectPermissions: map[string]string{"issues": "write"},
+			expectPermissions: map[string]string{testutil.PermissionIssues: testutil.PermissionWrite},
 			critical:          false,
 			description:       "More indent allowed (unusual but valid)",
 		},
@@ -613,7 +632,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 			content:           testutil.TestFixtureContentsRead,
 			initialExpected:   0,
 			expectBreak:       false,
-			expectPermissions: map[string]string{"contents": "read"},
+			expectPermissions: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical:          true,
 			description:       "Boundary: 0 == 0",
 		},
@@ -623,7 +642,7 @@ func TestProcessPermissionEntryMutationResistance(t *testing.T) {
 			content:           testutil.TestFixtureContentsRead,
 			initialExpected:   -1,
 			expectBreak:       false,
-			expectPermissions: map[string]string{"contents": "read"},
+			expectPermissions: map[string]string{testutil.PermissionContents: testutil.PermissionRead},
 			critical:          false,
 			description:       "Large indent value (10 spaces)",
 		},

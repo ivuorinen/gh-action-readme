@@ -1,3 +1,4 @@
+# checkov:skip=CKV_SECRET_6:test fixture - fake token for testing
 ---
 theme: professional
 output_format: html

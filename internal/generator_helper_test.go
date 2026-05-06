@@ -90,7 +90,7 @@ func createTestAction() *ActionYML {
 	return &ActionYML{
 		Name:        testutil.TestActionName,
 		Description: testutil.TestActionDesc,
-		Runs:        map[string]any{"using": "composite"},
+		Runs:        map[string]any{testGenRunsUsing: appconstants.ActionTypeComposite},
 	}
 }
 

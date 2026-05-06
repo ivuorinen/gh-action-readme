@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -16,13 +17,13 @@ func TestRenderReadme(t *testing.T) {
 
 	action := &ActionYML{
 		Name:        "MyAction",
-		Description: "desc",
+		Description: testGenShortDesc,
 		Inputs: map[string]ActionInput{
 			"foo": {Description: "Foo input", Required: true},
 		},
 	}
 	tmpl := filepath.Join(tmpDir, "templates", testutil.TestTemplateReadme)
-	opts := TemplateOptions{TemplatePath: tmpl, Format: "md"}
+	opts := TemplateOptions{TemplatePath: tmpl, Format: appconstants.OutputFormatMarkdown}
 	out, err := RenderReadme(action, opts)
 	if err != nil {
 		t.Fatalf("render failed: %v", err)

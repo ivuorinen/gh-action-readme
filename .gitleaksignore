@@ -52,3 +52,7 @@ d09c7918cb70017b71fdaeead197e18168e5f398:internal/configuration_loader_test.go:g
 # config_test.go test tokens (commits d09c791, 6291710)
 d09c7918cb70017b71fdaeead197e18168e5f398:internal/config_test.go:generic-api-key:133
 62917109069f227e8227a25448fe8c4242405309:internal/config_test.go:github-pat:929
+
+# audit docs that document the old fake token value (SEC-003 notes)
+3c8d2e23a4fba53aea8cd40d3596ce8197d0425f:docs/audit/security-findings.md:github-pat:39
+daec5381dd085430667c1743e7b3322a6a9b140e:docs/audit/nitpicker-findings.md:github-pat:157

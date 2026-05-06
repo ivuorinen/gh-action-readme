@@ -1,3 +1,4 @@
+# checkov:skip=CKV_SECRET_6:test fixture - fake token for testing
 theme: default
 output_format: md
 github_token: base-token

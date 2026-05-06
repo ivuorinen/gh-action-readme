@@ -1,5 +1,7 @@
 package testutil
 
+import "github.com/ivuorinen/gh-action-readme/appconstants"
+
 // This file contains test-only constants moved from appconstants.
 // These constants are exported for use across test files in different packages.
 
@@ -10,6 +12,7 @@ const (
 	CacheTestKey1      = "key1"
 	CacheTestKey2      = "key2"
 	CacheTestValue1    = "value1"
+	CacheTestValue2    = "value2"
 	CacheShortLivedKey = "short-lived"
 	CacheExpiringKey   = "expiring-key"
 )
@@ -25,7 +28,7 @@ const (
 	TestErrFileError = "file error"
 
 	// TestErrPermissionDenied is used in error handler tests for permission errors.
-	TestErrPermissionDenied = "permission denied"
+	TestErrPermissionDenied = appconstants.ErrorPatternPermission
 )
 
 // Progress test constants for reducing string duplication.
@@ -49,6 +52,9 @@ const (
 // Validation component test constants for reducing string duplication.
 const (
 	TestItemName = "test-item"
+	TestItem1    = "item1"
+	TestItem2    = "item2"
+	TestItem3    = "item3"
 )
 
 // Wizard test constants for reducing string duplication.
@@ -90,9 +96,9 @@ const (
 
 // GitHub Actions runner names for reducing string duplication.
 const (
-	RunnerUbuntuLatest  = "ubuntu-latest"
-	RunnerWindowsLatest = "windows-latest"
-	RunnerMacosLatest   = "macos-latest"
+	RunnerUbuntuLatest  = appconstants.RunnerUbuntuLatest
+	RunnerWindowsLatest = appconstants.RunnerWindowsLatest
+	RunnerMacosLatest   = appconstants.RunnerMacosLatest
 )
 
 // Test assertion message format templates for reducing string duplication.
@@ -153,7 +159,7 @@ const (
 // Dependency update test constants for reducing string duplication in updater_test.go.
 const (
 	// Actions checkout references for dependency update tests.
-	TestCheckoutV4OldUses  = "actions/checkout@v4"
+	TestCheckoutV4OldUses  = TestActionCheckoutV4
 	TestCheckoutPinnedV417 = "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7"
 	TestCheckoutPinnedV411 = "actions/checkout@abc123 # v4.1.1"
 
@@ -190,7 +196,7 @@ const (
 	TestPermissionsHeader = "# permissions:\n"
 	TestActionNameLine    = "name: Test Action\n"
 	TestDescriptionLine   = "description: Test\n"
-	TestRunsLine          = "runs:\n"
+	TestRunsLine          = appconstants.YAMLFieldRuns
 	TestCompositeUsing    = "  using: composite\n"
 	TestStepsEmpty        = "  steps: []\n"
 	TestErrorFormat       = "ParseActionYML() error = %v"
@@ -218,57 +224,65 @@ const (
 	TestMsgFailedReadOutput  = "Failed to read output file: %v" // Used for output file read errors
 	TestMsgExpected1InfoCall = "expected 1 Info call, got %d"   // Used in logger mock tests
 	TestMsgExportConfigError = "ExportConfig() error = %v"      // Used in config export tests
+
+	// InputReader assertion format strings.
+	TestErrInputReaderNotUsed = "InputReader was not used, index = %d, want 1"
+
+	// Error-containing assertion format string used in handler tests.
+	TestErrExpectedErrorContaining = "expected error containing %q, got: %s"
 )
 
 // Test case name constants for reducing duplication across test files.
 const (
-	TestCaseNameNoGitRepository      = "no git repository"
-	TestCaseNameEmptyPath            = "empty path"
-	TestCaseNameNonexistentDir       = "nonexistent directory"
-	TestCaseNameNoActionFiles        = "no action files"
-	TestCaseNameInvalidYAML          = "invalid yaml"
-	TestCaseNameInvalidActionFile    = "invalid action file"
-	TestCaseNameEmptyTheme           = "empty theme"
-	TestCaseNameCompositeAction      = "composite action"
-	TestCaseNameCommitSHA            = "commit SHA"
-	TestCaseNameBranchName           = "branch name"
-	TestCaseNameAllValidFiles        = "all valid files"
-	TestCaseNameValidAction          = "valid action"
-	TestCaseNameZeroFiles            = "zero files"
-	TestCaseNamePathTraversal        = "with path traversal attempt"
-	TestCaseNameVerboseFlag          = "verbose flag"
-	TestCaseNameUserWhitespace       = "user provides value with whitespace"
-	TestCaseNameUserAcceptDefault    = "user accepts default (yes)"
-	TestCaseNameUnknownTheme         = "unknown theme"
-	TestCaseNameUnknownFormat        = "unknown output format"
-	TestCaseNameUnknownError         = "unknown error"
-	TestCaseNameSubdirAction         = "subdirectory action"
-	TestCaseNameSSHGitHub            = "SSH GitHub URL"
-	TestCaseNameShortCommitSHA       = "short commit SHA"
-	TestCaseNameSemanticVersion      = "semantic version"
-	TestCaseNameRootAction           = "root action"
-	TestCaseNameErrorEmptyDir        = "returns error for empty directory with no action files"
-	TestCaseNameRelativePath         = "relative path"
-	TestCaseNameQuietFlag            = "quiet flag"
-	TestCaseNamePermissionDenied     = "permission denied on output directory"
-	TestCaseNamePathTraversalAttempt = "path traversal attempt"
-	TestCaseNameNonexistentTemplate  = "non-existent template"
-	TestCaseNameNonexistentFiles     = "nonexistent files"
-	TestCaseNameNoMatch              = "no match"
-	TestCaseNameMissingRuns          = "missing runs"
-	TestCaseNameMissingName          = "missing name"
-	TestCaseNameMissingDesc          = "missing description"
-	TestCaseNameMajorVersionOnly     = "major version only"
-	TestCaseNameJavaScriptAction     = "javascript action"
+	TestCaseNameReturnsErrInvalidYAML   = "returns error for invalid YAML syntax"
+	TestCaseNameReturnsErrMissingFields = "returns error for missing required fields"
+	TestCaseNameNoGitRepository         = "no git repository"
+	TestCaseNameEmptyPath               = "empty path"
+	TestCaseNameNonexistentDir          = "nonexistent directory"
+	TestCaseNameNoActionFiles           = "no action files"
+	TestCaseNameInvalidYAML             = "invalid yaml"
+	TestCaseNameInvalidActionFile       = "invalid action file"
+	TestCaseNameEmptyTheme              = "empty theme"
+	TestCaseNameCompositeAction         = "composite action"
+	TestCaseNameCommitSHA               = "commit SHA"
+	TestCaseNameBranchName              = "branch name"
+	TestCaseNameAllValidFiles           = "all valid files"
+	TestCaseNameValidAction             = "valid action"
+	TestCaseNameZeroFiles               = "zero files"
+	TestCaseNamePathTraversal           = "with path traversal attempt"
+	TestCaseNameVerboseFlag             = "verbose flag"
+	TestCaseNameUserWhitespace          = "user provides value with whitespace"
+	TestCaseNameUserAcceptDefault       = "user accepts default (yes)"
+	TestCaseNameUnknownTheme            = "unknown theme"
+	TestCaseNameUnknownFormat           = "unknown output format"
+	TestCaseNameUnknownError            = "unknown error"
+	TestCaseNameSubdirAction            = "subdirectory action"
+	TestCaseNameSSHGitHub               = "SSH GitHub URL"
+	TestCaseNameShortCommitSHA          = "short commit SHA"
+	TestCaseNameSemanticVersion         = "semantic version"
+	TestCaseNameRootAction              = "root action"
+	TestCaseNameErrorEmptyDir           = "returns error for empty directory with no action files"
+	TestCaseNameRelativePath            = "relative path"
+	TestCaseNameQuietFlag               = "quiet flag"
+	TestCaseNamePermissionDenied        = "permission denied on output directory"
+	TestCaseNamePathTraversalAttempt    = "path traversal attempt"
+	TestCaseNameNonexistentTemplate     = "non-existent template"
+	TestCaseNameNonexistentFiles        = "nonexistent files"
+	TestCaseNameNoMatch                 = "no match"
+	TestCaseNameMissingRuns             = "missing runs"
+	TestCaseNameMissingName             = "missing name"
+	TestCaseNameMissingDesc             = "missing description"
+	TestCaseNameMajorVersionOnly        = "major version only"
+	TestCaseNameJavaScriptAction        = "javascript action"
 )
 
 // Validation test constants.
 const (
 	TestVersionSemantic = "v1.2.3"
-	TestVersionPlain    = "1.2.3"
+	TestVersionPlain    = MutationSemverFull
 	TestVersionWithAt   = "@v1.2.3"
 	TestCaseNameEmpty   = "empty string"
-	TestBranchMain      = "main"
+	TestBranchMain      = appconstants.GitDefaultBranch
 	TestGitRefMain      = "refs/heads/main"
 )
 
@@ -311,19 +325,20 @@ const (
 	TestMsgGitNotInstalled       = "git not installed"
 	TestErrPathTraversal         = "path traversal"
 	TestInvalidYAMLPrefix        = "invalid: [yaml"
-	TestLangJavaScriptTypeScript = "JavaScript/TypeScript"
+	TestLangJavaScriptTypeScript = appconstants.LangJavaScriptTypeScript
 	TestMsgExpectedNonNilConfig  = "expected non-nil config"
 )
 
 // Test commands - moved from appconstants for better separation.
 const (
-	TestCmdGen      = "gen"
-	TestCmdConfig   = "config"
-	TestCmdValidate = "validate"
-	TestCmdDeps     = "deps"
-	TestCmdShow     = "show"
-	TestCmdList     = "list"
+	TestCmdGen      = appconstants.CommandGen
+	TestCmdConfig   = appconstants.CommandConfig
+	TestCmdValidate = appconstants.CommandValidate
+	TestCmdDeps     = appconstants.CommandDeps
+	TestCmdShow     = appconstants.CommandShow
+	TestCmdList     = appconstants.CommandList
 	TestCmdUpgrade  = "upgrade"
+	TestCmdCache    = appconstants.CommandCache
 )
 
 // Test file paths and names - moved from appconstants.
@@ -368,18 +383,33 @@ const (
 
 // Test URLs and paths - moved from appconstants.
 const (
-	TestURLHelp           = "https://example.com/help"
-	TestURLGitHubAPI      = "https://api.github.com/"
-	TestURLGitHub         = "https://github.com/"
-	TestURLGitHubUserRepo = "https://github.com/user/repo"
-	TestKeyFile           = "file"
-	TestKeyPath           = "path"
+	TestURLHelp              = "https://example.com/help"
+	TestURLGitHubAPI         = "https://api.github.com/"
+	TestURLGitHub            = "https://github.com/"
+	TestURLGitHubUserRepo    = "https://github.com/user/repo"
+	TestURLGitHubMyorgMyrepo = "https://github.com/myorg/myrepo.git"
+	TestKeyFile              = "file"
+	TestKeyPath              = "path"
+	TestKeyError             = "error"
+	TestKeyStatusCode        = "status_code"
+	TestKeySingle            = "key"
 )
 
 // Test repository and organization values - moved from appconstants.
 const (
-	TestValue   = "test"
-	TestVersion = "v1.0.0"
+	TestValue           = "test"
+	TestVersion         = "v1.0.0"
+	TestRepoMyorgMyrepo = "myorg/myrepo"
+)
+
+// Test glob patterns for file discovery.
+const (
+	TestPatternActionYMLGlob = "**/action.yml"
+)
+
+// Test token values.
+const (
+	TestToken123 = "test-token-123" // #nosec G101 -- test fixture value, not a credential
 )
 
 // Test dependency actions - moved from appconstants.
@@ -399,15 +429,15 @@ const (
 const (
 	TestHTMLNewContent        = "New content"
 	TestHTMLClosingTag        = "\n</html>"
-	TestMsgFailedToReadOutput = "Failed to read output file: %v"
+	TestMsgFailedToReadOutput = TestMsgFailedReadOutput
 )
 
 // Test detector messages - moved from appconstants.
 const (
 	TestMsgFailedToCreateAction = "Failed to create action.yml: %v"
-	TestPermRead                = "read"
-	TestPermWrite               = "write"
-	TestPermContents            = "contents"
+	TestPermRead                = appconstants.PermissionRead
+	TestPermWrite               = appconstants.PermissionWrite
+	TestPermContents            = appconstants.PermScopeContents
 )
 
 // Test repository names - moved from appconstants.
@@ -418,12 +448,12 @@ const (
 
 // Integration test directory and file names - moved from appconstants.
 const (
-	TestDirDotGitHub       = ".github"
+	TestDirDotGitHub       = appconstants.DirGitHub
 	TestFileGitIgnore      = ".gitignore"
 	TestFileGHActionReadme = "gh-action-readme.yml"
-	TestBinaryName         = "gh-action-readme"
+	TestBinaryName         = appconstants.AppName
 	// Common file names used across integration tests.
-	TestFilePackageJSON = "package.json"
+	TestFilePackageJSON = appconstants.PackageJSON
 )
 
 // Integration test CLI flags - moved from appconstants.
@@ -449,28 +479,28 @@ const (
 
 // Config test constants - moved from appconstants.
 const (
-	TestFileGHReadmeYAML = ".ghreadme.yaml"
-	TestFileConfigYAML   = "config.yaml"
+	TestFileGHReadmeYAML = appconstants.ConfigFilePatternHidden
+	TestFileConfigYAML   = appconstants.ConfigYAML
 	TestTokenConfig      = "config-token"
-	TestTokenStd         = "ghp_test1234567890abcdefghijklmnopqrstuvwxyz"
+	TestTokenStd         = "FAKE_TOKEN_FOR_TESTING" // #nosec G101 -- test fixture value, not a credential
 	TestTokenEnv         = "env-token"
 	TestFileCustomConfig = "custom-config.yml"
 )
 
 // Theme constants for testing - reducing string duplication across test files.
 const (
-	TestThemeDefault      = "default"
-	TestThemeGitHub       = "github"
-	TestThemeGitLab       = "gitlab"
-	TestThemeMinimal      = "minimal"
-	TestThemeProfessional = "professional"
-	TestThemeASCIIDoc     = "asciidoc"
+	TestThemeDefault      = appconstants.ThemeDefault
+	TestThemeGitHub       = appconstants.ThemeGitHub
+	TestThemeGitLab       = appconstants.ThemeGitLab
+	TestThemeMinimal      = appconstants.ThemeMinimal
+	TestThemeProfessional = appconstants.ThemeProfessional
+	TestThemeASCIIDoc     = appconstants.OutputFormatASCIIDoc
 )
 
 // Template path constants for testing - reducing hardcoded template paths.
 const (
-	TestTemplateReadme       = "readme.tmpl"
-	TestTemplateWithPrefix   = "templates/readme.tmpl"
+	TestTemplateReadme       = appconstants.TemplateReadme
+	TestTemplateWithPrefix   = appconstants.TemplatePathDefault
 	TestTemplateGitHub       = "themes/github/readme.tmpl"
 	TestTemplateGitLab       = "themes/gitlab/readme.tmpl"
 	TestTemplateMinimal      = "themes/minimal/readme.tmpl"
@@ -629,7 +659,7 @@ const (
 	MutationOrgIvuorinen       = "ivuorinen"
 	MutationRepoHelloWorld     = "Hello-World"
 	MutationRepoSetupNode      = "setup-node"
-	MutationRepoGhActionReadme = "gh-action-readme"
+	MutationRepoGhActionReadme = appconstants.AppName
 
 	// Test description constants for reducing duplication.
 	MutationDescEmptyInput    = "Empty input"
@@ -646,12 +676,12 @@ const (
 
 	// Version mutation test constants.
 	MutationVersionV2         = "v2.5.1"
-	MutationVersionNoV        = "1.2.3"
-	MutationVersionBuild      = "1.2.3+build.123"
-	MutationVersionPrerelease = "1.2.3-alpha"
+	MutationVersionNoV        = MutationSemverFull
+	MutationVersionBuild      = MutationSemverBuildMeta
+	MutationVersionPrerelease = MutationSemverPrerelease
 
 	// Uses statement mutation test constants.
-	MutationUsesActionsCheckout   = "actions/checkout@v3"
+	MutationUsesActionsCheckout   = TestActionCheckoutV3
 	MutationUsesActionsCheckoutV1 = "actions/checkout@v1"
 	MutationUsesOrgRepo           = "org/repo@ver"
 
@@ -678,13 +708,13 @@ const (
 // Configuration field name constants for reducing string duplication.
 const (
 	ConfigFieldName         = "config"
-	ConfigFieldRepository   = "repository"
-	ConfigFieldVersion      = "version"
-	ConfigFieldOrganization = "organization"
-	ConfigFieldOutputDir    = "output_dir"
+	ConfigFieldRepository   = appconstants.ConfigKeyRepository
+	ConfigFieldVersion      = appconstants.ConfigKeyVersion
+	ConfigFieldOrganization = appconstants.ConfigKeyOrganization
+	ConfigFieldOutputDir    = appconstants.ConfigKeyOutputDir
 	ConfigFieldAction       = "action"
 	ConfigFieldRepo         = "repo"
-	ConfigFieldGit          = ".git"
+	ConfigFieldGit          = appconstants.DirGit
 )
 
 // Whitespace character constants for reducing string duplication in tests.
@@ -699,7 +729,7 @@ const (
 const (
 	TestFixtureGlobalYAML     = "global.yaml"
 	TestFixtureBadYAML        = "bad.yaml"
-	TestFixturePullRequests   = "pull-requests"
+	TestFixturePullRequests   = appconstants.PermScopePullRequests
 	TestFixtureMissingPermKey = "missing permission key %q"
 	TestFixtureContentsRead   = "contents: read"
 	TestFixtureIssuesWrite    = "issues: write"
@@ -707,8 +737,8 @@ const (
 
 // Parser test permission constants for reducing string duplication.
 const (
-	PermissionContents = "contents"
-	PermissionIssues   = "issues"
-	PermissionRead     = "read"
-	PermissionWrite    = "write"
+	PermissionContents = appconstants.PermScopeContents
+	PermissionIssues   = appconstants.PermScopeIssues
+	PermissionRead     = appconstants.PermissionRead
+	PermissionWrite    = appconstants.PermissionWrite
 )

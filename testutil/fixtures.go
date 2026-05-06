@@ -15,6 +15,13 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
+// fixture tag constants to avoid repeated string literals.
+const (
+	fixtureTagBasic = "basic"
+	fixtureTagError = "error"
+	fixtureTagValid = "valid"
+)
+
 // fixtureCache provides thread-safe caching of fixture content.
 var fixtureCache = struct {
 	mu    sync.RWMutex
@@ -800,7 +807,7 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 				Fixture:     "actions/javascript/simple.yml",
 				ExpectValid: true,
 				ExpectError: false,
-				Tags:        []string{"javascript", "basic", "valid"},
+				Tags:        []string{"javascript", fixtureTagBasic, fixtureTagValid},
 			},
 			{
 				ID:          "composite-basic",
@@ -810,7 +817,7 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 				Fixture:     "actions/composite/basic.yml",
 				ExpectValid: true,
 				ExpectError: false,
-				Tags:        []string{"composite", "basic", "valid"},
+				Tags:        []string{"composite", fixtureTagBasic, fixtureTagValid},
 			},
 			{
 				ID:          "docker-basic",
@@ -820,7 +827,7 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 				Fixture:     "actions/docker/basic.yml",
 				ExpectValid: true,
 				ExpectError: false,
-				Tags:        []string{"docker", "basic", "valid"},
+				Tags:        []string{"docker", fixtureTagBasic, fixtureTagValid},
 			},
 			{
 				ID:          "invalid-missing-description",
@@ -830,7 +837,7 @@ func (fm *FixtureManager) createDefaultScenarios(scenarioFile string) error {
 				Fixture:     "actions/invalid/missing-description.yml",
 				ExpectValid: false,
 				ExpectError: true,
-				Tags:        []string{"invalid", "validation", "error"},
+				Tags:        []string{"invalid", "validation", fixtureTagError},
 			},
 		},
 	}

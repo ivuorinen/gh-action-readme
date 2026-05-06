@@ -17,15 +17,23 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
 )
 
+const (
+	frameworkNextJS = "Next.js"
+)
+
 // ProjectDetector handles auto-detection of project settings.
 type ProjectDetector struct {
-	output     *internal.ColoredOutput
+	output     internal.MessageLogger
 	currentDir string
 	repoRoot   string
 }
 
 // NewProjectDetector creates a new project detector.
-func NewProjectDetector(output *internal.ColoredOutput) (*ProjectDetector, error) {
+func NewProjectDetector(output internal.MessageLogger) (*ProjectDetector, error) {
+	if output == nil {
+		output = internal.NewColoredOutput(false)
+	}
+
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToGetCurrentDir, err)
@@ -437,7 +445,7 @@ func (d *ProjectDetector) detectLanguageFromFile(filename string, characteristic
 func (d *ProjectDetector) detectFrameworkFromFile(filename string, characteristics map[string]string) {
 	switch filename {
 	case "next.config.js":
-		characteristics["framework"] = "Next.js"
+		characteristics["framework"] = frameworkNextJS
 	case "nuxt.config.js":
 		characteristics["framework"] = "Nuxt.js"
 	case "vue.config.js":

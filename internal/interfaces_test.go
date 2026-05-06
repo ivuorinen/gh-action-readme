@@ -172,8 +172,8 @@ func TestFocusedInterfacesGeneratorWithDependencyInjection(t *testing.T) {
 
 	// Create generator with dependency injection
 	config := &AppConfig{
-		Theme:        "default",
-		OutputFormat: "md",
+		Theme:        appconstants.ThemeDefault,
+		OutputFormat: appconstants.OutputFormatMarkdown,
 		OutputDir:    ".",
 		Verbose:      false,
 		Quiet:        false,

@@ -12,4 +12,5 @@ paths = [
 	'''^testdata/''',
 	'''_test\.go$''',
 	'''^integration_test\.go$''',
+	'''^\.serena/''',
 ]

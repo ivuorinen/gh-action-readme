@@ -37,27 +37,27 @@ type ValidationWarning struct {
 
 // validPermissionsMap defines valid GitHub Actions permissions and their allowed values.
 var validPermissionsMap = map[string][]string{
-	"actions":             {"read", "write"},
-	"checks":              {"read", "write"},
-	"contents":            {"read", "write"},
-	"deployments":         {"read", "write"},
-	"id-token":            {"write"},
-	"issues":              {"read", "write"},
-	"discussions":         {"read", "write"},
-	"packages":            {"read", "write"},
-	"pull-requests":       {"read", "write"},
-	"repository-projects": {"read", "write"},
-	"security-events":     {"read", "write"},
-	"statuses":            {"read", "write"},
+	appconstants.PermScopeActions:            {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeChecks:             {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeContents:           {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeDeployments:        {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeIDToken:            {appconstants.PermissionWrite},
+	appconstants.PermScopeIssues:             {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeDiscussions:        {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopePackages:           {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopePullRequests:       {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeRepositoryProjects: {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeSecurityEvents:     {appconstants.PermissionRead, appconstants.PermissionWrite},
+	appconstants.PermScopeStatuses:           {appconstants.PermissionRead, appconstants.PermissionWrite},
 }
 
 // ConfigValidator handles configuration validation with immediate feedback.
 type ConfigValidator struct {
-	output *internal.ColoredOutput
+	output internal.MessagingOutput
 }
 
 // NewConfigValidator creates a new configuration validator.
-func NewConfigValidator(output *internal.ColoredOutput) *ConfigValidator {
+func NewConfigValidator(output internal.MessagingOutput) *ConfigValidator {
 	return &ConfigValidator{
 		output: output,
 	}
@@ -112,7 +112,7 @@ func (v *ConfigValidator) ValidateField(fieldName, value string) *ValidationResu
 		v.validateOutputFormat(value, result)
 	case appconstants.ConfigKeyOutputDir:
 		v.validateOutputDir(value, result)
-	case "github_token":
+	case appconstants.ConfigKeyGitHubToken:
 		v.validateGitHubToken(value, result)
 	default:
 		result.Warnings = append(result.Warnings, ValidationWarning{
@@ -274,7 +274,7 @@ func (v *ConfigValidator) validateGitHubToken(token string, result *ValidationRe
 	// Check token format
 	if !v.isValidGitHubToken(token) {
 		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "github_token",
+			Field:   appconstants.ConfigKeyGitHubToken,
 			Message: "Token format looks unusual",
 			Value:   "[REDACTED]",
 		})
@@ -284,7 +284,7 @@ func (v *ConfigValidator) validateGitHubToken(token string, result *ValidationRe
 
 	// Security warning
 	result.Warnings = append(result.Warnings, ValidationWarning{
-		Field:   "github_token",
+		Field:   appconstants.ConfigKeyGitHubToken,
 		Message: "Tokens should be stored securely in environment variables",
 		Value:   "[REDACTED]",
 	})

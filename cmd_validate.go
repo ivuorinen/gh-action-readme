@@ -13,7 +13,7 @@ import (
 
 func newValidateCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "validate",
+		Use:   appconstants.CommandValidate,
 		Short: "Validate action.yml files.",
 		Run:   wrapHandlerWithErrorHandling(validateHandler),
 	}
@@ -21,7 +21,7 @@ func newValidateCmd() *cobra.Command {
 
 func newSchemaCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "schema",
+		Use:   appconstants.CommandSchema,
 		Short: "Show the action.yml schema info.",
 		Run:   schemaHandler,
 	}

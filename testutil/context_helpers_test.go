@@ -14,8 +14,8 @@ func TestContextHelpers(t *testing.T) {
 		contextFunc func(string) map[string]string
 	}{
 		{"ContextWithPath", TestKeyPath, "/test/path", ContextWithPath},
-		{"ContextWithError", "error", testErrorMessage, ContextWithError},
-		{"ContextWithStatusCode", "status_code", "404", ContextWithStatusCode},
+		{"ContextWithError", TestKeyError, testErrorMessage, ContextWithError},
+		{"ContextWithStatusCode", TestKeyStatusCode, "404", ContextWithStatusCode},
 		{"ContextWithLine", "line", "42", ContextWithLine},
 		{"ContextWithMissingFields", "missing_fields", "field1,field2", ContextWithMissingFields},
 		{"ContextWithDirectory", "directory", "/test/dir", ContextWithDirectory},
@@ -68,40 +68,40 @@ func TestMergeContexts(t *testing.T) {
 		{
 			name: "single context",
 			contexts: []map[string]string{
-				{"key": "value"},
+				{TestKeySingle: "value"},
 			},
-			expected: map[string]string{"key": "value"},
+			expected: map[string]string{TestKeySingle: "value"},
 		},
 		{
 			name: "multiple contexts without overlap",
 			contexts: []map[string]string{
 				{"key1": "value1"},
-				{"key2": "value2"},
+				{"key2": CacheTestValue2},
 			},
 			expected: map[string]string{
 				"key1": "value1",
-				"key2": "value2",
+				"key2": CacheTestValue2,
 			},
 		},
 		{
 			name: "multiple contexts with overlap - later wins",
 			contexts: []map[string]string{
-				{"key": "first"},
-				{"key": "second"},
+				{TestKeySingle: "first"},
+				{TestKeySingle: "second"},
 			},
-			expected: map[string]string{"key": "second"},
+			expected: map[string]string{TestKeySingle: "second"},
 		},
 		{
 			name: "complex merge",
 			contexts: []map[string]string{
-				{"path": "/test", "error": "not found"},
-				{"status_code": "404"},
-				{"error": "file not found"},
+				{TestKeyPath: "/test", TestKeyError: "not found"},
+				{TestKeyStatusCode: "404"},
+				{TestKeyError: "file not found"},
 			},
 			expected: map[string]string{
-				"path":        "/test",
-				"error":       "file not found",
-				"status_code": "404",
+				TestKeyPath:       "/test",
+				TestKeyError:      "file not found",
+				TestKeyStatusCode: "404",
 			},
 		},
 	}

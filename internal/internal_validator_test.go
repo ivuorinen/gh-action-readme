@@ -3,6 +3,8 @@ package internal
 import (
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 func TestValidateActionYMLRequired(t *testing.T) {
@@ -23,12 +25,55 @@ func TestValidateActionYMLValid(t *testing.T) {
 	t.Parallel()
 	a := &ActionYML{
 		Name:        "MyAction",
-		Description: "desc",
-		Runs:        map[string]any{"using": "node12"},
+		Description: testGenShortDesc,
+		Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
 	}
 	res := ValidateActionYML(a)
 	if len(res.MissingFields) != 0 {
 		t.Errorf("expected no missing fields, got %v", res.MissingFields)
+	}
+}
+
+// assertHasDeprecationSuggestion fails if no suggestion mentions runtime and "deprecated".
+func assertHasDeprecationSuggestion(t *testing.T, suggestions []string, runtime string) {
+	t.Helper()
+
+	for _, s := range suggestions {
+		if strings.Contains(s, runtime) && strings.Contains(s, "deprecated") {
+			return
+		}
+	}
+
+	t.Errorf("expected deprecation suggestion mentioning %q, got: %v", runtime, suggestions)
+}
+
+// TestValidateActionYML_DeprecatedRuntime verifies that node12 and node16 produce
+// a deprecation warning but are still considered valid (not in MissingFields).
+func TestValidateActionYML_DeprecatedRuntime(t *testing.T) {
+	t.Parallel()
+
+	for _, runtime := range []string{appconstants.NodeRuntimeNode12, appconstants.NodeRuntimeNode16} {
+		runtime := runtime
+		t.Run(runtime, func(t *testing.T) {
+			t.Parallel()
+
+			a := &ActionYML{
+				Name:        testGenActionName,
+				Description: testGenShortDesc,
+				Runs:        map[string]any{testGenRunsUsing: runtime},
+			}
+			res := ValidateActionYML(a)
+
+			if len(res.MissingFields) != 0 {
+				t.Errorf("deprecated runtime %q should not produce missing fields, got: %v", runtime, res.MissingFields)
+			}
+
+			if !containsWarning(t, res.Warnings, appconstants.FieldRunsUsing) {
+				t.Errorf("expected deprecation warning for runtime %q, got warnings: %v", runtime, res.Warnings)
+			}
+
+			assertHasDeprecationSuggestion(t, res.Suggestions, runtime)
+		})
 	}
 }
 
@@ -53,9 +98,9 @@ func TestValidateActionYML_BrandingWarning(t *testing.T) {
 
 	base := func() *ActionYML {
 		return &ActionYML{
-			Name:        "Action",
-			Description: "desc",
-			Runs:        map[string]any{"using": "node20"},
+			Name:        testGenActionName,
+			Description: testGenShortDesc,
+			Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
 		}
 	}
 
@@ -75,7 +120,7 @@ func TestValidateActionYML_BrandingWarning(t *testing.T) {
 		t.Parallel()
 
 		a := base()
-		a.Branding = &Branding{Icon: "activity", Color: "blue"}
+		a.Branding = &Branding{Icon: appconstants.ActivityWorkflowType, Color: "blue"}
 		res := ValidateActionYML(a)
 
 		if containsWarning(t, res.Warnings, "branding") {
@@ -90,10 +135,10 @@ func TestValidateActionYML_InputsWarning(t *testing.T) {
 
 	base := func() *ActionYML {
 		return &ActionYML{
-			Name:        "Action",
-			Description: "desc",
-			Runs:        map[string]any{"using": "node20"},
-			Branding:    &Branding{Icon: "activity"},
+			Name:        testGenActionName,
+			Description: testGenShortDesc,
+			Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+			Branding:    &Branding{Icon: appconstants.ActivityWorkflowType},
 		}
 	}
 
@@ -112,7 +157,7 @@ func TestValidateActionYML_InputsWarning(t *testing.T) {
 		t.Parallel()
 
 		a := base()
-		a.Inputs = map[string]ActionInput{"token": {Description: "A token"}}
+		a.Inputs = map[string]ActionInput{testGenTokenKey: {Description: "A token"}}
 		res := ValidateActionYML(a)
 
 		if containsWarning(t, res.Warnings, "inputs") {
@@ -127,11 +172,11 @@ func TestValidateActionYML_OutputsWarning(t *testing.T) {
 
 	base := func() *ActionYML {
 		return &ActionYML{
-			Name:        "Action",
-			Description: "desc",
-			Runs:        map[string]any{"using": "node20"},
-			Branding:    &Branding{Icon: "activity"},
-			Inputs:      map[string]ActionInput{"token": {Description: "A token"}},
+			Name:        testGenActionName,
+			Description: testGenShortDesc,
+			Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+			Branding:    &Branding{Icon: appconstants.ActivityWorkflowType},
+			Inputs:      map[string]ActionInput{testGenTokenKey: {Description: "A token"}},
 		}
 	}
 

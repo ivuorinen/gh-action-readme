@@ -11,7 +11,6 @@ import (
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
-	"github.com/ivuorinen/gh-action-readme/internal/helpers"
 )
 
 var (
@@ -67,7 +66,7 @@ func setupOutputAndErrorHandling() (*internal.ColoredOutput, *internal.ErrorHand
 }
 
 func createAnalyzer(generator *internal.Generator, output *internal.ColoredOutput) *dependencies.Analyzer {
-	return helpers.CreateAnalyzer(generator, output)
+	return internal.CreateAnalyzer(generator, output)
 }
 
 // wrapHandlerWithErrorHandling converts error-returning handler to Cobra handler.
@@ -82,7 +81,7 @@ func wrapHandlerWithErrorHandling(handler func(*cobra.Command, []string) error) 
 		if err := handler(cmd, args); err != nil {
 			output := createOutputManager(globalConfig.Quiet)
 			output.Error(err.Error())
-			os.Exit(1)
+			os.Exit(appconstants.ExitCodeError)
 		}
 	}
 }
@@ -129,7 +128,7 @@ func main() {
 	rootCmd.AddCommand(newValidateCmd())
 	rootCmd.AddCommand(newSchemaCmd())
 	rootCmd.AddCommand(&cobra.Command{
-		Use:   "version",
+		Use:   appconstants.CommandVersion,
 		Short: "Print the version number",
 		Long:  "Print the version number and build information",
 		Run: func(cmd *cobra.Command, _ []string) {
@@ -157,7 +156,7 @@ func main() {
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(appconstants.ExitCodeError)
 	}
 }
 

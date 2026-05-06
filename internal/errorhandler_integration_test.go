@@ -14,8 +14,10 @@ import (
 )
 
 const (
-	envGoTestSubprocess = "GO_TEST_SUBPROCESS"
-	envTestType         = "TEST_TYPE"
+	envGoTestSubprocess  = "GO_TEST_SUBPROCESS"
+	envTestType          = "TEST_TYPE"
+	testErrDetailKeyPath = "path"
+	testErrDetailToken   = "token"
 )
 
 // verifyExitCode checks that the command exited with the expected exit code.
@@ -177,7 +179,7 @@ func runHandleErrorCases(handler *internal.ErrorHandler, testType string) bool {
 		handler.HandleError(err)
 	case "handle_error_with_context":
 		err := apperrors.New(appconstants.ErrCodeConfiguration, "config file missing").
-			WithDetails(map[string]string{"path": "/invalid/path/config.yaml", "type": "application"})
+			WithDetails(map[string]string{testErrDetailKeyPath: "/invalid/path/config.yaml", "type": "application"})
 		handler.HandleError(err)
 	case "handle_error_with_suggestions":
 		err := apperrors.New(appconstants.ErrCodeFileNotFound, "file error occurred").
@@ -211,7 +213,7 @@ func runSubprocessTest() {
 		handler.HandleFatalError(
 			appconstants.ErrCodeConfiguration,
 			"configuration error in settings",
-			map[string]string{"section": "github", "key": "token"},
+			map[string]string{"section": "github", "key": testErrDetailToken},
 		)
 	case "handle_simple_error_generic":
 		handler.HandleSimpleError("operation failed", errors.New("generic error occurred"))
@@ -334,7 +336,7 @@ func TestErrorHandlerWithComplexContext(t *testing.T) {
 	_ = cmd.Wait()
 
 	// Verify all context keys are displayed
-	contextKeys := []string{"path", "action", "reason"}
+	contextKeys := []string{testErrDetailKeyPath, "action", "reason"}
 	for _, key := range contextKeys {
 		if !strings.Contains(stderrStr, key) {
 			t.Errorf("stderr missing context key %q", key)
@@ -357,9 +359,9 @@ func runComplexContextTest() {
 
 	err := apperrors.New(appconstants.ErrCodeInvalidYAML, "YAML parsing failed")
 	err = err.WithDetails(map[string]string{
-		"path":   "/path/to/action.yml",
-		"action": "parse-workflow",
-		"reason": "invalid syntax at line 42",
+		testErrDetailKeyPath: "/path/to/action.yml",
+		"action":             "parse-workflow",
+		"reason":             "invalid syntax at line 42",
 	})
 	err = err.WithSuggestions(
 		"Check the file path is correct",

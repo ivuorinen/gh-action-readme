@@ -12,6 +12,11 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testUpdaterRepo  = "repo"
+	testUpdaterOwner = "test"
+)
+
 // newTestAnalyzer creates an Analyzer with cache for testing.
 // Returns the analyzer and a cleanup function.
 // Pattern used 7+ times in updater_test.go.
@@ -74,7 +79,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			newUses:        testutil.TestCheckoutPinnedV417,
 			commitSHA:      testutil.TestActionCheckoutSHA,
 			version:        testutil.TestVersionV417,
-			updateType:     "patch",
+			updateType:     appconstants.UpdateTypePatch,
 			wantErr:        false,
 			validateBackup: true,
 			checkRollback:  false,
@@ -86,7 +91,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			newUses:        testutil.TestCheckoutPinnedV417,
 			commitSHA:      testutil.TestActionCheckoutSHA,
 			version:        testutil.TestVersionV417,
-			updateType:     "patch",
+			updateType:     appconstants.UpdateTypePatch,
 			wantErr:        false,
 			validateBackup: true,
 			checkRollback:  false,
@@ -101,7 +106,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 					NewUses:    testutil.TestCheckoutPinnedV417,
 					CommitSHA:  testutil.TestActionCheckoutSHA,
 					Version:    testutil.TestVersionV417,
-					UpdateType: "patch",
+					UpdateType: appconstants.UpdateTypePatch,
 					LineNumber: 0,
 				},
 				{
@@ -110,7 +115,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 					NewUses:    "actions/setup-node@1a4e6d7c9f8e5b2a3c4d5e6f7a8b9c0d1e2f3a4b # v4.0.0",
 					CommitSHA:  "1a4e6d7c9f8e5b2a3c4d5e6f7a8b9c0d1e2f3a4b",
 					Version:    "v4.0.0",
-					UpdateType: "major",
+					UpdateType: appconstants.UpdateTypeMajor,
 					LineNumber: 0,
 				},
 			},
@@ -125,7 +130,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			newUses:        testutil.TestCheckoutPinnedV417,
 			commitSHA:      testutil.TestActionCheckoutSHA,
 			version:        testutil.TestVersionV417,
-			updateType:     "patch",
+			updateType:     appconstants.UpdateTypePatch,
 			wantErr:        false,
 			validateBackup: true,
 			checkRollback:  false,
@@ -137,7 +142,7 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			newUses:        testutil.TestCheckoutPinnedV417,
 			commitSHA:      testutil.TestActionCheckoutSHA,
 			version:        testutil.TestVersionV417,
-			updateType:     "none",
+			updateType:     appconstants.UpdateTypeNone,
 			wantErr:        false,
 			validateBackup: true,
 			checkRollback:  false,
@@ -148,11 +153,11 @@ func TestApplyPinnedUpdates(t *testing.T) {
 			updates: []PinnedUpdate{
 				{
 					FilePath:   "", // Will be set by test
-					OldUses:    "name: Test Action",
-					NewUses:    "invalid:::yaml",
+					OldUses:    "actions/checkout@v4",
+					NewUses:    "{unclosed",
 					CommitSHA:  "",
 					Version:    "",
-					UpdateType: "none",
+					UpdateType: appconstants.UpdateTypeNone,
 					LineNumber: 0,
 				},
 			},
@@ -433,7 +438,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 			name: "no tags available",
 			mockSetup: func() *Analyzer {
 				mockClient := testutil.MockGitHubClient(map[string]string{
-					"GET https://api.github.com/repos/test/repo/tags": "[]",
+					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "[]",
 				})
 				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
 
@@ -442,8 +447,8 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 					Cache:        NewCacheAdapter(cacheInstance),
 				}
 			},
-			owner:       "test",
-			repo:        "repo",
+			owner:       testUpdaterOwner,
+			repo:        testUpdaterRepo,
 			expectError: true,
 		},
 		{
@@ -454,15 +459,15 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 					Cache:        nil,
 				}
 			},
-			owner:       "test",
-			repo:        "repo",
+			owner:       testUpdaterOwner,
+			repo:        testUpdaterRepo,
 			expectError: true,
 		},
 		{
 			name: "malformed tag response",
 			mockSetup: func() *Analyzer {
 				mockClient := testutil.MockGitHubClient(map[string]string{
-					"GET https://api.github.com/repos/test/repo/tags": "invalid json",
+					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "invalid json",
 				})
 				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
 
@@ -471,8 +476,8 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 					Cache:        NewCacheAdapter(cacheInstance),
 				}
 			},
-			owner:       "test",
-			repo:        "repo",
+			owner:       testUpdaterOwner,
+			repo:        testUpdaterRepo,
 			expectError: true,
 		},
 	}
@@ -646,11 +651,11 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		analyzer, cleanupAnalyzer := newTestAnalyzer(t)
 		defer cleanupAnalyzer()
 
-		// Create an update that breaks YAML
+		// Create an update that produces unparseable YAML (unclosed flow mapping)
 		updates := []PinnedUpdate{
 			{
-				OldUses: "name: Test",
-				NewUses: "invalid::yaml::syntax:",
+				OldUses: "actions/checkout@v4",
+				NewUses: "{unclosed",
 			},
 		}
 

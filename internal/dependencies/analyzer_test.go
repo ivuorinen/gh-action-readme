@@ -16,6 +16,13 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testDepOwnerActions = "actions"
+	testDepRepoCheckout = "checkout"
+	testDepVersionV3    = "v3"
+	testDepVersionV4    = "v4"
+)
+
 // analyzeActionFileTestCase describes a single test case for AnalyzeActionFile.
 type analyzeActionFileTestCase struct {
 	name         string
@@ -154,15 +161,15 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 		{
 			name:            testutil.TestCaseNameSemanticVersion,
 			uses:            testutil.TestActionCheckoutV4,
-			expectedOwner:   "actions",
-			expectedRepo:    "checkout",
-			expectedVersion: "v4",
+			expectedOwner:   testDepOwnerActions,
+			expectedRepo:    testDepRepoCheckout,
+			expectedVersion: testDepVersionV4,
 			expectedType:    SemanticVersion,
 		},
 		{
 			name:            "semantic version with patch",
 			uses:            "actions/setup-node@v3.8.1",
-			expectedOwner:   "actions",
+			expectedOwner:   testDepOwnerActions,
 			expectedRepo:    "setup-node",
 			expectedVersion: "v3.8.1",
 			expectedType:    SemanticVersion,
@@ -170,8 +177,8 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 		{
 			name:            testutil.TestCaseNameCommitSHA,
 			uses:            "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e",
-			expectedOwner:   "actions",
-			expectedRepo:    "checkout",
+			expectedOwner:   testDepOwnerActions,
+			expectedRepo:    testDepRepoCheckout,
 			expectedVersion: testutil.TestSHAForTesting,
 			expectedType:    CommitSHA,
 		},
@@ -213,7 +220,7 @@ func TestAnalyzerVersionChecking(t *testing.T) {
 	}{
 		{
 			name:        "semantic version major",
-			version:     "v4",
+			version:     testDepVersionV4,
 			isPinned:    false,
 			isCommitSHA: false,
 			isSemantic:  true,
@@ -295,15 +302,15 @@ func TestAnalyzerGetLatestVersion(t *testing.T) {
 	}{
 		{
 			name:            "valid repository",
-			owner:           "actions",
-			repo:            "checkout",
+			owner:           testDepOwnerActions,
+			repo:            testDepRepoCheckout,
 			expectedVersion: testutil.TestVersionV4_1_1,
 			expectedSHA:     testutil.TestSHAForTesting,
 			expectError:     false,
 		},
 		{
 			name:            "another valid repository",
-			owner:           "actions",
+			owner:           testDepOwnerActions,
 			repo:            "setup-node",
 			expectedVersion: testutil.TestVersionV4_0_0,
 			expectedSHA:     "1a4e6d7c9f8e5b2a3c4d5e6f7a8b9c0d1e2f3a4b",
@@ -348,7 +355,7 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 		{
 			Name:        testutil.TestActionCheckout,
 			Uses:        testutil.TestActionCheckoutV3,
-			Version:     "v3",
+			Version:     testDepVersionV3,
 			IsPinned:    false,
 			VersionType: SemanticVersion,
 			Description: "Action for checking out a repo",
@@ -373,12 +380,12 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 
 	found := false
 	for _, dep := range outdated {
-		if dep.Current.Name == testutil.TestActionCheckout && dep.Current.Version == "v3" {
+		if dep.Current.Name == testutil.TestActionCheckout && dep.Current.Version == testDepVersionV3 {
 			found = true
 			if dep.LatestVersion != testutil.TestVersionV4_1_1 {
 				t.Errorf("expected latest version v4.1.1, got %s", dep.LatestVersion)
 			}
-			if dep.UpdateType != "major" {
+			if dep.UpdateType != appconstants.UpdateTypeMajor {
 				t.Errorf("expected major update, got %s", dep.UpdateType)
 			}
 		}
@@ -404,31 +411,31 @@ func TestAnalyzerCompareVersions(t *testing.T) {
 			name:         "major version difference",
 			current:      "v3.0.0",
 			latest:       testutil.TestVersionV4_0_0,
-			expectedType: "major",
+			expectedType: appconstants.UpdateTypeMajor,
 		},
 		{
 			name:         "minor version difference",
 			current:      testutil.TestVersionV4_0_0,
 			latest:       "v4.1.0",
-			expectedType: "minor",
+			expectedType: appconstants.UpdateTypeMinor,
 		},
 		{
 			name:         "patch version difference",
 			current:      "v4.1.0",
 			latest:       testutil.TestVersionV4_1_1,
-			expectedType: "patch",
+			expectedType: appconstants.UpdateTypePatch,
 		},
 		{
 			name:         "no difference",
 			current:      testutil.TestVersionV4_1_1,
 			latest:       testutil.TestVersionV4_1_1,
-			expectedType: "none",
+			expectedType: appconstants.UpdateTypeNone,
 		},
 		{
 			name:         "floating to specific",
-			current:      "v4",
+			current:      testDepVersionV4,
 			latest:       testutil.TestVersionV4_1_1,
-			expectedType: "patch",
+			expectedType: appconstants.UpdateTypePatch,
 		},
 	}
 
@@ -468,7 +475,7 @@ func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	dep := Dependency{
 		Name:        testutil.TestActionCheckout,
 		Uses:        testutil.TestActionCheckoutV3,
-		Version:     "v3",
+		Version:     testDepVersionV3,
 		IsPinned:    false,
 		VersionType: SemanticVersion,
 		Description: "Action for checking out a repo",
@@ -489,7 +496,7 @@ func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	testutil.AssertEqual(t, testutil.TestActionCheckoutV3, update.OldUses)
 	testutil.AssertStringContains(t, update.NewUses, "actions/checkout@8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e")
 	testutil.AssertStringContains(t, update.NewUses, "# v4.1.1")
-	testutil.AssertEqual(t, "major", update.UpdateType)
+	testutil.AssertEqual(t, appconstants.UpdateTypeMajor, update.UpdateType)
 }
 
 func TestAnalyzerWithCache(t *testing.T) {
@@ -506,11 +513,11 @@ func TestAnalyzerWithCache(t *testing.T) {
 	}
 
 	// First call should hit the API
-	version1, sha1, err1 := analyzer.getLatestVersion("actions", "checkout")
+	version1, sha1, err1 := analyzer.getLatestVersion(testDepOwnerActions, testDepRepoCheckout)
 	testutil.AssertNoError(t, err1)
 
 	// Second call should hit the cache
-	version2, sha2, err2 := analyzer.getLatestVersion("actions", "checkout")
+	version2, sha2, err2 := analyzer.getLatestVersion(testDepOwnerActions, testDepRepoCheckout)
 	testutil.AssertNoError(t, err2)
 
 	// Results should be identical
@@ -546,7 +553,7 @@ func TestAnalyzerRateLimitHandling(t *testing.T) {
 	}
 
 	// This should handle the rate limit gracefully
-	_, _, err := analyzer.getLatestVersion("actions", "checkout")
+	_, _, err := analyzer.getLatestVersion(testDepOwnerActions, testDepRepoCheckout)
 	if err == nil {
 		t.Error("expected rate limit error to be returned")
 	}
@@ -725,6 +732,31 @@ func TestCacheAdapterSet(t *testing.T) {
 }
 
 // TestIsCompositeAction tests composite action detection.
+func TestValidateActionType(t *testing.T) {
+	t.Parallel()
+
+	analyzer, cleanup := newTestAnalyzer(t)
+	defer cleanup()
+
+	validTypes := []string{
+		appconstants.NodeRuntimeNode24,
+		appconstants.NodeRuntimeNode20,
+		appconstants.NodeRuntimeNode16,
+		appconstants.NodeRuntimeNode12,
+		appconstants.ActionTypeDocker,
+		appconstants.ActionTypeComposite,
+	}
+	for _, typ := range validTypes {
+		if err := analyzer.validateActionType(typ); err != nil {
+			t.Errorf("validateActionType(%q) unexpected error: %v", typ, err)
+		}
+	}
+
+	if err := analyzer.validateActionType("node18"); err == nil {
+		t.Error("validateActionType(\"node18\") expected error, got nil")
+	}
+}
+
 func TestIsCompositeAction(t *testing.T) {
 	t.Parallel()
 

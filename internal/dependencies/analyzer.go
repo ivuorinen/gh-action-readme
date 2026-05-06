@@ -25,6 +25,16 @@ var (
 	rePinnedVersion   = regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
 )
 
+// validActionRuntimes is the authoritative list of valid GitHub Actions runtime identifiers.
+var validActionRuntimes = []string{
+	appconstants.NodeRuntimeNode12,
+	appconstants.NodeRuntimeNode16,
+	appconstants.NodeRuntimeNode20,
+	appconstants.NodeRuntimeNode24,
+	appconstants.ActionTypeDocker,
+	appconstants.ActionTypeComposite,
+}
+
 // VersionType represents the type of version specification used.
 type VersionType string
 
@@ -238,8 +248,7 @@ func (a *Analyzer) validateAndCheckComposite(
 
 // validateActionType checks if the action type is valid.
 func (a *Analyzer) validateActionType(usingType string) error {
-	validTypes := []string{"node20", "node16", "node12", "docker", "composite"}
-	for _, validType := range validTypes {
+	for _, validType := range validActionRuntimes {
 		if usingType == validType {
 			return nil
 		}
@@ -628,6 +637,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 		[]byte(updatedContent),
 		appconstants.FilePermDefault,
 	); err != nil {
+		// Do not remove backupPath here — it is the recovery copy for this failure.
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 
@@ -646,8 +656,27 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 // Preserves indentation and YAML list markers.
 func applyUpdatesToLines(lines []string, updates []PinnedUpdate) {
 	for _, update := range updates {
+		target := appconstants.UsesFieldPrefix + update.OldUses
+
 		for i, line := range lines {
-			if !strings.Contains(line, update.OldUses) {
+			// Skip comment lines
+			if strings.HasPrefix(strings.TrimLeft(line, " \t"), "#") {
+				continue
+			}
+
+			idx := strings.Index(line, target)
+			if idx < 0 {
+				continue
+			}
+
+			// Skip if the match is inside an inline comment (# before the match position)
+			if commentIdx := strings.Index(line, "#"); commentIdx >= 0 && commentIdx < idx {
+				continue
+			}
+
+			// Require OldUses to be a complete token — not a prefix of a longer version string
+			afterTarget := strings.TrimLeft(line[idx+len(target):], " \t")
+			if afterTarget != "" && !strings.HasPrefix(afterTarget, "#") {
 				continue
 			}
 
@@ -701,21 +730,9 @@ func (a *Analyzer) validateActionFile(filePath string) error {
 		return errors.New("validation failed: missing required field 'runs.using'")
 	}
 
-	// Validate 'using' field value against GitHub Actions specification
-	// Valid runtimes: node12, node16, node20, node24, docker, composite
-	// Reference: https://docs.github.com/en/actions/creating-actions
-	validRuntimes := []string{
-		"node12",
-		"node16",
-		"node20",
-		"node24",
-		"docker",
-		"composite",
-	}
-
 	validUsing := false
 	runtime := strings.TrimSpace(strings.ToLower(action.Runs.Using))
-	for _, valid := range validRuntimes {
+	for _, valid := range validActionRuntimes {
 		if runtime == valid {
 			validUsing = true
 
@@ -727,7 +744,7 @@ func (a *Analyzer) validateActionFile(filePath string) error {
 		return fmt.Errorf(
 			"validation failed: invalid value for 'runs.using': %s (valid: %s)",
 			action.Runs.Using,
-			strings.Join(validRuntimes, ", "),
+			strings.Join(validActionRuntimes, ", "),
 		)
 	}
 

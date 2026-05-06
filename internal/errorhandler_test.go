@@ -10,6 +10,10 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
+const (
+	testErrHandlerSubstr = "hello"
+)
+
 // newTestErrorHandler creates an ErrorHandler for testing with quiet output.
 // Reduces duplication across error handler tests.
 func newTestErrorHandler() *ErrorHandler {
@@ -223,13 +227,13 @@ func TestContains(t *testing.T) {
 		{
 			name:   "exact match",
 			s:      testutil.ValidationHelloWorld,
-			substr: "hello",
+			substr: testErrHandlerSubstr,
 			want:   true,
 		},
 		{
 			name:   "case insensitive match",
 			s:      "Hello World",
-			substr: "hello",
+			substr: testErrHandlerSubstr,
 			want:   true,
 		},
 		{
@@ -247,7 +251,7 @@ func TestContains(t *testing.T) {
 		{
 			name:   "empty string",
 			s:      "",
-			substr: "hello",
+			substr: testErrHandlerSubstr,
 			want:   false,
 		},
 		{

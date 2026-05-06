@@ -31,8 +31,10 @@ runs:
 
     - name: Install dependencies
       shell: bash
+      env:
+        WORKING_DIR: ${{ inputs.working-directory }}
       run: |
-        cd ${{ inputs.working-directory }}
+        cd "$WORKING_DIR"
         npm ci
 
     - name: Run tests
@@ -46,9 +48,11 @@ runs:
     - name: Build project
       shell: bash
       id: build
+      env:
+        WORKING_DIR: ${{ inputs.working-directory }}
       run: |
         set -u
-        cd ${{ inputs.working-directory }}
+        cd "$WORKING_DIR"
         npm run build
         # Capture exit code immediately to avoid fragility with intervening commands
         build_exit_code=$?

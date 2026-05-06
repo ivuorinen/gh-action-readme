@@ -122,7 +122,7 @@ func isValidOrgRepo(org, repo string) bool {
 func formatVersion(version string) string {
 	version = strings.TrimSpace(version)
 	if version == "" {
-		return "@v1"
+		return appconstants.VersionRefV1
 	}
 	if !strings.HasPrefix(version, "@") {
 		return "@" + version
@@ -199,7 +199,7 @@ func extractActionSubdirectory(actionPath, repoRoot string) string {
 func getActionVersion(data any) string {
 	td, ok := data.(*TemplateData)
 	if !ok {
-		return "v1"
+		return appconstants.VersionTagV1
 	}
 
 	// Priority 1: Explicit version override
@@ -213,7 +213,7 @@ func getActionVersion(data any) string {
 	}
 
 	// Priority 3: Fallback
-	return "v1"
+	return appconstants.VersionTagV1
 }
 
 // BuildTemplateData constructs comprehensive template data from action and configuration.
