@@ -637,8 +637,7 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 		[]byte(updatedContent),
 		appconstants.FilePermDefault,
 	); err != nil {
-		_ = os.Remove(backupPath)
-
+		// Do not remove backupPath here — it is the recovery copy for this failure.
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 

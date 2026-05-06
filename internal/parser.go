@@ -222,7 +222,11 @@ type actionFileWalker struct {
 func (w *actionFileWalker) walkFunc(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		if os.IsPermission(err) {
-			return filepath.SkipDir
+			if info != nil && info.IsDir() {
+				return filepath.SkipDir
+			}
+
+			return nil
 		}
 
 		return err

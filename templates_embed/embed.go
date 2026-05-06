@@ -28,7 +28,7 @@ func GetEmbeddedTemplate(templatePath string) ([]byte, error) {
 		cleanPath = appconstants.DirTemplates + cleanPath
 	}
 
-	if strings.Contains(cleanPath, "..") {
+	if !fs.ValidPath(cleanPath) {
 		return nil, filepath.ErrBadPattern
 	}
 
@@ -47,7 +47,7 @@ func IsEmbeddedTemplateAvailable(templatePath string) bool {
 		cleanPath = appconstants.DirTemplates + cleanPath
 	}
 
-	if strings.Contains(cleanPath, "..") {
+	if !fs.ValidPath(cleanPath) {
 		return false
 	}
 

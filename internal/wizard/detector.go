@@ -30,6 +30,10 @@ type ProjectDetector struct {
 
 // NewProjectDetector creates a new project detector.
 func NewProjectDetector(output internal.MessageLogger) (*ProjectDetector, error) {
+	if output == nil {
+		output = internal.NewColoredOutput(false)
+	}
+
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToGetCurrentDir, err)

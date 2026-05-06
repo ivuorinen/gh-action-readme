@@ -274,7 +274,7 @@ func (v *ConfigValidator) validateGitHubToken(token string, result *ValidationRe
 	// Check token format
 	if !v.isValidGitHubToken(token) {
 		result.Warnings = append(result.Warnings, ValidationWarning{
-			Field:   "github_token",
+			Field:   appconstants.ConfigKeyGitHubToken,
 			Message: "Token format looks unusual",
 			Value:   "[REDACTED]",
 		})
@@ -284,7 +284,7 @@ func (v *ConfigValidator) validateGitHubToken(token string, result *ValidationRe
 
 	// Security warning
 	result.Warnings = append(result.Warnings, ValidationWarning{
-		Field:   "github_token",
+		Field:   appconstants.ConfigKeyGitHubToken,
 		Message: "Tokens should be stored securely in environment variables",
 		Value:   "[REDACTED]",
 	})

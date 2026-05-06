@@ -204,7 +204,7 @@ func branchExists(repoRoot, branch string) bool {
 
 // parseGitHubURL extracts organization and repository name from various GitHub URL formats.
 func parseGitHubURL(url string) (organization, repository string) {
-	for _, re := range []*regexp.Regexp{reGitHubURLNoSuffix, reGitHubURLWithSuffix} {
+	for _, re := range []*regexp.Regexp{reGitHubURLWithSuffix, reGitHubURLNoSuffix} {
 		matches := re.FindStringSubmatch(url)
 		if len(matches) >= 3 {
 			repo := strings.TrimSuffix(matches[2], appconstants.DirGit)

@@ -46,7 +46,7 @@ func (r *StdinReader) ReadLine() (string, error) {
 	trimmed := strings.TrimSpace(line)
 
 	// EOF on last line with no trailing newline — data is still valid input
-	if err == io.EOF && trimmed != "" {
+	if errors.Is(err, io.EOF) && trimmed != "" {
 		return trimmed, nil
 	}
 
@@ -465,7 +465,9 @@ func setupDepsUpgrade(
 	}
 
 	if internal.GetGitHubToken(config) == "" {
-		return nil, nil, errors.New("no GitHub token found, set GITHUB_TOKEN environment variable")
+		return nil, nil, apperrors.New(appconstants.ErrCodeGitHubAuth, "GitHub token not found").
+			WithSuggestions(apperrors.GetSuggestions(appconstants.ErrCodeGitHubAuth, map[string]string{})...).
+			WithHelpURL(apperrors.GetHelpURL(appconstants.ErrCodeGitHubAuth))
 	}
 
 	generator := internal.NewGenerator(config)

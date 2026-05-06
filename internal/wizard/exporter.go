@@ -32,6 +32,10 @@ type ConfigExporter struct {
 
 // NewConfigExporter creates a new configuration exporter.
 func NewConfigExporter(output internal.MessageLogger) *ConfigExporter {
+	if output == nil {
+		output = internal.NewColoredOutput(false)
+	}
+
 	return &ConfigExporter{
 		output: output,
 	}
