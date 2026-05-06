@@ -68,7 +68,7 @@ Notes: Added `cmd_validate.go` — `validate` command implementation to Package 
 #### [DA01] `applyUpdates()` and `setupDepsUpgrade()` attributed to wrong file with wrong line numbers
 
 Fixed: 2026-05-05
-Notes: CLAUDE.md lines 139–140 now correctly reference `cmd_deps.go:549` and `cmd_deps.go:444`.
+Notes: CLAUDE.md lines 139–140 now correctly reference `cmd_deps.go:560` and `cmd_deps.go:455` (updated again in DA13 after the linting refactor).
 
 #### [DA02] Package structure lists `internal/errors/` which does not exist
 

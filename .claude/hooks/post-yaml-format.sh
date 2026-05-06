@@ -13,7 +13,10 @@ file_path=$(echo "$input" | python3 -c \
 [[ "$file_path" == */testdata/* ]] && exit 0
 
 REPO_ROOT=$(git -C "$(dirname "$file_path")" rev-parse --show-toplevel 2>/dev/null) || exit 0
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || {
+  echo "Error: cannot cd to repo root: $REPO_ROOT"
+  exit 1
+}
 
 YAMLFMT_MODULE="github.com/google/yamlfmt/cmd/yamlfmt"
 YAMLFMT_VERSION=$(awk '/^YAMLFMT_VERSION :=/ { print $3; exit }' "$REPO_ROOT/Makefile" 2>/dev/null)

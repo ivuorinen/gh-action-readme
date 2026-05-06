@@ -5,7 +5,9 @@ description: Identifies untested functions in packages below the 72% threshold a
 
 1. Run `go test -coverprofile=coverage.out -covermode=atomic ./...`
 2. Run `go tool cover -func=coverage.out` and parse all output lines.
-3. Identify packages where the package-level total is below 72.0%.
+3. Identify packages where the package-level total is below the configured threshold.
+    Read the threshold from the Makefile: `awk '/^COVERAGE_THRESHOLD :=/ { print $3; exit }' Makefile`.
+    Fall back to 72.0 if not found.
 4. For each low-coverage package, list every function at 0.0% coverage.
 
 For each 0% function, classify it as:

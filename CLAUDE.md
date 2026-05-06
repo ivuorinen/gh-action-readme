@@ -89,7 +89,7 @@ The `wrapHandlerWithErrorHandling()` wrapper (in `main.go`):
 
 - Initializes `globalConfig` if nil (important for testing)
 - Calls the handler and captures the error
-- Displays error via `ColoredOutput` and exits with code 1 if error occurs
+- Displays error via `ColoredOutput` and exits with `appconstants.ExitCodeError` if error occurs
 
 **Testing handlers:**
 
@@ -138,14 +138,15 @@ err := myFunction(output, mockConfig, mockReader)
 - `applyUpdates()` - accepts `InputReader` for stdin mocking (cmd_deps.go:560)
 - `setupDepsUpgrade()` - accepts `*AppConfig` for config injection (cmd_deps.go:455)
 
-**Test interfaces** (defined in `main_test.go` — test-only):
+**Interfaces** (production interface in `cmd_deps.go`; test implementation in `main_test.go`):
 
 ```go
-// InputReader for mocking user input
+// InputReader is declared in cmd_deps.go (production code, enables testing)
 type InputReader interface {
     ReadLine() (string, error)
 }
 
+// TestInputReader is defined in main_test.go (test-only)
 type TestInputReader struct {
     responses []string
     index     int

@@ -30,6 +30,7 @@ case "$basename_lower" in
 *.go | *.ts | *.js | *.jsx | *.tsx | *.py | *.rb | *.java | *.rs | *.c | *.cpp | *.h)
   exit 0
   ;;
+*) ;; # intentional fall-through: continue to name-based checks below
 esac
 
 if echo "$basename_lower" | grep -qE "\b(secret|credential|password)(s)?\b" 2>/dev/null; then
