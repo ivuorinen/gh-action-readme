@@ -738,7 +738,14 @@ func TestValidateActionType(t *testing.T) {
 	analyzer, cleanup := newTestAnalyzer(t)
 	defer cleanup()
 
-	validTypes := []string{"node24", "node20", "node16", "node12", "docker", "composite"}
+	validTypes := []string{
+		appconstants.NodeRuntimeNode24,
+		appconstants.NodeRuntimeNode20,
+		appconstants.NodeRuntimeNode16,
+		appconstants.NodeRuntimeNode12,
+		appconstants.ActionTypeDocker,
+		appconstants.ActionTypeComposite,
+	}
 	for _, typ := range validTypes {
 		if err := analyzer.validateActionType(typ); err != nil {
 			t.Errorf("validateActionType(%q) unexpected error: %v", typ, err)

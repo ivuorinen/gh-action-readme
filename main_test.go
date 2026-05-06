@@ -2692,7 +2692,7 @@ func TestSetupDepsUpgrade(t *testing.T) {
 				return tmpDir, config
 			},
 			wantErr:    true,
-			errContain: "no GitHub token",
+			errContain: "GitHub token not found",
 		},
 		{
 			name: "succeeds with valid token and action files",
@@ -2828,15 +2828,13 @@ func TestDepsUpgradeHandlerErrorPaths(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
-		if !strings.Contains(err.Error(), "no GitHub token") {
-			t.Errorf("expected 'no GitHub token' error, got: %v", err)
+		if !strings.Contains(err.Error(), "GitHub token not found") {
+			t.Errorf("expected 'GitHub token not found' error, got: %v", err)
 		}
 	})
 }
 
 func TestConfigRootHandler(t *testing.T) {
-	t.Parallel()
-
 	origConfig := globalConfig
 	t.Cleanup(func() { globalConfig = origConfig })
 

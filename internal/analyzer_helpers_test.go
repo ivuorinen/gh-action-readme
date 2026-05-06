@@ -16,54 +16,38 @@ const (
 func TestCreateAnalyzer(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name           string
-		setupConfig    func() *AppConfig
-		expectAnalyzer bool
-	}{
-		{
-			name: "successful analyzer creation with valid config",
-			setupConfig: func() *AppConfig {
-				return &AppConfig{
-					Theme:        testAnalyzerThemeDefault,
-					OutputFormat: testAnalyzerFormatMD,
-					OutputDir:    ".",
-					GitHubToken:  testAnalyzerFakeToken,
-				}
-			},
-			expectAnalyzer: true,
-		},
-		{
-			name: "analyzer creation without GitHub token",
-			setupConfig: func() *AppConfig {
-				return &AppConfig{
-					Theme:        testAnalyzerThemeDefault,
-					OutputFormat: testAnalyzerFormatMD,
-					OutputDir:    ".",
-				}
-			},
-			expectAnalyzer: true,
-		},
+	config := &AppConfig{
+		Theme:        testAnalyzerThemeDefault,
+		OutputFormat: testAnalyzerFormatMD,
+		OutputDir:    ".",
+		GitHubToken:  testAnalyzerFakeToken,
 	}
+	generator := NewGenerator(config)
+	output := &ColoredOutput{NoColor: true}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	analyzer := CreateAnalyzer(generator, output)
+	if analyzer == nil {
+		t.Error("expected analyzer to be created, got nil")
+	}
+}
 
-			config := tt.setupConfig()
-			generator := NewGenerator(config)
-			output := &ColoredOutput{NoColor: true}
+func TestCreateAnalyzer_WithoutToken(t *testing.T) {
+	// Not parallel: uses t.Setenv to pin the environment to no-token state.
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GH_README_GITHUB_TOKEN", "")
 
-			analyzer := CreateAnalyzer(generator, output)
+	config := &AppConfig{
+		Theme:        testAnalyzerThemeDefault,
+		OutputFormat: testAnalyzerFormatMD,
+		OutputDir:    ".",
+	}
+	generator := NewGenerator(config)
+	output := &ColoredOutput{NoColor: true}
 
-			if tt.expectAnalyzer && analyzer == nil {
-				t.Error("expected analyzer to be created, got nil")
-			}
-
-			if !tt.expectAnalyzer && analyzer != nil {
-				t.Error("expected analyzer to be nil, got non-nil")
-			}
-		})
+	// CreateDependencyAnalyzer succeeds without a token (skips GitHub client).
+	analyzer := CreateAnalyzer(generator, output)
+	if analyzer == nil {
+		t.Error("expected analyzer to be created without a GitHub token, got nil")
 	}
 }
 
@@ -85,10 +69,7 @@ func TestCreateAnalyzerIntegration(t *testing.T) {
 	output := NewColoredOutput(true)
 
 	analyzer := CreateAnalyzer(generator, output)
-
-	if analyzer != nil {
-		t.Log("Analyzer created successfully")
-	} else {
-		t.Log("Analyzer creation failed - expected without valid GitHub token")
+	if analyzer == nil {
+		t.Error("expected analyzer to be created with a fake token, got nil")
 	}
 }

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -610,7 +611,11 @@ func TestBuildTemplateData_RealGitRepo(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	testutil.CreateGitRepoWithRemote(t, tmpDir, "https://github.com/testorg/testrepo.git")
+	testutil.CreateGitRepoWithRemote(
+		t,
+		tmpDir,
+		fmt.Sprintf("https://github.com/%s/%s.git", testTplTestOrg, testTplTestRepo),
+	)
 
 	action := &ActionYML{Name: "Test", Description: "test"}
 	config := &AppConfig{}
