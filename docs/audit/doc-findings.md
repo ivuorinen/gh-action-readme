@@ -35,7 +35,7 @@ The `generateByFormat` function contains the `switch g.Config.OutputFormat` bloc
 
 ### Pass 2 — 2026-05-05
 
-#### [DA08] gremlins described as "Go 1.25+ compatible" but project is on Go 1.26.2
+#### [DA08] gremlins described as "Go 1.25+ compatible" but project is on Go 1.26.3
 
 Fixed: 2026-05-05
 Notes: Changed "Go 1.25+" to "Go 1.26+" in CLAUDE.md line 303.
