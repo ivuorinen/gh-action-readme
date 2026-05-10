@@ -22,7 +22,7 @@ Strategic roadmap for gh-action-readme development and future enhancements.
 - **Zero Linting Violations**: Complete golangci-lint compliance
 - **EditorConfig Compliance**: Consistent formatting across codebase
 - **Security Hardening**: Integrated govulncheck, Trivy, gitleaks, CodeQL
-- **Dependency Updates**: Latest Go 1.24, security patches applied
+- **Dependency Updates**: Latest Go 1.26.2, security patches applied
 
 ### Developer Experience
 

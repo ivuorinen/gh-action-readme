@@ -317,7 +317,7 @@ gh-action-readme version [flags]
 gh-action-readme version 1.2.0
 Built: 2025-08-07T10:30:00Z
 Commit: a1b2c3d
-Go: go1.24.4
+Go: go1.26.2
 Platform: linux/amd64
 ```
 
