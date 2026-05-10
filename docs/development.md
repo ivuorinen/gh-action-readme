@@ -22,7 +22,7 @@ cd testdata/
 
 ### Prerequisites
 
-- **Go 1.26.2+** (required)
+- **Go 1.26.3+** (required)
 - **golangci-lint** (for linting)
 - **pre-commit** (for git hooks)
 - **Docker** (optional, for containerized testing)

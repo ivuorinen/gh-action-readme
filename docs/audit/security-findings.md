@@ -26,12 +26,12 @@ No open findings.
 #### [SEC-001] Go stdlib: loop induction variable overflow/underflow
 
 Fixed: 2026-05-05
-Notes: `go.mod` already declares `go 1.26.2`, which is one of the fix versions (go1.25.9, go1.26.2). No change required.
+Notes: `go.mod` already declares `go 1.26.3`, which is one of the fix versions (go1.25.9, go1.26.3). No change required.
 
 #### [SEC-002] Go stdlib crypto/tls: race on ClientCAs/RootCAs during session resumption
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.7). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.7). No change required.
 
 #### [SEC-003] Fake GitHub token in test fixture committed to repository
 
@@ -42,27 +42,27 @@ Notes: Replaced `ghp_test1234567890abcdefghijklmnopqrstuvwxyz` with `"FAKE_TOKEN
 #### [SEC-004] Go stdlib: incorrect pointer unwrapping in compiler (memory move)
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (go1.25.9, go1.26.2). Same upgrade as SEC-001. No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (go1.25.9, go1.26.3). Same upgrade as SEC-001. No change required.
 
 #### [SEC-005] Go stdlib net/url: invalid URL host accepted by url.Parse
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.8). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.8). No change required.
 
 #### [SEC-006] Go stdlib net/url: unbounded query parsing (DoS)
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.6). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.6). No change required.
 
 #### [SEC-007] Go stdlib html/template: XSS via http-equiv refresh meta tag
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.8). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.8). No change required.
 
 #### [SEC-008] Go stdlib html/template: incorrect JS template literal escaping across branches
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.9). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.9). No change required.
 
 #### [SEC-009] Dockerfile: container process runs as root (missing USER)
 
@@ -86,32 +86,32 @@ indirection (`env: WORKING_DIR: ${{ ... }}` + `"$WORKING_DIR"`) in `testdata/com
 #### [SEC-014] Go stdlib archive/zip: super-linear file name indexing (DoS)
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.6). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.6). No change required.
 
 #### [SEC-015] Go stdlib archive/tar: unbounded memory on sparse old-GNU archives
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.9). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.9). No change required.
 
 #### [SEC-016] Go stdlib: GOARCH=wasm memory limit bypass (DoS)
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.6). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.6). No change required.
 
 #### [SEC-017] Go stdlib net/http: Transfer-Encoding header bypass (request smuggling)
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.6). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.6). No change required.
 
 #### [SEC-019] Go stdlib os.File.ReadDir: FileInfo may reference file outside Root
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.6). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.6). No change required.
 
 #### [SEC-020] Go stdlib os: file path escape via ReadDir FileInfo (Unix only)
 
 Fixed: 2026-05-05
-Notes: `go.mod` at `go 1.26.2` satisfies the fix window (≥1.25.8). No change required.
+Notes: `go.mod` at `go 1.26.3` satisfies the fix window (≥1.25.8). No change required.
 
 #### [SEC-021] Checkov secret detection: obvious fake tokens in test fixtures
 

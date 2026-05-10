@@ -105,11 +105,11 @@ the `handleNoFilesFoundError` check (`cmd_deps.go:121`). When no action files ar
 falls through to `analyzeDependencies(output, nil, analyzer)` which prints a misleading
 "Dependencies found in action files:" header with no files.
 
-#### [N38] CLAUDE.md Go version "1.25+" contradicts `go.mod` 1.26.2
+#### [N38] CLAUDE.md Go version "1.25+" contradicts `go.mod` 1.26.3
 
 Fixed: 2026-05-05
 Notes: Changed "Go 1.25+" to "Go 1.26+" in the gremlins tool note (`CLAUDE.md:303`).
-The module requires go 1.26.2 per `go.mod`.
+The module requires go 1.26.3 per `go.mod`.
 
 #### [N39] CLAUDE.md hardcoded coverage percentage becomes stale
 

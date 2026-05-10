@@ -36,7 +36,7 @@ git push origin feature/my-awesome-feature
 
 ### Prerequisites
 
-- **Go 1.26.2+** (required)
+- **Go 1.26.3+** (required)
 - **golangci-lint** (for code quality)
 - **pre-commit** (for git hooks)
 
