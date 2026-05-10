@@ -975,7 +975,7 @@ func getExpectedFilename(outputFormat string) string {
 	case appconstants.OutputFormatHTML:
 		// HTML files have variable names based on action name, so we'll use a pattern
 		// The DetectGeneratedFiles function will find any .html file
-		return "*.html"
+		return TestPatternHTML
 	case appconstants.OutputFormatJSON:
 		return appconstants.ActionDocsJSON
 	case appconstants.OutputFormatASCIIDoc:
