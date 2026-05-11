@@ -67,7 +67,7 @@ func TestGetExpectedFilename(t *testing.T) {
 		want   string
 	}{
 		{appconstants.OutputFormatMarkdown, appconstants.ReadmeMarkdown},
-		{appconstants.OutputFormatHTML, "*.html"},
+		{appconstants.OutputFormatHTML, TestPatternHTML},
 		{appconstants.OutputFormatJSON, appconstants.ActionDocsJSON},
 		{appconstants.OutputFormatASCIIDoc, appconstants.ReadmeASCIIDoc},
 		{"unknown-format", appconstants.ReadmeMarkdown},
