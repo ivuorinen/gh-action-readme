@@ -16,8 +16,10 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # only for delete-branch option
+      contents: write
       issues: write
       pull-requests: write
     steps:
       - uses: ivuorinen/actions/stale@f2d15a840e8888ba4f0c348ea70b6522cf2dc541 # v2026.04.15
+        with:
+          token: ${{ github.token }}
