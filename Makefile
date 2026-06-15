@@ -24,7 +24,7 @@ EDITORCONFIG_CHECKER_VERSION := v3.7.0
 # renovate: datasource=go depName=github.com/oligot/go-mod-upgrade
 GO_MOD_UPGRADE_VERSION := v0.12.0
 # renovate: datasource=go depName=github.com/securego/gosec/v2
-GOSEC_VERSION := v2.26.1
+GOSEC_VERSION := v2.27.1
 # renovate: datasource=go depName=github.com/google/yamlfmt
 YAMLFMT_VERSION := v0.21.0
 # renovate: datasource=go depName=golang.org/x/tools
