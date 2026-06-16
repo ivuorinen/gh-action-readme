@@ -7,7 +7,7 @@ import (
 )
 
 // loadGitHubTokenFromEnv retrieves the GitHub token from environment variables.
-// It checks both the tool-specific environment variable (GHREADME_GITHUB_TOKEN)
+// It checks both the tool-specific environment variable (GH_README_GITHUB_TOKEN)
 // and the standard GitHub environment variable (GITHUB_TOKEN) in that order.
 // Returns an empty string if no token is found.
 func loadGitHubTokenFromEnv() string {

@@ -4,7 +4,7 @@
 
 ![GitHub](https://img.shields.io/badge/GitHub%20Action-Documentation%20Generator-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Go](https://img.shields.io/badge/Go-1.26.3+-00ADD8)
+![Go](https://img.shields.io/badge/Go-1.26.4+-00ADD8)
 ![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)
 
 [![Security](https://img.shields.io/badge/security-hardened-brightgreen)](docs/security.md)
@@ -111,7 +111,7 @@ go run . gen testdata/example-action/ --output custom.md
 Or run remotely without cloning:
 
 ```bash
-# Run directly from GitHub (requires Go 1.26.3+)
+# Run directly from GitHub (requires Go 1.26.4+)
 go run github.com/ivuorinen/gh-action-readme@latest gen
 go run github.com/ivuorinen/gh-action-readme@latest gen --theme professional
 go run github.com/ivuorinen/gh-action-readme@latest validate

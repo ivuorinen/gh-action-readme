@@ -29,6 +29,12 @@ type AppConfig struct {
 	Repository       string `mapstructure:"repository"         yaml:"repository,omitempty"`
 	Version          string `mapstructure:"version"            yaml:"version,omitempty"`
 	UseDefaultBranch bool   `mapstructure:"use_default_branch" yaml:"use_default_branch"`
+	// useDefaultBranchSet records whether a loaded source explicitly set
+	// use_default_branch. UseDefaultBranch defaults to true, so a plain bool
+	// cannot distinguish "unset" from an explicit "false"; this flag lets a
+	// source that sets it to false override the default during merge. Not
+	// serialized (unexported), set by the config loaders via viper.IsSet.
+	useDefaultBranchSet bool
 
 	// Template Settings
 	Theme          string `mapstructure:"theme"           yaml:"theme"`
@@ -336,8 +342,13 @@ func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
 	if src.Quiet {
 		dst.Quiet = src.Quiet
 	}
-	if src.UseDefaultBranch {
+	// UseDefaultBranch defaults to true, so it must be merged on explicit
+	// presence (tracked via useDefaultBranchSet) rather than "merge if true" —
+	// otherwise a source setting use_default_branch: false could never override
+	// the default.
+	if src.useDefaultBranchSet {
 		dst.UseDefaultBranch = src.UseDefaultBranch
+		dst.useDefaultBranchSet = true
 	}
 }
 
@@ -413,70 +424,6 @@ func DetectRepositoryName(repoRoot string) string {
 	}
 
 	return info.GetRepositoryName()
-}
-
-// loadAndMergeConfig is a helper that loads config from a directory and merges it.
-// Returns nil if dir is empty (no-op). Returns error if loading fails.
-func loadAndMergeConfig(
-	config *AppConfig,
-	dir string,
-	loadFunc func(string) (*AppConfig, error),
-	errorFormat string,
-	allowTokens bool,
-) error {
-	if dir == "" {
-		return nil
-	}
-
-	loadedConfig, err := loadFunc(dir)
-	if err != nil {
-		return fmt.Errorf(errorFormat, err)
-	}
-
-	MergeConfigs(config, loadedConfig, allowTokens)
-
-	return nil
-}
-
-// LoadConfiguration loads configuration with multi-level hierarchy.
-func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, error) {
-	// 1. Start with defaults
-	config := DefaultAppConfig()
-
-	// 2. Load global config
-	globalConfig, err := InitConfig(configFile)
-	if err != nil {
-		return nil, fmt.Errorf(appconstants.ErrFailedToLoadGlobalConfig, err)
-	}
-	MergeConfigs(config, globalConfig, true) // Allow tokens for global config
-
-	// 3. Apply repo-specific overrides from global config
-	repoName := DetectRepositoryName(repoRoot)
-	if repoName != "" {
-		if repoOverride, exists := globalConfig.RepoOverrides[repoName]; exists {
-			MergeConfigs(config, &repoOverride, false) // No tokens in overrides
-		}
-	}
-
-	// 4. Load repository root ghreadme.yaml
-	if err := loadAndMergeConfig(config, repoRoot, LoadRepoConfig,
-		appconstants.ErrFailedToLoadRepoConfig, false); err != nil {
-		return nil, err
-	}
-
-	// 5. Load action-specific config.yaml
-	if err := loadAndMergeConfig(config, actionDir, LoadActionConfig,
-		appconstants.ErrFailedToLoadActionConfig, false); err != nil {
-		return nil, err
-	}
-
-	// 6. Apply environment variable overrides for GitHub token
-	// Check environment variables directly with higher priority
-	if token := loadGitHubTokenFromEnv(); token != "" {
-		config.GitHubToken = token
-	}
-
-	return config, nil
 }
 
 // InitConfig initializes the global configuration using Viper with XDG compliance.

@@ -47,6 +47,18 @@ func TestValidateFilePath(t *testing.T) {
 			path:    "testdata/action.yml/",
 			wantErr: false,
 		},
+		{
+			// filepath.Clean collapses this to "/etc/passwd"; a cleaned-path
+			// check would miss it, so the original path must be inspected.
+			name:    "absolute traversal collapsed by Clean",
+			path:    "/tmp/x/../../../etc/passwd",
+			wantErr: true,
+		},
+		{
+			name:    "relative traversal that resolves in-bounds is still rejected",
+			path:    "actions/build/../build/action.yml",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

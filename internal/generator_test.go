@@ -663,6 +663,31 @@ func TestGeneratorWithDifferentThemes(t *testing.T) {
 	}
 }
 
+// TestGeneratorUnknownThemeErrors verifies that an unrecognized theme produces an
+// explicit error rather than silently falling back to the default template.
+func TestGeneratorUnknownThemeErrors(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
+
+	config := defaultTestConfig()
+	config.Theme = "totally-not-a-real-theme"
+	config.OutputDir = tmpDir
+	generator := NewGenerator(config)
+
+	err := generator.GenerateFromFile(actionPath)
+	if err == nil {
+		t.Fatal("expected an error for an unknown theme, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown theme") {
+		t.Errorf("error = %q, want it to mention 'unknown theme'", err.Error())
+	}
+}
+
 func TestGeneratorErrorHandling(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

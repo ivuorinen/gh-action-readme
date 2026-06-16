@@ -1,15 +1,30 @@
 # Security Audit Findings
 
 Generated: 2026-05-05
-Last validated: 2026-05-05
-Pass: 2
+Last validated: 2026-06-16
+Pass: 3
 
 ## Tool Coverage
 
-- Available: opengrep, grype, trivy, gitleaks, checkov, gosec, snyk, npm, yarn, pnpm
-- Not available: semgrep (broken Python environment — ImportError on startup)
-- Not applicable: npm/yarn/pnpm (no Node.js lockfile present), snyk (requires `snyk auth`)
-- Errored: semgrep: `ImportError: cannot import name 'cli' from 'semgrep.cli'`; snyk: `Use 'snyk auth' to authenticate.`
+- Available (ran): gosec, govulncheck, gitleaks, trivy, grype, snyk, opengrep, checkov
+- Not available: nancy
+- Not applicable: npm/yarn/pnpm (no Node.js lockfile present)
+- Errored: semgrep: `.../semgrep/bin/python: bad interpreter: No such file or directory` (broken
+  mise install — opengrep, its fork, ran instead and covered SAST)
+
+## Pass 3 Results (2026-06-16)
+
+Re-scan after the working-tree quality fixes. No new findings; all open findings remain 0.
+
+- gosec: 0 issues (60 files, 57 nosec annotations)
+- govulncheck: 164 OSV advisories in the dependency graph, 0 reachable/called
+- gitleaks: 0 secrets; trivy: 0 vulns/misconfig/secrets; grype: 0 matches; snyk: 0 vulns
+- opengrep: 10 findings — 9× `dangerous-exec-command` (git/detector.go, validation/validation.go,
+  testutil/testutil.go) and 1× `import-text-template` (template.go) — all re-validate to the
+  already-triaged SEC-010/011/012 (validated/fixed exec inputs) and SEC-018 (text/template is
+  correct for the non-HTML markdown/asciidoc formats); no change.
+- checkov: 6× CKV_SECRET_6 on testdata fixture configs — the intentional fake tokens already
+  tracked as SEC-021 (Invalid); no change.
 
 ## Summary
 

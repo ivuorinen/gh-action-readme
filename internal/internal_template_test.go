@@ -2,6 +2,7 @@ package internal
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -16,7 +17,7 @@ func TestRenderReadme(t *testing.T) {
 	testutil.SetupTestTemplates(t, tmpDir)
 
 	action := &ActionYML{
-		Name:        "MyAction",
+		Name:        testutil.TestActionNameMyAction,
 		Description: testGenShortDesc,
 		Inputs: map[string]ActionInput{
 			"foo": {Description: "Foo input", Required: true},
@@ -30,5 +31,11 @@ func TestRenderReadme(t *testing.T) {
 	}
 	if len(out) < 10 || out[0:1] != "#" {
 		t.Error("unexpected output content")
+	}
+	// Verify the action data actually flowed into the output, not just that the
+	// template's literal "#" header rendered. A regressed data pipeline (empty
+	// .Name / dropped Inputs) would still satisfy the length+prefix check above.
+	if !strings.Contains(out, testutil.TestActionNameMyAction) {
+		t.Errorf("rendered output missing action name %q; got:\n%s", testutil.TestActionNameMyAction, out)
 	}
 }

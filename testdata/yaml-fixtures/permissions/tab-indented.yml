@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+# permissions:
+#	- contents: read
+#	- issues: write
+name: Test Action
+description: Test action with tab-indented permission comment block
+runs:
+  using: composite
+  steps: []

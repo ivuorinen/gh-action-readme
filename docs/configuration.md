@@ -24,8 +24,7 @@ output_format: md
 output_dir: .
 verbose: false
 github_token: ""
-dependencies_enabled: true
-cache_ttl: 3600
+analyze_dependencies: true
 ```
 
 ## 🔧 Configuration Options
@@ -44,16 +43,8 @@ cache_ttl: 3600
 | Option | Type | Default | Description |
 | -------- | ------ | --------- | ------------- |
 | `github_token` | string | `""` | GitHub personal access token |
-| `dependencies_enabled` | boolean | `true` | Enable dependency analysis |
-| `rate_limit_delay` | int | `1000` | Delay between API calls (ms) |
-
-### Performance Settings
-
-| Option | Type | Default | Description |
-| -------- | ------ | --------- | ------------- |
-| `cache_ttl` | int | `3600` | Cache TTL in seconds |
-| `concurrent_requests` | int | `3` | Max concurrent GitHub API requests |
-| `timeout` | int | `30` | Request timeout in seconds |
+| `analyze_dependencies` | boolean | `true` | Enable dependency analysis |
+| `show_security_info` | boolean | `false` | Show security/permissions info |
 
 ## 🌍 Environment Variables
 
@@ -68,11 +59,7 @@ export GH_ACTION_README_VERBOSE=true
 
 # GitHub settings
 export GITHUB_TOKEN=your_token_here
-export GH_ACTION_README_DEPENDENCIES=true
-
-# Performance settings
-export GH_ACTION_README_CACHE_TTL=7200
-export GH_ACTION_README_TIMEOUT=60
+export GH_ACTION_README_ANALYZE_DEPENDENCIES=true
 ```
 
 ### Environment Variable Priority
@@ -134,9 +121,6 @@ $ gh-action-readme config wizard
 ```bash
 # List available themes
 gh-action-readme config themes
-
-# Set default theme
-gh-action-readme config set theme github
 ```
 
 ### Custom Themes
@@ -158,14 +142,7 @@ gh-action-readme gen --theme custom
 
 ```text
 templates/themes/your-theme/
-├── readme.tmpl           # Main template
-├── partials/            # Optional partial templates
-│   ├── header.tmpl
-│   ├── inputs.tmpl
-│   └── examples.tmpl
-└── assets/              # Optional theme assets
-    ├── styles.css
-    └── logo.png
+└── readme.tmpl           # Main template (readme.adoc for the asciidoc template)
 ```
 
 ## 🔐 GitHub Token Configuration
@@ -180,13 +157,9 @@ templates/themes/your-theme/
 
 ```bash
 # Environment variable (recommended)
+export GH_README_GITHUB_TOKEN=your_token_here
+# or
 export GITHUB_TOKEN=your_token_here
-
-# Configuration file
-gh-action-readme config set github_token your_token_here
-
-# Command line (least secure)
-gh-action-readme gen --github-token your_token_here
 ```
 
 ### Token Benefits
@@ -200,25 +173,21 @@ gh-action-readme gen --github-token your_token_here
 
 ### Cache Settings
 
-```yaml
-# Cache configuration
-cache_enabled: true
-cache_dir: ~/.cache/gh-action-readme
-cache_ttl: 3600  # 1 hour in seconds
-cache_max_size: 100  # MB
-```
+Caching is built in and not user-configurable. The cache lives in the
+XDG cache directory (`~/.cache/gh-action-readme`) and uses fixed defaults:
+a 15-minute TTL for API responses and a 100 MB maximum size.
 
 ### Cache Management
 
 ```bash
 # Clear cache
-gh-action-readme config clear-cache
+gh-action-readme cache clear
 
-# Check cache status
-gh-action-readme config cache-status
+# Check cache path
+gh-action-readme cache path
 
-# Set cache TTL
-gh-action-readme config set cache_ttl 7200  # 2 hours
+# Check cache stats
+gh-action-readme cache stats
 ```
 
 ## 🔧 Advanced Configuration
@@ -261,36 +230,21 @@ template_vars:
 ```bash
 # Show current config
 gh-action-readme config show
-
-# Show specific setting
-gh-action-readme config get theme
 ```
 
 ### Update Configuration
 
+Edit the config file directly (`~/.config/gh-action-readme/config.yaml`) or re-run the wizard:
+
 ```bash
-# Set individual values
-gh-action-readme config set theme professional
-gh-action-readme config set verbose true
-
-# Reset to defaults
-gh-action-readme config reset
-
-# Remove config file
-gh-action-readme config delete
+gh-action-readme config wizard
 ```
 
-### Export/Import Configuration
+To reset to defaults, delete the config file and re-initialize:
 
 ```bash
-# Export current config
-gh-action-readme config export --format json > config.json
-
-# Import configuration
-gh-action-readme config import config.json
-
-# Merge configurations
-gh-action-readme config merge other-config.yaml
+rm ~/.config/gh-action-readme/config.yaml
+gh-action-readme config init
 ```
 
 ## 🔍 Debugging Configuration
@@ -300,29 +254,13 @@ gh-action-readme config merge other-config.yaml
 ```bash
 # Enable verbose output
 gh-action-readme gen --verbose
-
-# Set in config
-gh-action-readme config set verbose true
-```
-
-### Configuration Validation
-
-```bash
-# Validate current configuration
-gh-action-readme config validate
-
-# Test configuration with dry run
-gh-action-readme gen --dry-run --verbose
 ```
 
 ### Troubleshooting
 
 ```bash
-# Show effective configuration (merged from all sources)
-gh-action-readme config effective
-
-# Show configuration file locations
-gh-action-readme config paths
+# Show current configuration
+gh-action-readme config show
 
 # Reset corrupted configuration
 rm ~/.config/gh-action-readme/config.yaml

@@ -200,14 +200,15 @@ func TestParseGitHubURLMutationResistance(t *testing.T) {
 			"Extra path segments invalid for simple format",
 		),
 
-		// .git extension edge cases
+		// .git extension edge cases: dotted repo names are preserved and a single
+		// trailing ".git" suffix is stripped.
 		makeURLTestCase(
 			"double_git_extension",
 			"octocat/Hello-World.git.git",
-			testutil.MutationStrEmpty,
-			testutil.MutationStrEmpty,
+			testutil.MutationOrgOctocat,
+			testutil.MutationRepoHelloWorld+".git",
 			true,
-			"Dots not allowed in repo name by [^/.] pattern",
+			"Dotted repo names preserved; one trailing .git suffix stripped",
 		),
 	}
 

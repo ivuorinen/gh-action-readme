@@ -49,7 +49,7 @@ func (co *ColoredOutput) Success(format string, args ...any) {
 // Error prints an error message in red to stderr.
 func (co *ColoredOutput) Error(format string, args ...any) {
 	if co.NoColor {
-		fmt.Fprintf(os.Stderr, "❌ "+format+"\n", args...)
+		_, _ = fmt.Fprintf(os.Stderr, "❌ "+format+"\n", args...)
 	} else {
 		_, _ = color.New(color.FgRed).Fprintf(os.Stderr, "❌ "+format+"\n", args...)
 	}
@@ -103,7 +103,7 @@ func (co *ColoredOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
 
 	// Print main error message
 	if co.NoColor {
-		fmt.Fprintf(os.Stderr, "❌ %s\n", err.Error())
+		_, _ = fmt.Fprintf(os.Stderr, "❌ %s\n", err.Error())
 	} else {
 		color.Red("❌ %s", err.Error())
 	}

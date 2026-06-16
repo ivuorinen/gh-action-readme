@@ -1,15 +1,355 @@
 # Nitpicker Findings
 
 Generated: 2026-05-04
-Last validated: 2026-05-05
+Last validated: 2026-06-16 (pass 13)
 
 ## Summary
 
-- Total: 45 | Open: 0 | Fixed: 42 | Invalid: 3
+- Total: 97 | Open: 0 | Fixed: 92 | Invalid: 5
 
 ## Open Findings
 
 ## Fixed
+
+### Pass 13 — 2026-06-16
+
+#### [N93] `git.parseGitHubURL` truncates repository names that contain a dot (N91 fixed only the sibling parser)
+
+Fixed: 2026-06-16
+Notes: internal/git/detector.go used `reGitHubURLNoSuffix = github\.com[:/]([^/]+)/([^/\.]+)`, truncating
+dotted repo names at the first dot for any remote URL lacking a `.git` suffix (e.g. the HTTPS web-clone URL
+`https://github.com/org/my.repo` yielded repo `my`). N91 fixed the same class of bug in
+internal/validation/strings.go's `ParseGitHubURL` but never touched this second, independent parser. Replaced
+both regexes with one dot-tolerant `reGitHubURL = github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?(?:/.*)?$` mirroring
+`validation.reGitHubURLFull`, simplified `parseGitHubURL` to a single match, and added two dotted-repo cases to
+TestParseGitHubURL. Verified all prior edge cases (subgroups, trailing slash, query params, SSH) still pass.
+
+#### [N94] `apperrors.Wrap` aliases the original's `Suggestions` slice despite a "copy to avoid mutating" comment
+
+Fixed: 2026-06-16
+Notes: Wrap (internal/apperrors/errors.go) cloned `Details` via maps.Clone but copied `Suggestions` by slice
+reference, so a later `WithSuggestions` append on the copy could write into the original's backing array.
+Changed to `slices.Clone(ce.Suggestions)` (slices already imported). Latent (no current
+Wrap(...).WithSuggestions(...) chain), but the copy contract now holds.
+
+#### [N95] `use_default_branch:false` in a `repo_overrides` entry was silently ignored (incomplete N79 fix)
+
+Fixed: 2026-06-16
+Notes: N79 made `use_default_branch:false` overridable only for top-level configs via `useDefaultBranchSet`
+(set from `viper.IsSet`). Repo-override structs are produced by viper's nested unmarshal, so their flag was
+always false and a per-repo `use_default_branch:false` could never disable the default-true behavior. Added
+`markRepoOverrideUseDefaultBranch` (internal/viper_helper.go), called from both loaders, which inspects the raw
+viper `repo_overrides` map (robust against repo names containing dots/slashes) and sets the flag per override
+when the key is explicitly present. Added `ConfigKeyRepoOverrides` constant, fixture
+configs/repo-override-use-default-branch-false.yml, and end-to-end test
+TestLoadConfigFromViperRepoOverrideUseDefaultBranch.
+
+#### [N96] `StdinReader` doc comment overstated its buffer-reuse guarantee
+
+Fixed: 2026-06-16
+Notes: internal/input.go comment said the buffer is "preserved across calls" without scoping it to a single
+instance; a caller constructing a fresh StdinReader per read can drop a buffered-but-unconsumed stdin tail.
+Reworded to state the guarantee is per-instance and that multi-read callers must reuse one StdinReader.
+
+### Pass 12 — 2026-06-16
+
+#### [N77] configuration.md documents Performance Settings keys (cache_ttl, concurrent_requests, timeout) that AppConfig never defines
+
+Fixed: 2026-06-16
+Notes: Removed the phantom Performance Settings section (cache_ttl/concurrent_requests/timeout) and the
+GH_ACTION_README_CACHE_TTL/_TIMEOUT env exports from docs/configuration.md — none exist in AppConfig. (See
+doc-findings DA16.)
+
+#### [N78] development.md documents a GenerateReadme() function that does not exist
+
+Fixed: 2026-06-16
+Notes: docs/development.md replaced the fictional GenerateReadme() with the real entry points
+(internal.RenderReadme and Generator.GenerateFromFile/ProcessBatch). (doc-findings DA17.)
+
+#### [N79] use_default_branch cannot be disabled via config — merge only propagates the true value
+
+Fixed: 2026-06-16
+Notes: AppConfig gained an unexported useDefaultBranchSet flag, set from viper.IsSet in both config loaders
+(loadConfigFromViper, loadAndUnmarshalConfig). mergeBooleanFields now merges UseDefaultBranch on explicit
+presence, so use_default_branch:false overrides the default-true. Added
+TestMergeBooleanFieldsUseDefaultBranchPresence; verified end-to-end via an action config.yaml.
+
+#### [N80] Production and tests exercise two divergent LoadConfiguration implementations
+
+Fixed: 2026-06-16
+Notes: Deleted the test-only package-level LoadConfiguration and loadAndMergeConfig; repointed config_test.go
+to NewConfigurationLoader().LoadConfiguration (the production path), so tests now exercise the shipped
+implementation.
+
+#### [N81] promptSensitive echoes GitHub tokens to terminal despite "without echoing" contract
+
+Fixed: 2026-06-16
+Notes: promptSensitive now disables terminal echo via golang.org/x/term ReadPassword on a TTY (falls back to
+the scanner for non-TTY/piped input). x/term promoted to a direct dependency.
+
+#### [N83] deps security exits with error code 1 when no action files found, inconsistent with deps list/outdated
+
+Fixed: 2026-06-16
+Notes: depsSecurityHandler now uses handleNoFilesFoundError + a len==0 guard (returns nil on no files),
+consistent with deps list/outdated; updated the integration test that asserted the old error.
+
+#### [N84] deps outdated prints contradictory 'All dependencies are up to date!' after warning that no action files exist
+
+Fixed: 2026-06-16
+Notes: depsOutdatedHandler adds a len==0 guard after handleNoFilesFoundError, so it no longer prints 'All
+dependencies are up to date!' when no action files exist.
+
+#### [N85] Interactive upgrade prompt errors out (exit 1) on EOF/empty input instead of treating it as the default 'N'
+
+Fixed: 2026-06-16
+Notes: applyUpdates treats io.EOF (empty/closed stdin) as the default 'N' and cancels with nil instead of
+returning an error.
+
+#### [N86] Unused viper field on ConfigurationLoader (dead state)
+
+Fixed: 2026-06-16
+Notes: Removed the unused viper field and its initializers from ConfigurationLoader and dropped the now-unused
+spf13/viper import.
+
+#### [N87] github_helper doc comment names a wrong/non-existent env var for the GitHub token
+
+Fixed: 2026-06-16
+Notes: Corrected the github_helper.go doc comment GHREADME_GITHUB_TOKEN -> GH_README_GITHUB_TOKEN (matches
+appconstants.EnvGitHubToken).
+
+#### [N88] Error() iterates Details map in nondeterministic order, producing unstable error output
+
+Fixed: 2026-06-16
+Notes: ContextualError.Error() iterates Details via slices.Sorted(maps.Keys(...)) for deterministic, stable
+output.
+
+#### [N89] ValidateActionYMLPath swallows non-NotExist stat errors, treating unreadable paths as valid
+
+Fixed: 2026-06-16
+Notes: ValidateActionYMLPath now returns any os.Stat error wrapped with %w (not only IsNotExist), so
+permission-denied/unreadable paths are surfaced instead of treated as valid.
+
+#### [N90] depsGraphHandler bypasses the error-returning handler convention and the error-handling wrapper
+
+Fixed: 2026-06-16
+Notes: depsGraphHandler (and schemaHandler, arch AA11) now return error and are registered via
+wrapHandlerWithErrorHandling, matching the project-wide handler convention.
+
+#### [N91] ParseGitHubURL truncates repository names that contain a dot
+
+Fixed: 2026-06-16
+Notes: ParseGitHubURL regexes use ([^/]+?) with explicit optional .git stripping so dotted repo names (e.g.
+my.repo) are preserved; updated the mutation test that encoded the old [^/.] truncation.
+
+#### [N92] GitHub token input silently truncated for tokens larger than 64KB line (bufio.Scanner default limit)
+
+Fixed: 2026-06-16
+Notes: Raised the wizard's bufio.Scanner buffer to 1MB (the 64KB default could truncate long input); the new
+term ReadPassword path for sensitive input also bypasses the scanner entirely.
+
+### Pass 11 — 2026-06-16
+
+#### [N48] Docs advertise yaml/toml gen output formats that are rejected at runtime
+
+Fixed: 2026-06-16
+Notes: Removed yaml/toml from the `gen` output-format docs (README.md, docs/usage.md, docs/api.md, CLAUDE.md)
+and corrected format counts to 4 (md/html/json/asciidoc). CLI help (cmd_gen.go:38) already listed only the 4
+working formats. `config export` yaml/toml docs left intact (that path genuinely supports them).
+
+#### [N49] TOML export swallows all write errors, defeating the atomic-write integrity guarantee
+
+Fixed: 2026-06-16
+Notes: Introduced a `stickyWriter` (records first write error) in internal/wizard/exporter.go. writeTOMLConfig
+and all section writers now take `*stickyWriter`; the exportTOML callback returns `sw.err`, so a mid-write
+failure aborts before os.Rename instead of committing a truncated file.
+
+#### [N50] YAML/JSON header WriteString errors ignored before atomic rename
+
+Fixed: 2026-06-16
+Notes: exportYAML now writes the headers and runs the YAML encoder through the same `stickyWriter` and returns
+`sw.err` after Encode (goccy/go-yaml discards the underlying write error), surfacing header/body write
+failures.
+
+#### [N51] Token redaction misses tokens nested in RepoOverrides
+
+Fixed: 2026-06-16
+Notes: configRootHandler deep-copies RepoOverrides and redacts each nested GitHubToken (added
+appconstants.RedactedPlaceholder). Added TestConfigRootHandlerRedactsNestedTokens capturing stdout to assert
+neither the top-level nor nested token leaks.
+
+#### [N52] security.md falsely claims HTML output is not escaped; html/template auto-escapes all action fields
+
+Fixed: 2026-06-16
+Notes: docs/security.md rewritten: HTML output IS auto-escaped by html/template; documented the real (minor)
+nuance that operator-controlled header/footer config is written verbatim.
+
+#### [N53] Export path-traversal guard rejects legitimate paths containing '..' as a substring
+
+Fixed: 2026-06-16
+Notes: ExportConfig traversal guard now rejects only a `..` path segment (slices.Contains over the split path)
+instead of any `..` substring, allowing legitimate names such as config..bak.yaml.
+
+#### [N54] Annotated-tag dereference fallback can emit a tag-object SHA as a commit pin
+
+Fixed: 2026-06-16
+Notes: getCommitSHAForTag returns "" when an annotated tag's GetTag dereference fails (instead of the
+tag-object SHA), so GeneratePinnedUpdate's empty-SHA guard rejects the update rather than writing a broken
+pin.
+
+#### [N55] Unknown-theme error hardcodes a theme list that duplicates the canonical themeTemplates map and will drift
+
+Fixed: 2026-06-16
+Notes: Unknown-theme error builds its valid-theme list from appconstants.GetSupportedThemes() (single source)
+via a shared validateTheme helper.
+
+#### [N56] Icon badge color segment is not shields-encoded, breaking gray-dark color
+
+Fixed: 2026-06-16
+Notes: Icon badge color segment is now shields-encoded (shieldsBadgeEncode(branding.Color)) so colors
+containing hyphens (e.g. gray-dark) no longer break shields.io segment parsing.
+
+#### [N57] WaitGroup reuse race between concurrent Close() and Delete()/Set()/cleanup()
+
+Fixed: 2026-06-16
+Notes: cache.Close sets a `closed` flag under the mutex before saveWG.Wait; saveToDiskAsync skips when closed
+and uses WaitGroup.Go, eliminating the WaitGroup-reuse race with concurrent Set/Delete/cleanup. Verified with
+`go test -race ./internal/cache`.
+
+#### [N58] Add unit test for new isValidGitHubOrgName function
+
+Fixed: 2026-06-16
+Notes: Added TestConfigValidatorIsValidGitHubOrgName covering valid/invalid org names (underscores,
+consecutive/leading/trailing hyphens, dots, 39/40-char bounds).
+
+#### [N59] Misleading 'unknown' fallback for cache directory path
+
+Fixed: 2026-06-16
+Notes: cmd_cache handlers use the appconstants.CachePathUnknown sentinel (not ScopeUnknown) and skip os.Stat
+for the sentinel, avoiding a bogus relative-path stat.
+
+#### [N60] Annotated-tag dereference-failure fallback branch is untested
+
+Fixed: 2026-06-16
+Notes: Added TestGetCommitSHAForTag_AnnotatedTagDerefFailure (omits the /git/tags mock so GetTag 404s)
+asserting sha == "".
+
+#### [N61] Duplicate string literal "MyAction" across test files violates project rule
+
+Fixed: 2026-06-16
+Notes: Added testutil.TestActionNameMyAction and replaced the four "MyAction" literals in
+internal_template_test.go and internal_validator_test.go.
+
+#### [N62] TestRepoSlug does not cover consecutive spaces, masking a doc/behavior mismatch
+
+Fixed: 2026-06-16
+Notes: Removed the obsolete TestRepoSlug (function deleted in N70); added a consecutive-spaces case to
+validation TestSanitizeActionName documenting the actual (non-collapsing) behavior.
+
+#### [N63] Traversal test depends on ambient cwd and asserts only error-presence
+
+Fixed: 2026-06-16
+Notes: TestExportConfigRejectsTraversal now isolates via t.Chdir(t.TempDir()), asserts the error mentions
+`..`, and asserts the traversal target file was not created.
+
+#### [N64] Misleading comment misstates detectProjectSettings error contract
+
+Fixed: 2026-06-16
+Notes: Corrected the misleading comment in wizard_test.go: detectProjectSettings only errors when the cwd
+cannot be determined (actionDir then unset); being outside a git repo is not an error.
+
+#### [N65] Remove duplicate `ContextKey*` constants that shadow existing `TestKey*` constants
+
+Fixed: 2026-06-16
+Notes: Removed the duplicate `ContextKey*` constants (shadowed existing `TestKey*`); confirmed 0 usages.
+
+#### [N66] Remove unused `TestStr*`, `Tag*`, and `Generic*` constants (dead code; literals not actually replaced)
+
+Fixed: 2026-06-16
+Notes: Removed the unused `TestStr*`/`Tag*`/`Generic*` constants (dead code; the literals were never actually
+replaced); confirmed 0 usages.
+
+#### [N67] .gitleaks.toml comment falsely claims docs/audit/ is gitignored; files are committed
+
+Fixed: 2026-06-16
+Notes: .gitleaks.toml comment corrected: docs/audit/ is tracked in git (not gitignored); excluded from
+scanning with a warning not to store real secrets. Allowlist regex unchanged.
+
+#### [N68] Theme validation is inconsistent across output formats
+
+Fixed: 2026-06-16
+Notes: validateTheme is called up-front in generateByFormat, so an invalid --theme now fails identically for
+JSON as for templated formats (verified via the built binary).
+
+#### [N69] TOML config export emits map sections in nondeterministic order
+
+Fixed: 2026-06-16
+Notes: writeMapSection sorts keys before writing, making TOML [permissions]/[variables] export deterministic.
+
+#### [N70] repoSlug reimplements validation.SanitizeActionName and does not strip URL/repo-invalid characters
+
+Fixed: 2026-06-16
+Notes: Deleted repoSlug; callers now use validation.SanitizeActionName (single source of truth).
+
+#### [N71] Tab-indented permission comment parsing change has no test
+
+Fixed: 2026-06-16
+Notes: Added testdata/yaml-fixtures/permissions/tab-indented.yml (+
+testutil.TestFixturePermissionsTabIndented) and a parser test asserting tab-indented permission comment blocks
+parse.
+
+#### [N72] Concurrent cache.json writers race on os.WriteFile (pre-existing, now easier to hit)
+
+Fixed: 2026-06-16
+Notes: cache saveToDisk serializes writes with a saveMutex and writes atomically via a temp file + os.Rename,
+preventing a torn cache.json from concurrent async saves.
+
+#### [N73] Deprecation suggestion still recommends node20 despite node24 now being valid
+
+Fixed: 2026-06-16
+Notes: Deprecated-runtime suggestion now recommends appconstants.NodeRuntimeNode24 (current) instead of
+node20.
+
+#### [N74] MockHTTPClient doc comment overclaims full concurrency safety
+
+Fixed: 2026-06-16
+Notes: MockHTTPClient doc comment corrected: only the Requests slice is mutex-guarded; same-key responses
+share one Body reader and must not be read concurrently.
+
+#### [N75] Exported config files now created with 0600 instead of prior 0644 (behavior change)
+
+Fixed: 2026-06-16
+Notes: Documented in writeFileAtomic that exported files are intentionally created 0600 (stricter than the
+previous 0644).
+
+#### [N76] Atomic export temp file shares destination dir; partial temp files may linger on crash
+
+Fixed: 2026-06-16
+Notes: Documented in writeFileAtomic the temp-file pattern and that a hard kill between create and rename can
+leave a harmless stale .tmp (never contains secrets; cleaned on the next export).
+
+### Pass 10 — 2026-06-12
+
+#### [N46] Data race in `testutil.MockHTTPClient.Do` breaks `go test -race ./...`
+
+Fixed: 2026-06-12
+Notes: `MockHTTPClient.Do` appended to the shared `Requests` slice without
+synchronization (`testutil/testutil.go:28`). Parallel `t.Parallel()` analyzer tests
+(e.g. `TestAnalyzerGetLatestVersion`, `analyzer_test.go:325`) share one mock client
+through the GitHub client's transport, so `go test -race ./internal/dependencies`
+reported a data race on the slice while plain `go test` hid it. Added a `sync.Mutex`
+to `MockHTTPClient` guarding the `Requests` append (`Responses` is read-only after
+construction). `go test -race ./...` now passes on every package. Surfaced after
+fast-forwarding to origin (the parallel analyzer tests arrived with #220).
+
+#### [N47] `getDefaultBranch` has an always-true `len(parts) > 0` guard (dead branch)
+
+Fixed: 2026-06-12
+Notes: `internal/git/detector.go:184` guarded `return parts[len(parts)-1]` with
+`if len(parts) > 0`, but `strings.Split` always returns at least one element, so the
+trailing `return appconstants.GitDefaultBranch` fallback was unreachable dead code.
+Removed the guard and return the last element directly with an explanatory comment
+(behavior identical; verified by `go test ./internal/git`). Not caught by prior
+passes N11–N45.
 
 ### Pass 9 — 2026-05-05
 
@@ -314,7 +654,8 @@ Notes: Promoted all regex patterns to package-level `var` in `internal/validatio
 #### [N05] `isUnitTestEnvironment()` uses fragile `os.Args[0]` inspection
 
 Fixed: 2026-05-04
-Notes: Changed detection to `strings.HasSuffix(os.Args[0], ".test") || strings.HasSuffix(os.Args[0], ".test.exe")`.
+Notes: Changed detection to `strings.HasSuffix(os.Args[0], ".test") || strings.HasSuffix(os.Args[0],
+".test.exe")`.
 This uses Go's documented test binary naming convention rather than searching for package-name substrings,
 making it reliable across all packages and platforms.
 
@@ -342,6 +683,24 @@ runtime is detected, without failing validation.
 Added `TestValidateActionYML_DeprecatedRuntime` test covering both runtimes.
 
 ## Invalid
+
+### Pass 13 — 2026-06-16
+
+#### [N97] `validate`/`gen` error on a no-action directory while `deps` subcommands exit 0
+
+Notes: Not a defect — intentional asymmetry. `validate`/`gen` are explicit operations on actions, so a
+directory with no action files is a usage error worth surfacing (exit 1). The `deps` subcommands are lenient
+discovery and return nil on no files (see fixed N83/N84/N37). The two behaviors are correct for their
+respective contracts; no code change.
+
+### Pass 12 — 2026-06-16
+
+#### [N82] ErrorWithSuggestions silently discards suggestions, details, and help URLs — users never see them
+
+Notes: False positive. ContextualError.Error() (internal/apperrors/errors.go) already appends Details,
+Suggestions, and HelpURL, so ErrorWithSuggestions printing err.Error() DOES show them. The proposed fix (use
+FormatContextualError) would double-render, because formatMainError itself calls err.Error() which already
+contains those sections. Code left unchanged.
 
 ### Pass 5 — 2026-05-05
 

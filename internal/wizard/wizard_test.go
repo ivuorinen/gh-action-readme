@@ -1039,7 +1039,13 @@ func TestDetectProjectSettings(t *testing.T) {
 	t.Run("sets action directory", func(t *testing.T) {
 		wizard := testWizard(t, "")
 
-		_ = wizard.detectProjectSettings()
+		// detectProjectSettings only returns an error if the current directory
+		// cannot be determined; in that case actionDir is left unset, so logging
+		// the error here aids diagnosis of the assertion failure below. Being
+		// outside a git repo is not an error (git detection is skipped).
+		if err := wizard.detectProjectSettings(); err != nil {
+			t.Logf("detectProjectSettings() returned error: %v", err)
+		}
 
 		if wizard.actionDir == "" {
 			t.Error("detectProjectSettings() should set actionDir")

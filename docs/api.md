@@ -12,8 +12,12 @@ gh-action-readme [command] [flags]
 
 - **`gen`** - Generate documentation from action.yml files
 - **`validate`** - Validate action.yml files with suggestions
+- **`schema`** - Show action.yml JSON schema
 - **`config`** - Configuration management commands
+- **`cache`** - Cache management commands
+- **`deps`** - Dependency analysis commands
 - **`version`** - Show version information
+- **`about`** - Show about information
 - **`help`** - Help about any command
 
 ## 🚀 Generation Command
@@ -52,15 +56,9 @@ gh-action-readme gen [directory_or_file] [flags]
 | Flag | Short | Type | Default | Description |
 | ------ | ------- | ------ | --------- | ------------- |
 | `--recursive` | `-r` | boolean | `false` | Search directories recursively for action.yml files |
-| `--quiet` | `-q` | boolean | `false` | Suppress progress output |
-| `--verbose` | `-v` | boolean | `false` | Enable verbose logging |
+| `--ignore-dirs` | | string | | Comma-separated list of directory names to ignore |
 
-#### GitHub Integration
-
-| Flag | Short | Type | Default | Description |
-| ------ | ------- | ------ | --------- | ------------- |
-| `--github-token` | | string | | GitHub personal access token (or use GITHUB_TOKEN env) |
-| `--no-dependencies` | | boolean | `false` | Disable dependency analysis |
+> Note: `-v/--verbose` and `-q/--quiet` are root persistent flags available on all commands.
 
 ### Examples
 
@@ -128,8 +126,9 @@ gh-action-readme gen --theme professional
 # Recursive processing
 gh-action-readme gen --recursive --theme github
 
-# With GitHub token for enhanced features
-gh-action-readme gen --github-token ghp_xxxx --verbose
+# With GitHub token for enhanced features (use env var)
+export GH_README_GITHUB_TOKEN=ghp_xxxx
+gh-action-readme gen --verbose
 
 # Quiet mode for scripts
 gh-action-readme gen --theme github --quiet
@@ -151,11 +150,7 @@ gh-action-readme validate [file_or_directory] [flags]
 
 ### Flags
 
-| Flag | Short | Type | Default | Description |
-| ------ | ------- | ------ | --------- | ------------- |
-| `--verbose` | `-v` | boolean | `false` | Show detailed validation messages |
-| `--quiet` | `-q` | boolean | `false` | Only show errors, suppress warnings |
-| `--recursive` | `-r` | boolean | `false` | Validate recursively |
+The `validate` command has no own flags. Validation always runs recursively. Use the root persistent flags `-v/--verbose` and `-q/--quiet` as needed.
 
 ### Examples
 
@@ -168,9 +163,6 @@ gh-action-readme validate action.yml
 
 # Verbose validation with suggestions
 gh-action-readme validate --verbose
-
-# Recursive validation
-gh-action-readme validate --recursive ./actions/
 ```
 
 ### Validation Output
@@ -200,18 +192,13 @@ gh-action-readme config [subcommand] [flags]
 #### `init` - Initialize Configuration
 
 ```bash
-gh-action-readme config init [flags]
+gh-action-readme config init
 ```
-
-**Flags:**
-
-- `--force` - Overwrite existing configuration
-- `--global` - Create global configuration (default: user-specific)
 
 #### `show` - Display Configuration
 
 ```bash
-gh-action-readme config show [key] [flags]
+gh-action-readme config show
 ```
 
 **Examples:**
@@ -219,12 +206,6 @@ gh-action-readme config show [key] [flags]
 ```bash
 # Show all configuration
 gh-action-readme config show
-
-# Show specific key
-gh-action-readme config show theme
-
-# Show with file paths
-gh-action-readme config show --paths
 ```
 
 #### `themes` - List Available Themes
@@ -254,7 +235,6 @@ gh-action-readme config wizard [flags]
 
 - `--format` - Export format: yaml (default), json, toml
 - `--output` - Output file path
-- `--no-github-token` - Skip GitHub token setup
 
 **Example:**
 
@@ -262,54 +242,13 @@ gh-action-readme config wizard [flags]
 gh-action-readme config wizard --format json --output config.json
 ```
 
-#### `set` - Set Configuration Value
-
-```bash
-gh-action-readme config set <key> <value>
-```
-
-**Examples:**
-
-```bash
-gh-action-readme config set theme github
-gh-action-readme config set verbose true
-gh-action-readme config set output_format html
-```
-
-#### `get` - Get Configuration Value
-
-```bash
-gh-action-readme config get <key>
-```
-
-#### `reset` - Reset Configuration
-
-```bash
-gh-action-readme config reset [key]
-```
-
-**Examples:**
-
-```bash
-# Reset all configuration
-gh-action-readme config reset
-
-# Reset specific key
-gh-action-readme config reset theme
-```
-
 ## ℹ️ Information Commands
 
 ### Version Command
 
 ```bash
-gh-action-readme version [flags]
+gh-action-readme version
 ```
-
-**Flags:**
-
-- `--short` - Show version number only
-- `--json` - Output in JSON format
 
 **Output:**
 
@@ -317,7 +256,7 @@ gh-action-readme version [flags]
 gh-action-readme version 1.2.0
 Built: 2025-08-07T10:30:00Z
 Commit: a1b2c3d
-Go: go1.26.3
+Go: go1.26.4
 Platform: linux/amd64
 ```
 
@@ -374,8 +313,8 @@ These flags are available for all commands:
 
 ### GitHub Integration
 
-- `GITHUB_TOKEN` - GitHub personal access token
-- `GH_ACTION_README_NO_DEPENDENCIES` - Disable dependency analysis
+- `GH_README_GITHUB_TOKEN` - GitHub personal access token
+- `GITHUB_TOKEN` - GitHub personal access token (fallback)
 
 ### Advanced Options
 
@@ -467,7 +406,7 @@ fi
 gh-action-readme gen --verbose
 
 # Configuration debugging
-gh-action-readme config show --debug
+gh-action-readme config show
 
 # Validation debugging
 gh-action-readme validate --verbose

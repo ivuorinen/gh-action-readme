@@ -2,11 +2,9 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -21,36 +19,10 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/helpers"
 )
 
-// InputReader interface for reading user input (enables testing).
-type InputReader interface {
-	ReadLine() (string, error)
-}
-
 // fileDep pairs a floating dependency with the file it was found in.
 type fileDep struct {
 	file string
 	dep  dependencies.Dependency
-}
-
-// StdinReader reads from actual stdin.
-type StdinReader struct {
-	reader *bufio.Reader
-}
-
-func (r *StdinReader) ReadLine() (string, error) {
-	if r.reader == nil {
-		r.reader = bufio.NewReader(os.Stdin)
-	}
-
-	line, err := r.reader.ReadString('\n')
-	trimmed := strings.TrimSpace(line)
-
-	// EOF on last line with no trailing newline — data is still valid input
-	if errors.Is(err, io.EOF) && trimmed != "" {
-		return trimmed, nil
-	}
-
-	return trimmed, err
 }
 
 func newDepsCmd() *cobra.Command {
@@ -81,7 +53,7 @@ func newDepsCmd() *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "graph",
 		Short: "Generate dependency graph",
-		Run:   depsGraphHandler,
+		Run:   wrapHandlerWithErrorHandling(depsGraphHandler),
 	})
 
 	upgradeCmd := &cobra.Command{
@@ -217,8 +189,12 @@ func depsSecurityHandler(_ *cobra.Command, _ []string) error {
 		globalConfig.IgnoredDirectories,
 		"security analysis",
 	)
-	if err != nil {
-		return fmt.Errorf(appconstants.ErrFailedToDiscoverActionFiles, err)
+	if err := handleNoFilesFoundError(err, output); err != nil {
+		return err
+	}
+
+	if len(actionFiles) == 0 {
+		return nil
 	}
 
 	analyzer := createAnalyzer(generator, output)
@@ -322,6 +298,10 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) error {
 	)
 	if err := handleNoFilesFoundError(err, output); err != nil {
 		return err
+	}
+
+	if len(actionFiles) == 0 {
+		return nil
 	}
 
 	analyzer := createAnalyzer(generator, output)
@@ -564,11 +544,11 @@ func applyUpdates(
 	analyzer *dependencies.Analyzer,
 	allUpdates []dependencies.PinnedUpdate,
 	automatic bool,
-	reader InputReader,
+	reader internal.InputReader,
 ) error {
 	// Default to stdin if not provided
 	if reader == nil {
-		reader = &StdinReader{}
+		reader = &internal.StdinReader{}
 	}
 
 	if automatic {
@@ -582,6 +562,14 @@ func applyUpdates(
 		output.Info("\n❓ This will modify your action.yml files. Continue? (y/N): ")
 		response, err := reader.ReadLine()
 		if err != nil {
+			// EOF (e.g. empty piped input or a closed stdin) is not a failure —
+			// treat it as the safe default "N" and cancel rather than erroring.
+			if errors.Is(err, io.EOF) {
+				output.Info("Canceled")
+
+				return nil
+			}
+
 			return fmt.Errorf("failed to read response: %w", err)
 		}
 		if !slices.Contains([]string{"y", appconstants.InputYes}, strings.ToLower(response)) {
@@ -600,9 +588,11 @@ func applyUpdates(
 	return nil
 }
 
-func depsGraphHandler(_ *cobra.Command, _ []string) {
+func depsGraphHandler(_ *cobra.Command, _ []string) error {
 	output := createOutputManager(globalConfig.Quiet)
 	output.Bold("Dependency Graph:")
 	output.Info("Generating visual dependency graph...")
 	output.Printf("This feature is not yet implemented\n")
+
+	return nil
 }

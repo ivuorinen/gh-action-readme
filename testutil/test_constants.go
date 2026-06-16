@@ -412,6 +412,15 @@ const (
 	TestToken123 = "test-token-123" // #nosec G101 -- test fixture value, not a credential
 )
 
+// TestActionNameMyAction is the action name literal shared across template and
+// validator tests (avoids duplicating the "MyAction" literal per the
+// no-constant-duplication rule). Distinct from TestMyAction ("My Action").
+const TestActionNameMyAction = "MyAction"
+
+// TestFixturePermissionsTabIndented is a permissions fixture whose comment block
+// uses tab indentation, exercising the tab-aware comment parsing path.
+const TestFixturePermissionsTabIndented = "permissions/tab-indented.yml"
+
 // Test dependency actions - moved from appconstants.
 const (
 	TestActionCheckoutV3  = "actions/checkout@v3"
@@ -624,6 +633,9 @@ const (
 	TestConfigMinimalSimple      = "configs/minimal-simple.yml"
 	TestConfigProfessionalSimple = "configs/professional-simple.yml"
 	TestConfigMinimalDist        = "configs/minimal-dist.yml"
+	// TestConfigRepoOverrideUseDefaultBranchFalse is a global config whose repo
+	// override explicitly sets use_default_branch: false.
+	TestConfigRepoOverrideUseDefaultBranchFalse = "configs/repo-override-use-default-branch-false.yml"
 
 	// Valid/default configs.
 	TestConfigValidSimple = "configs/valid-simple.yml"

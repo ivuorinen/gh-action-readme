@@ -14,10 +14,12 @@ import (
 // validateFilePath ensures a file path is safe to read.
 // Returns an error if the path contains traversal attempts.
 func validateFilePath(path string) error {
-	cleanPath := filepath.Clean(path)
-
-	// Check for ".." components in cleaned path
-	for _, component := range strings.Split(filepath.ToSlash(cleanPath), "/") {
+	// Check the ORIGINAL path for ".." components rather than the cleaned path:
+	// filepath.Clean collapses an absolute traversal such as
+	// "/a/../../etc/passwd" into "/etc/passwd" (no ".." remaining), which would
+	// otherwise slip past a cleaned-path check. Action file paths derived from
+	// directory walks never legitimately contain "..".
+	for _, component := range strings.Split(filepath.ToSlash(path), "/") {
 		if component == ".." {
 			return fmt.Errorf("invalid file path: traversal detected in %q", path)
 		}

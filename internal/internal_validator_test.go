@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 func TestValidateActionYMLRequired(t *testing.T) {
@@ -24,7 +25,7 @@ func TestValidateActionYMLRequired(t *testing.T) {
 func TestValidateActionYMLValid(t *testing.T) {
 	t.Parallel()
 	a := &ActionYML{
-		Name:        "MyAction",
+		Name:        testutil.TestActionNameMyAction,
 		Description: testGenShortDesc,
 		Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
 	}

@@ -1,6 +1,7 @@
 package wizard
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -180,6 +181,26 @@ func TestConfigValidatorIsValidGitHubName(t *testing.T) {
 	}
 
 	runValidationTests(t, tests, validator.isValidGitHubName, "isValidGitHubName")
+}
+
+func TestConfigValidatorIsValidGitHubOrgName(t *testing.T) {
+	validator := newTestValidator()
+
+	tests := []validationTestCase{
+		{"single char", "a", true},
+		{"valid org", "my-org", true},
+		{"valid with numbers", "test123", true},
+		{"max length 39 chars", strings.Repeat("a", 39), true},
+		{"empty", "", false},
+		{"underscore not allowed", "a_b", false},
+		{"consecutive hyphens not allowed", "a--b", false},
+		{"leading hyphen", "-a", false},
+		{"trailing hyphen", "a-", false},
+		{"dot not allowed", "a.b", false},
+		{"over length 40 chars", strings.Repeat("a", 40), false},
+	}
+
+	runValidationTests(t, tests, validator.isValidGitHubOrgName, "isValidGitHubOrgName")
 }
 
 func TestConfigValidatorIsValidSemanticVersion(t *testing.T) {

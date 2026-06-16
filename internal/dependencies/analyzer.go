@@ -23,6 +23,9 @@ var (
 	reGitSHA          = regexp.MustCompile(appconstants.RegexGitSHA)
 	reSemanticVersion = regexp.MustCompile(`^v?\d+(\.\d+)*(\.\d+)?(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
 	rePinnedVersion   = regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
+	// reSafeTagName accepts only plain git tag characters, blocking newline/YAML
+	// injection from a tag name that gets embedded into a pinned uses-statement.
+	reSafeTagName = regexp.MustCompile(`^[A-Za-z0-9._/+-]+$`)
 )
 
 // validActionRuntimes is the authoritative list of valid GitHub Actions runtime identifiers.
@@ -190,6 +193,17 @@ func (a *Analyzer) GeneratePinnedUpdate(
 ) (*PinnedUpdate, error) {
 	if latestSHA == "" {
 		return nil, fmt.Errorf("no commit SHA available for %s", dep.Uses)
+	}
+
+	// Defense in depth: latestSHA and latestVersion originate from the GitHub API
+	// and are written verbatim into the user's action.yml. Require a full 40-char
+	// commit SHA and a plain tag name so a compromised or proxied response cannot
+	// inject newlines or extra YAML into the pinned reference.
+	if len(latestSHA) != appconstants.FullSHALength || !reGitSHA.MatchString(latestSHA) {
+		return nil, fmt.Errorf("refusing to pin %s: invalid commit SHA %q", dep.Uses, latestSHA)
+	}
+	if !reSafeTagName.MatchString(latestVersion) {
+		return nil, fmt.Errorf("refusing to pin %s: invalid version tag %q", dep.Uses, latestVersion)
 	}
 
 	// Create the new pinned uses string: "owner/repo@sha # version"
@@ -522,13 +536,32 @@ func (a *Analyzer) getLatestRelease(ctx context.Context, owner, repo string) (ve
 }
 
 // getCommitSHAForTag retrieves the commit SHA for a given tag.
+//
+// Annotated tags (used by virtually every major action repository) point at a
+// tag object, not a commit; GetRef returns that tag-object SHA. GitHub Actions
+// only accepts commit SHAs in `uses:` pins, so an annotated tag's tag-object SHA
+// would produce a broken pin. When the ref resolves to a tag object, dereference
+// it via GetTag to obtain the underlying commit SHA.
 func (a *Analyzer) getCommitSHAForTag(ctx context.Context, owner, repo, tagName string) string {
-	tag, _, err := a.GitHubClient.Git.GetRef(ctx, owner, repo, "tags/"+tagName)
-	if err != nil || tag.GetObject() == nil {
+	ref, _, err := a.GitHubClient.Git.GetRef(ctx, owner, repo, "tags/"+tagName)
+	if err != nil || ref.GetObject() == nil {
 		return ""
 	}
 
-	return tag.GetObject().GetSHA()
+	obj := ref.GetObject()
+	if obj.GetType() == appconstants.GitObjectTypeTag {
+		if tagObj, _, tagErr := a.GitHubClient.Git.GetTag(ctx, owner, repo, obj.GetSHA()); tagErr == nil &&
+			tagObj.GetObject() != nil {
+			return tagObj.GetObject().GetSHA()
+		}
+		// Dereferencing the annotated tag failed. The ref's object SHA is the
+		// tag-object SHA, not a commit, and GitHub Actions rejects it as a `uses:`
+		// pin. Return "" so callers reject the update instead of writing a broken
+		// pin that a 40-char-hex validation cannot distinguish from a commit SHA.
+		return ""
+	}
+
+	return obj.GetSHA()
 }
 
 // getLatestTag fetches the most recent tag and its commit SHA.
@@ -536,7 +569,12 @@ func (a *Analyzer) getLatestTag(ctx context.Context, owner, repo string) (versio
 	tags, _, err := a.GitHubClient.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{
 		PerPage: 10,
 	})
-	if err != nil || len(tags) == 0 {
+	if err != nil {
+		// Surface the real API error (rate limit, auth, network) rather than
+		// masking it as "no tags", so callers can report the actual cause.
+		return "", "", fmt.Errorf("failed to list tags: %w", err)
+	}
+	if len(tags) == 0 {
 		return "", "", errors.New("no releases or tags found")
 	}
 
@@ -680,9 +718,11 @@ func applyUpdatesToLines(lines []string, updates []PinnedUpdate) {
 				continue
 			}
 
-			// Preserve both indentation AND list markers
+			// Preserve both indentation AND list markers. Capture the original
+			// leading whitespace verbatim rather than re-emitting spaces, so any
+			// tabs or mixed indentation in the source line survive the rewrite.
 			trimmed := strings.TrimLeft(line, " \t")
-			indent := strings.Repeat(" ", len(line)-len(trimmed))
+			indent := line[:len(line)-len(trimmed)]
 
 			// Check if this is a list item (starts with "- ")
 			listMarker := ""

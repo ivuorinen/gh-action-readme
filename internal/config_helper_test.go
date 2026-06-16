@@ -10,13 +10,15 @@ import (
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
-// boolFields represents the boolean configuration fields used in merge tests.
+// boolFields represents the default-false boolean configuration fields used in
+// merge tests. UseDefaultBranch is intentionally excluded: it defaults to true and
+// merges on explicit presence (see TestMergeBooleanFieldsUseDefaultBranchPresence),
+// which the "merge if true" table here cannot model.
 type boolFields struct {
 	AnalyzeDependencies bool
 	ShowSecurityInfo    bool
 	Verbose             bool
 	Quiet               bool
-	UseDefaultBranch    bool
 }
 
 // createBoolFieldMergeTest creates a test table entry for testing boolean field merging.
@@ -40,21 +42,18 @@ func createBoolFieldMergeTest(name string, dst, src, want boolFields) struct {
 			ShowSecurityInfo:    dst.ShowSecurityInfo,
 			Verbose:             dst.Verbose,
 			Quiet:               dst.Quiet,
-			UseDefaultBranch:    dst.UseDefaultBranch,
 		},
 		src: &AppConfig{
 			AnalyzeDependencies: src.AnalyzeDependencies,
 			ShowSecurityInfo:    src.ShowSecurityInfo,
 			Verbose:             src.Verbose,
 			Quiet:               src.Quiet,
-			UseDefaultBranch:    src.UseDefaultBranch,
 		},
 		want: &AppConfig{
 			AnalyzeDependencies: want.AnalyzeDependencies,
 			ShowSecurityInfo:    want.ShowSecurityInfo,
 			Verbose:             want.Verbose,
 			Quiet:               want.Quiet,
-			UseDefaultBranch:    want.UseDefaultBranch,
 		},
 	}
 }

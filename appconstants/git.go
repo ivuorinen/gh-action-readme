@@ -15,6 +15,8 @@ const (
 	GitQuiet = "--quiet"
 	// GitConfigURL is the git config url pattern.
 	GitConfigURL = "url = "
+	// GitObjectTypeTag is the GitHub Git ref object type for an annotated tag.
+	GitObjectTypeTag = "tag"
 )
 
 // GitHub Actions runner constants.

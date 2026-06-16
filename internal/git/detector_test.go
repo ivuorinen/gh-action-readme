@@ -219,6 +219,18 @@ func TestParseGitHubURL(t *testing.T) {
 			expectedRepo: testGitRepoRepo,
 		},
 		{
+			name:         "HTTPS URL without .git suffix and dotted repo name",
+			remoteURL:    "https://github.com/" + testGitOrgOwner + "/my.repo",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: "my.repo",
+		},
+		{
+			name:         "SSH URL with dotted repo name and .git suffix",
+			remoteURL:    "git@github.com:" + testGitOrgOwner + "/my.repo.git",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: "my.repo",
+		},
+		{
 			name:         "Invalid URL",
 			remoteURL:    "not-a-valid-url",
 			expectedOrg:  "",

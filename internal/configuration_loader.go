@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/viper"
-
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
@@ -15,8 +13,6 @@ import (
 type ConfigurationLoader struct {
 	// sources tracks which sources are enabled
 	sources map[appconstants.ConfigurationSource]bool
-	// viper instance for global configuration
-	viper *viper.Viper
 }
 
 // ConfigurationOptions configures how configuration loading behaves.
@@ -41,7 +37,6 @@ func NewConfigurationLoader() *ConfigurationLoader {
 			appconstants.SourceEnvironment:  true,
 			appconstants.SourceCLIFlags:     false, // CLI flags are applied separately
 		},
-		viper: viper.New(),
 	}
 }
 
@@ -49,7 +44,6 @@ func NewConfigurationLoader() *ConfigurationLoader {
 func NewConfigurationLoaderWithOptions(opts ConfigurationOptions) *ConfigurationLoader {
 	loader := &ConfigurationLoader{
 		sources: make(map[appconstants.ConfigurationSource]bool),
-		viper:   viper.New(),
 	}
 
 	// Set default sources if none specified

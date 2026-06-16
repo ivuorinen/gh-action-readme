@@ -73,6 +73,9 @@ const (
 	ScopeGlobal = "global"
 	// ScopeUnknown is the unknown scope.
 	ScopeUnknown = "unknown"
+	// RedactedPlaceholder replaces secret values (e.g. GitHub tokens) when a
+	// config is printed, so they never leak to terminals, CI logs, or screen shares.
+	RedactedPlaceholder = "***redacted***"
 )
 
 // User input constants.

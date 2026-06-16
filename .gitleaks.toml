@@ -13,4 +13,9 @@ paths = [
 	'''_test\.go$''',
 	'''^integration_test\.go$''',
 	'''^\.serena/''',
+	# Audit reports are tracked in git and intentionally quote documented fake
+	# token values when describing past secret-scanning findings (e.g.
+	# N27/SEC-003); they are excluded from gitleaks scanning. Do not place real
+	# secrets here.
+	'''^docs/audit/''',
 ]

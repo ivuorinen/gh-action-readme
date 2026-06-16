@@ -285,3 +285,21 @@ func assertJSONSectionsForType(t *testing.T, out *JSONOutput, sectionType string
 		t.Errorf("expected section of type %q to be absent from documentation sections", sectionType)
 	}
 }
+
+func TestShieldsBadgeEncode(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		"Setup-Node": "Setup--Node", // hyphen must be doubled (it is the separator)
+		"Setup Node": "Setup_Node",  // space → underscore
+		"a_b":        "a__b",        // underscore doubled
+		"plain":      "plain",       // unchanged
+		"git-merge":  "git--merge",  // branding icon with hyphen
+		"a-b c_d":    "a--b_c__d",   // combined
+	}
+	for in, want := range cases {
+		if got := shieldsBadgeEncode(in); got != want {
+			t.Errorf("shieldsBadgeEncode(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

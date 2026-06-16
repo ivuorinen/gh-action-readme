@@ -838,7 +838,7 @@ func TestSchemaHandler(t *testing.T) {
 			}
 
 			cmd := &cobra.Command{}
-			schemaHandler(cmd, []string{})
+			_ = schemaHandler(cmd, []string{})
 			// Should not panic - output is tested via integration tests
 		})
 	}
@@ -853,7 +853,11 @@ func TestConfigShowHandler(t *testing.T) {
 }
 
 func TestDepsGraphHandler(t *testing.T) {
-	testSimpleVoidHandler(t, depsGraphHandler)
+	// depsGraphHandler now returns error (always nil — unimplemented feature);
+	// adapt it to the void-handler helper, which asserts it does not panic.
+	testSimpleVoidHandler(t, func(cmd *cobra.Command, args []string) {
+		_ = depsGraphHandler(cmd, args)
+	})
 }
 
 func TestCreateAnalyzer(t *testing.T) {
@@ -2089,13 +2093,15 @@ func TestDepsSecurityHandlerIntegration(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "returns error for no action files",
+			// No action files is not an error — depsSecurityHandler now returns nil
+			// here, consistent with deps list/outdated (handleNoFilesFoundError).
+			name: "returns no error for no action files",
 			setupFunc: func(t *testing.T, _ string) {
 				t.Helper()
 				// Don't create any action files
 			},
 			setToken: true,
-			wantErr:  true,
+			wantErr:  false,
 		},
 	}
 
@@ -2845,5 +2851,40 @@ func TestConfigRootHandler(t *testing.T) {
 	err := configRootHandler(cmd, []string{})
 	if err != nil {
 		t.Errorf("configRootHandler() unexpected error: %v", err)
+	}
+}
+
+// TestConfigRootHandlerRedactsNestedTokens verifies that verbose config output
+// redacts GitHub tokens both at the top level and inside RepoOverrides, so a
+// token configured per-repo is never printed in plaintext.
+func TestConfigRootHandlerRedactsNestedTokens(t *testing.T) {
+	origConfig := globalConfig
+	t.Cleanup(func() { globalConfig = origConfig })
+
+	const topToken = "ghp_TOPLEVELtoken1234567890abcdef"  // #nosec G101 -- test fixture value, not a credential
+	const nestedToken = "ghp_NESTEDtoken0987654321zyxwvu" // #nosec G101 -- test fixture value, not a credential
+
+	globalConfig = internal.DefaultAppConfig()
+	globalConfig.Quiet = false
+	globalConfig.Verbose = true
+	globalConfig.GitHubToken = topToken
+	globalConfig.RepoOverrides = map[string]internal.AppConfig{
+		"testorg/secret-repo": {GitHubToken: nestedToken},
+	}
+
+	out := testutil.CaptureStdout(func() {
+		if err := configRootHandler(&cobra.Command{}, []string{}); err != nil {
+			t.Errorf("configRootHandler() unexpected error: %v", err)
+		}
+	})
+
+	if strings.Contains(out, topToken) {
+		t.Errorf("top-level token leaked in verbose output:\n%s", out)
+	}
+	if strings.Contains(out, nestedToken) {
+		t.Errorf("RepoOverrides nested token leaked in verbose output:\n%s", out)
+	}
+	if !strings.Contains(out, appconstants.RedactedPlaceholder) {
+		t.Errorf("expected redaction placeholder %q in output:\n%s", appconstants.RedactedPlaceholder, out)
 	}
 }

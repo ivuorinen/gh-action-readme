@@ -179,9 +179,11 @@ func parsePermissionLine(content string) (key, value string, ok bool) {
 // processPermissionEntry processes a single line in the permissions block.
 // Returns true if parsing should break (dedented out of block), false to continue.
 func processPermissionEntry(line, content string, expectedItemIndent *int, permissions map[string]string) bool {
-	// Get the indent of the content (after removing #)
+	// Get the indent of the content (after removing #). Strip both spaces and
+	// tabs so a tab-indented comment item is recognized as indentation rather
+	// than content (which would otherwise truncate the permissions block early).
 	lineAfterHash := strings.TrimPrefix(line, "#")
-	contentIndent := len(lineAfterHash) - len(strings.TrimLeft(lineAfterHash, " "))
+	contentIndent := len(lineAfterHash) - len(strings.TrimLeft(lineAfterHash, " \t"))
 
 	// Set expected indent on first item
 	if *expectedItemIndent == -1 {

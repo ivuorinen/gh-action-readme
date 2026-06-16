@@ -31,6 +31,8 @@ type Cache struct {
 	done       chan bool        // Cleanup shutdown
 	defaultTTL time.Duration    // Default TTL for entries
 	saveWG     sync.WaitGroup   // Wait group for pending save operations
+	saveMutex  sync.Mutex       // Serializes disk writes in saveToDisk
+	closed     bool             // Set under mutex by Close; gates new async saves
 }
 
 // Config represents cache configuration.
@@ -56,20 +58,24 @@ func NewCache(config *Config) (*Cache, error) {
 	}
 
 	// Get XDG cache directory
-	cacheDir, err := xdg.CacheFile(appconstants.AppName)
+	// Resolve the full cache file path (<xdg-cache>/gh-action-readme/cache.json).
+	// Passing the complete relative path namespaces the cache under its own
+	// directory; passing only the app name would resolve c.path to the shared
+	// XDG cache root and write cache.json there alongside other apps' files.
+	cacheFile, err := xdg.CacheFile(filepath.Join(appconstants.AppName, appconstants.CacheJSON))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get XDG cache directory: %w", err)
 	}
 
 	// Ensure cache directory exists
-	cacheDirParent := filepath.Dir(cacheDir)
+	cacheDir := filepath.Dir(cacheFile)
 	// #nosec G301 -- cache directory permissions
-	if err := os.MkdirAll(cacheDirParent, appconstants.FilePermDir); err != nil {
+	if err := os.MkdirAll(cacheDir, appconstants.FilePermDir); err != nil {
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
 	cache := &Cache{
-		path:       filepath.Dir(cacheDir),
+		path:       cacheDir,
 		data:       make(map[string]Entry),
 		defaultTTL: config.DefaultTTL,
 		done:       make(chan bool),
@@ -137,9 +143,9 @@ func (c *Cache) Delete(key string) {
 	defer c.mutex.Unlock()
 
 	delete(c.data, key)
-	go func() {
-		_ = c.saveToDisk() // Async operation, error logged internally
-	}()
+	// Use the tracked async save so Close()'s saveWG.Wait() waits for this
+	// persist to finish; a bare goroutine would race past Close and be lost.
+	c.saveToDiskAsync()
 }
 
 // Clear removes all entries from the cache.
@@ -193,6 +199,13 @@ func (c *Cache) Close() error {
 	case c.done <- true:
 	default:
 	}
+
+	// Mark closed under the mutex so no further saveToDiskAsync starts a new
+	// WaitGroup task after Wait() returns (which would be a WaitGroup-reuse race
+	// against concurrent Set/Delete/cleanup calls).
+	c.mutex.Lock()
+	c.closed = true
+	c.mutex.Unlock()
 
 	// Wait for any pending async save operations to complete
 	c.saveWG.Wait()
@@ -283,8 +296,33 @@ func (c *Cache) saveToDisk() error {
 	}
 
 	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
-	// #nosec G306 -- cache file permissions
-	if err := os.WriteFile(cacheFile, jsonData, appconstants.FilePermDefault); err != nil {
+
+	// Serialize concurrent writers (Set/Delete/cleanup each spawn an async save)
+	// and stage the write through a temp file + rename so a concurrent reader or
+	// a crash mid-write never observes a torn cache.json.
+	c.saveMutex.Lock()
+	defer c.saveMutex.Unlock()
+
+	tmp, err := os.CreateTemp(c.path, appconstants.CacheJSON+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp cache file: %w", err)
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }() // no-op once the rename succeeds
+
+	if _, err := tmp.Write(jsonData); err != nil {
+		_ = tmp.Close()
+
+		return fmt.Errorf("failed to write cache file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("failed to close temp cache file: %w", err)
+	}
+	// #nosec G302 -- cache file permissions
+	if err := os.Chmod(tmpName, appconstants.FilePermDefault); err != nil {
+		return fmt.Errorf("failed to set cache file permissions: %w", err)
+	}
+	if err := os.Rename(tmpName, cacheFile); err != nil {
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
@@ -293,12 +331,17 @@ func (c *Cache) saveToDisk() error {
 
 // saveToDiskAsync saves the cache to disk asynchronously.
 // Cache save failures are non-critical and silently ignored.
+//
+// Callers must hold c.mutex (Set, Delete, cleanup do). The closed check under
+// that lock guarantees no new WaitGroup task is started once Close has begun, so
+// Close's saveWG.Wait never races a fresh saveWG.Go.
 func (c *Cache) saveToDiskAsync() {
-	c.saveWG.Add(1)
-	go func() {
-		defer c.saveWG.Done()
+	if c.closed {
+		return
+	}
+	c.saveWG.Go(func() {
 		_ = c.saveToDisk() // Ignore errors - cache save failures are non-critical
-	}()
+	})
 }
 
 // estimateSize provides a rough estimate of the memory size of a value.

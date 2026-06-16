@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-github/v74/github"
@@ -18,14 +19,24 @@ import (
 )
 
 // MockHTTPClient is a mock HTTP client for testing.
+//
+// The Requests slice is mutex-guarded, so recording requests is safe when a
+// single mock client is shared across parallel subtests (t.Parallel). Responses
+// are NOT deep-cloned per call: every Do for a given method+URL returns the same
+// *http.Response whose Body is a single reader. Two goroutines requesting the
+// same key and reading both Bodies concurrently will race on that reader, so a
+// shared response must not be read from more than one goroutine at a time.
 type MockHTTPClient struct {
+	mu        sync.Mutex
 	Responses map[string]*http.Response
 	Requests  []*http.Request
 }
 
 // Do implements the http.Client interface.
 func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	m.mu.Lock()
 	m.Requests = append(m.Requests, req)
+	m.mu.Unlock()
 
 	key := req.Method + " " + req.URL.String()
 	if resp, ok := m.Responses[key]; ok {
@@ -514,10 +525,14 @@ func InitGitRepo(t *testing.T, dir string) {
 		t.Fatalf("Failed to initialize git repo: %v", err)
 	}
 
-	// Configure git user for commits
+	// Configure git user for commits. Also disable commit signing so the helper
+	// is hermetic: a developer's global commit.gpgsign (e.g. a 1Password/SSH
+	// signer) must not be invoked here, or commits fail non-interactively.
 	configCmds := [][]string{
-		{appconstants.GitCommand, "config", "user.name", "Test User"},
-		{appconstants.GitCommand, "config", "user.email", "test@example.com"},
+		{appconstants.GitCommand, ConfigFieldName, "user.name", "Test User"},
+		{appconstants.GitCommand, ConfigFieldName, "user.email", "test@example.com"},
+		{appconstants.GitCommand, ConfigFieldName, "commit.gpgsign", "false"},
+		{appconstants.GitCommand, ConfigFieldName, "tag.gpgsign", "false"},
 	}
 
 	for _, args := range configCmds {

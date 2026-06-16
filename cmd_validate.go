@@ -23,7 +23,7 @@ func newSchemaCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   appconstants.CommandSchema,
 		Short: "Show the action.yml schema info.",
-		Run:   schemaHandler,
+		Run:   wrapHandlerWithErrorHandling(schemaHandler),
 	}
 }
 
@@ -54,7 +54,14 @@ func validateHandler(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func schemaHandler(_ *cobra.Command, _ []string) {
+func schemaHandler(_ *cobra.Command, _ []string) error {
 	output := internal.NewColoredOutput(globalConfig.Quiet)
+	if globalConfig.Schema == "" {
+		output.Printf("Schema: (not configured — set 'schema' in .ghreadme.yaml)\n")
+
+		return nil
+	}
 	output.Printf("Schema: %s (replaceable, editable)\n", globalConfig.Schema)
+
+	return nil
 }

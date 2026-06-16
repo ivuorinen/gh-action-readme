@@ -85,8 +85,38 @@ func loadConfigFromViper(configPath string) (*AppConfig, error) {
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
+	// Record explicit presence of use_default_branch so a false value can
+	// override the default-true during merge (see AppConfig.useDefaultBranchSet).
+	config.useDefaultBranchSet = v.IsSet(appconstants.ConfigKeyUseDefaultBranch)
+	markRepoOverrideUseDefaultBranch(v, &config)
 
 	return &config, nil
+}
+
+// markRepoOverrideUseDefaultBranch records, per repo override, whether
+// use_default_branch was explicitly present in the source config so a false
+// value can override the default-true during merge (mirrors the top-level
+// useDefaultBranchSet handling). It inspects the raw viper map directly rather
+// than building dotted IsSet keys, so repo names containing dots are handled
+// correctly.
+func markRepoOverrideUseDefaultBranch(v *viper.Viper, config *AppConfig) {
+	if len(config.RepoOverrides) == 0 {
+		return
+	}
+	raw, ok := v.Get(appconstants.ConfigKeyRepoOverrides).(map[string]any)
+	if !ok {
+		return
+	}
+	for name, override := range config.RepoOverrides {
+		entry, ok := raw[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		if _, present := entry[appconstants.ConfigKeyUseDefaultBranch]; present {
+			override.useDefaultBranchSet = true
+			config.RepoOverrides[name] = override
+		}
+	}
 }
 
 // loadAndUnmarshalConfig initializes viper with defaults, reads config file,
@@ -115,6 +145,10 @@ func loadAndUnmarshalConfig(configFile string, v *viper.Viper) (*AppConfig, erro
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
+	// Record explicit presence of use_default_branch so a false value can
+	// override the default-true during merge (see AppConfig.useDefaultBranchSet).
+	config.useDefaultBranchSet = v.IsSet(appconstants.ConfigKeyUseDefaultBranch)
+	markRepoOverrideUseDefaultBranch(v, &config)
 
 	// Resolve template paths relative to binary if they're not absolute
 	resolveAllTemplatePaths(&config)

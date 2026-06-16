@@ -528,19 +528,28 @@ func TestAnalyzerWithCache(t *testing.T) {
 func TestAnalyzerRateLimitHandling(t *testing.T) {
 	t.Parallel()
 
-	// Create mock client that returns rate limit error
-	rateLimitResponse := &http.Response{
-		StatusCode: http.StatusForbidden,
-		Header: http.Header{
-			"X-RateLimit-Remaining": []string{"0"},
-			"X-RateLimit-Reset":     []string{strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10)},
-		},
+	rlHeader := http.Header{
+		"X-RateLimit-Remaining": []string{"0"},
+		"X-RateLimit-Reset":     []string{strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10)},
+	}
+	// Separate responses: an http.Response Body can only be read once, so the
+	// release and tag lookups need their own.
+	rateLimitRelease := &http.Response{
+		StatusCode: http.StatusForbidden, Header: rlHeader,
+		Body: testutil.NewStringReader(`{"message": "API rate limit exceeded"}`),
+	}
+	rateLimitTags := &http.Response{
+		StatusCode: http.StatusForbidden, Header: rlHeader,
 		Body: testutil.NewStringReader(`{"message": "API rate limit exceeded"}`),
 	}
 
+	// Rate-limit BOTH the release and the tag-list endpoints (tags is the
+	// fallback path) so the surfaced error genuinely reflects the rate limit.
+	// ListTags adds ?per_page=10, so the mock key must include it.
 	mockClient := &testutil.MockHTTPClient{
 		Responses: map[string]*http.Response{
-			"GET https://api.github.com/repos/actions/checkout/releases/latest": rateLimitResponse,
+			"GET https://api.github.com/repos/actions/checkout/releases/latest":  rateLimitRelease,
+			"GET https://api.github.com/repos/actions/checkout/tags?per_page=10": rateLimitTags,
 		},
 	}
 
@@ -558,10 +567,10 @@ func TestAnalyzerRateLimitHandling(t *testing.T) {
 		t.Error("expected rate limit error to be returned")
 	}
 
-	// The error message depends on GitHub client implementation
-	// It should fail with either rate limit or API error
-	if !strings.Contains(err.Error(), "rate limit") && !strings.Contains(err.Error(), "no releases or tags found") {
-		t.Errorf("expected error to contain rate limit info or no releases message, got: %s", err.Error())
+	// With both endpoints rate-limited, the surfaced error must reflect the rate
+	// limit rather than being masked as a generic "no tags" message.
+	if !strings.Contains(err.Error(), "rate limit") {
+		t.Errorf("expected error to surface rate limit info, got: %s", err.Error())
 	}
 }
 
@@ -816,5 +825,107 @@ func TestIsCompositeAction(t *testing.T) {
 				t.Errorf("IsCompositeAction() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestGetCommitSHAForTag_AnnotatedTag verifies that an annotated tag (ref object
+// type "tag") is dereferenced via GetTag to the underlying commit SHA, instead of
+// returning the unusable tag-object SHA that would produce a broken `uses:` pin.
+func TestGetCommitSHAForTag_AnnotatedTag(t *testing.T) {
+	t.Parallel()
+
+	const (
+		annTag       = "v9.9.9"
+		annTagObjSHA = "1111111111111111111111111111111111111111"
+		annCommitSHA = "2222222222222222222222222222222222222222"
+	)
+
+	base := "GET https://api.github.com/repos/annorg/annrepo"
+	refJSON := `{"ref":"refs/tags/` + annTag + `","object":{"type":"tag","sha":"` + annTagObjSHA + `"}}`
+	tagJSON := `{"sha":"` + annTagObjSHA + `","object":{"type":"commit","sha":"` + annCommitSHA + `"}}`
+	mockResponses := map[string]string{
+		base + "/releases/latest":          `{"tag_name": "` + annTag + `"}`,
+		base + "/git/ref/tags/" + annTag:   refJSON,
+		base + "/git/tags/" + annTagObjSHA: tagJSON,
+	}
+
+	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	analyzer := &Analyzer{
+		GitHubClient: testutil.MockGitHubClient(mockResponses),
+		Cache:        cacheInstance,
+	}
+
+	version, sha, err := analyzer.getLatestVersion("annorg", "annrepo")
+	if err != nil {
+		t.Fatalf("getLatestVersion returned error: %v", err)
+	}
+	if version != annTag {
+		t.Errorf("version = %q, want %q", version, annTag)
+	}
+	if sha != annCommitSHA {
+		t.Errorf("sha = %q, want dereferenced commit SHA %q (annotated tag not peeled)", sha, annCommitSHA)
+	}
+}
+
+// TestGetCommitSHAForTag_AnnotatedTagDerefFailure verifies that when an annotated
+// tag's GetTag dereference fails (e.g. rate limit/404 between the GetRef and
+// GetTag calls), getCommitSHAForTag returns "" rather than the unusable
+// tag-object SHA. Returning the tag-object SHA would produce a broken `uses:` pin
+// that the 40-char-hex validation cannot catch.
+func TestGetCommitSHAForTag_AnnotatedTagDerefFailure(t *testing.T) {
+	t.Parallel()
+
+	const (
+		annTag       = "v9.9.9"
+		annTagObjSHA = "1111111111111111111111111111111111111111"
+	)
+
+	base := "GET https://api.github.com/repos/annorg/annrepo"
+	refJSON := `{"ref":"refs/tags/` + annTag + `","object":{"type":"tag","sha":"` + annTagObjSHA + `"}}`
+	// Note: the "/git/tags/<sha>" endpoint is intentionally NOT mocked, so the
+	// mock client returns 404 for GetTag and the dereference fails.
+	mockResponses := map[string]string{
+		base + "/releases/latest":        `{"tag_name": "` + annTag + `"}`,
+		base + "/git/ref/tags/" + annTag: refJSON,
+	}
+
+	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	analyzer := &Analyzer{
+		GitHubClient: testutil.MockGitHubClient(mockResponses),
+		Cache:        cacheInstance,
+	}
+
+	version, sha, err := analyzer.getLatestVersion("annorg", "annrepo")
+	if err != nil {
+		t.Fatalf("getLatestVersion returned error: %v", err)
+	}
+	if version != annTag {
+		t.Errorf("version = %q, want %q", version, annTag)
+	}
+	if sha != "" {
+		t.Errorf("sha = %q, want \"\" (deref failed; must not fall back to tag-object SHA %q)", sha, annTagObjSHA)
+	}
+}
+
+// TestGeneratePinnedUpdate_RejectsInjection verifies that a malformed/injection-
+// bearing SHA or version tag (e.g. from a compromised/proxied API) is refused
+// rather than written verbatim into the user's action.yml.
+func TestGeneratePinnedUpdate_RejectsInjection(t *testing.T) {
+	t.Parallel()
+
+	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	analyzer := &Analyzer{Cache: cacheInstance}
+	dep := Dependency{Uses: testutil.TestActionCheckoutV3}
+
+	if _, err := analyzer.GeneratePinnedUpdate(
+		"a.yml", dep, "v4", "abc123 # evil\nrun: bad",
+	); err == nil {
+		t.Error("expected GeneratePinnedUpdate to reject a non-SHA / injection-bearing commit value")
+	}
+
+	if _, err := analyzer.GeneratePinnedUpdate(
+		"a.yml", dep, "v4\nrun: bad", testutil.TestSHAForTesting,
+	); err == nil {
+		t.Error("expected GeneratePinnedUpdate to reject an injection-bearing version tag")
 	}
 }

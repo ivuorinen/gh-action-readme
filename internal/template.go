@@ -68,8 +68,12 @@ func getFieldWithFallback(data any, gitGetter, configGetter func(*TemplateData) 
 		if gitValue := gitGetter(td); gitValue != "" {
 			return gitValue
 		}
-		if configValue := configGetter(td); configValue != "" {
-			return configValue
+		// configGetter dereferences td.Config; guard against a manually
+		// constructed TemplateData with a nil Config (consistent with getActionVersion).
+		if td.Config != nil {
+			if configValue := configGetter(td); configValue != "" {
+				return configValue
+			}
 		}
 	}
 
@@ -150,6 +154,21 @@ func buildUsesString(td *TemplateData, org, repo, version string) string {
 	return validation.FormatUsesStatement(org, repo, version)
 }
 
+// resolveSymlinkedAbs returns the absolute, symlink-resolved form of path. It
+// falls back to the plain absolute path when symlinks cannot be evaluated (e.g.
+// the path does not exist), and returns "" only when even filepath.Abs fails.
+func resolveSymlinkedAbs(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return ""
+	}
+	if resolved, rerr := filepath.EvalSymlinks(abs); rerr == nil {
+		return resolved
+	}
+
+	return abs
+}
+
 // extractActionSubdirectory extracts the subdirectory path for an action relative to repo root.
 // For monorepo actions (e.g., org/repo/subdir/action.yml), returns "subdir".
 // For repo-root actions (e.g., org/repo/action.yml), returns empty string.
@@ -160,14 +179,13 @@ func extractActionSubdirectory(actionPath, repoRoot string) string {
 		return ""
 	}
 
-	// Get absolute paths for reliable comparison
-	absActionPath, err := filepath.Abs(actionPath)
-	if err != nil {
-		return ""
-	}
-
-	absRepoRoot, err := filepath.Abs(repoRoot)
-	if err != nil {
+	// Get absolute, symlink-resolved paths for reliable comparison. Resolving
+	// symlinks on both sides keeps filepath.Rel from producing a spurious ".."
+	// (and silently dropping the subdir) when the action path is reached through
+	// a symlink that diverges from the real repo-root tree.
+	absActionPath := resolveSymlinkedAbs(actionPath)
+	absRepoRoot := resolveSymlinkedAbs(repoRoot)
+	if absActionPath == "" || absRepoRoot == "" {
 		return ""
 	}
 
@@ -198,7 +216,7 @@ func extractActionSubdirectory(actionPath, repoRoot string) string {
 // Priority: 1) Config.Version (explicit override), 2) Default branch (if enabled), 3) "v1" (fallback).
 func getActionVersion(data any) string {
 	td, ok := data.(*TemplateData)
-	if !ok {
+	if !ok || td.Config == nil {
 		return appconstants.VersionTagV1
 	}
 
@@ -218,6 +236,12 @@ func getActionVersion(data any) string {
 
 // BuildTemplateData constructs comprehensive template data from action and configuration.
 func BuildTemplateData(action *ActionYML, config *AppConfig, repoRoot, actionPath string) *TemplateData {
+	// Guard against a nil config: this is an exported entry point and the
+	// template funcs dereference Config unconditionally.
+	if config == nil {
+		config = DefaultAppConfig()
+	}
+
 	data := &TemplateData{
 		ActionYML:  action,
 		Config:     config,

@@ -34,7 +34,27 @@ func configRootHandler(_ *cobra.Command, _ []string) error {
 	}
 	output.Info("Configuration file location: %s", path)
 	if globalConfig.Verbose {
-		output.Info("Current config: %+v", globalConfig)
+		// Redact GitHub tokens before dumping the whole struct so they do not
+		// leak into terminals, CI logs, or screen shares via %+v.
+		redacted := *globalConfig
+		if redacted.GitHubToken != "" {
+			redacted.GitHubToken = appconstants.RedactedPlaceholder
+		}
+		// RepoOverrides is a map of AppConfig, each with its own GitHubToken. The
+		// shallow copy above aliases the same map, and %+v recurses into it, so a
+		// token configured under a repo override would print in plaintext. Deep-copy
+		// the map and redact each nested token.
+		if len(redacted.RepoOverrides) > 0 {
+			overrides := make(map[string]internal.AppConfig, len(redacted.RepoOverrides))
+			for name, override := range redacted.RepoOverrides {
+				if override.GitHubToken != "" {
+					override.GitHubToken = appconstants.RedactedPlaceholder
+				}
+				overrides[name] = override
+			}
+			redacted.RepoOverrides = overrides
+		}
+		output.Info("Current config: %+v", &redacted)
 	}
 
 	return nil

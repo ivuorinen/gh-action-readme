@@ -213,6 +213,17 @@ func (g *Generator) ProcessBatch(paths []string) error {
 		return errors.New("no action files to process")
 	}
 
+	// A single explicit --output filename cannot disambiguate multiple inputs:
+	// every file would resolve to the same path and silently overwrite the prior
+	// one. Fail fast and point the user at --output-dir instead.
+	if len(paths) > 1 && g.Config.OutputFilename != "" {
+		return fmt.Errorf(
+			"--output filename cannot be used with %d action files; "+
+				"use --output-dir to write one file per action",
+			len(paths),
+		)
+	}
+
 	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
 	parseErrors, successCount := g.processFiles(paths, bar)
 	g.Progress.FinishProgressBarWithNewline(bar)
@@ -260,12 +271,32 @@ func (g *Generator) ValidateFiles(paths []string) error {
 // resolveTemplatePathForFormat determines the correct template path
 // based on the configured theme or custom template path.
 // If a theme is specified, it takes precedence over the template path.
-func (g *Generator) resolveTemplatePathForFormat() string {
+func (g *Generator) resolveTemplatePathForFormat() (string, error) {
 	if g.Config.Theme != "" {
-		return resolveThemeTemplate(g.Config.Theme)
+		if err := g.validateTheme(); err != nil {
+			return "", err
+		}
+
+		return resolveThemeTemplate(g.Config.Theme), nil
 	}
 
-	return g.Config.Template
+	return g.Config.Template, nil
+}
+
+// validateTheme rejects a non-empty --theme that is not a known theme. An unknown
+// theme must be an explicit error rather than a silent fall-through to the default
+// template — a typo'd --theme would otherwise produce default output with no
+// warning. The valid-theme list is derived from the canonical appconstants source
+// so it cannot drift from the themes the generator actually accepts.
+func (g *Generator) validateTheme() error {
+	if g.Config.Theme != "" && resolveThemeTemplate(g.Config.Theme) == "" {
+		return fmt.Errorf(
+			"unknown theme %q; valid themes: %s",
+			g.Config.Theme, strings.Join(appconstants.GetSupportedThemes(), ", "),
+		)
+	}
+
+	return nil
 }
 
 // renderTemplateForAction builds template data and renders it using the specified options.
@@ -299,7 +330,10 @@ func (g *Generator) generateSimpleFormat(
 	outputDir, actionPath string,
 	format, defaultFilename, successMsg string,
 ) error {
-	templatePath := g.resolveTemplatePathForFormat()
+	templatePath, err := g.resolveTemplatePathForFormat()
+	if err != nil {
+		return err
+	}
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
@@ -335,7 +369,10 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 
 // generateHTML creates an HTML file using the template and optional header/footer.
 func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string) error {
-	templatePath := g.resolveTemplatePathForFormat()
+	templatePath, err := g.resolveTemplatePathForFormat()
+	if err != nil {
+		return err
+	}
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
@@ -355,7 +392,15 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Footer: "",
 	}
 
-	defaultFilename := action.Name + ".html"
+	// Sanitize the action name for use as a filename: a name containing "/" (valid
+	// in action.yml) would otherwise resolve into a non-existent subdirectory and
+	// fail os.Create with ENOENT. Fall back to a stable default for empty names.
+	safeName := strings.ReplaceAll(action.Name, "/", "-")
+	safeName = strings.ReplaceAll(safeName, string(filepath.Separator), "-")
+	if strings.TrimSpace(safeName) == "" {
+		safeName = "action"
+	}
+	defaultFilename := safeName + ".html"
 	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
@@ -530,6 +575,12 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string
 
 // generateByFormat generates documentation in the specified format.
 func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
+	// Validate the theme once, up front, so an invalid --theme fails identically
+	// for every output format (the JSON path does not call resolveTemplatePathForFormat).
+	if err := g.validateTheme(); err != nil {
+		return err
+	}
+
 	switch g.Config.OutputFormat {
 	case appconstants.OutputFormatMarkdown:
 		return g.generateMarkdown(action, outputDir, actionPath)

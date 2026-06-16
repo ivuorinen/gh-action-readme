@@ -272,3 +272,26 @@ func TestConfigExporterGetDefaultOutputPath(t *testing.T) {
 		}
 	})
 }
+
+func TestExportConfigRejectsTraversal(t *testing.T) {
+	// Isolate the filesystem so a regressed guard cannot write outside the test
+	// sandbox or depend on the ambient working directory. t.Chdir disallows
+	// t.Parallel, which is fine here.
+	t.Chdir(t.TempDir())
+
+	exporter := NewConfigExporter(internal.NewColoredOutput(true))
+	config := createTestConfig()
+
+	const traversalPath = "../../etc/evil.yaml"
+	err := exporter.ExportConfig(config, FormatYAML, traversalPath)
+	if err == nil {
+		t.Fatal("expected ExportConfig to reject a path containing '..'")
+	}
+	if !strings.Contains(err.Error(), "..") {
+		t.Errorf("expected a traversal-rejection error mentioning '..', got: %v", err)
+	}
+	// The guard must reject before any write; the target must not exist.
+	if _, statErr := os.Stat(traversalPath); !os.IsNotExist(statErr) {
+		t.Errorf("traversal target should not have been created; os.Stat err = %v", statErr)
+	}
+}

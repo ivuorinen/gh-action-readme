@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/term"
+
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal"
 	"github.com/ivuorinen/gh-action-readme/internal/git"
@@ -25,11 +27,19 @@ type ConfigWizard struct {
 	actionDir string
 }
 
+// wizardScannerMaxBytes is the maximum size of a single scanned input line. The
+// bufio.Scanner default (64KB) would silently truncate longer input; 1MB is far
+// beyond any realistic field (e.g. a token) while still bounding memory.
+const wizardScannerMaxBytes = 1024 * 1024
+
 // NewConfigWizard creates a new configuration wizard instance.
 func NewConfigWizard(output internal.MessageLogger) *ConfigWizard {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), wizardScannerMaxBytes)
+
 	return &ConfigWizard{
 		output:  output,
-		scanner: bufio.NewScanner(os.Stdin),
+		scanner: scanner,
 		config:  internal.DefaultAppConfig(),
 	}
 }
@@ -318,8 +328,25 @@ func (w *ConfigWizard) promptWithDefault(prompt, defaultValue string) string {
 }
 
 // promptSensitive prompts for sensitive input (like tokens) without echoing.
+// When stdin is a terminal the input is read with echo disabled so the secret
+// never appears on screen, in scrollback, or in screen-share/recordings. For
+// non-TTY input (pipes, tests) it falls back to the buffered scanner.
 func (w *ConfigWizard) promptSensitive(prompt string) string {
 	w.output.Printf(appconstants.FormatPrompt, prompt)
+
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		secret, err := term.ReadPassword(fd)
+		// ReadPassword consumes the newline without echoing it; emit one so the
+		// next prompt starts on its own line.
+		w.output.Printf("\n")
+		if err != nil {
+			return ""
+		}
+
+		return strings.TrimSpace(string(secret))
+	}
+
 	if w.scanner.Scan() {
 		return strings.TrimSpace(w.scanner.Text())
 	}

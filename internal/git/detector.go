@@ -15,8 +15,16 @@ import (
 )
 
 var (
-	reGitHubURLNoSuffix   = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/\.]+)`)
-	reGitHubURLWithSuffix = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/]+)\.git$`)
+	// reGitHubURL captures org/repo from any GitHub remote URL. The repo group is
+	// dot-tolerant ([^/]+?) and an optional .git suffix (plus any trailing path)
+	// is stripped, so names like "my.repo" are preserved even when the URL omits
+	// the .git suffix (common for HTTPS web-clone URLs). Mirrors
+	// validation.reGitHubURLFull so both parsers agree.
+	reGitHubURL = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?(?:/.*)?$`)
+	// reSafeBranchName accepts only plain git ref characters, so a hostile or
+	// malformed symbolic-ref value cannot inject newlines/metacharacters into
+	// generated README output or constructed URLs.
+	reSafeBranchName = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 )
 
 // RepoInfo contains information about a Git repository.
@@ -155,6 +163,10 @@ func getRemoteURLFromConfig(repoRoot string) (string, error) {
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("failed to read git config: %w", err)
+	}
+
 	return "", errors.New("no origin remote URL found in git config")
 }
 
@@ -179,13 +191,18 @@ func getDefaultBranch(repoRoot string) string {
 		return appconstants.GitDefaultBranch // Default fallback
 	}
 
-	// Extract branch name from refs/remotes/origin/HEAD -> refs/remotes/origin/main
+	// Extract branch name from refs/remotes/origin/HEAD -> refs/remotes/origin/main.
+	// strings.Split always returns at least one element, so the last is always valid.
 	parts := strings.Split(strings.TrimSpace(string(output)), "/")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
+	branch := parts[len(parts)-1]
+
+	// Reject anything that isn't a plain branch name before it flows into
+	// generated output / URLs; fall back to the default.
+	if !reSafeBranchName.MatchString(branch) {
+		return appconstants.GitDefaultBranch
 	}
 
-	return appconstants.GitDefaultBranch
+	return branch
 }
 
 // branchExists checks if a branch exists in the repository.
@@ -204,13 +221,13 @@ func branchExists(repoRoot, branch string) bool {
 
 // parseGitHubURL extracts organization and repository name from various GitHub URL formats.
 func parseGitHubURL(url string) (organization, repository string) {
-	for _, re := range []*regexp.Regexp{reGitHubURLWithSuffix, reGitHubURLNoSuffix} {
-		matches := re.FindStringSubmatch(url)
-		if len(matches) >= 3 {
-			repo := strings.TrimSuffix(matches[2], appconstants.DirGit)
+	matches := reGitHubURL.FindStringSubmatch(url)
+	if len(matches) >= 3 {
+		// The regex already strips an optional .git suffix; TrimSuffix is a
+		// defensive no-op for inputs the regex left a stray suffix on.
+		repo := strings.TrimSuffix(matches[2], appconstants.DirGit)
 
-			return matches[1], repo
-		}
+		return matches[1], repo
 	}
 
 	return "", ""
