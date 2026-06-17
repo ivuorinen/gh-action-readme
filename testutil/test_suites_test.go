@@ -312,7 +312,7 @@ func TestValidateActionFixture(t *testing.T) {
 		t.Parallel()
 		fixture := &ActionFixture{
 			Name:    "test",
-			Content: "name: test\ndescription: test",
+			Content: MustReadFixture(TestFixtureCompositeNameDescOnly),
 			IsValid: true,
 		}
 		ValidateActionFixture(t, fixture)

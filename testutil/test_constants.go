@@ -131,6 +131,18 @@ const (
 	TestFixtureActionSimple                = "actions/simple/action.yml"
 	TestFixtureActionMinimal               = "actions/minimal/action.yml"
 
+	// Composite action stub fixtures (name+description, field-missing, and
+	// dependency-step variants) replacing inline YAML literals in tests.
+	TestFixtureCompositeNameDescOnly      = "actions/composite/name-desc-only.yml"
+	TestFixtureCompositeMissingName       = "actions/composite/missing-name.yml"
+	TestFixtureCompositeMissingDesc       = "actions/composite/missing-description.yml"
+	TestFixtureCompositeActionDescription = "actions/composite/with-action-description.yml"
+	TestFixtureCompositeStepCheckoutV4    = "actions/composite/step-checkout-v4.yml"
+	TestFixtureCompositeStepCheckoutV3    = "actions/composite/step-checkout-v3.yml"
+	TestFixtureCompositeStepSetupNodeV3   = "actions/composite/step-setup-node-v3.yml"
+	TestFixtureCompositeStepSetupNodeV2   = "actions/composite/step-setup-node-v2.yml"
+	TestFixtureInvalidMalformedRuns       = "actions/invalid/malformed-runs.yml"
+
 	// Config test fixtures for configuration tests.
 	TestConfigGlobalGitHubHTML        = "configs/global-github-html.yml"
 	TestConfigGlobalDefaultMD         = "configs/global-default-md.yml"
@@ -349,6 +361,22 @@ const (
 	TestErrorScenarioOldDeps       = "error-scenarios/action-with-old-deps.yml"
 	TestErrorScenarioInvalidYAML   = "error-scenarios/invalid-yaml-syntax.yml"
 	TestErrorScenarioMissingFields = "error-scenarios/missing-required-fields.yml"
+)
+
+// Standalone test file-name literals shared across test files (reduces
+// duplicated string constants per the no-constant-duplication rule).
+const (
+	// TestNonexistentYML is a deliberately missing action file name used to
+	// exercise not-found / error code paths.
+	TestNonexistentYML = "nonexistent.yml"
+
+	// TestFixtureCompositeActionAnalyzer is the analyzer composite-action
+	// fixture file name (under testdata/analyzer/).
+	TestFixtureCompositeActionAnalyzer = "composite-action.yml"
+
+	// TestTokenGHPExisting is a fake GitHub PAT used to assert token resolution
+	// precedence. Not a real credential.
+	TestTokenGHPExisting = "ghp_existing_token" // #nosec G101 -- test fixture value, not a credential
 )
 
 // TestMinimalAction is the minimal action YAML content for testing.

@@ -667,7 +667,13 @@ func TestFormatUsesStatementMutationResistance(t *testing.T) {
 func TestCleanVersionStringMutationResistance(t *testing.T) {
 	tests := []sanitizeTestCase{
 		// v prefix removal
-		makeSanitizeTestCase("v_prefix_removed", "v1.2.3", "1.2.3", true, "TrimPrefix(\"v\") applied"),
+		makeSanitizeTestCase(
+			"v_prefix_removed",
+			testutil.TestVersionSemantic,
+			"1.2.3",
+			true,
+			"TrimPrefix(\"v\") applied",
+		),
 		makeSanitizeTestCase("no_v_prefix_unchanged", "1.2.3", "1.2.3", true, "No v prefix to remove"),
 
 		// Whitespace handling
@@ -699,7 +705,7 @@ func TestCleanVersionStringMutationResistance(t *testing.T) {
 		makeSanitizeTestCase(
 			"double_v",
 			"vv1.2.3",
-			"v1.2.3",
+			testutil.TestVersionSemantic,
 			true,
 			"Only first v removed (TrimPrefix, not ReplaceAll)",
 		),

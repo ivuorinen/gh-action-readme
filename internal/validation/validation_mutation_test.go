@@ -258,7 +258,13 @@ func TestIsSemanticVersionMutationResistance(t *testing.T) {
 func TestIsVersionPinnedMutationResistance(t *testing.T) {
 	tests := []pinnedTestCase{
 		// Semantic version cases (first part of ||)
-		makePinnedTestCase("semver_is_pinned", "v1.2.3", true, true, "Semver satisfies first condition"),
+		makePinnedTestCase(
+			"semver_is_pinned",
+			testutil.TestVersionSemantic,
+			true,
+			true,
+			"Semver satisfies first condition",
+		),
 		makePinnedTestCase("semver_no_v_is_pinned", "1.2.3", true, true, "Semver without v"),
 
 		// Full SHA cases (second part of ||)
@@ -396,7 +402,7 @@ func TestVersionValidationLogicCombinations(t *testing.T) {
 		},
 		{
 			name:        "semver_all_relevant_true",
-			version:     "v1.2.3",
+			version:     testutil.TestVersionSemantic,
 			isSHA:       false,
 			isSemver:    true,
 			isPinned:    true,

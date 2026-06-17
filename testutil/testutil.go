@@ -404,29 +404,40 @@ func AssertStringContains(t *testing.T, str, substring string) {
 func AssertEqual(t *testing.T, expected, actual any) {
 	t.Helper()
 
-	// Handle maps which can't be compared directly
-	if expectedMap, ok := expected.(map[string]string); ok {
-		actualMap, ok := actual.(map[string]string)
-		if !ok {
-			t.Fatalf("expected map[string]string, got %T", actual)
-		}
+	if ok, msg := equalCheck(expected, actual); !ok {
+		t.Fatal(msg)
+	}
+}
 
+// equalCheck reports whether actual equals expected, special-casing
+// map[string]string (which is not directly comparable), and returns a failure
+// message when they differ. It is a pure function so the comparison — including
+// the failure path — can be unit-tested directly; AssertEqual itself takes a
+// *testing.T, which cannot be mocked to assert that it actually fails on
+// unequal values.
+func equalCheck(expected, actual any) (ok bool, msg string) {
+	if expectedMap, isMap := expected.(map[string]string); isMap {
+		actualMap, isMap := actual.(map[string]string)
+		if !isMap {
+			return false, fmt.Sprintf("expected map[string]string, got %T", actual)
+		}
 		if len(expectedMap) != len(actualMap) {
-			t.Fatalf("expected map with %d entries, got %d", len(expectedMap), len(actualMap))
+			return false, fmt.Sprintf("expected map with %d entries, got %d", len(expectedMap), len(actualMap))
 		}
-
 		for k, v := range expectedMap {
 			if actualMap[k] != v {
-				t.Fatalf("expected map[%s] = %s, got %s", k, v, actualMap[k])
+				return false, fmt.Sprintf("expected map[%s] = %s, got %s", k, v, actualMap[k])
 			}
 		}
 
-		return
+		return true, ""
 	}
 
 	if expected != actual {
-		t.Fatalf("expected %v, got %v", expected, actual)
+		return false, fmt.Sprintf("expected %v, got %v", expected, actual)
 	}
+
+	return true, ""
 }
 
 // AssertSliceContainsAll fails if any of expectedSubstrings is not found in any item of the slice.

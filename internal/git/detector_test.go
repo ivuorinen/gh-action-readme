@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -45,7 +46,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 				// Create .git file (for git worktrees)
-				gitFile := filepath.Join(tmpDir, ".git")
+				gitFile := filepath.Join(tmpDir, appconstants.DirGit)
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
 
 				return tmpDir
@@ -105,7 +106,7 @@ func TestFindRepositoryRoot(t *testing.T) {
 				}
 
 				// Verify the returned path contains a .git directory or file
-				gitPath := filepath.Join(repoRoot, ".git")
+				gitPath := filepath.Join(repoRoot, appconstants.DirGit)
 				testutil.AssertFileExists(t, gitPath)
 			}
 		})
@@ -680,7 +681,7 @@ func TestFindRepositoryRootEdgeCases(t *testing.T) {
 			name: "git worktree with .git file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				gitFile := filepath.Join(tmpDir, ".git")
+				gitFile := filepath.Join(tmpDir, appconstants.DirGit)
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/worktree")
 
 				return tmpDir

@@ -83,7 +83,7 @@ func TestInitConfig(t *testing.T) {
 		},
 		{
 			name:        "nonexistent config file",
-			configFile:  "nonexistent.yml",
+			configFile:  testutil.TestNonexistentYML,
 			expectError: true,
 		},
 	}
@@ -898,9 +898,9 @@ func TestMergeSecurityFields(t *testing.T) {
 		),
 		createTokenMergeTest(
 			"allow tokens - do not overwrite with empty",
-			"ghp_existing_token",
+			testutil.TestTokenGHPExisting,
 			"",
-			"ghp_existing_token",
+			testutil.TestTokenGHPExisting,
 			true,
 		),
 		createTokenMergeTest(

@@ -617,7 +617,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
 
 		// Cache a version
-		analyzer.cacheVersion(testutil.CacheTestKey, "v1.2.3", "def456")
+		analyzer.cacheVersion(testutil.CacheTestKey, testutil.TestVersionSemantic, "def456")
 
 		// Retrieve it
 		version, sha, found := analyzer.getCachedVersion(testutil.CacheTestKey)
@@ -625,7 +625,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		if !found {
 			t.Error("getCachedVersion() should return true after cacheVersion()")
 		}
-		if version != "v1.2.3" {
+		if version != testutil.TestVersionSemantic {
 			t.Errorf("getCachedVersion() version = %s, want v1.2.3", version)
 		}
 		if sha != "def456" {
@@ -706,7 +706,7 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		defer cleanup()
 
 		actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-		testutil.WriteTestFile(t, actionPath, "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+		testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureActionMinimal))
 
 		// Make file read-only
 		err := os.Chmod(actionPath, 0444) // #nosec G302 -- intentionally read-only for test

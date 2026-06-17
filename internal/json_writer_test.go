@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -19,7 +20,7 @@ func newTestJSONWriter() *JSONWriter {
 func parseFixtureAction(t *testing.T, fixturePath string) *ActionYML {
 	t.Helper()
 
-	tmpFile := filepath.Join(t.TempDir(), "action.yml")
+	tmpFile := filepath.Join(t.TempDir(), appconstants.ActionFileNameYML)
 	testutil.WriteTestFile(t, tmpFile, testutil.MustReadFixture(fixturePath))
 
 	action, err := ParseActionYML(tmpFile)

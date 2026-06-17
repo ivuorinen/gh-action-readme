@@ -5,31 +5,24 @@ Last validated: 2026-06-17 (pass 14 — full multi-skill audit)
 
 ## Summary
 
-- Total: 112 | Open: 4 | Fixed: 103 | Invalid: 5
+- Total: 116 | Open: 5 | Fixed: 111 | Invalid: 5
 
 ## Open Findings
 
-### Advisory
-
-#### [N111] IsCommitSHA false-positives on short all-hex tags/refs
-
-Category: correctness
-Area: internal/validation/validation.go (reCommitSHA = ^[a-f0-9]{7,40}$)
-Problem: Any 7–40-char lowercase-hex string is classified as a commit SHA, so a tag like `deadbee` or a 7-char
-hex branch is mis-detected. The 40-char guard in IsVersionPinned mitigates the pinning path.
-Decision: No clean fix — 7-char short SHAs are inherently ambiguous with hex tags. Left as-is (cosmetic;
-affects detection messaging only, not generation correctness). Surfaced by the parsing lens.
-
-#### [N112] IsSemanticVersion accepts malformed prerelease/build strings
-
-Category: correctness
-Area: internal/validation/validation.go (reSemanticVersion)
-Problem: The prerelease group allows empty/dotted-only identifiers, so `v1.2.3-..` and leading-zero `01.02.03`
-validate as semver though SemVer 2.0.0 forbids both.
-Decision: Cosmetic — only affects validation-quality messaging, not generation. Tightening the regex risks
-rejecting valid edge cases; left as-is pending a decision. Surfaced by the parsing lens.
-
 ### Medium
+
+#### [N116] Several error-path tests assert only `err != nil`, not the right error
+
+Category: tests
+Area: internal/generator_test.go (field-boundary / parse-error tables), internal/dependencies/parser_test.go
+(traversal cases), internal/dependencies/analyzer_test.go (IsCompositeAction invalid case)
+Problem: These error-path table tests check only that an error occurred, not that it is the expected one. A
+regression that changes WHY a path/action is rejected (e.g. a stat short-circuit firing before the traversal
+check) keeps them green while the real logic is bypassed.
+Fix: add an errContains column asserting the specific message (the codebase already has the pattern in
+generator_test.go resolveOutputPath and main_test.go validateDepsUpgradeError). Deferred from pass 16: a broad,
+low-risk improvement across many tables; filed for a focused follow-up to avoid churning the test files just
+migrated for the fixture/constant rules (N113).
 
 #### [N105] Production caches are never Closed — leaked cleanup goroutine and unflushed final saves
 
@@ -58,7 +51,56 @@ Evidence: grep finds no read of MaxSize outside its declaration/DefaultConfig.
 Fix: either wire size eviction into cleanup()/Set, or remove MaxSize + Size + estimateSize. Deferred from pass
 14 pending a decision on whether bounded caching is wanted.
 
+### Advisory
+
+#### [N111] IsCommitSHA false-positives on short all-hex tags/refs
+
+Category: correctness
+Area: internal/validation/validation.go (reCommitSHA = ^[a-f0-9]{7,40}$)
+Problem: Any 7–40-char lowercase-hex string is classified as a commit SHA, so a tag like `deadbee` or a 7-char
+hex branch is mis-detected. The 40-char guard in IsVersionPinned mitigates the pinning path.
+Decision: No clean fix — 7-char short SHAs are inherently ambiguous with hex tags. Left as-is (cosmetic;
+affects detection messaging only, not generation correctness). Surfaced by the parsing lens.
+
+#### [N112] IsSemanticVersion accepts malformed prerelease/build strings
+
+Category: correctness
+Area: internal/validation/validation.go (reSemanticVersion)
+Problem: The prerelease group allows empty/dotted-only identifiers, so `v1.2.3-..` and leading-zero `01.02.03`
+validate as semver though SemVer 2.0.0 forbids both.
+Decision: Cosmetic — only affects validation-quality messaging, not generation. Tightening the regex risks
+rejecting valid edge cases; left as-is pending a decision. Surfaced by the parsing lens.
+
 ## Fixed
+
+### Pass 16 — 2026-06-17
+
+#### [N113] Inline YAML in tests violated the no-inline-yaml-in-tests rule (18 sites)
+
+Fixed: 2026-06-17
+Notes: 18 test sites embedded action.yml YAML as Go string literals (main_test.go, generator_test.go,
+wizard/detector_test.go, dependencies/updater_test.go, testutil/{helpers,test_suites}_test.go). Created 9 shared
+fixtures under testdata/yaml-fixtures/actions/ (composite stubs, field-missing variants, per-action dependency
+stubs, a malformed-runs invalid fixture), registered path constants in testutil/test_constants.go, and replaced
+every inline literal with testutil.MustReadFixture. Verified 0 remaining inline composite-stub literals.
+
+#### [N114] Duplicate string constants across test files violated no-constant-duplication (8 literals)
+
+Fixed: 2026-06-17
+Notes: Replaced repeated literals with existing constants — ".git"→appconstants.DirGit (dir-name uses only;
+URL-suffix concatenations left intact), "v1.2.3"→testutil.TestVersionSemantic,
+"action.yaml"→appconstants.ActionFileNameYAML, "action.yml"→appconstants.ActionFileNameYML,
+"actions/javascript/simple.yml"→testutil.TestFixtureJavaScriptSimple — and added 3 new shared constants
+(TestNonexistentYML, TestFixtureCompositeActionAnalyzer, TestTokenGHPExisting) for literals with no existing
+constant. Verified each constant's value matched before substituting.
+
+#### [N115] AssertEqual had no negative-path test — a no-op assertion would pass the whole suite
+
+Fixed: 2026-06-17
+Notes: testutil.AssertEqual takes *testing.T (unmockable), so its failure path was untested — a regression that
+gutted it would silently pass every assertion. Extracted the comparison into a pure equalCheck(expected,
+actual) (ok, msg) and added TestEqualCheck covering both equal (ok) and unequal (not-ok + non-empty message)
+cases, including the map length/value/type branches. Surfaced by the test-quality lens.
 
 ### Pass 15 — 2026-06-17
 

@@ -468,7 +468,7 @@ func TestGeneratorProcessBatch(t *testing.T) {
 		},
 		{
 			name:        testutil.TestCaseNameNonexistentFiles,
-			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
+			setupFunc:   setupNonexistentFiles(testutil.TestNonexistentYML),
 			expectError: true,
 		},
 	}
@@ -551,7 +551,7 @@ func TestGeneratorValidateFiles(t *testing.T) {
 		},
 		{
 			name:        testutil.TestCaseNameNonexistentFiles,
-			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
+			setupFunc:   setupNonexistentFiles(testutil.TestNonexistentYML),
 			expectError: true,
 		},
 	}
@@ -820,7 +820,7 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 					strings.Contains(actionPath, "..") {
 					t.Fatalf("invalid path: %q", actionPath)
 				}
-				content := "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
+				content := testutil.MustReadFixture(testutil.TestFixtureActionMinimal)
 				testutil.WriteTestFile(t, actionPath, content)
 
 				return tmpDir
@@ -1036,25 +1036,25 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 	}{
 		{
 			name:      testutil.TestCaseNameValidAction,
-			content:   "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []",
+			content:   testutil.MustReadFixture(testutil.TestFixtureActionMinimal),
 			wantErr:   false,
 			wantValid: true,
 		},
 		{
 			name:      testutil.TestCaseNameMissingName,
-			content:   "description: Test\nruns:\n  using: composite\n  steps: []",
+			content:   testutil.MustReadFixture(testutil.TestFixtureCompositeMissingName),
 			wantErr:   true,
 			wantValid: false,
 		},
 		{
 			name:      testutil.TestCaseNameMissingDesc,
-			content:   "name: Test\nruns:\n  using: composite\n  steps: []",
+			content:   testutil.MustReadFixture(testutil.TestFixtureCompositeMissingDesc),
 			wantErr:   true,
 			wantValid: false,
 		},
 		{
 			name:      testutil.TestCaseNameMissingRuns,
-			content:   "name: Test\ndescription: Test",
+			content:   testutil.MustReadFixture(testutil.TestFixtureCompositeNameDescOnly),
 			wantErr:   true,
 			wantValid: false,
 		},
@@ -1449,12 +1449,12 @@ func TestParseAndValidateAction_FieldBoundary(t *testing.T) {
 	}{
 		{
 			name:    "missing name field errors",
-			content: "description: D\nruns:\n  using: composite\n  steps: []",
+			content: testutil.MustReadFixture(testutil.TestFixtureCompositeMissingName),
 			wantErr: true,
 		},
 		{
 			name:    "missing description field errors",
-			content: "name: N\nruns:\n  using: composite\n  steps: []",
+			content: testutil.MustReadFixture(testutil.TestFixtureCompositeMissingDesc),
 			wantErr: true,
 		},
 		{

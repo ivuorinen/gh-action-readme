@@ -277,8 +277,13 @@ func TestCLIFlags(t *testing.T) {
 			wantExit: 0,
 		},
 		{
-			name:     "config file flag",
-			args:     []string{"--config", "nonexistent.yml", appconstants.CommandConfig, appconstants.CommandShow},
+			name: "config file flag",
+			args: []string{
+				"--config",
+				testutil.TestNonexistentYML,
+				appconstants.CommandConfig,
+				appconstants.CommandShow,
+			},
 			wantExit: 1,
 		},
 		{
@@ -436,7 +441,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-					"name: Test\ndescription: Test\nruns: [invalid:::",
+					testutil.MustReadFixture(testutil.TestFixtureInvalidMalformedRuns),
 				)
 			},
 			wantExit:  1,
@@ -467,7 +472,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-					"name: Test\ndescription: Test action",
+					testutil.MustReadFixture(testutil.TestFixtureCompositeNameDescOnly),
 				)
 			},
 			wantExit:  1,
@@ -2347,12 +2352,12 @@ func TestAnalyzeSecurityDeps(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					action1,
-					"name: Test1\ndescription: Test1\nruns:\n  using: composite\n  steps:\n  - uses: actions/checkout@v4",
+					testutil.MustReadFixture(testutil.TestFixtureCompositeStepCheckoutV4),
 				)
 				testutil.WriteTestFile(
 					t,
 					action2,
-					"name: Test2\ndescription: Test2\nruns:\n  using: composite\n  steps:\n  - uses: actions/setup-node@v3",
+					testutil.MustReadFixture(testutil.TestFixtureCompositeStepSetupNodeV3),
 				)
 
 				return []string{action1, action2}
@@ -2407,12 +2412,12 @@ func TestCollectAllUpdates(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					action1,
-					"name: Test1\ndescription: Test1\nruns:\n  using: composite\n  steps:\n  - uses: actions/checkout@v3",
+					testutil.MustReadFixture(testutil.TestFixtureCompositeStepCheckoutV3),
 				)
 				testutil.WriteTestFile(
 					t,
 					action2,
-					"name: Test2\ndescription: Test2\nruns:\n  using: composite\n  steps:\n  - uses: actions/setup-node@v2",
+					testutil.MustReadFixture(testutil.TestFixtureCompositeStepSetupNodeV2),
 				)
 
 				return []string{action1, action2}

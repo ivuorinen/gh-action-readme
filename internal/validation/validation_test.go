@@ -38,14 +38,19 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 
-				return testutil.WriteActionFixtureAs(t, tmpDir, "action.yaml", testutil.TestFixtureMinimalAction)
+				return testutil.WriteActionFixtureAs(
+					t,
+					tmpDir,
+					appconstants.ActionFileNameYAML,
+					testutil.TestFixtureMinimalAction,
+				)
 			},
 			expectError: false,
 		},
 		{
 			name: "nonexistent file",
 			setupFunc: func(_ *testing.T, tmpDir string) string {
-				return filepath.Join(tmpDir, "nonexistent.yml")
+				return filepath.Join(tmpDir, testutil.TestNonexistentYML)
 			},
 			expectError: true,
 		},
@@ -348,7 +353,7 @@ func TestIsGitRepository(t *testing.T) {
 			name: "directory with .git file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				gitFile := filepath.Join(tmpDir, ".git")
+				gitFile := filepath.Join(tmpDir, appconstants.DirGit)
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
 
 				return tmpDir

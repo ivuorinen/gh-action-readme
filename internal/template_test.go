@@ -514,7 +514,7 @@ func TestFormatVersion(t *testing.T) {
 		},
 		{
 			name:    "version without @",
-			version: "v1.2.3",
+			version: testutil.TestVersionSemantic,
 			want:    testutil.TestVersionWithAt,
 		},
 		{
@@ -775,7 +775,7 @@ func prepareTestActionFile(t *testing.T, actionPath string) string {
 	}
 
 	// For nonexistent file test
-	return filepath.Join(t.TempDir(), "nonexistent.yml")
+	return filepath.Join(t.TempDir(), testutil.TestNonexistentYML)
 }
 
 func TestAnalyzeDependencies(t *testing.T) {

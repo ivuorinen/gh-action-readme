@@ -777,7 +777,7 @@ func TestIsCompositeAction(t *testing.T) {
 	}{
 		{
 			name:    testutil.TestCaseNameCompositeAction,
-			fixture: "composite-action.yml",
+			fixture: testutil.TestFixtureCompositeActionAnalyzer,
 			want:    true,
 			wantErr: false,
 		},

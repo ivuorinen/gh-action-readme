@@ -9,7 +9,7 @@ import (
 func TestParseActionYMLValid(t *testing.T) {
 	t.Parallel()
 	// Create temporary action file using fixture
-	actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
+	actionPath := testutil.CreateTemporaryAction(t, testutil.TestFixtureJavaScriptSimple)
 	action, err := ParseActionYML(actionPath)
 	if err != nil {
 		t.Fatalf("failed to parse action.yml: %v", err)

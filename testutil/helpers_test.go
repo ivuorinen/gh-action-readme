@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // TestGitHelpers tests the git setup helper functions.
@@ -19,7 +21,7 @@ func TestGitHelpers(t *testing.T) {
 
 		gitDir := SetupGitDirectory(t, tmpDir)
 
-		expectedGitDir := filepath.Join(tmpDir, ".git")
+		expectedGitDir := filepath.Join(tmpDir, appconstants.DirGit)
 		if gitDir != expectedGitDir {
 			t.Errorf("SetupGitDirectory() = %v, want %v", gitDir, expectedGitDir)
 		}
@@ -164,7 +166,7 @@ func TestWriteActionFile(t *testing.T) {
 	tmpDir, cleanup := TempDir(t)
 	defer cleanup()
 
-	content := "name: Test\ndescription: test action\nruns:\n  using: composite\n  steps: []"
+	content := MustReadFixture(TestFixtureCompositeActionDescription)
 	actionPath := WriteActionFile(t, tmpDir, content)
 
 	if _, err := os.Stat(actionPath); os.IsNotExist(err) {
@@ -202,7 +204,7 @@ func TestAssertFileContentEquals(t *testing.T) {
 	defer cleanup()
 
 	filePath := filepath.Join(tmpDir, "testfile.yml")
-	content := "name: test\ndescription: test"
+	content := MustReadFixture(TestFixtureCompositeNameDescOnly)
 	WriteTestFile(t, filePath, content)
 
 	AssertFileContentEquals(t, filePath, content)
