@@ -1,7 +1,7 @@
 # {{.Name}}
 
-{{if .Branding}}![{{.Branding.Icon}}](https://img.shields.io/badge/icon-{{.Branding.Icon}}-{{.Branding.Color}}) {{end}}
-![GitHub](https://img.shields.io/badge/GitHub%20Action-{{.Name | replace " " "%20"}}-blue)
+{{if .Branding}}![{{.Branding.Icon}}](https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}) {{end}}
+![GitHub](https://img.shields.io/badge/GitHub%20Action-{{.Name | badgeSegment}}-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 > {{.Description}}
@@ -31,7 +31,7 @@ jobs:
 | Parameter | Description | Required | Default |
 |-----------|-------------|----------|---------|
 {{- range $key, $input := .Inputs}}
-| `{{$key}}` | {{$input.Description}} | {{if $input.Required}}✅{{else}}❌{{end}} | {{if $input.Default}}`{{$input.Default}}`{{else}}-{{end}} |
+| `{{$key}}` | {{$input.Description | mdCell}} | {{if $input.Required}}✅{{else}}❌{{end}} | {{if $input.Default}}`{{$input.Default | mdCell}}`{{else}}-{{end}} |
 {{- end}}
 {{end}}
 
@@ -41,7 +41,7 @@ jobs:
 | Parameter | Description |
 |-----------|-------------|
 {{- range $key, $output := .Outputs}}
-| `{{$key}}` | {{$output.Description}} |
+| `{{$key}}` | {{$output.Description | mdCell}} |
 {{- end}}
 {{end}}
 
@@ -101,7 +101,8 @@ This action uses the following dependencies:
 | Action | Version | Author | Description |
 |--------|---------|--------|-------------|
 {{- range .Dependencies}}
-| {{if .MarketplaceURL}}[{{.Name}}]({{.MarketplaceURL}}){{else}}{{.Name}}{{end}} | {{if .IsPinned}}🔒{{end}}{{.Version}} | [{{.Author}}](https://github.com/{{.Author}}) | {{.Description}} |
+| {{if .MarketplaceURL}}[{{.Name | mdCell}}]({{.MarketplaceURL}}){{else}}{{.Name | mdCell}}{{end}} | {{if .IsPinned}}🔒{{end}}{{.Version | mdCell}} |
+{{- " "}}[{{.Author | mdCell}}](https://github.com/{{.Author}}) | {{.Description | mdCell}} |
 {{- end}}
 
 <details>

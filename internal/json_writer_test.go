@@ -296,6 +296,9 @@ func TestShieldsBadgeEncode(t *testing.T) {
 		"plain":      "plain",       // unchanged
 		"git-merge":  "git--merge",  // branding icon with hyphen
 		"a-b c_d":    "a--b_c__d",   // combined
+		"C/C++":      "C%2FC++",     // slash percent-encoded (would break the URL path)
+		"a?b#c":      "a%3Fb%23c",   // query/fragment chars percent-encoded
+		"50%":        "50%25",       // literal percent encoded
 	}
 	for in, want := range cases {
 		if got := shieldsBadgeEncode(in); got != want {

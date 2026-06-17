@@ -2,7 +2,7 @@
 
 {{if .Branding}}
 <div align="center">
-  <img src="https://img.shields.io/badge/icon-{{.Branding.Icon}}-{{.Branding.Color}}" alt="{{.Branding.Icon}}" />
+  <img src="https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}" alt="{{.Branding.Icon}}" />
   <img src="https://img.shields.io/badge/status-stable-brightgreen" alt="Status" />
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
 </div>
@@ -64,7 +64,7 @@ This action supports various configuration options to customize its behavior acc
 | Parameter | Description | Type | Required | Default Value |
 |-----------|-------------|------|----------|---------------|
 {{- range $key, $input := .Inputs}}
-| **`{{$key}}`** | {{$input.Description}} | `string` | {{if $input.Required}}✅ Yes{{else}}❌ No{{end}} | {{if $input.Default}}`{{$input.Default}}`{{else}}_None_{{end}} |
+| **`{{$key}}`** | {{$input.Description | mdCell}} | `string` | {{if $input.Required}}✅ Yes{{else}}❌ No{{end}} | {{if $input.Default}}`{{$input.Default | mdCell}}`{{else}}_None_{{end}} |
 {{- end}}
 
 #### Parameter Details
@@ -94,7 +94,7 @@ This action provides the following outputs that can be used in subsequent workfl
 | Parameter | Description | Usage |
 |-----------|-------------|-------|
 {{- range $key, $output := .Outputs}}
-| **`{{$key}}`** | {{$output.Description}} | `\${{"{{"}} steps.{{$.Name | lower | replace " " "-"}}.outputs.{{$key}} {{"}}"}}` |
+| **`{{$key}}`** | {{$output.Description | mdCell}} | `\${{"{{"}} steps.{{$.Name | lower | replace " " "-"}}.outputs.{{$key}} {{"}}"}}` |
 {{- end}}
 
 #### Using Outputs
@@ -190,7 +190,8 @@ This action uses the following dependencies:
 | Action | Version | Author | Description |
 |--------|---------|--------|-------------|
 {{- range .Dependencies}}
-| {{if .MarketplaceURL}}[{{.Name}}]({{.MarketplaceURL}}){{else}}{{.Name}}{{end}} | {{if .IsPinned}}🔒{{end}}{{.Version}} | [{{.Author}}](https://github.com/{{.Author}}) | {{.Description}} |
+| {{if .MarketplaceURL}}[{{.Name | mdCell}}]({{.MarketplaceURL}}){{else}}{{.Name | mdCell}}{{end}} | {{if .IsPinned}}🔒{{end}}{{.Version | mdCell}} |
+{{- " "}}[{{.Author | mdCell}}](https://github.com/{{.Author}}) | {{.Description | mdCell}} |
 {{- end}}
 
 <details>

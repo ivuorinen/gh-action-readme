@@ -5,6 +5,7 @@ import (
 	htmltemplate "html/template"
 	"io"
 	"path/filepath"
+	"regexp"
 	"strings"
 	texttemplate "text/template"
 
@@ -59,7 +60,23 @@ func templateFuncs() texttemplate.FuncMap {
 		"gitRepo":       getGitRepo,
 		"gitUsesString": getGitUsesString,
 		"actionVersion": getActionVersion,
+		"mdCell":        mdCell,
+		"badgeSegment":  shieldsBadgeEncode,
 	}
+}
+
+// mdCell escapes a value for safe interpolation into a Markdown (or AsciiDoc)
+// table cell. A literal "|" would otherwise be read as a column separator and an
+// embedded newline would terminate the row, so both honest values (a description
+// containing a pipe) and crafted action metadata can corrupt the table. Pipes are
+// backslash-escaped and CR/LF are collapsed to a <br> break.
+func mdCell(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "|", "\\|")
+	s = strings.ReplaceAll(s, "\n", "<br>")
+	s = strings.ReplaceAll(s, "\r", "<br>")
+
+	return s
 }
 
 // getFieldWithFallback extracts a field from TemplateData with Git-then-Config fallback logic.
@@ -119,7 +136,20 @@ func getGitUsesString(data any) string {
 func isValidOrgRepo(org, repo string) bool {
 	return org != "" && repo != "" &&
 		org != appconstants.DefaultOrgPlaceholder &&
-		repo != appconstants.DefaultRepoPlaceholder
+		repo != appconstants.DefaultRepoPlaceholder &&
+		isValidGitHubPathSegment(org) &&
+		isValidGitHubPathSegment(repo)
+}
+
+// reGitHubPathSegment matches a single GitHub org/repo path segment: letters,
+// digits, "-", "_", and "." (so dotted repos like "my.repo" stay valid). It
+// rejects "/", "@", whitespace, and control characters, which would otherwise
+// inject extra path segments or a bogus version into the generated uses:
+// statement (org/repo flow from config files and git detection).
+var reGitHubPathSegment = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+func isValidGitHubPathSegment(s string) bool {
+	return reGitHubPathSegment.MatchString(s)
 }
 
 // formatVersion ensures version has proper @ prefix.

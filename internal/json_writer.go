@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -17,16 +18,20 @@ var getVersion = func() string {
 	return "0.1.0" // Default version, should be overridden at build time
 }
 
-// shieldsBadgeEncode escapes a value for a shields.io badge field, where "-" is
-// the segment separator. Per shields.io: "_" → "__", "-" → "--", " " → "_".
-// Without this, an action name like "Setup-Node" splits the badge into the wrong
-// label/message/color segments and renders incorrectly (or not at all).
+// shieldsBadgeEncode escapes a value for a shields.io badge URL segment. First it
+// applies shields.io's separator escaping ("_" → "__", "-" → "--", " " → "_") so
+// an action name like "Setup-Node" does not split the badge into the wrong
+// label/message/color segments. Then it percent-encodes any remaining
+// URL-reserved characters (e.g. "/", "?", "#", "%", "(", ")") so a legitimate
+// name or color such as "C/C++ build" or a branding value with a slash does not
+// corrupt the URL. url.PathEscape leaves the "-"/"_" produced above untouched
+// (both are RFC 3986 unreserved).
 func shieldsBadgeEncode(s string) string {
 	s = strings.ReplaceAll(s, "_", "__")
 	s = strings.ReplaceAll(s, "-", "--")
 	s = strings.ReplaceAll(s, " ", "_")
 
-	return s
+	return url.PathEscape(s)
 }
 
 // JSONOutput represents the structured JSON documentation output.

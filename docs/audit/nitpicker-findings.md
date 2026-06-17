@@ -5,9 +5,29 @@ Last validated: 2026-06-17 (pass 14 — full multi-skill audit)
 
 ## Summary
 
-- Total: 106 | Open: 2 | Fixed: 99 | Invalid: 5
+- Total: 112 | Open: 4 | Fixed: 103 | Invalid: 5
 
 ## Open Findings
+
+### Advisory
+
+#### [N111] IsCommitSHA false-positives on short all-hex tags/refs
+
+Category: correctness
+Area: internal/validation/validation.go (reCommitSHA = ^[a-f0-9]{7,40}$)
+Problem: Any 7–40-char lowercase-hex string is classified as a commit SHA, so a tag like `deadbee` or a 7-char
+hex branch is mis-detected. The 40-char guard in IsVersionPinned mitigates the pinning path.
+Decision: No clean fix — 7-char short SHAs are inherently ambiguous with hex tags. Left as-is (cosmetic;
+affects detection messaging only, not generation correctness). Surfaced by the parsing lens.
+
+#### [N112] IsSemanticVersion accepts malformed prerelease/build strings
+
+Category: correctness
+Area: internal/validation/validation.go (reSemanticVersion)
+Problem: The prerelease group allows empty/dotted-only identifiers, so `v1.2.3-..` and leading-zero `01.02.03`
+validate as semver though SemVer 2.0.0 forbids both.
+Decision: Cosmetic — only affects validation-quality messaging, not generation. Tightening the regex risks
+rejecting valid edge cases; left as-is pending a decision. Surfaced by the parsing lens.
 
 ### Medium
 
@@ -39,6 +59,40 @@ Fix: either wire size eviction into cleanup()/Set, or remove MaxSize + Size + es
 14 pending a decision on whether bounded caching is wanted.
 
 ## Fixed
+
+### Pass 15 — 2026-06-17
+
+#### [N107] shieldsBadgeEncode omitted URL percent-encoding — `/ ? # %` corrupt the JSON badge URL
+
+Fixed: 2026-06-17
+Notes: shieldsBadgeEncode (json_writer.go) did only shields separator escaping, so a legitimate name/color like
+`C/C++ build` produced a URL with a stray `/` that broke the shields endpoint. Added url.PathEscape after the
+separator escaping (leaves the produced `-`/`_` untouched). Added percent-encode test cases.
+
+#### [N108] Markdown/AsciiDoc table cells were not escaped — a `|` or newline corrupts the table
+
+Fixed: 2026-06-17
+Notes: github/professional/asciidoc themes interpolated action description/default/name/etc directly into table
+cells via text/template (no escaping), so an honest description containing `|` (or a crafted `[x](url)`) broke
+the table. Added an mdCell template func (escapes `|` → `\|`, collapses CR/LF to `<br>`) and applied it to the
+input/output/dependency cells across the github, professional, and asciidoc themes.
+
+#### [N109] Badge URLs interpolated raw `.Name`/`.Branding` — broken/spoofable badges
+
+Fixed: 2026-06-17
+Notes: github/asciidoc badge URLs used `.Name | replace " " "%20"` (only spaces) and raw branding icon/color;
+the professional theme interpolated branding raw into an `<img src>`. A name like `C/C++ build` or a crafted
+value produced malformed URLs or a markdown/attribute breakout. Exposed shieldsBadgeEncode as a `badgeSegment`
+template func and applied it to all badge segments in the github, asciidoc, and professional themes. Verified
+end-to-end render.
+
+#### [N110] isValidOrgRepo accepted org/repo containing `/` or `@` — uses: path/version injection
+
+Fixed: 2026-06-17
+Notes: isValidOrgRepo (template.go) only checked non-empty/non-placeholder, so an org like `evil/x` or repo
+`r@v9` (from config or git detection) injected extra path segments / a bogus version into the generated `uses:`
+statement. Added isValidGitHubPathSegment (^[A-Za-z0-9._-]+$) — rejects `/`, `@`, whitespace, control chars
+while keeping dotted repos valid. Added TestIsValidOrgRepo.
 
 ### Pass 14 — 2026-06-17
 
