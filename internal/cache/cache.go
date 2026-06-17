@@ -40,6 +40,11 @@ type Config struct {
 	DefaultTTL      time.Duration // Default TTL for entries
 	CleanupInterval time.Duration // How often to clean expired entries
 	MaxSize         int64         // Maximum cache size in bytes (0 = unlimited)
+	// Path, when non-empty, overrides the XDG cache directory. It exists so
+	// tests can supply an isolated temp directory instead of sharing the real
+	// per-user cache (which would let cached entries leak between test cases).
+	// Production code leaves this empty to use the XDG location.
+	Path string
 }
 
 // DefaultConfig returns default cache configuration.
@@ -57,18 +62,20 @@ func NewCache(config *Config) (*Cache, error) {
 		config = DefaultConfig()
 	}
 
-	// Get XDG cache directory
-	// Resolve the full cache file path (<xdg-cache>/gh-action-readme/cache.json).
-	// Passing the complete relative path namespaces the cache under its own
-	// directory; passing only the app name would resolve c.path to the shared
-	// XDG cache root and write cache.json there alongside other apps' files.
-	cacheFile, err := xdg.CacheFile(filepath.Join(appconstants.AppName, appconstants.CacheJSON))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get XDG cache directory: %w", err)
+	// Resolve the cache directory. An explicit config.Path (used by tests for
+	// isolation) takes precedence; otherwise use the XDG cache location.
+	cacheDir := config.Path
+	if cacheDir == "" {
+		// Resolve the full cache file path (<xdg-cache>/gh-action-readme/cache.json).
+		// Passing the complete relative path namespaces the cache under its own
+		// directory; passing only the app name would resolve c.path to the shared
+		// XDG cache root and write cache.json there alongside other apps' files.
+		cacheFile, err := xdg.CacheFile(filepath.Join(appconstants.AppName, appconstants.CacheJSON))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get XDG cache directory: %w", err)
+		}
+		cacheDir = filepath.Dir(cacheFile)
 	}
-
-	// Ensure cache directory exists
-	cacheDir := filepath.Dir(cacheFile)
 	// #nosec G301 -- cache directory permissions
 	if err := os.MkdirAll(cacheDir, appconstants.FilePermDir); err != nil {
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)

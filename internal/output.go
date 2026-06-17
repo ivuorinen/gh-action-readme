@@ -101,11 +101,13 @@ func (co *ColoredOutput) ErrorWithSuggestions(err *apperrors.ContextualError) {
 		return
 	}
 
-	// Print main error message
+	// Print main error message to stderr (color.Red writes to stdout via
+	// color.Output, so use an explicit stderr writer to keep errors off stdout —
+	// matching ColoredOutput.Error).
 	if co.NoColor {
 		_, _ = fmt.Fprintf(os.Stderr, "❌ %s\n", err.Error())
 	} else {
-		color.Red("❌ %s", err.Error())
+		_, _ = color.New(color.FgRed).Fprintf(os.Stderr, "❌ %s\n", err.Error())
 	}
 }
 

@@ -2,7 +2,7 @@
 
 Generated: 2026-05-05
 Last validated: 2026-06-16
-Pass: 3
+Pass: 4
 
 ## Tool Coverage
 
@@ -11,6 +11,21 @@ Pass: 3
 - Not applicable: npm/yarn/pnpm (no Node.js lockfile present)
 - Errored: semgrep: `.../semgrep/bin/python: bad interpreter: No such file or directory` (broken
   mise install — opengrep, its fork, ran instead and covered SAST)
+
+## Pass 4 Results (2026-06-16)
+
+Full re-scan with all 11 detectable tools available and run (semgrep now also resolvable but the
+opengrep fork remained the SAST source). No new findings; open count stays 0.
+
+- gosec: 0 issues; govulncheck: 0 reachable/called advisories
+- gitleaks: 0 secrets; trivy: 0 vulns/0 misconfig/0 secrets; grype: 0 matches; snyk: 0 vulns
+- opengrep: 10 findings — 9× `dangerous-exec-command` (git/detector.go:113/175/210,
+  validation/validation.go:37, testutil/testutil.go ×5) + 1× `import-text-template`
+  (template.go:9). All re-validate to SEC-010/011/012 (validated git/exec inputs) and SEC-018
+  (text/template is correct for non-HTML markdown/asciidoc). The detector.go line numbers drifted
+  after the N93 regex consolidation but the rule+file match is unchanged.
+- checkov: 6× CKV_SECRET_6 on testdata fixture configs — intentional fake tokens tracked as
+  SEC-021 (Invalid); no change.
 
 ## Pass 3 Results (2026-06-16)
 

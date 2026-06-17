@@ -45,7 +45,7 @@ func runAnalyzeActionFileTest(t *testing.T, tt analyzeActionFileTestCase) {
 
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 
 	analyzer := &Analyzer{
 		GitHubClient: githubClient,
@@ -285,7 +285,7 @@ func TestAnalyzerGetLatestVersion(t *testing.T) {
 	// Create mock GitHub client with test responses
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 
 	analyzer := &Analyzer{
 		GitHubClient: githubClient,
@@ -343,7 +343,7 @@ func TestAnalyzerCheckOutdated(t *testing.T) {
 	// Create mock GitHub client
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 
 	analyzer := &Analyzer{
 		GitHubClient: githubClient,
@@ -464,7 +464,7 @@ func TestAnalyzerGeneratePinnedUpdate(t *testing.T) {
 	// Create analyzer
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 
 	analyzer := &Analyzer{
 		GitHubClient: githubClient,
@@ -505,7 +505,7 @@ func TestAnalyzerWithCache(t *testing.T) {
 	// Test that caching works properly
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 
 	analyzer := &Analyzer{
 		GitHubClient: githubClient,
@@ -554,7 +554,7 @@ func TestAnalyzerRateLimitHandling(t *testing.T) {
 	}
 
 	client := github.NewClient(&http.Client{Transport: &testutil.MockTransport{Client: mockClient}})
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 
 	analyzer := &Analyzer{
 		GitHubClient: client,
@@ -611,7 +611,7 @@ func TestNewAnalyzer(t *testing.T) {
 	// Create test dependencies
 	mockResponses := testutil.MockGitHubResponses()
 	githubClient := testutil.MockGitHubClient(mockResponses)
-	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
+	cacheInstance, err := cache.NewCache(isolatedCacheConfig(t))
 	testutil.AssertNoError(t, err)
 	defer testutil.CleanupCache(t, cacheInstance)()
 
@@ -716,7 +716,7 @@ func TestNoOpCache(t *testing.T) {
 func TestCacheAdapterSet(t *testing.T) {
 	t.Parallel()
 
-	c, err := cache.NewCache(cache.DefaultConfig())
+	c, err := cache.NewCache(isolatedCacheConfig(t))
 	if err != nil {
 		t.Fatalf("failed to create cache: %v", err)
 	}
@@ -849,7 +849,7 @@ func TestGetCommitSHAForTag_AnnotatedTag(t *testing.T) {
 		base + "/git/tags/" + annTagObjSHA: tagJSON,
 	}
 
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 	analyzer := &Analyzer{
 		GitHubClient: testutil.MockGitHubClient(mockResponses),
 		Cache:        cacheInstance,
@@ -889,7 +889,7 @@ func TestGetCommitSHAForTag_AnnotatedTagDerefFailure(t *testing.T) {
 		base + "/git/ref/tags/" + annTag: refJSON,
 	}
 
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 	analyzer := &Analyzer{
 		GitHubClient: testutil.MockGitHubClient(mockResponses),
 		Cache:        cacheInstance,
@@ -913,7 +913,7 @@ func TestGetCommitSHAForTag_AnnotatedTagDerefFailure(t *testing.T) {
 func TestGeneratePinnedUpdate_RejectsInjection(t *testing.T) {
 	t.Parallel()
 
-	cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+	cacheInstance := newIsolatedCache(t)
 	analyzer := &Analyzer{Cache: cacheInstance}
 	dep := Dependency{Uses: testutil.TestActionCheckoutV3}
 

@@ -17,13 +17,38 @@ const (
 	testUpdaterOwner = "test"
 )
 
+// isolatedCacheConfig returns a cache config whose Path points at a per-test
+// temp directory, so cached entries never leak between test cases (or between
+// runs) via the shared real per-user cache.
+func isolatedCacheConfig(t *testing.T) *cache.Config {
+	t.Helper()
+
+	cfg := cache.DefaultConfig()
+	cfg.Path = t.TempDir()
+
+	return cfg
+}
+
+// newIsolatedCache creates a cache backed by a per-test temp directory and
+// registers Close() as test cleanup, so the background save goroutine is stopped
+// (and the final flush completed) before t.TempDir removal runs.
+func newIsolatedCache(t *testing.T) *cache.Cache {
+	t.Helper()
+
+	c, err := cache.NewCache(isolatedCacheConfig(t))
+	testutil.AssertNoError(t, err)
+	t.Cleanup(testutil.CleanupCache(t, c))
+
+	return c
+}
+
 // newTestAnalyzer creates an Analyzer with cache for testing.
 // Returns the analyzer and a cleanup function.
 // Pattern used 7+ times in updater_test.go.
 func newTestAnalyzer(t *testing.T) (*Analyzer, func()) {
 	t.Helper()
 
-	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
+	cacheInstance, err := cache.NewCache(isolatedCacheConfig(t))
 	testutil.AssertNoError(t, err)
 
 	analyzer := &Analyzer{
@@ -440,7 +465,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 				mockClient := testutil.MockGitHubClient(map[string]string{
 					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "[]",
 				})
-				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+				cacheInstance := newIsolatedCache(t)
 
 				return &Analyzer{
 					GitHubClient: mockClient,
@@ -469,7 +494,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 				mockClient := testutil.MockGitHubClient(map[string]string{
 					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "invalid json",
 				})
-				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+				cacheInstance := newIsolatedCache(t)
 
 				return &Analyzer{
 					GitHubClient: mockClient,
@@ -543,7 +568,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 			name: "invalid data type",
 			setupFn: func(t *testing.T) (*Analyzer, func()) {
 				t.Helper()
-				c, err := cache.NewCache(cache.DefaultConfig())
+				c, err := cache.NewCache(isolatedCacheConfig(t))
 				testutil.AssertNoError(t, err)
 				_ = c.Set(testutil.CacheTestKey, "invalid-string")
 
@@ -555,7 +580,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 			name: "empty cache entry",
 			setupFn: func(t *testing.T) (*Analyzer, func()) {
 				t.Helper()
-				c, err := cache.NewCache(cache.DefaultConfig())
+				c, err := cache.NewCache(isolatedCacheConfig(t))
 				testutil.AssertNoError(t, err)
 
 				return &Analyzer{Cache: NewCacheAdapter(c)}, testutil.CleanupCache(t, c)
@@ -585,7 +610,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 	t.Run("cacheVersion stores and retrieves correctly", func(t *testing.T) {
 		t.Parallel()
 
-		cacheInstance, err := cache.NewCache(cache.DefaultConfig())
+		cacheInstance, err := cache.NewCache(isolatedCacheConfig(t))
 		testutil.AssertNoError(t, err)
 		defer testutil.CleanupCache(t, cacheInstance)()
 

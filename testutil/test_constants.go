@@ -421,6 +421,11 @@ const TestActionNameMyAction = "MyAction"
 // uses tab indentation, exercising the tab-aware comment parsing path.
 const TestFixturePermissionsTabIndented = "permissions/tab-indented.yml"
 
+// TestFixturePermissionsTwoBlocksWithProse has two header permission blocks split
+// by a dedented prose comment, exercising that a dedent ends only the current
+// block instead of aborting the whole comment scan.
+const TestFixturePermissionsTwoBlocksWithProse = "permissions/two-blocks-with-prose.yml"
+
 // Test dependency actions - moved from appconstants.
 const (
 	TestActionCheckoutV3  = "actions/checkout@v3"
@@ -636,6 +641,9 @@ const (
 	// TestConfigRepoOverrideUseDefaultBranchFalse is a global config whose repo
 	// override explicitly sets use_default_branch: false.
 	TestConfigRepoOverrideUseDefaultBranchFalse = "configs/repo-override-use-default-branch-false.yml"
+	// TestConfigAnalyzeDepsFalse explicitly disables analyze_dependencies and
+	// show_security_info to exercise the presence-flag merge path.
+	TestConfigAnalyzeDepsFalse = "configs/analyze-deps-false.yml"
 
 	// Valid/default configs.
 	TestConfigValidSimple = "configs/valid-simple.yml"

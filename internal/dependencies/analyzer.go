@@ -514,12 +514,20 @@ func (a *Analyzer) getCachedVersion(cacheKey string) (version, sha string, found
 		return "", "", false
 	}
 
-	versionInfo, ok := cached.(map[string]string)
+	// Read as map[string]any: an in-memory hit returns the stored map[string]any,
+	// and a hit loaded from cache.json is decoded by encoding/json as
+	// map[string]interface{} (== map[string]any). Asserting map[string]string
+	// here previously failed for every disk-loaded entry, silently defeating the
+	// on-disk cache across CLI invocations.
+	versionInfo, ok := cached.(map[string]any)
 	if !ok {
 		return "", "", false
 	}
 
-	return versionInfo["version"], versionInfo["sha"], true
+	version, _ = versionInfo["version"].(string)
+	sha, _ = versionInfo["sha"].(string)
+
+	return version, sha, true
 }
 
 // getLatestRelease fetches the latest release and its commit SHA.
@@ -589,7 +597,9 @@ func (a *Analyzer) cacheVersion(cacheKey, version, sha string) {
 		return
 	}
 
-	versionInfo := map[string]string{"version": version, "sha": sha}
+	// Store as map[string]any so the value type is identical whether served from
+	// memory or reloaded from cache.json (see getCachedVersion).
+	versionInfo := map[string]any{"version": version, "sha": sha}
 	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, appconstants.CacheDefaultTTL)
 }
 
@@ -614,14 +624,28 @@ func (a *Analyzer) compareVersions(current, latest string) string {
 }
 
 // parseVersionParts normalizes version string to 3-part semantic version.
+// Prerelease (-suffix) and build metadata (+suffix) are stripped first so that,
+// per semver, "1.0.0-beta" and "1.0.0+build" both reduce to the core "1.0.0";
+// otherwise the trailing segment ("0-beta") would be string-compared against
+// "0" and misclassified as a patch update.
 func (a *Analyzer) parseVersionParts(version string) []string {
-	parts := strings.Split(version, ".")
+	parts := strings.Split(coreVersion(version), ".")
 	// For floating versions like "v4", treat as "v4.0.0" for comparison
 	for len(parts) < appconstants.VersionPartsCount {
 		parts = append(parts, "0")
 	}
 
 	return parts
+}
+
+// coreVersion strips any semver prerelease (-...) or build-metadata (+...)
+// suffix, returning just the numeric "major.minor.patch" core.
+func coreVersion(version string) string {
+	if i := strings.IndexAny(version, "-+"); i >= 0 {
+		return version[:i]
+	}
+
+	return version
 }
 
 // determineUpdateType compares version parts and returns update type.
@@ -694,46 +718,66 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 // Preserves indentation and YAML list markers.
 func applyUpdatesToLines(lines []string, updates []PinnedUpdate) {
 	for _, update := range updates {
-		target := appconstants.UsesFieldPrefix + update.OldUses
-
 		for i, line := range lines {
-			// Skip comment lines
-			if strings.HasPrefix(strings.TrimLeft(line, " \t"), "#") {
-				continue
+			if rewritten, ok := applyUpdateToLine(line, update); ok {
+				lines[i] = rewritten
 			}
-
-			idx := strings.Index(line, target)
-			if idx < 0 {
-				continue
-			}
-
-			// Skip if the match is inside an inline comment (# before the match position)
-			if commentIdx := strings.Index(line, "#"); commentIdx >= 0 && commentIdx < idx {
-				continue
-			}
-
-			// Require OldUses to be a complete token — not a prefix of a longer version string
-			afterTarget := strings.TrimLeft(line[idx+len(target):], " \t")
-			if afterTarget != "" && !strings.HasPrefix(afterTarget, "#") {
-				continue
-			}
-
-			// Preserve both indentation AND list markers. Capture the original
-			// leading whitespace verbatim rather than re-emitting spaces, so any
-			// tabs or mixed indentation in the source line survive the rewrite.
-			trimmed := strings.TrimLeft(line, " \t")
-			indent := line[:len(line)-len(trimmed)]
-
-			// Check if this is a list item (starts with "- ")
-			listMarker := ""
-			if strings.HasPrefix(trimmed, "- ") {
-				listMarker = "- "
-			}
-
-			// Reconstruct: indent + list marker + uses field
-			lines[i] = indent + listMarker + appconstants.UsesFieldPrefix + update.NewUses
 		}
 	}
+}
+
+// applyUpdateToLine rewrites a single line if it is a `uses:` field whose value
+// equals update.OldUses. The action reference is matched whether or not it is
+// wrapped in single or double quotes (a quoted `uses: "actions/checkout@v4"` was
+// previously skipped, silently leaving the dependency unpinned). The original
+// leading whitespace and YAML list marker are preserved. Returns the rewritten
+// line and true when a rewrite occurred, otherwise the original line and false.
+func applyUpdateToLine(line string, update PinnedUpdate) (string, bool) {
+	trimmed := strings.TrimLeft(line, " \t")
+	if strings.HasPrefix(trimmed, "#") {
+		return line, false // whole-line comment
+	}
+
+	// Capture the original leading whitespace verbatim so tabs/mixed indentation
+	// survive the rewrite.
+	indent := line[:len(line)-len(trimmed)]
+
+	listMarker := ""
+	body := trimmed
+	if strings.HasPrefix(body, "- ") {
+		listMarker = "- "
+		body = strings.TrimLeft(body[len(listMarker):], " \t")
+	}
+
+	if !strings.HasPrefix(body, appconstants.UsesFieldPrefix) {
+		return line, false
+	}
+
+	value := strings.TrimSpace(body[len(appconstants.UsesFieldPrefix):])
+	// Drop any trailing inline comment before comparing the reference value.
+	if ci := strings.Index(value, "#"); ci >= 0 {
+		value = strings.TrimSpace(value[:ci])
+	}
+	value = unquoteYAMLScalar(value)
+
+	if value != update.OldUses {
+		return line, false
+	}
+
+	return indent + listMarker + appconstants.UsesFieldPrefix + update.NewUses, true
+}
+
+// unquoteYAMLScalar strips a single matching pair of surrounding single or double
+// quotes from a YAML scalar; otherwise returns the input unchanged.
+func unquoteYAMLScalar(s string) string {
+	if len(s) >= 2 {
+		first, last := s[0], s[len(s)-1]
+		if (first == '"' && last == '"') || (first == '\'' && last == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+
+	return s
 }
 
 // validateAndRollbackOnFailure validates the action file and rolls back changes on failure.
@@ -800,8 +844,12 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 	cacheKey := appconstants.CacheKeyRepo + fmt.Sprintf("%s/%s", owner, repo)
 	if a.Cache != nil {
 		if cached, exists := a.Cache.Get(cacheKey); exists {
-			if repository, ok := cached.(*github.Repository); ok {
-				dep.Description = repository.GetDescription()
+			// Cache only the description string (the sole field consumed here).
+			// A string survives the cache.json JSON round-trip as a string, unlike
+			// the *github.Repository SDK struct, whose type assertion would fail
+			// for every disk-loaded entry.
+			if description, ok := cached.(string); ok {
+				dep.Description = description
 
 				return nil
 			}
@@ -816,7 +864,8 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 
 	// Cache the result with 1 hour TTL
 	if a.Cache != nil {
-		_ = a.Cache.SetWithTTL(cacheKey, repository, appconstants.CacheDefaultTTL) // Ignore cache errors
+		// Ignore cache errors.
+		_ = a.Cache.SetWithTTL(cacheKey, repository.GetDescription(), appconstants.CacheDefaultTTL)
 	}
 
 	// Enrich dependency with API data

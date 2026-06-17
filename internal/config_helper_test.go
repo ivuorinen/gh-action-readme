@@ -48,6 +48,11 @@ func createBoolFieldMergeTest(name string, dst, src, want boolFields) struct {
 			ShowSecurityInfo:    src.ShowSecurityInfo,
 			Verbose:             src.Verbose,
 			Quiet:               src.Quiet,
+			// These cases model a src that explicitly provides the two
+			// presence-merged feature flags, so mark them present. Verbose/Quiet
+			// remain OR-merged and need no presence flag.
+			analyzeDependenciesSet: true,
+			showSecurityInfoSet:    true,
 		},
 		want: &AppConfig{
 			AnalyzeDependencies: want.AnalyzeDependencies,

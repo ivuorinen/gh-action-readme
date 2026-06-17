@@ -11,6 +11,11 @@ Invalid finding (AA04) remains Invalid. 2 new findings filed (AA11, AA12), both 
 inconsistencies.
 - No Critical or High findings. `go build ./...` is clean — no import cycles, no reversed dependencies. Zero
 production files import `testutil`. `GetGitHubToken()` is used consistently as the canonical token accessor.
+- Pass 4 re-validation (2026-06-16): re-audited the full `go list` import graph plus the recently changed
+files (git/detector.go, viper_helper.go, apperrors/errors.go, appconstants/config.go). No new violations.
+testutil isolation holds; appconstants remains a leaf; the only subpackage→parent import is the documented
+AA03 (wizard→internal). Token-resolution paths all route through GetGitHubToken (no direct field bypass).
+Open count stays 0.
 
 ## Open Findings
 

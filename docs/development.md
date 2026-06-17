@@ -54,7 +54,7 @@ make lint
 - **`internal/generator.go`** - Core generation logic with custom output paths
 - **`internal/config.go`** - Viper configuration (XDG compliant)
 - **`internal/output.go`** - Colored terminal output with progress bars
-- **`internal/errors/`** - Contextual error handling with suggestions
+- **`internal/apperrors/`** - Contextual error handling with suggestions
 - **`internal/wizard/`** - Interactive configuration wizard
 - **`internal/progress.go`** - Progress indicators for batch operations
 
@@ -217,7 +217,7 @@ goimports -d .
 ### New Output Format
 
 1. Add constant to `generator.go`
-2. Add case to `GenerateFromFile()` switch
+2. Add a case to the format switch in `generateByFormat()` (`internal/generator.go`)
 3. Implement `generate[FORMAT]()` method
 4. Update CLI help and documentation
 

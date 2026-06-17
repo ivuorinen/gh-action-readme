@@ -55,6 +55,13 @@ type AppConfig struct {
 	// Features
 	AnalyzeDependencies bool `mapstructure:"analyze_dependencies" yaml:"analyze_dependencies"`
 	ShowSecurityInfo    bool `mapstructure:"show_security_info"   yaml:"show_security_info"`
+	// analyzeDependenciesSet / showSecurityInfoSet record whether a loaded source
+	// explicitly set these flags. Like useDefaultBranchSet, this lets a
+	// higher-priority source override a lower-priority true with an explicit
+	// false during merge (a plain "merge if true" cannot). Unexported; set by the
+	// config loaders via viper.IsSet.
+	analyzeDependenciesSet bool
+	showSecurityInfoSet    bool
 
 	// Custom Template Variables
 	Variables map[string]string `mapstructure:"variables" yaml:"variables,omitempty"`
@@ -328,13 +335,21 @@ func mergeSliceFields(dst *AppConfig, src *AppConfig) {
 	copySliceIfNotEmpty(&dst.IgnoredDirectories, src.IgnoredDirectories)
 }
 
-// mergeBooleanFields merges boolean fields from src to dst if true.
+// mergeBooleanFields merges boolean fields from src to dst.
+//
+// AnalyzeDependencies, ShowSecurityInfo, and UseDefaultBranch are genuine config
+// knobs: they merge on explicit presence (tracked via the *Set flags) so a
+// higher-priority source can override a lower-priority true with an explicit
+// false. Verbose and Quiet are CLI-flag style and intentionally OR-merged (any
+// scope that turns them on wins).
 func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
-	if src.AnalyzeDependencies {
+	if src.analyzeDependenciesSet {
 		dst.AnalyzeDependencies = src.AnalyzeDependencies
+		dst.analyzeDependenciesSet = true
 	}
-	if src.ShowSecurityInfo {
+	if src.showSecurityInfoSet {
 		dst.ShowSecurityInfo = src.ShowSecurityInfo
+		dst.showSecurityInfoSet = true
 	}
 	if src.Verbose {
 		dst.Verbose = src.Verbose
@@ -342,10 +357,6 @@ func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
 	if src.Quiet {
 		dst.Quiet = src.Quiet
 	}
-	// UseDefaultBranch defaults to true, so it must be merged on explicit
-	// presence (tracked via useDefaultBranchSet) rather than "merge if true" —
-	// otherwise a source setting use_default_branch: false could never override
-	// the default.
 	if src.useDefaultBranchSet {
 		dst.UseDefaultBranch = src.UseDefaultBranch
 		dst.useDefaultBranchSet = true

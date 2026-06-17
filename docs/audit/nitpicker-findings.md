@@ -1,15 +1,104 @@
 # Nitpicker Findings
 
 Generated: 2026-05-04
-Last validated: 2026-06-16 (pass 13)
+Last validated: 2026-06-17 (pass 14 — full multi-skill audit)
 
 ## Summary
 
-- Total: 97 | Open: 0 | Fixed: 92 | Invalid: 5
+- Total: 106 | Open: 2 | Fixed: 99 | Invalid: 5
 
 ## Open Findings
 
+### Medium
+
+#### [N105] Production caches are never Closed — leaked cleanup goroutine and unflushed final saves
+
+Category: reliability
+Area: internal/generator.go:110, internal/template.go:293 (cache.NewCache, never Close()d)
+Problem: cache.NewCache starts a ticker + cleanupLoop goroutine that only stop in Close(); no production caller
+closes the cache. Close() also performs the final synchronous saveToDisk + saveWG.Wait. Because it is never
+called, on fast process exit the most recent async saves (spawned by Set/SetWithTTL) can be lost — undermining
+the now-working on-disk cache (N98). Single-shot CLI reclaims the goroutine at exit, so this is reliability/perf,
+not a correctness defect.
+Evidence: grep shows Close() called only by testutil.CleanupCache (tests). cmd_cache.go Clear() persists
+synchronously (os.Remove) so the cache subcommands are unaffected.
+Fix: add Close() to the DependencyCache interface + CacheAdapter (delegate to cache.Close), and have the
+Generator own the cache lifecycle and Close it after ProcessBatch/GenerateFromFile completes. Deferred from
+pass 14: a safe fix needs lifecycle plumbing through generator/template and risks use-after-close; filed for a
+focused follow-up rather than a rushed refactor mid-audit.
+
+#### [N106] cache.Config.MaxSize is dead — the cache is unbounded
+
+Category: maintainability
+Area: internal/cache/cache.go (Config.MaxSize, Entry.Size, estimateSize)
+Problem: MaxSize (default 100MB) and the per-entry Size machinery exist but MaxSize is never read; no
+size-based eviction happens (only TTL expiry), so cache.json can grow without bound. The field implies a
+guarantee the code does not provide.
+Evidence: grep finds no read of MaxSize outside its declaration/DefaultConfig.
+Fix: either wire size eviction into cleanup()/Set, or remove MaxSize + Size + estimateSize. Deferred from pass
+14 pending a decision on whether bounded caching is wanted.
+
 ## Fixed
+
+### Pass 14 — 2026-06-17
+
+#### [N98] On-disk cache is silently useless — type assertion never matches after JSON reload
+
+Fixed: 2026-06-17
+Notes: cacheVersion stored map[string]string and getCachedVersion asserted the same, but cache.json reload
+decodes Entry.Value (any) as map[string]interface{}, so every disk-loaded entry failed the assertion — the
+on-disk cache provided zero benefit across CLI invocations. Store/read the version entry as map[string]any
+(coercing values to string); cache only the repository Description string instead of the *github.Repository SDK
+struct (a string survives the JSON round-trip). Surfaced by the completeness-critic lens.
+
+#### [N99] Dependency tests shared the real per-user cache directory (isolation defect exposed by N98)
+
+Fixed: 2026-06-17
+Notes: ~17 dependency tests built cache.NewCache(cache.DefaultConfig()) against the shared XDG cache dir; once
+N98 made the disk cache work, entries leaked between tests. Added cache.Config.Path (overrides XDG; empty in
+production), and isolatedCacheConfig/newIsolatedCache test helpers (per-test t.TempDir + t.Cleanup(Close)).
+Converted all dependency-test cache constructions to the isolated helpers.
+
+#### [N100] ErrorWithSuggestions printed errors to stdout when color was enabled
+
+Fixed: 2026-06-17
+Notes: internal/output.go ErrorWithSuggestions used color.Red(...) (writes to color.Output = stdout) in the
+color branch while the NoColor branch used stderr — so contextual errors landed on stdout on a normal
+terminal. Now both branches write to os.Stderr via color.New(color.FgRed).Fprintf, matching ColoredOutput.Error.
+
+#### [N101] Quoted `uses:` references were silently never pinned
+
+Fixed: 2026-06-17
+Notes: applyUpdatesToLines matched the literal `uses: actions/checkout@v4`, so a quoted
+`uses: "actions/checkout@v4"` line never matched and the dependency was silently left unpinned while reported
+as success. Rewrote matching as a structured per-line parse (applyUpdateToLine) that strips the list marker,
+surrounding single/double quotes, trailing inline comment, and whitespace before comparing the reference value
+exactly. All existing updater fixtures still pass.
+
+#### [N102] mergeBooleanFields zero-value bug for analyze_dependencies / show_security_info
+
+Fixed: 2026-06-17
+Notes: N79 fixed the "explicit false can't override a lower-priority true" defect only for use_default_branch.
+The same defect remained for analyze_dependencies and show_security_info (genuine per-config knobs). Added
+analyzeDependenciesSet/showSecurityInfoSet presence flags (set via viper.IsSet in both loaders and per
+repo-override via the generalized markRepoOverridePresenceFlags), and merged these on presence. Verbose/Quiet
+remain intentionally OR-merged. Added fixture + TestLoadConfigFromViperFeatureFlagPresence and updated
+TestMergeBooleanFields for the corrected divergent semantics.
+
+#### [N103] determineUpdateType misclassified prerelease/build-metadata versions
+
+Fixed: 2026-06-17
+Notes: parseVersionParts string-split on "." so "1.0.0-beta" → ["1","0","0-beta"], making v1.0.0 → v1.0.0-beta
+classify as a patch update (offering a prerelease as an upgrade); "+build" metadata likewise. Added
+coreVersion() to strip the -prerelease/+build suffix before splitting, so same-core versions compare equal.
+
+#### [N104] Permission-comment parser aborted the whole header scan on the first dedent
+
+Fixed: 2026-06-17
+Notes: processPermissionEntry returned "break" on a dedented line and the caller broke the entire scanner loop,
+so a second `# permissions:` block (or any later comment) after a dedented prose line was silently dropped. The
+caller now ends only the current block (inPermissionsBlock=false) and keeps scanning; a new permissions header
+is still caught earlier. Added permissions/two-blocks-with-prose.yml fixture + test.
 
 ### Pass 13 — 2026-06-16
 

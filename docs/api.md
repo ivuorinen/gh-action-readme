@@ -139,14 +139,13 @@ gh-action-readme gen --theme github --quiet
 ### Basic Syntax
 
 ```bash
-gh-action-readme validate [file_or_directory] [flags]
+gh-action-readme validate [flags]
 ```
 
 ### Arguments
 
-- **`[file_or_directory]`** - Optional path to validate
-  - If omitted, validates current directory
-  - Supports both files and directories
+The `validate` command takes no positional arguments. Any path argument is ignored —
+validation always runs recursively from the current working directory.
 
 ### Flags
 
@@ -155,11 +154,8 @@ The `validate` command has no own flags. Validation always runs recursively. Use
 ### Examples
 
 ```bash
-# Validate current directory
+# Validate the current directory tree
 gh-action-readme validate
-
-# Validate specific file
-gh-action-readme validate action.yml
 
 # Verbose validation with suggestions
 gh-action-readme validate --verbose
@@ -293,13 +289,7 @@ These flags are available for all commands:
 | Code | Description |
 | ------ | ------------- |
 | `0` | Success |
-| `1` | General error |
-| `2` | Invalid arguments |
-| `3` | File not found |
-| `4` | Validation failed |
-| `5` | Configuration error |
-| `6` | GitHub API error |
-| `7` | Template error |
+| `1` | Any error (the CLI does not differentiate error categories by exit code) |
 
 ## 🔧 Environment Variables
 
@@ -315,12 +305,6 @@ These flags are available for all commands:
 
 - `GH_README_GITHUB_TOKEN` - GitHub personal access token
 - `GITHUB_TOKEN` - GitHub personal access token (fallback)
-
-### Advanced Options
-
-- `GH_ACTION_README_CONFIG` - Custom configuration file path
-- `GH_ACTION_README_CACHE_TTL` - Cache TTL in seconds
-- `GH_ACTION_README_TIMEOUT` - Request timeout in seconds
 
 ## 🎯 Advanced Usage Patterns
 

@@ -135,9 +135,13 @@ func parsePermissionsFromComments(path string) (map[string]string, error) {
 
 		// Parse permission entries
 		if inPermissionsBlock && content != "" {
-			shouldBreak := processPermissionEntry(line, content, &expectedItemIndent, permissions)
-			if shouldBreak {
-				break
+			blockEnded := processPermissionEntry(line, content, &expectedItemIndent, permissions)
+			if blockEnded {
+				// A dedent ends the current permissions block but must NOT abort the
+				// whole header scan — a later "# permissions:" block (caught above)
+				// or trailing comment would otherwise be silently dropped.
+				inPermissionsBlock = false
+				expectedItemIndent = -1
 			}
 		}
 	}
@@ -177,7 +181,8 @@ func parsePermissionLine(content string) (key, value string, ok bool) {
 }
 
 // processPermissionEntry processes a single line in the permissions block.
-// Returns true if parsing should break (dedented out of block), false to continue.
+// Returns true if the line is dedented out of the current block (the caller
+// should end the block but keep scanning), false otherwise.
 func processPermissionEntry(line, content string, expectedItemIndent *int, permissions map[string]string) bool {
 	// Get the indent of the content (after removing #). Strip both spaces and
 	// tabs so a tab-indented comment item is recognized as indentation rather

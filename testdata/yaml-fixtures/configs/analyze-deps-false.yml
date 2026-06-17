@@ -1,0 +1,7 @@
+# Config that explicitly disables analyze_dependencies and show_security_info.
+# Used to verify the loader records the explicit-presence flags so a false value
+# can override a lower-priority true during merge.
+theme: default
+output_format: md
+analyze_dependencies: false
+show_security_info: false

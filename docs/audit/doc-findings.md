@@ -5,11 +5,45 @@ Last validated: 2026-06-16
 
 ## Summary
 
-- Total: 22 | Open: 0 | Fixed: 22 | Invalid: 0
+- Total: 27 | Open: 0 | Fixed: 27 | Invalid: 0
 
 ## Open Findings
 
 ## Fixed
+
+### Pass 5 — 2026-06-16
+
+#### [DA23] `docs/api.md` Exit Codes table fabricates codes 2–7
+
+Fixed: 2026-06-16
+Notes: The CLI only ever exits 0 (success) or 1 (any error) — only `appconstants.ExitCodeError = 1` exists and
+every os.Exit uses it. Replaced the fabricated 8-row table (Invalid arguments/File not found/Validation
+failed/Configuration error/GitHub API error/Template error) with the two real outcomes.
+
+#### [DA24] `docs/api.md` documents phantom env vars in an "Advanced Options" section
+
+Fixed: 2026-06-16
+Notes: Removed GH_ACTION_README_CONFIG, GH_ACTION_README_CACHE_TTL, GH_ACTION_README_TIMEOUT — none are read
+(no cache_ttl/timeout config key; config path is the --config flag, not an env var). Same phantom class as
+DA16. The "Configuration Override" env vars (theme/output_format/output_dir/verbose/quiet) are real AppConfig
+keys bound via viper AutomaticEnv and were kept.
+
+#### [DA25] `docs/development.md` references nonexistent package `internal/errors/`
+
+Fixed: 2026-06-16
+Notes: Package is `internal/apperrors/` (DA02 fixed the same drift in CLAUDE.md but development.md was missed).
+
+#### [DA26] `docs/api.md` claims `validate` accepts a path argument; the handler ignores it
+
+Fixed: 2026-06-16
+Notes: validateHandler discards args and always validates the cwd recursively (cmd_validate.go:30). Updated the
+syntax/arguments/examples to drop the `[file_or_directory]` arg and the `validate action.yml` example.
+
+#### [DA27] `docs/development.md` "New Output Format" step names `GenerateFromFile()` instead of `generateByFormat()`
+
+Fixed: 2026-06-16
+Notes: The format switch lives in generateByFormat() (internal/generator.go); GenerateFromFile routes through
+it. Same drift DA20/N44 fixed in CLAUDE.md. Corrected step 2 to name generateByFormat().
 
 ### Pass 4 — 2026-06-16
 

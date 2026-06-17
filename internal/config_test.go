@@ -736,16 +736,21 @@ func TestMergeBooleanFields(t *testing.T) {
 			boolFields{true, true, true, true},
 		),
 		createBoolFieldMergeTest(
-			"merge only some true values",
+			// AnalyzeDependencies/ShowSecurityInfo merge on presence: src's
+			// explicit false for ShowSecurityInfo overrides dst's true. Quiet is
+			// OR-merged so dst's true survives src's false.
+			"presence-merged false overrides; OR-merged false does not",
 			boolFields{false, true, false, true},
 			boolFields{true, false, true, false},
-			boolFields{true, true, true, true},
+			boolFields{true, false, true, true},
 		),
 		createBoolFieldMergeTest(
-			"merge with all source false",
+			// src explicitly sets the two feature flags false → they override the
+			// dst trues. Verbose/Quiet are OR-merged so dst's trues survive.
+			"explicit source false overrides presence-merged flags only",
 			boolFields{true, true, true, true},
 			boolFields{false, false, false, false},
-			boolFields{true, true, true, true},
+			boolFields{false, false, true, true},
 		),
 	}
 
@@ -796,6 +801,39 @@ func TestMergeBooleanFieldsUseDefaultBranchPresence(t *testing.T) {
 			t.Error("unset source should not override the destination value")
 		}
 	})
+}
+
+// TestLoadConfigFromViperFeatureFlagPresence verifies that an explicit
+// analyze_dependencies/show_security_info:false in a config records the presence
+// flags so the false can override a lower-priority true during merge.
+func TestLoadConfigFromViperFeatureFlagPresence(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := WriteConfigFixture(t, dir, testutil.TestConfigAnalyzeDepsFalse)
+
+	cfg, err := loadConfigFromViper(path)
+	if err != nil {
+		t.Fatalf("loadConfigFromViper returned error: %v", err)
+	}
+
+	if !cfg.analyzeDependenciesSet {
+		t.Error("explicit analyze_dependencies should set analyzeDependenciesSet")
+	}
+	if !cfg.showSecurityInfoSet {
+		t.Error("explicit show_security_info should set showSecurityInfoSet")
+	}
+
+	// Merging into a config where a lower-priority scope enabled the flags must
+	// apply the explicit false.
+	dst := &AppConfig{AnalyzeDependencies: true, ShowSecurityInfo: true}
+	mergeBooleanFields(dst, cfg)
+	if dst.AnalyzeDependencies {
+		t.Error("explicit analyze_dependencies:false should override lower-priority true")
+	}
+	if dst.ShowSecurityInfo {
+		t.Error("explicit show_security_info:false should override lower-priority true")
+	}
 }
 
 // TestLoadConfigFromViperRepoOverrideUseDefaultBranch verifies that a

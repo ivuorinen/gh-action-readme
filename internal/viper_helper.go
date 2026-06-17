@@ -85,21 +85,27 @@ func loadConfigFromViper(configPath string) (*AppConfig, error) {
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
-	// Record explicit presence of use_default_branch so a false value can
-	// override the default-true during merge (see AppConfig.useDefaultBranchSet).
-	config.useDefaultBranchSet = v.IsSet(appconstants.ConfigKeyUseDefaultBranch)
-	markRepoOverrideUseDefaultBranch(v, &config)
+	recordPresenceFlags(v, &config)
 
 	return &config, nil
 }
 
-// markRepoOverrideUseDefaultBranch records, per repo override, whether
-// use_default_branch was explicitly present in the source config so a false
-// value can override the default-true during merge (mirrors the top-level
-// useDefaultBranchSet handling). It inspects the raw viper map directly rather
-// than building dotted IsSet keys, so repo names containing dots are handled
-// correctly.
-func markRepoOverrideUseDefaultBranch(v *viper.Viper, config *AppConfig) {
+// recordPresenceFlags records whether the presence-tracked boolean config keys
+// (use_default_branch, analyze_dependencies, show_security_info) were explicitly
+// set in the source, so an explicit false can override a default or
+// lower-priority true during merge (see mergeBooleanFields).
+func recordPresenceFlags(v *viper.Viper, config *AppConfig) {
+	config.useDefaultBranchSet = v.IsSet(appconstants.ConfigKeyUseDefaultBranch)
+	config.analyzeDependenciesSet = v.IsSet(appconstants.ConfigKeyAnalyzeDependencies)
+	config.showSecurityInfoSet = v.IsSet(appconstants.ConfigKeyShowSecurityInfo)
+	markRepoOverridePresenceFlags(v, config)
+}
+
+// markRepoOverridePresenceFlags records, per repo override, which presence-tracked
+// boolean keys were explicitly present in the source config, mirroring the
+// top-level handling. It inspects the raw viper map directly rather than building
+// dotted IsSet keys, so repo names containing dots are handled correctly.
+func markRepoOverridePresenceFlags(v *viper.Viper, config *AppConfig) {
 	if len(config.RepoOverrides) == 0 {
 		return
 	}
@@ -114,8 +120,14 @@ func markRepoOverrideUseDefaultBranch(v *viper.Viper, config *AppConfig) {
 		}
 		if _, present := entry[appconstants.ConfigKeyUseDefaultBranch]; present {
 			override.useDefaultBranchSet = true
-			config.RepoOverrides[name] = override
 		}
+		if _, present := entry[appconstants.ConfigKeyAnalyzeDependencies]; present {
+			override.analyzeDependenciesSet = true
+		}
+		if _, present := entry[appconstants.ConfigKeyShowSecurityInfo]; present {
+			override.showSecurityInfoSet = true
+		}
+		config.RepoOverrides[name] = override
 	}
 }
 
@@ -145,10 +157,7 @@ func loadAndUnmarshalConfig(configFile string, v *viper.Viper) (*AppConfig, erro
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
-	// Record explicit presence of use_default_branch so a false value can
-	// override the default-true during merge (see AppConfig.useDefaultBranchSet).
-	config.useDefaultBranchSet = v.IsSet(appconstants.ConfigKeyUseDefaultBranch)
-	markRepoOverrideUseDefaultBranch(v, &config)
+	recordPresenceFlags(v, &config)
 
 	// Resolve template paths relative to binary if they're not absolute
 	resolveAllTemplatePaths(&config)
