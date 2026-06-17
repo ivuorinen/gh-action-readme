@@ -31,6 +31,12 @@ func (ca *CacheAdapter) SetWithTTL(key string, value any, ttl time.Duration) err
 	return ca.cache.SetWithTTL(key, value, ttl)
 }
 
+// Close stops the underlying cache's background goroutine and flushes pending
+// writes to disk.
+func (ca *CacheAdapter) Close() error {
+	return ca.cache.Close()
+}
+
 // NoOpCache implements DependencyCache with no-op operations for when caching is disabled.
 type NoOpCache struct{}
 
@@ -51,5 +57,10 @@ func (noc *NoOpCache) Set(_ string, _ any) error {
 
 // SetWithTTL does nothing.
 func (noc *NoOpCache) SetWithTTL(_ string, _ any, _ time.Duration) error {
+	return nil
+}
+
+// Close does nothing (no resources to release).
+func (noc *NoOpCache) Close() error {
 	return nil
 }

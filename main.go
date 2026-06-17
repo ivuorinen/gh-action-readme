@@ -69,6 +69,16 @@ func createAnalyzer(generator *internal.Generator, output *internal.ColoredOutpu
 	return internal.CreateAnalyzer(generator, output)
 }
 
+// closeAnalyzer releases an analyzer's cache (stopping its background goroutine
+// and flushing pending disk writes). Safe to call with a nil analyzer, so it can
+// be deferred immediately after createAnalyzer (which returns nil when no GitHub
+// token is configured).
+func closeAnalyzer(analyzer *dependencies.Analyzer) {
+	if analyzer != nil {
+		_ = analyzer.Close()
+	}
+}
+
 // wrapHandlerWithErrorHandling converts error-returning handler to Cobra handler.
 // This allows handlers to return errors for testing while maintaining Cobra compatibility.
 func wrapHandlerWithErrorHandling(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) {

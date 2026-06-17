@@ -103,6 +103,7 @@ func depsListHandler(_ *cobra.Command, _ []string) error {
 	}
 
 	analyzer := createAnalyzer(generator, output)
+	defer closeAnalyzer(analyzer)
 	totalDeps := analyzeDependencies(output, actionFiles, analyzer)
 
 	if totalDeps > 0 {
@@ -198,6 +199,7 @@ func depsSecurityHandler(_ *cobra.Command, _ []string) error {
 	}
 
 	analyzer := createAnalyzer(generator, output)
+	defer closeAnalyzer(analyzer)
 	if analyzer == nil {
 		output.Warning(
 			"⚠️  Analyzer disabled: GitHub token not configured. " +
@@ -305,6 +307,7 @@ func depsOutdatedHandler(_ *cobra.Command, _ []string) error {
 	}
 
 	analyzer := createAnalyzer(generator, output)
+	defer closeAnalyzer(analyzer)
 	if !validateGitHubToken(output) {
 		return nil // Not an error, just no token available
 	}
@@ -400,6 +403,8 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) error {
 		// setupDepsUpgrade returns descriptive errors, so just pass them through
 		return err
 	}
+	// Release the analyzer's cache (background goroutine + final flush) on return.
+	defer func() { _ = analyzer.Close() }()
 
 	// Parse flags and show mode
 	ciMode, _ := cmd.Flags().GetBool(appconstants.FlagCI)

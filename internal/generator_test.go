@@ -1443,19 +1443,22 @@ func TestParseAndValidateAction_FieldBoundary(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		content string
-		wantErr bool
+		name        string
+		content     string
+		wantErr     bool
+		errContains string // when wantErr, the missing field the error must name
 	}{
 		{
-			name:    "missing name field errors",
-			content: testutil.MustReadFixture(testutil.TestFixtureCompositeMissingName),
-			wantErr: true,
+			name:        "missing name field errors",
+			content:     testutil.MustReadFixture(testutil.TestFixtureCompositeMissingName),
+			wantErr:     true,
+			errContains: appconstants.FieldName,
 		},
 		{
-			name:    "missing description field errors",
-			content: testutil.MustReadFixture(testutil.TestFixtureCompositeMissingDesc),
-			wantErr: true,
+			name:        "missing description field errors",
+			content:     testutil.MustReadFixture(testutil.TestFixtureCompositeMissingDesc),
+			wantErr:     true,
+			errContains: appconstants.FieldDescription,
 		},
 		{
 			name:    "all required fields present does not error",
@@ -1476,6 +1479,12 @@ func TestParseAndValidateAction_FieldBoundary(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseAndValidateAction() error=%v, wantErr=%v", err, tt.wantErr)
+			}
+			// Pin the rejection to the specific missing field so a regression in
+			// the required-field boundary (e.g. dropping the description term)
+			// cannot pass by erroring for a different reason.
+			if tt.wantErr && err != nil && !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("error %q does not name the missing field %q", err.Error(), tt.errContains)
 			}
 		})
 	}

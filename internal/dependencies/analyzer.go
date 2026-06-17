@@ -102,6 +102,10 @@ type DependencyCache interface {
 	Get(key string) (any, bool)
 	Set(key string, value any) error
 	SetWithTTL(key string, value any, ttl time.Duration) error
+	// Close stops any background cleanup goroutine and flushes pending writes to
+	// disk. Callers that construct a cache must Close it (e.g. via Analyzer.Close)
+	// so the final async saves are not lost on process exit.
+	Close() error
 }
 
 // Note: Using git.RepoInfo instead of local GitInfo to avoid duplication
@@ -113,6 +117,17 @@ func NewAnalyzer(client *github.Client, repoInfo git.RepoInfo, cache DependencyC
 		Cache:        cache,
 		RepoInfo:     repoInfo,
 	}
+}
+
+// Close releases the analyzer's cache (stopping its background goroutine and
+// flushing pending disk writes). It is safe to call on an analyzer with a nil
+// cache. Callers that construct an analyzer should defer Close.
+func (a *Analyzer) Close() error {
+	if a.Cache == nil {
+		return nil
+	}
+
+	return a.Cache.Close()
 }
 
 // AnalyzeActionFile analyzes dependencies from an action.yml file.

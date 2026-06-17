@@ -582,3 +582,45 @@ func createTestCache(t *testing.T, tmpDir string) *Cache {
 
 	return cache
 }
+
+// TestCacheEvictsToMaxSize verifies that cleanup enforces the MaxSize bound by
+// evicting entries (previously MaxSize was dead config and the cache was
+// unbounded).
+func TestCacheEvictsToMaxSize(t *testing.T) {
+	t.Parallel()
+
+	const maxSize = int64(60)
+	cache, err := NewCache(&Config{
+		DefaultTTL:      time.Hour, // long TTL so entries are not expiry-evicted
+		CleanupInterval: time.Hour,
+		MaxSize:         maxSize,
+		Path:            t.TempDir(),
+	})
+	testutil.AssertNoError(t, err)
+	defer testutil.CleanupCache(t, cache)()
+
+	// Each ~12-byte value; 10 entries far exceed the 60-byte bound.
+	for i := range 10 {
+		testutil.AssertNoError(t, cache.Set(fmt.Sprintf("k%d", i), strings.Repeat("x", 10)))
+	}
+
+	cache.cleanup() // runs evictToMaxSize under the lock
+
+	var total int64
+	cache.mutex.RLock()
+	remaining := len(cache.data)
+	for _, e := range cache.data {
+		total += e.Size
+	}
+	cache.mutex.RUnlock()
+
+	if total > maxSize {
+		t.Errorf("after eviction total size = %d, want <= %d", total, maxSize)
+	}
+	if remaining == 0 {
+		t.Error("eviction removed all entries; expected some to remain under the bound")
+	}
+	if remaining == 10 {
+		t.Error("no entries evicted; MaxSize bound not enforced")
+	}
+}

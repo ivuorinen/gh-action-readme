@@ -42,6 +42,38 @@ func newIsolatedCache(t *testing.T) *cache.Cache {
 	return c
 }
 
+// TestAnalyzerClose verifies Analyzer.Close is nil-safe and delegates to the
+// cache, and that the cache adapters implement Close.
+func TestAnalyzerClose(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil cache is safe", func(t *testing.T) {
+		t.Parallel()
+		a := &Analyzer{}
+		if err := a.Close(); err != nil {
+			t.Errorf("Close() with nil cache = %v, want nil", err)
+		}
+	})
+
+	t.Run("no-op cache closes cleanly", func(t *testing.T) {
+		t.Parallel()
+		a := &Analyzer{Cache: NewNoOpCache()}
+		if err := a.Close(); err != nil {
+			t.Errorf("Close() with no-op cache = %v, want nil", err)
+		}
+	})
+
+	t.Run("real cache closes via adapter", func(t *testing.T) {
+		t.Parallel()
+		c, err := cache.NewCache(isolatedCacheConfig(t))
+		testutil.AssertNoError(t, err)
+		a := &Analyzer{Cache: NewCacheAdapter(c)}
+		if err := a.Close(); err != nil {
+			t.Errorf("Close() with real cache = %v, want nil", err)
+		}
+	})
+}
+
 // newTestAnalyzer creates an Analyzer with cache for testing.
 // Returns the analyzer and a cleanup function.
 // Pattern used 7+ times in updater_test.go.

@@ -1,45 +1,16 @@
 # Nitpicker Findings
 
 Generated: 2026-05-04
-Last validated: 2026-06-17 (pass 14 — full multi-skill audit)
+Last validated: 2026-06-17 (pass 20 — full multi-skill audit)
 
 ## Summary
 
-- Total: 117 | Open: 5 | Fixed: 108 | Invalid: 4
-- Open breakdown: 3 Medium (N105 cache-close, N106 dead MaxSize, N116-remainder error-presence tests),
-  2 Advisory (N111/N112 validation-regex). All deferred with rationale: they need a design decision
-  (bounded cache?), a careful lifecycle refactor, or are cosmetic with no clean fix.
+- Total: 117 | Open: 2 | Fixed: 111 | Invalid: 4
+- Open breakdown: 2 Advisory only (N111/N112 validation-regex) — both cosmetic (affect validation messaging,
+  not generation), with no clean fix (short-SHA ambiguity / would break the semver mutation-test suite). All
+  Critical/High/Medium findings are fixed.
 
 ## Open Findings
-
-### Medium
-
-#### [N105] Production caches are never Closed — leaked cleanup goroutine and unflushed final saves
-
-Category: reliability
-Area: internal/generator.go:110, internal/template.go:293 (cache.NewCache, never Close()d)
-Problem: cache.NewCache starts a ticker + cleanupLoop goroutine that only stop in Close(); no production caller
-closes the cache. Close() also performs the final synchronous saveToDisk + saveWG.Wait. Because it is never
-called, on fast process exit the most recent async saves (spawned by Set/SetWithTTL) can be lost — undermining
-the now-working on-disk cache (N98). Single-shot CLI reclaims the goroutine at exit, so this is reliability/perf,
-not a correctness defect.
-Evidence: grep shows Close() called only by testutil.CleanupCache (tests). cmd_cache.go Clear() persists
-synchronously (os.Remove) so the cache subcommands are unaffected.
-Fix: add Close() to the DependencyCache interface + CacheAdapter (delegate to cache.Close), and have the
-Generator own the cache lifecycle and Close it after ProcessBatch/GenerateFromFile completes. Deferred from
-pass 14: a safe fix needs lifecycle plumbing through generator/template and risks use-after-close; filed for a
-focused follow-up rather than a rushed refactor mid-audit.
-
-#### [N106] cache.Config.MaxSize is dead — the cache is unbounded
-
-Category: maintainability
-Area: internal/cache/cache.go (Config.MaxSize, Entry.Size, estimateSize)
-Problem: MaxSize (default 100MB) and the per-entry Size machinery exist but MaxSize is never read; no
-size-based eviction happens (only TTL expiry), so cache.json can grow without bound. The field implies a
-guarantee the code does not provide.
-Evidence: grep finds no read of MaxSize outside its declaration/DefaultConfig.
-Fix: either wire size eviction into cleanup()/Set, or remove MaxSize + Size + estimateSize. Deferred from pass
-14 pending a decision on whether bounded caching is wanted.
 
 ### Advisory
 
@@ -59,20 +30,41 @@ Area: internal/validation/validation.go (reSemanticVersion)
 Problem: The prerelease group allows empty/dotted-only identifiers, so `v1.2.3-..` and leading-zero `01.02.03`
 validate as semver though SemVer 2.0.0 forbids both.
 Decision: Cosmetic — only affects validation-quality messaging, not generation. Tightening the regex risks
-rejecting valid edge cases; left as-is pending a decision. Surfaced by the parsing lens.
-
-#### [N116-remainder] Non-security error-path tests still assert only `err != nil`
-
-Category: tests
-Area: internal/generator_test.go (field-boundary / parse-error tables), internal/dependencies/analyzer_test.go
-(IsCompositeAction invalid case)
-Problem: These tables check only that an error occurred, not which one. Lower risk than the traversal case
-(non-security validation), so a wrong-reason regression is less consequential.
-Decision: The security-relevant traversal table (dependencies/parser_test.go) was fixed in pass 17 with a
-"traversal" errContains assertion. The remaining non-security tables are left as a low-priority follow-up to
-avoid further churn on the test files just migrated for N113.
+rejecting valid edge cases and would break the semver mutation-test suite; left as-is. Surfaced by the parsing
+lens.
 
 ## Fixed
+
+### Pass 20 — 2026-06-17
+
+#### [N116b] Field-boundary test asserted only `err != nil`, not which field was missing
+
+Fixed: 2026-06-17
+Notes: TestParseAndValidateAction_FieldBoundary now carries an errContains column asserting the missing-field
+error names the specific field (name vs description), so a regression in the required-field boundary cannot pass
+by erroring for a different reason. With the traversal case (pass 17) this closes the meaningful part of N116;
+the remaining pure invalid-YAML presence checks are acceptable as-is.
+
+### Pass 19 — 2026-06-17
+
+#### [N106] cache.Config.MaxSize was dead — the cache was unbounded
+
+Fixed: 2026-06-17
+Notes: Decided to make MaxSize real rather than delete it (Entry.Size feeds the `cache stats` output). Added a
+maxSize field to Cache (from Config.MaxSize) and evictToMaxSize(), called from cleanup() after expiry removal:
+when total entry size exceeds maxSize it evicts entries oldest-expiry-first until within bound (0 = unbounded).
+Added TestCacheEvictsToMaxSize.
+
+### Pass 18 — 2026-06-17
+
+#### [N105] Production caches are never Closed — leaked goroutine and unflushed final saves
+
+Fixed: 2026-06-17
+Notes: Added Close() to the DependencyCache interface (CacheAdapter delegates to cache.Close; NoOpCache no-ops)
+and Analyzer.Close() (nil-safe). The template gen path (analyzeDependencies) owns its cache and defers
+analyzer.Close(); the deps command paths defer closeAnalyzer(analyzer) (nil-safe helper) at all three
+createAnalyzer sites and setupDepsUpgrade. Stops the cleanup goroutine and runs the final synchronous flush so
+the on-disk cache (N98) actually persists. Added TestAnalyzerClose; verified `go test -race` and e2e gen.
 
 ### Pass 17 — 2026-06-17
 

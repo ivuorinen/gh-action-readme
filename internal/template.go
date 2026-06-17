@@ -334,6 +334,9 @@ func analyzeDependencies(actionPath string, config *AppConfig, gitInfo git.RepoI
 	}
 
 	analyzer := dependencies.NewAnalyzer(githubClient, gitInfo, depCache)
+	// Stop the cache's background goroutine and flush pending writes before
+	// returning (this function owns the cache's whole lifecycle).
+	defer func() { _ = analyzer.Close() }()
 
 	// Analyze dependencies
 	deps, err := analyzer.AnalyzeActionFile(actionPath)

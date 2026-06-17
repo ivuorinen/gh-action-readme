@@ -30,6 +30,7 @@ type Cache struct {
 	ticker     *time.Ticker     // Cleanup ticker
 	done       chan bool        // Cleanup shutdown
 	defaultTTL time.Duration    // Default TTL for entries
+	maxSize    int64            // Max total entry size in bytes (0 = unbounded)
 	saveWG     sync.WaitGroup   // Wait group for pending save operations
 	saveMutex  sync.Mutex       // Serializes disk writes in saveToDisk
 	closed     bool             // Set under mutex by Close; gates new async saves
@@ -85,6 +86,7 @@ func NewCache(config *Config) (*Cache, error) {
 		path:       cacheDir,
 		data:       make(map[string]Entry),
 		defaultTTL: config.DefaultTTL,
+		maxSize:    config.MaxSize,
 		done:       make(chan bool),
 	}
 
@@ -264,8 +266,44 @@ func (c *Cache) cleanup() {
 		}
 	}
 
+	// Enforce the size bound after expiry removal.
+	c.evictToMaxSize()
+
 	// Save to disk after cleanup
 	c.saveToDiskAsync()
+}
+
+// evictToMaxSize removes entries (oldest expiry first) until the total entry
+// size is within maxSize. A maxSize of 0 means unbounded. The caller must hold
+// c.mutex.
+func (c *Cache) evictToMaxSize() {
+	if c.maxSize <= 0 {
+		return
+	}
+
+	var total int64
+	for _, entry := range c.data {
+		total += entry.Size
+	}
+	if total <= c.maxSize {
+		return
+	}
+
+	// Evict the entry with the earliest ExpiresAt repeatedly until under the
+	// bound. O(n^2) worst case, but the cache holds few entries and eviction is
+	// rare (cleanup interval + tiny entries).
+	for total > c.maxSize && len(c.data) > 0 {
+		var oldestKey string
+		var oldestExp time.Time
+		first := true
+		for key, entry := range c.data {
+			if first || entry.ExpiresAt.Before(oldestExp) {
+				oldestKey, oldestExp, first = key, entry.ExpiresAt, false
+			}
+		}
+		total -= c.data[oldestKey].Size
+		delete(c.data, oldestKey)
+	}
 }
 
 // loadFromDisk loads cache data from disk.
