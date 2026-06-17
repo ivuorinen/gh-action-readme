@@ -1,7 +1,7 @@
 # Nitpicker Findings
 
 Generated: 2026-05-04
-Last validated: 2026-06-17 (pass 20 — full multi-skill audit)
+Last validated: 2026-06-17 (pass 25 — full multi-skill audit + verification)
 
 ## Summary
 
@@ -9,6 +9,18 @@ Last validated: 2026-06-17 (pass 20 — full multi-skill audit)
 - Open breakdown: 2 Advisory only (N111/N112 validation-regex) — both cosmetic (affect validation messaging,
   not generation), with no clean fix (short-SHA ambiguity / would break the semver mutation-test suite). All
   Critical/High/Medium findings are fixed.
+
+### Verification passes 21–25 (2026-06-17)
+
+- Pass 21 — Adversarial self-review of all pass-14–20 production changes (analyzer quote-matching, coreVersion,
+  cache map[string]any + evictToMaxSize + Close lifecycle, mergeBooleanFields presence flags, parser dedent,
+  template escaping, output stderr, closeAnalyzer defers, split dep-table rows): **no regressions or new bugs**.
+- Pass 22 — End-to-end render of all 5 themes × 4 output formats with a crafted action (pipes, `/`, special
+  chars): 9/9 succeed; pipes escaped in tables, badge slashes percent-encoded.
+- Pass 23 — Security re-scan of the final tree: gosec 0, govulncheck 0 reachable, gitleaks 0.
+- Pass 24 — Coverage 82.1% (≥ 72% gate); `go test -race ./...` clean across all 12 packages; golangci-lint 0.
+- Pass 25 — Findings reconciliation: counts verified programmatically (Open 2 / Fixed 111 / Invalid 4); the 2
+  open items are advisory-by-design.
 
 ## Open Findings
 
