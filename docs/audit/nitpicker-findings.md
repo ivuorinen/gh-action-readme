@@ -5,24 +5,14 @@ Last validated: 2026-06-17 (pass 14 — full multi-skill audit)
 
 ## Summary
 
-- Total: 116 | Open: 5 | Fixed: 111 | Invalid: 5
+- Total: 117 | Open: 5 | Fixed: 108 | Invalid: 4
+- Open breakdown: 3 Medium (N105 cache-close, N106 dead MaxSize, N116-remainder error-presence tests),
+  2 Advisory (N111/N112 validation-regex). All deferred with rationale: they need a design decision
+  (bounded cache?), a careful lifecycle refactor, or are cosmetic with no clean fix.
 
 ## Open Findings
 
 ### Medium
-
-#### [N116] Several error-path tests assert only `err != nil`, not the right error
-
-Category: tests
-Area: internal/generator_test.go (field-boundary / parse-error tables), internal/dependencies/parser_test.go
-(traversal cases), internal/dependencies/analyzer_test.go (IsCompositeAction invalid case)
-Problem: These error-path table tests check only that an error occurred, not that it is the expected one. A
-regression that changes WHY a path/action is rejected (e.g. a stat short-circuit firing before the traversal
-check) keeps them green while the real logic is bypassed.
-Fix: add an errContains column asserting the specific message (the codebase already has the pattern in
-generator_test.go resolveOutputPath and main_test.go validateDepsUpgradeError). Deferred from pass 16: a broad,
-low-risk improvement across many tables; filed for a focused follow-up to avoid churning the test files just
-migrated for the fixture/constant rules (N113).
 
 #### [N105] Production caches are never Closed — leaked cleanup goroutine and unflushed final saves
 
@@ -71,7 +61,28 @@ validate as semver though SemVer 2.0.0 forbids both.
 Decision: Cosmetic — only affects validation-quality messaging, not generation. Tightening the regex risks
 rejecting valid edge cases; left as-is pending a decision. Surfaced by the parsing lens.
 
+#### [N116-remainder] Non-security error-path tests still assert only `err != nil`
+
+Category: tests
+Area: internal/generator_test.go (field-boundary / parse-error tables), internal/dependencies/analyzer_test.go
+(IsCompositeAction invalid case)
+Problem: These tables check only that an error occurred, not which one. Lower risk than the traversal case
+(non-security validation), so a wrong-reason regression is less consequential.
+Decision: The security-relevant traversal table (dependencies/parser_test.go) was fixed in pass 17 with a
+"traversal" errContains assertion. The remaining non-security tables are left as a low-priority follow-up to
+avoid further churn on the test files just migrated for N113.
+
 ## Fixed
+
+### Pass 17 — 2026-06-17
+
+#### [N116] Security-relevant traversal test asserted only `err != nil`
+
+Fixed: 2026-06-17
+Notes: TestValidateFilePath (dependencies/parser_test.go) checked only that rejected paths errored, so a
+regression changing WHY a path is rejected (e.g. a stat short-circuit before the traversal check) would slip
+past. Added an assertion that error cases' messages contain "traversal", pinning the rejection reason. The
+remaining non-security error-presence tables are tracked as N116-remainder (advisory).
 
 ### Pass 16 — 2026-06-17
 

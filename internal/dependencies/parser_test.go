@@ -1,6 +1,7 @@
 package dependencies
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -68,6 +69,12 @@ func TestValidateFilePath(t *testing.T) {
 			err := validateFilePath(tt.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateFilePath() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			// For rejected paths, assert the rejection is specifically for
+			// traversal — not some incidental error — so a regression that
+			// changes WHY a path is rejected does not slip past this test.
+			if tt.wantErr && err != nil && !strings.Contains(err.Error(), "traversal") {
+				t.Errorf("validateFilePath() error = %q, want it to mention traversal", err.Error())
 			}
 		})
 	}
