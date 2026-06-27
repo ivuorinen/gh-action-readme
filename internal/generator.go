@@ -363,6 +363,9 @@ func (g *Generator) generateSimpleFormat(
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
 	}
+	if err := ensureParentDir(outputPath); err != nil {
+		return err
+	}
 	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
 		return fmt.Errorf("failed to write %s to %s: %w", format, outputPath, err)
@@ -421,6 +424,9 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
 	}
+	if err := ensureParentDir(outputPath); err != nil {
+		return err
+	}
 	if err := writer.Write(content, outputPath); err != nil {
 		return fmt.Errorf("failed to write HTML to %s: %w", outputPath, err)
 	}
@@ -437,6 +443,9 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 	outputPath, err := g.resolveOutputPath(outputDir, appconstants.ActionDocsJSON)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
+	if err := ensureParentDir(outputPath); err != nil {
+		return err
 	}
 	if err := writer.Write(action, outputPath); err != nil {
 		return fmt.Errorf("failed to write JSON to %s: %w", outputPath, err)
@@ -587,6 +596,19 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string
 	}
 
 	return absFinalPath, nil
+}
+
+// ensureParentDir creates the parent directory of path so a subsequent write
+// succeeds even when --output-dir (or a nested --output filename) points at a
+// directory that does not exist yet. Called only after path-traversal validation.
+func ensureParentDir(path string) error {
+	dir := filepath.Dir(path)
+	// #nosec G301 -- generated documentation directory permissions
+	if err := os.MkdirAll(dir, appconstants.FilePermDir); err != nil {
+		return fmt.Errorf("failed to create output directory %q: %w", dir, err)
+	}
+
+	return nil
 }
 
 // generateByFormat generates documentation in the specified format.

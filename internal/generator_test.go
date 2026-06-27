@@ -663,6 +663,35 @@ func TestGeneratorWithDifferentThemes(t *testing.T) {
 	}
 }
 
+// TestGeneratorCreatesMissingOutputDir verifies generation auto-creates a
+// non-existent output directory rather than failing the write — regression for the
+// CI "Comprehensive Documentation Generation" step where --output-dir pointed at a
+// directory that did not yet exist.
+func TestGeneratorCreatesMissingOutputDir(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	testutil.SetupTestTemplates(t, tmpDir)
+
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
+
+	outDir := filepath.Join(tmpDir, "does", "not", "exist")
+	config := defaultTestConfig()
+	config.OutputDir = outDir
+	generator := NewGenerator(config)
+
+	if err := generator.GenerateFromFile(actionPath); err != nil {
+		t.Fatalf("GenerateFromFile into a missing output dir: %v", err)
+	}
+
+	readmeFiles, _ := filepath.Glob(filepath.Join(outDir, "README*.md"))
+	if len(readmeFiles) == 0 {
+		t.Errorf("expected output written into auto-created dir %q", outDir)
+	}
+}
+
 // TestGeneratorUnknownThemeErrors verifies that an unrecognized theme produces an
 // explicit error rather than silently falling back to the default template.
 func TestGeneratorUnknownThemeErrors(t *testing.T) {
