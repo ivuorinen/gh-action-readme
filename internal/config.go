@@ -271,10 +271,33 @@ func DefaultAppConfig() *AppConfig {
 // MergeConfigs merges a source config into a destination config, excluding security-sensitive fields.
 func MergeConfigs(dst *AppConfig, src *AppConfig, allowTokens bool) {
 	mergeStringFields(dst, src)
+	mergeDefaultsFields(dst, src)
 	mergeMapFields(dst, src)
 	mergeSliceFields(dst, src)
 	mergeBooleanFields(dst, src)
 	mergeSecurityFields(dst, src, allowTokens)
+}
+
+// mergeDefaultsFields merges the action.yml fallback defaults (Name/Description/
+// Runs/Branding) from src into dst, field by field, when the src value is set.
+// Without this, a `defaults:` block in a repo/action config is parsed but then
+// silently dropped by the merge, leaving the built-in defaults in effect.
+func mergeDefaultsFields(dst *AppConfig, src *AppConfig) {
+	if src.Defaults.Name != "" {
+		dst.Defaults.Name = src.Defaults.Name
+	}
+	if src.Defaults.Description != "" {
+		dst.Defaults.Description = src.Defaults.Description
+	}
+	if len(src.Defaults.Runs) > 0 {
+		dst.Defaults.Runs = src.Defaults.Runs
+	}
+	if src.Defaults.Branding.Icon != "" {
+		dst.Defaults.Branding.Icon = src.Defaults.Branding.Icon
+	}
+	if src.Defaults.Branding.Color != "" {
+		dst.Defaults.Branding.Color = src.Defaults.Branding.Color
+	}
 }
 
 // mergeStringFields merges simple string fields from src to dst if non-empty.
@@ -289,6 +312,7 @@ func mergeStringFields(dst *AppConfig, src *AppConfig) {
 		{&dst.Theme, src.Theme},
 		{&dst.OutputFormat, src.OutputFormat},
 		{&dst.OutputDir, src.OutputDir},
+		{&dst.OutputFilename, src.OutputFilename},
 		{&dst.Template, src.Template},
 		{&dst.Header, src.Header},
 		{&dst.Footer, src.Footer},

@@ -635,6 +635,37 @@ func TestMergeMapFields(t *testing.T) {
 }
 
 // TestMergeSliceFields tests the merging of slice fields in configuration.
+func TestMergeConfigsOutputFilename(t *testing.T) {
+	t.Parallel()
+	const want = "DOCS.md"
+	dst := &AppConfig{}
+	src := &AppConfig{OutputFilename: want}
+
+	MergeConfigs(dst, src, false)
+
+	if dst.OutputFilename != want {
+		t.Errorf("OutputFilename not merged: got %q, want %q", dst.OutputFilename, want)
+	}
+}
+
+func TestMergeDefaultsFields(t *testing.T) {
+	t.Parallel()
+	const wantName = "My Org Action"
+	const keepDesc = "built-in description"
+	dst := &AppConfig{Defaults: DefaultValues{Name: "Built-in", Description: keepDesc}}
+	src := &AppConfig{Defaults: DefaultValues{Name: wantName}}
+
+	MergeConfigs(dst, src, false)
+
+	if dst.Defaults.Name != wantName {
+		t.Errorf("Defaults.Name not merged: got %q, want %q", dst.Defaults.Name, wantName)
+	}
+	if dst.Defaults.Description != keepDesc {
+		t.Errorf("Defaults.Description overwritten by empty src: got %q, want %q",
+			dst.Defaults.Description, keepDesc)
+	}
+}
+
 func TestMergeSliceFields(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -1,14 +1,22 @@
 # Nitpicker Findings
 
 Generated: 2026-05-04
-Last validated: 2026-06-17 (pass 25 — full multi-skill audit + verification)
+Last validated: 2026-06-27 (pass 26 — fresh adversarial branch-diff review)
 
 ## Summary
 
-- Total: 117 | Open: 2 | Fixed: 111 | Invalid: 4
-- Open breakdown: 2 Advisory only (N111/N112 validation-regex) — both cosmetic (affect validation messaging,
-  not generation), with no clean fix (short-SHA ambiguity / would break the semver mutation-test suite). All
-  Critical/High/Medium findings are fixed.
+- Total: 133 | Open: 12 | Fixed: 117 | Invalid: 4
+- Open breakdown: 4 Advisory (N111/N112 validation-regex; N130/N131 defensive-only) + 8 Low. All
+  Critical/High/Medium findings are fixed. N129 was independently fixed via the PR #254 CR pass (see Fixed).
+
+### Pass 26 — 2026-06-27 (fresh branch-diff review)
+
+- Four parallel adversarial reviewers swept the 33 changed production `.go` files (main..HEAD).
+- Fixed 1 High + 3 Medium + 1 Low with regression tests (N117–N121): config-merge drops (OutputFilename,
+  Defaults), cache Close lifecycle (expiry/MaxSize not enforced on shutdown), `config export` clobbering the
+  live config (data loss), dead no-op code.
+- Filed 9 Low + 2 Advisory (N122–N132) for follow-up — each with evidence and a concrete fix.
+- After fixes: `go test -race ./...` clean (12 packages), `go vet` clean, golangci-lint 0 issues.
 
 ### Verification passes 21–25 (2026-06-17)
 
@@ -45,7 +53,149 @@ Decision: Cosmetic — only affects validation-quality messaging, not generation
 rejecting valid edge cases and would break the semver mutation-test suite; left as-is. Surfaced by the parsing
 lens.
 
+#### [N130] Viper env prefix `GH_ACTION_README_` inconsistent with documented `GH_README_` namespace
+
+Category: conventions
+Area: internal/viper_helper.go:43 (SetEnvPrefix)
+Problem: AutomaticEnv config overrides require `GH_ACTION_README_THEME` etc., while the documented token env is
+`GH_README_GITHUB_TOKEN`. A user expecting `GH_README_THEME` to mirror the token var gets a silent no-op.
+Evidence: SetEnvPrefix("GH_ACTION_README") vs github_helper token lookups on `GH_README_*`.
+Decision (Advisory): No documented contract for non-token env overrides exists, so nothing is broken today.
+Fix when addressed: align the prefix to `GH_README` or document `GH_ACTION_README_` for non-token overrides.
+
+#### [N131] GetGitHubToken dereferences config without a nil guard
+
+Category: reliability
+Area: internal/config.go:96-108
+Problem: `config.GitHubToken` is read with no nil check; the exported function panics on a nil config.
+Evidence: all current callers guard `globalConfig`, so no live crash — defensive only.
+Fix when addressed: `if config != nil && config.GitHubToken != ""` before the field access.
+
+### Low
+
+#### [N122] Parser rejects the scalar `permissions:` form, failing the whole file
+
+Category: correctness
+Area: internal/parser.go:23 (Permissions map[string]string)
+Problem: An action.yml with `permissions: read-all` (or `write-all`) fails to decode entirely — goccy returns
+`string was used where mapping is expected` and ParseActionYML rejects the file with a cryptic message.
+Evidence: decoding `name: x\npermissions: read-all` returns the type error; the object form parses fine.
+Impact: Low — action.yml has no official `permissions` field (it is a repo convention here), so the scalar
+form is non-standard input; impact is poor UX on malformed input, not rejection of valid input.
+Fix: give Permissions a custom UnmarshalYAML that accepts a scalar (`read-all`/`write-all`) or a mapping.
+
+#### [N123] JSON-writer usage example does not escape quotes in input defaults
+
+Category: correctness
+Area: internal/json_writer.go:292
+Problem: Input default values are interpolated into a double-quoted YAML scalar without escaping, so a default
+containing `"` produces invalid YAML in the generated usage block.
+Evidence: input `default: 'a"b'` yields `key: "a"b"` — broken YAML the user copies.
+Fix: escape `"`/`\` (or single-quote with `'`-doubling) when wrapping the value.
+
+#### [N124] Monorepo subdir uses OS-native separators in the `uses:` path
+
+Category: correctness
+Area: internal/template.go:176-184 (extractActionSubdirectory)
+Problem: The subdir comes from `filepath.Rel` (OS separators) and is concatenated into the `uses:` path, so on
+Windows it emits backslashes: `org/repo/actions\build@v1`.
+Evidence: extractActionSubdirectory returns `actions\csharp-build` on Windows; buildUsesString does `repo+"/"+subdir`.
+Fix: `filepath.ToSlash(relPath)` before returning the subdir.
+
+#### [N125] Config.Version is not character-validated before entering the `uses:` example
+
+Category: correctness
+Area: internal/template.go:254 / 130-132 (formatVersion)
+Problem: Unlike org/repo (validated via isValidGitHubPathSegment), Config.Version flows into the rendered usage
+example with no validation; a multiline/whitespace value corrupts or injects into the example block.
+Evidence: config `version: "v1\n      run: x"` is emitted verbatim (text/template, no escaping). Trust boundary
+is the user's own config, so impact is Low.
+Fix: reject whitespace/newlines in version before use, mirroring the org/repo segment check.
+
+#### [N126] HTML header/footer read errors silently swallowed
+
+Category: reliability
+Area: internal/template.go:382-386, 392-396
+Problem: `if h, e := os.ReadFile(...); e == nil` discards the error, so a mistyped `--header`/`--footer` path
+yields output with the fragment silently missing and no diagnostic.
+Evidence: the error variable `e` is never surfaced.
+Fix: return (or warn on) the read error instead of discarding it.
+
+#### [N127] Path-traversal filename check rejects legitimate `..`-containing names
+
+Category: correctness
+Area: internal/generator.go:534
+Problem: `strings.Contains(filename, "..")` rejects valid filenames that merely contain a literal `..`, e.g.
+`report..final.md` or `v1..2.md`, with a path-traversal error.
+Evidence: substring match, not a path-component check.
+Fix: split on the path separator and reject only an exact `..` element.
+
+#### [N128] Cache `done` channel is unbuffered — goroutine leak in long-lived embeddings
+
+Category: reliability
+Area: internal/cache/cache.go:90 (done: make(chan bool)) + Close
+Problem: The non-blocking send on the unbuffered `done` channel is dropped if Close races a cleanup tick (the
+loop is inside cleanup(), not at the select); the ticker is then stopped so the loop blocks forever.
+Evidence: `select { case c.done <- true: default: }` with no ready receiver takes the default. Harmless on
+immediate process exit; a real leak in any longer-lived embedding.
+Fix: `done: make(chan bool, 1)` so the send always buffers.
+
+#### [N132] Repository-name validator rejects valid names with dots or >39 chars
+
+Category: correctness
+Area: internal/wizard/validator.go:171/413 (validateRepository/isValidGitHubName)
+Problem: The regex and `len > 39` cap reject GitHub repo names containing `.` and names up to 100 chars, which
+GitHub allows; `config validate` on repo `my.cool.action` reports an invalid-name error.
+Evidence: regex `^[a-zA-Z0-9]([a-zA-Z0-9\-_]*[a-zA-Z0-9])?$` + `len > 39` reuse the org-grade strictness.
+Fix: allow `.` and raise the length cap for repository names (separate from the org validator).
+
 ## Fixed
+
+### Pass 26 — 2026-06-27
+
+#### [N129] Presence flags always true in the global-config path (IsSet vs InConfig)
+
+Fixed: 2026-06-27
+Notes: Independently flagged by CodeRabbit on PR #254 (thread 5). recordPresenceFlags used `viper.IsSet`, which
+reports keys set only via SetDefault as present. Switched the three presence checks to `v.InConfig`, which
+inspects only the loaded config file. Validated by the full suite (no test regressions).
+
+#### [N120] `config export` with no --output silently overwrites the live config (data loss)
+
+Fixed: 2026-06-27
+Notes: GetDefaultOutputPath(FormatYAML) resolves to the exact live config path; ExportConfig → writeFileAtomic
+overwrote it with a sanitized copy (token stripped, repo_overrides dropped) and no confirmation, permanently
+losing repo_overrides. Added a guard in ExportConfig that refuses to write when the target resolves (via a new
+samePath helper) to the existing live config, directing the user to pass --output. Test:
+TestExportConfigRefusesLiveConfigOverwrite.
+
+#### [N117] MergeConfigs dropped OutputFilename
+
+Fixed: 2026-06-27
+Notes: `output_filename` is a documented config key consumed by generator.go but was omitted from
+mergeStringFields, so a repo/global `output_filename:` was parsed then discarded — output went to README.md
+regardless. Added the field to the merge. Test: TestMergeConfigsOutputFilename.
+
+#### [N118] MergeConfigs dropped the action `defaults:` block
+
+Fixed: 2026-06-27
+Notes: `Defaults` (mapstructure:"defaults") was never merged, so a user `defaults:` block was parsed into the
+source config then ignored, leaving the built-in fallbacks in effect (FillMissing uses Config.Defaults). Added
+mergeDefaultsFields (per-subfield, non-empty wins). Test: TestMergeDefaultsFields.
+
+#### [N119] Cache.Close persisted expired and over-MaxSize entries
+
+Fixed: 2026-06-27
+Notes: Expiry pruning and MaxSize eviction ran only in the 5-minute cleanupLoop, which never fires in a
+short-lived CLI; Close wrote c.data verbatim, so cache.json accumulated expired entries forever and ignored
+MaxSize (unbounded disk growth). Extracted pruneLocked (shared by cleanup) and call it under the lock in Close
+before the final save. Test: TestCacheCloseProunesExpiredAndEnforcesMaxSize.
+
+#### [N121] Dead no-op code in sanitizeConfig
+
+Fixed: 2026-06-27
+Notes: Removed three `if x == "" { x = "" }` no-op blocks (Organization/Repository/Version) in
+internal/wizard/exporter.go sanitizeConfig.
 
 ### Pass 20 — 2026-06-17
 

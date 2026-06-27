@@ -56,6 +56,18 @@ func (e *ConfigExporter) ExportConfig(config *internal.AppConfig, format ExportF
 		return fmt.Errorf("refusing to export to a path containing a '..' segment: %q", outputPath)
 	}
 
+	// Refuse to overwrite the live config file. Export sanitizes the config
+	// (strips the token and drops repo_overrides), so writing over the active
+	// config — which is also GetDefaultOutputPath's default target — would
+	// silently discard those fields. Require an explicit, different --output.
+	if cfgPath, cfgErr := internal.GetConfigPath(); cfgErr == nil && samePath(cfgPath, outputPath) {
+		if _, statErr := os.Stat(outputPath); statErr == nil {
+			return fmt.Errorf(
+				"refusing to overwrite the live config %q (export drops tokens and repo_overrides); "+
+					"pass --output to choose a different file", outputPath)
+		}
+	}
+
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(outputPath)
 	// #nosec G301 -- output directory permissions
@@ -73,6 +85,19 @@ func (e *ConfigExporter) ExportConfig(config *internal.AppConfig, format ExportF
 	default:
 		return fmt.Errorf("unsupported export format: %s", format)
 	}
+}
+
+// samePath reports whether a and b resolve to the same filesystem path,
+// comparing cleaned absolute forms so "./config.yaml" and an absolute config
+// path are recognized as identical.
+func samePath(a, b string) bool {
+	absA, errA := filepath.Abs(a)
+	absB, errB := filepath.Abs(b)
+	if errA != nil || errB != nil {
+		return filepath.Clean(a) == filepath.Clean(b)
+	}
+
+	return absA == absB
 }
 
 // GetSupportedFormats returns the list of supported export formats.
@@ -278,17 +303,6 @@ func (e *ConfigExporter) sanitizeConfig(config *internal.AppConfig) *internal.Ap
 	// Remove sensitive information
 	sanitized.GitHubToken = ""    // Never export tokens
 	sanitized.RepoOverrides = nil // Don't export repo overrides
-
-	// Remove empty/default values to keep the config clean
-	if sanitized.Organization == "" {
-		sanitized.Organization = ""
-	}
-	if sanitized.Repository == "" {
-		sanitized.Repository = ""
-	}
-	if sanitized.Version == "" {
-		sanitized.Version = ""
-	}
 
 	// Remove legacy fields if they match defaults
 	defaults := internal.DefaultAppConfig()

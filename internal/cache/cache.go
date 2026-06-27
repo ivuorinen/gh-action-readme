@@ -7,6 +7,8 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,6 +78,15 @@ func NewCache(config *Config) (*Cache, error) {
 			return nil, fmt.Errorf("failed to get XDG cache directory: %w", err)
 		}
 		cacheDir = filepath.Dir(cacheFile)
+	} else {
+		// An explicit path comes from config and must not escape via parent
+		// traversal before it reaches os.MkdirAll / file writes. Normalize and
+		// reject any ".." component.
+		cleaned := filepath.Clean(cacheDir)
+		if slices.Contains(strings.Split(filepath.ToSlash(cleaned), "/"), "..") {
+			return nil, fmt.Errorf("invalid cache path %q: parent traversal is not allowed", cacheDir)
+		}
+		cacheDir = cleaned
 	}
 	// #nosec G301 -- cache directory permissions
 	if err := os.MkdirAll(cacheDir, appconstants.FilePermDir); err != nil {
@@ -219,6 +230,14 @@ func (c *Cache) Close() error {
 	// Wait for any pending async save operations to complete
 	c.saveWG.Wait()
 
+	// Prune expired entries and enforce MaxSize before the final write. The
+	// cleanupLoop only runs on the CleanupInterval ticker, which never fires in a
+	// short-lived CLI process, so without this Close() persists every expired
+	// entry and ignores MaxSize — letting cache.json grow without bound.
+	c.mutex.Lock()
+	c.pruneLocked()
+	c.mutex.Unlock()
+
 	// Save final state to disk
 	return c.saveToDisk()
 }
@@ -254,11 +273,20 @@ func (c *Cache) cleanupLoop() {
 	}
 }
 
-// cleanup removes expired entries.
+// cleanup removes expired entries and persists the result.
 func (c *Cache) cleanup() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	c.pruneLocked()
+
+	// Save to disk after cleanup
+	c.saveToDiskAsync()
+}
+
+// pruneLocked removes expired entries then enforces the MaxSize bound. The caller
+// must hold c.mutex. Shared by the periodic cleanup loop and Close().
+func (c *Cache) pruneLocked() {
 	now := time.Now()
 	for key, entry := range c.data {
 		if now.After(entry.ExpiresAt) {
@@ -268,9 +296,6 @@ func (c *Cache) cleanup() {
 
 	// Enforce the size bound after expiry removal.
 	c.evictToMaxSize()
-
-	// Save to disk after cleanup
-	c.saveToDiskAsync()
 }
 
 // evictToMaxSize removes entries (oldest expiry first) until the total entry
