@@ -64,9 +64,7 @@ jobs:
           # Test recursive generation with different themes. Recursive runs resolve
           # multiple action files, so they must use --output-dir (one file per action)
           # rather than --output (a single filename), which the generator rejects.
-          # --output-dir does not create the target, so create it first.
           echo "Testing recursive generation with themes..."
-          mkdir -p "$PWD/docs/all-actions-minimal" "$PWD/docs/all-actions-professional"
           go run . gen testdata/ --recursive --theme minimal -f html --output-dir "$PWD/docs/all-actions-minimal"
           go run . gen testdata/ --recursive --theme professional -f json --output-dir "$PWD/docs/all-actions-professional"
 
