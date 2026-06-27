@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -67,6 +68,19 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "empty file path",
 			setupFunc: func(_ *testing.T, _ string) string {
 				return ""
+			},
+			expectError: true,
+		},
+		{
+			name: "directory named action.yml is rejected",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				dirPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				if err := os.Mkdir(dirPath, appconstants.FilePermDir); err != nil {
+					t.Fatalf("failed to create directory: %v", err)
+				}
+
+				return dirPath
 			},
 			expectError: true,
 		},

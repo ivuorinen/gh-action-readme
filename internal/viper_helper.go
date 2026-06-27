@@ -95,9 +95,12 @@ func loadConfigFromViper(configPath string) (*AppConfig, error) {
 // set in the source, so an explicit false can override a default or
 // lower-priority true during merge (see mergeBooleanFields).
 func recordPresenceFlags(v *viper.Viper, config *AppConfig) {
-	config.useDefaultBranchSet = v.IsSet(appconstants.ConfigKeyUseDefaultBranch)
-	config.analyzeDependenciesSet = v.IsSet(appconstants.ConfigKeyAnalyzeDependencies)
-	config.showSecurityInfoSet = v.IsSet(appconstants.ConfigKeyShowSecurityInfo)
+	// InConfig (not IsSet) checks only the loaded config file. IsSet also reports
+	// keys that exist solely via SetDefault as set, which would mark inherited
+	// defaults as explicit and force unintended overrides during config merges.
+	config.useDefaultBranchSet = v.InConfig(appconstants.ConfigKeyUseDefaultBranch)
+	config.analyzeDependenciesSet = v.InConfig(appconstants.ConfigKeyAnalyzeDependencies)
+	config.showSecurityInfoSet = v.InConfig(appconstants.ConfigKeyShowSecurityInfo)
 	markRepoOverridePresenceFlags(v, config)
 }
 

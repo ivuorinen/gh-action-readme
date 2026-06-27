@@ -425,8 +425,11 @@ func equalCheck(expected, actual any) (ok bool, msg string) {
 			return false, fmt.Sprintf("expected map with %d entries, got %d", len(expectedMap), len(actualMap))
 		}
 		for k, v := range expectedMap {
-			if actualMap[k] != v {
-				return false, fmt.Sprintf("expected map[%s] = %s, got %s", k, v, actualMap[k])
+			// Use the two-value form: a missing key reads as "" and would falsely
+			// match an expected "" value when the lengths happen to be equal.
+			actualVal, exists := actualMap[k]
+			if !exists || actualVal != v {
+				return false, fmt.Sprintf("expected map[%s] = %s, got %s", k, v, actualVal)
 			}
 		}
 

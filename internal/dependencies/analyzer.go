@@ -28,6 +28,12 @@ var (
 	reSafeTagName = regexp.MustCompile(`^[A-Za-z0-9._/+-]+$`)
 )
 
+// Cache map field keys for the stored version/sha entry (see getCachedVersion/cacheVersion).
+const (
+	cacheFieldVersion = "version"
+	cacheFieldSHA     = "sha"
+)
+
 // validActionRuntimes is the authoritative list of valid GitHub Actions runtime identifiers.
 var validActionRuntimes = []string{
 	appconstants.NodeRuntimeNode12,
@@ -539,8 +545,14 @@ func (a *Analyzer) getCachedVersion(cacheKey string) (version, sha string, found
 		return "", "", false
 	}
 
-	version, _ = versionInfo["version"].(string)
-	sha, _ = versionInfo["sha"].(string)
+	// Treat incomplete cached data as a miss: a partial entry (missing/non-string/
+	// empty version or sha) would otherwise lock the analyzer into unusable data
+	// and skip the refetch path.
+	version, vOK := versionInfo[cacheFieldVersion].(string)
+	sha, sOK := versionInfo[cacheFieldSHA].(string)
+	if !vOK || !sOK || version == "" || sha == "" {
+		return "", "", false
+	}
 
 	return version, sha, true
 }
@@ -614,7 +626,7 @@ func (a *Analyzer) cacheVersion(cacheKey, version, sha string) {
 
 	// Store as map[string]any so the value type is identical whether served from
 	// memory or reloaded from cache.json (see getCachedVersion).
-	versionInfo := map[string]any{"version": version, "sha": sha}
+	versionInfo := map[string]any{cacheFieldVersion: version, cacheFieldSHA: sha}
 	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, appconstants.CacheDefaultTTL)
 }
 

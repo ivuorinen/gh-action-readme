@@ -192,13 +192,18 @@ func getDefaultBranch(repoRoot string) string {
 	}
 
 	// Extract branch name from refs/remotes/origin/HEAD -> refs/remotes/origin/main.
-	// strings.Split always returns at least one element, so the last is always valid.
-	parts := strings.Split(strings.TrimSpace(string(output)), "/")
-	branch := parts[len(parts)-1]
+	// Strip the prefix rather than splitting on "/" and taking the last segment,
+	// which would truncate a branch like "release/v1" to "v1".
+	ref := strings.TrimSpace(string(output))
+	const remoteHeadPrefix = "refs/remotes/origin/"
+	if !strings.HasPrefix(ref, remoteHeadPrefix) {
+		return appconstants.GitDefaultBranch
+	}
+	branch := strings.TrimPrefix(ref, remoteHeadPrefix)
 
 	// Reject anything that isn't a plain branch name before it flows into
 	// generated output / URLs; fall back to the default.
-	if !reSafeBranchName.MatchString(branch) {
+	if branch == "" || !reSafeBranchName.MatchString(branch) {
 		return appconstants.GitDefaultBranch
 	}
 

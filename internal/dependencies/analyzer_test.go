@@ -929,3 +929,34 @@ func TestGeneratePinnedUpdate_RejectsInjection(t *testing.T) {
 		t.Error("expected GeneratePinnedUpdate to reject an injection-bearing version tag")
 	}
 }
+
+// TestGetCachedVersionTreatsPartialDataAsMiss ensures incomplete cached entries
+// (missing, empty, or non-string version/sha) are reported as a cache miss so the
+// analyzer refetches rather than locking onto unusable data.
+func TestGetCachedVersionTreatsPartialDataAsMiss(t *testing.T) {
+	t.Parallel()
+
+	analyzer := &Analyzer{Cache: NewCacheAdapter(newIsolatedCache(t))}
+
+	const wantVer, wantSHA = "v1", "abc"
+	partial := map[string]map[string]any{
+		"missing-sha":     {cacheFieldVersion: wantVer},
+		"missing-version": {cacheFieldSHA: wantSHA},
+		"empty-values":    {cacheFieldVersion: "", cacheFieldSHA: ""},
+		"non-string":      {cacheFieldVersion: 1, cacheFieldSHA: wantSHA},
+	}
+	for key, val := range partial {
+		testutil.AssertNoError(t, analyzer.Cache.Set(key, val))
+		if _, _, found := analyzer.getCachedVersion(key); found {
+			t.Errorf("%s: expected cache miss for partial data, got found=true", key)
+		}
+	}
+
+	testutil.AssertNoError(t, analyzer.Cache.Set("complete",
+		map[string]any{cacheFieldVersion: wantVer, cacheFieldSHA: wantSHA}))
+	version, sha, found := analyzer.getCachedVersion("complete")
+	if !found || version != wantVer || sha != wantSHA {
+		t.Errorf("complete data: got version=%q sha=%q found=%v, want %s/%s/true",
+			version, sha, found, wantVer, wantSHA)
+	}
+}

@@ -22,6 +22,20 @@ import (
 // It is a variable so tests can replace it to simulate cache-creation failures.
 var newCacheFunc = cache.NewCache
 
+// actionNameReplacer maps path separators and Windows-reserved filename
+// characters to '-' so an action name is safe to use as a file name on any OS.
+var actionNameReplacer = strings.NewReplacer(
+	"/", "-",
+	"\\", "-",
+	":", "-",
+	"*", "-",
+	"?", "-",
+	"\"", "-",
+	"<", "-",
+	">", "-",
+	"|", "-",
+)
+
 // Generator orchestrates the documentation generation process.
 // It uses focused interfaces to reduce coupling and improve testability.
 type Generator struct {
@@ -394,10 +408,12 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 
 	// Sanitize the action name for use as a filename: a name containing "/" (valid
 	// in action.yml) would otherwise resolve into a non-existent subdirectory and
-	// fail os.Create with ENOENT. Fall back to a stable default for empty names.
-	safeName := strings.ReplaceAll(action.Name, "/", "-")
-	safeName = strings.ReplaceAll(safeName, string(filepath.Separator), "-")
-	if strings.TrimSpace(safeName) == "" {
+	// fail os.Create with ENOENT. Also strip Windows-reserved characters
+	// (: * ? " < > | and backslash) which fail generation at write time on
+	// Windows. Fall back to a stable default for empty names.
+	safeName := actionNameReplacer.Replace(strings.TrimSpace(action.Name))
+	safeName = strings.Trim(safeName, ".- ")
+	if safeName == "" {
 		safeName = "action"
 	}
 	defaultFilename := safeName + ".html"
