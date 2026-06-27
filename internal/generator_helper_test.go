@@ -47,7 +47,7 @@ func testHTMLGeneration(t *testing.T) {
 	testFormatGeneration(
 		t,
 		func(g *Generator, a *ActionYML, out, path string) error {
-			return g.generateHTML(a, out, path)
+			return g.generateHTML(a, out, path, false)
 		},
 		"Test Action.html",
 		"HTML",

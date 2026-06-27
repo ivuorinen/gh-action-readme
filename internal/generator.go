@@ -56,6 +56,12 @@ type Generator struct {
 	Config   *AppConfig
 	Output   CompleteOutput
 	Progress ProgressManager
+
+	// usedNames tracks output filenames already emitted within a single batch so
+	// per-action names that sanitize to the same string (e.g. two actions named
+	// "Build", or "foo/bar" vs "foo:bar") get a "-N" suffix instead of silently
+	// overwriting each other in a shared --output-dir. Non-nil only during a batch.
+	usedNames map[string]int
 }
 
 // isUnitTestEnvironment detects if we're running unit tests (not integration tests).
@@ -241,6 +247,10 @@ func (g *Generator) ProcessBatch(paths []string) error {
 		)
 	}
 
+	// Reset the per-batch filename map so collisions are disambiguated across this
+	// run's actions (see disambiguateName).
+	g.usedNames = make(map[string]int)
+
 	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
 	parseErrors, successCount := g.processFiles(paths, bar)
 	g.Progress.FinishProgressBarWithNewline(bar)
@@ -283,6 +293,25 @@ func (g *Generator) ValidateFiles(paths []string) error {
 	}
 
 	return nil
+}
+
+// disambiguateName returns name unchanged the first time it is seen within a batch
+// and appends "-2", "-3", … on subsequent collisions. Deterministic for a given
+// processing order. A no-op (returns name) outside a batch, when usedNames is nil.
+func (g *Generator) disambiguateName(name string) string {
+	if g.usedNames == nil {
+		return name
+	}
+
+	ext := filepath.Ext(name)
+	base := strings.TrimSuffix(name, ext)
+	candidate := name
+	for i := 2; g.usedNames[candidate] > 0; i++ {
+		candidate = fmt.Sprintf("%s-%d%s", base, i, ext)
+	}
+	g.usedNames[candidate]++
+
+	return candidate
 }
 
 // generateFromFile is the implementation behind GenerateFromFile. uniqueNames is
@@ -386,7 +415,7 @@ func (g *Generator) generateSimpleFormat(
 	// overwrite earlier outputs.
 	filename := defaultFilename
 	if uniqueNames {
-		filename = safeActionFilename(action, filepath.Ext(defaultFilename))
+		filename = g.disambiguateName(safeActionFilename(action, filepath.Ext(defaultFilename)))
 	}
 
 	outputPath, err := g.resolveOutputPath(outputDir, filename)
@@ -416,7 +445,7 @@ func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath st
 }
 
 // generateHTML creates an HTML file using the template and optional header/footer.
-func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string) error {
+func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	templatePath, err := g.resolveTemplatePathForFormat()
 	if err != nil {
 		return err
@@ -442,8 +471,12 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 
 	// Per-action filename so multiple actions written to one output directory do
 	// not collide (and to avoid path separators / Windows-reserved characters in
-	// the action name resolving into a bad path).
+	// the action name resolving into a bad path). In a shared-dir batch, also
+	// disambiguate names that sanitize to the same string.
 	defaultFilename := safeActionFilename(action, ".html")
+	if uniqueNames {
+		defaultFilename = g.disambiguateName(defaultFilename)
+	}
 	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
@@ -469,7 +502,7 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string, uniqueName
 
 	jsonFilename := appconstants.ActionDocsJSON
 	if uniqueNames {
-		jsonFilename = safeActionFilename(action, ".json")
+		jsonFilename = g.disambiguateName(safeActionFilename(action, ".json"))
 	}
 
 	outputPath, err := g.resolveOutputPath(outputDir, jsonFilename)
@@ -665,7 +698,7 @@ func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath st
 	case appconstants.OutputFormatMarkdown:
 		return g.generateMarkdown(action, outputDir, actionPath, uniqueNames)
 	case appconstants.OutputFormatHTML:
-		return g.generateHTML(action, outputDir, actionPath)
+		return g.generateHTML(action, outputDir, actionPath, uniqueNames)
 	case appconstants.OutputFormatJSON:
 		return g.generateJSON(action, outputDir, uniqueNames)
 	case appconstants.OutputFormatASCIIDoc:

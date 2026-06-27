@@ -432,6 +432,30 @@ func logREADMELocations(t *testing.T, dir string) {
 	})
 }
 
+// TestGeneratorDisambiguateName verifies the per-batch collision suffixing: names
+// that sanitize to the same string get "-N" before the extension so they do not
+// overwrite each other, while distinct names and the no-batch case pass through.
+func TestGeneratorDisambiguateName(t *testing.T) {
+	t.Parallel()
+
+	// Outside a batch (nil map) names pass through unchanged.
+	g := &Generator{}
+	if got := g.disambiguateName("README.md"); got != "README.md" {
+		t.Errorf("nil usedNames: got %q, want README.md", got)
+	}
+
+	// Within a batch, repeated names gain -N suffixes before the extension.
+	g.usedNames = make(map[string]int)
+	for i, want := range []string{"Build.json", "Build-2.json", "Build-3.json"} {
+		if got := g.disambiguateName("Build.json"); got != want {
+			t.Errorf("call %d: got %q, want %q", i+1, got, want)
+		}
+	}
+	if got := g.disambiguateName("Test.json"); got != "Test.json" {
+		t.Errorf("distinct name: got %q, want Test.json", got)
+	}
+}
+
 // TestGeneratorProcessBatchUniqueFilenames verifies that generating multiple
 // actions into one shared --output-dir writes one file per action for the
 // fixed-name formats (markdown's README.md, JSON's action-docs.json) instead of
