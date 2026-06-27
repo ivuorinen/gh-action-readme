@@ -432,6 +432,79 @@ func logREADMELocations(t *testing.T, dir string) {
 	})
 }
 
+// TestGeneratorDisambiguateName verifies the per-batch collision suffixing: names
+// that sanitize to the same string get "-N" before the extension so they do not
+// overwrite each other, while distinct names and the no-batch case pass through.
+func TestGeneratorDisambiguateName(t *testing.T) {
+	t.Parallel()
+
+	// Outside a batch (nil map) names pass through unchanged.
+	g := &Generator{}
+	if got := g.disambiguateName("README.md"); got != "README.md" {
+		t.Errorf("nil usedNames: got %q, want README.md", got)
+	}
+
+	// Within a batch, repeated names gain -N suffixes before the extension.
+	g.usedNames = make(map[string]int)
+	for i, want := range []string{"Build.json", "Build-2.json", "Build-3.json"} {
+		if got := g.disambiguateName("Build.json"); got != want {
+			t.Errorf("call %d: got %q, want %q", i+1, got, want)
+		}
+	}
+	if got := g.disambiguateName("Test.json"); got != "Test.json" {
+		t.Errorf("distinct name: got %q, want Test.json", got)
+	}
+}
+
+// TestGeneratorProcessBatchUniqueFilenames verifies that generating multiple
+// actions into one shared --output-dir writes one file per action for the
+// fixed-name formats (markdown's README.md, JSON's action-docs.json) instead of
+// overwriting a single file — the recursive filename collision. Markdown also
+// exercises the generateSimpleFormat path that AsciiDoc reuses.
+func TestGeneratorProcessBatchUniqueFilenames(t *testing.T) {
+	t.Parallel()
+
+	formats := []struct {
+		format string
+		glob   string
+	}{
+		{appconstants.OutputFormatMarkdown, "*.md"},
+		{appconstants.OutputFormatJSON, "*.json"},
+	}
+
+	for _, f := range formats {
+		t.Run(f.format, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir, cleanup := testutil.TempDir(t)
+			defer cleanup()
+			testutil.SetupTestTemplates(t, tmpDir)
+
+			setup := createMultiActionSetup(
+				[]string{"action1", "action2"},
+				[]string{testutil.TestFixtureJavaScriptSimple, testutil.TestFixtureCompositeBasic},
+			)
+			files := setup(t, tmpDir)
+
+			outDir := filepath.Join(tmpDir, "shared-out")
+			config := defaultTestConfig()
+			config.OutputFormat = f.format
+			config.OutputDir = outDir
+			generator := NewGenerator(config)
+
+			if err := generator.ProcessBatch(files); err != nil {
+				t.Fatalf("ProcessBatch(%s): %v", f.format, err)
+			}
+
+			got, _ := filepath.Glob(filepath.Join(outDir, f.glob))
+			if len(got) != len(files) {
+				t.Errorf("%s: expected %d distinct files (one per action), got %d: %v",
+					f.format, len(files), len(got), got)
+			}
+		})
+	}
+}
+
 func TestGeneratorProcessBatch(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -468,7 +541,7 @@ func TestGeneratorProcessBatch(t *testing.T) {
 		},
 		{
 			name:        testutil.TestCaseNameNonexistentFiles,
-			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
+			setupFunc:   setupNonexistentFiles(testutil.TestNonexistentYML),
 			expectError: true,
 		},
 	}
@@ -551,7 +624,7 @@ func TestGeneratorValidateFiles(t *testing.T) {
 		},
 		{
 			name:        testutil.TestCaseNameNonexistentFiles,
-			setupFunc:   setupNonexistentFiles("nonexistent.yml"),
+			setupFunc:   setupNonexistentFiles(testutil.TestNonexistentYML),
 			expectError: true,
 		},
 	}
@@ -660,6 +733,60 @@ func TestGeneratorWithDifferentThemes(t *testing.T) {
 				t.Errorf("no output file was created for theme %s", theme)
 			}
 		})
+	}
+}
+
+// TestGeneratorCreatesMissingOutputDir verifies generation auto-creates a
+// non-existent output directory rather than failing the write — regression for the
+// CI "Comprehensive Documentation Generation" step where --output-dir pointed at a
+// directory that did not yet exist.
+func TestGeneratorCreatesMissingOutputDir(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	testutil.SetupTestTemplates(t, tmpDir)
+
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
+
+	outDir := filepath.Join(tmpDir, "does", "not", "exist")
+	config := defaultTestConfig()
+	config.OutputDir = outDir
+	generator := NewGenerator(config)
+
+	if err := generator.GenerateFromFile(actionPath); err != nil {
+		t.Fatalf("GenerateFromFile into a missing output dir: %v", err)
+	}
+
+	readmeFiles, _ := filepath.Glob(filepath.Join(outDir, "README*.md"))
+	if len(readmeFiles) == 0 {
+		t.Errorf("expected output written into auto-created dir %q", outDir)
+	}
+}
+
+// TestGeneratorUnknownThemeErrors verifies that an unrecognized theme produces an
+// explicit error rather than silently falling back to the default template.
+func TestGeneratorUnknownThemeErrors(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureJavaScriptSimple))
+
+	config := defaultTestConfig()
+	config.Theme = "totally-not-a-real-theme"
+	config.OutputDir = tmpDir
+	generator := NewGenerator(config)
+
+	err := generator.GenerateFromFile(actionPath)
+	if err == nil {
+		t.Fatal("expected an error for an unknown theme, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown theme") {
+		t.Errorf("error = %q, want it to mention 'unknown theme'", err.Error())
 	}
 }
 
@@ -795,7 +922,7 @@ func TestGeneratorDiscoverActionFilesWithValidation(t *testing.T) {
 					strings.Contains(actionPath, "..") {
 					t.Fatalf("invalid path: %q", actionPath)
 				}
-				content := "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
+				content := testutil.MustReadFixture(testutil.TestFixtureActionMinimal)
 				testutil.WriteTestFile(t, actionPath, content)
 
 				return tmpDir
@@ -1011,25 +1138,25 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 	}{
 		{
 			name:      testutil.TestCaseNameValidAction,
-			content:   "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []",
+			content:   testutil.MustReadFixture(testutil.TestFixtureActionMinimal),
 			wantErr:   false,
 			wantValid: true,
 		},
 		{
 			name:      testutil.TestCaseNameMissingName,
-			content:   "description: Test\nruns:\n  using: composite\n  steps: []",
+			content:   testutil.MustReadFixture(testutil.TestFixtureCompositeMissingName),
 			wantErr:   true,
 			wantValid: false,
 		},
 		{
 			name:      testutil.TestCaseNameMissingDesc,
-			content:   "name: Test\nruns:\n  using: composite\n  steps: []",
+			content:   testutil.MustReadFixture(testutil.TestFixtureCompositeMissingDesc),
 			wantErr:   true,
 			wantValid: false,
 		},
 		{
 			name:      testutil.TestCaseNameMissingRuns,
-			content:   "name: Test\ndescription: Test",
+			content:   testutil.MustReadFixture(testutil.TestFixtureCompositeNameDescOnly),
 			wantErr:   true,
 			wantValid: false,
 		},
@@ -1418,19 +1545,22 @@ func TestParseAndValidateAction_FieldBoundary(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		content string
-		wantErr bool
+		name        string
+		content     string
+		wantErr     bool
+		errContains string // when wantErr, the missing field the error must name
 	}{
 		{
-			name:    "missing name field errors",
-			content: "description: D\nruns:\n  using: composite\n  steps: []",
-			wantErr: true,
+			name:        "missing name field errors",
+			content:     testutil.MustReadFixture(testutil.TestFixtureCompositeMissingName),
+			wantErr:     true,
+			errContains: appconstants.FieldName,
 		},
 		{
-			name:    "missing description field errors",
-			content: "name: N\nruns:\n  using: composite\n  steps: []",
-			wantErr: true,
+			name:        "missing description field errors",
+			content:     testutil.MustReadFixture(testutil.TestFixtureCompositeMissingDesc),
+			wantErr:     true,
+			errContains: appconstants.FieldDescription,
 		},
 		{
 			name:    "all required fields present does not error",
@@ -1451,6 +1581,12 @@ func TestParseAndValidateAction_FieldBoundary(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseAndValidateAction() error=%v, wantErr=%v", err, tt.wantErr)
+			}
+			// Pin the rejection to the specific missing field so a regression in
+			// the required-field boundary (e.g. dropping the description term)
+			// cannot pass by erroring for a different reason.
+			if tt.wantErr && err != nil && !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("error %q does not name the missing field %q", err.Error(), tt.errContains)
 			}
 		})
 	}

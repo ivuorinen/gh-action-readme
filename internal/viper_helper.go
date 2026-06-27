@@ -85,8 +85,53 @@ func loadConfigFromViper(configPath string) (*AppConfig, error) {
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
+	recordPresenceFlags(v, &config)
 
 	return &config, nil
+}
+
+// recordPresenceFlags records whether the presence-tracked boolean config keys
+// (use_default_branch, analyze_dependencies, show_security_info) were explicitly
+// set in the source, so an explicit false can override a default or
+// lower-priority true during merge (see mergeBooleanFields).
+func recordPresenceFlags(v *viper.Viper, config *AppConfig) {
+	// InConfig (not IsSet) checks only the loaded config file. IsSet also reports
+	// keys that exist solely via SetDefault as set, which would mark inherited
+	// defaults as explicit and force unintended overrides during config merges.
+	config.useDefaultBranchSet = v.InConfig(appconstants.ConfigKeyUseDefaultBranch)
+	config.analyzeDependenciesSet = v.InConfig(appconstants.ConfigKeyAnalyzeDependencies)
+	config.showSecurityInfoSet = v.InConfig(appconstants.ConfigKeyShowSecurityInfo)
+	markRepoOverridePresenceFlags(v, config)
+}
+
+// markRepoOverridePresenceFlags records, per repo override, which presence-tracked
+// boolean keys were explicitly present in the source config, mirroring the
+// top-level handling. It inspects the raw viper map directly rather than building
+// dotted IsSet keys, so repo names containing dots are handled correctly.
+func markRepoOverridePresenceFlags(v *viper.Viper, config *AppConfig) {
+	if len(config.RepoOverrides) == 0 {
+		return
+	}
+	raw, ok := v.Get(appconstants.ConfigKeyRepoOverrides).(map[string]any)
+	if !ok {
+		return
+	}
+	for name, override := range config.RepoOverrides {
+		entry, ok := raw[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		if _, present := entry[appconstants.ConfigKeyUseDefaultBranch]; present {
+			override.useDefaultBranchSet = true
+		}
+		if _, present := entry[appconstants.ConfigKeyAnalyzeDependencies]; present {
+			override.analyzeDependenciesSet = true
+		}
+		if _, present := entry[appconstants.ConfigKeyShowSecurityInfo]; present {
+			override.showSecurityInfoSet = true
+		}
+		config.RepoOverrides[name] = override
+	}
 }
 
 // loadAndUnmarshalConfig initializes viper with defaults, reads config file,
@@ -115,6 +160,7 @@ func loadAndUnmarshalConfig(configFile string, v *viper.Viper) (*AppConfig, erro
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf(appconstants.ErrFailedToUnmarshalConfig, err)
 	}
+	recordPresenceFlags(v, &config)
 
 	// Resolve template paths relative to binary if they're not absolute
 	resolveAllTemplatePaths(&config)

@@ -5,6 +5,7 @@ import (
 	htmltemplate "html/template"
 	"io"
 	"path/filepath"
+	"regexp"
 	"strings"
 	texttemplate "text/template"
 
@@ -59,7 +60,23 @@ func templateFuncs() texttemplate.FuncMap {
 		"gitRepo":       getGitRepo,
 		"gitUsesString": getGitUsesString,
 		"actionVersion": getActionVersion,
+		"mdCell":        mdCell,
+		"badgeSegment":  shieldsBadgeEncode,
 	}
+}
+
+// mdCell escapes a value for safe interpolation into a Markdown (or AsciiDoc)
+// table cell. A literal "|" would otherwise be read as a column separator and an
+// embedded newline would terminate the row, so both honest values (a description
+// containing a pipe) and crafted action metadata can corrupt the table. Pipes are
+// backslash-escaped and CR/LF are collapsed to a <br> break.
+func mdCell(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "|", "\\|")
+	s = strings.ReplaceAll(s, "\n", "<br>")
+	s = strings.ReplaceAll(s, "\r", "<br>")
+
+	return s
 }
 
 // getFieldWithFallback extracts a field from TemplateData with Git-then-Config fallback logic.
@@ -68,8 +85,12 @@ func getFieldWithFallback(data any, gitGetter, configGetter func(*TemplateData) 
 		if gitValue := gitGetter(td); gitValue != "" {
 			return gitValue
 		}
-		if configValue := configGetter(td); configValue != "" {
-			return configValue
+		// configGetter dereferences td.Config; guard against a manually
+		// constructed TemplateData with a nil Config (consistent with getActionVersion).
+		if td.Config != nil {
+			if configValue := configGetter(td); configValue != "" {
+				return configValue
+			}
 		}
 	}
 
@@ -115,7 +136,20 @@ func getGitUsesString(data any) string {
 func isValidOrgRepo(org, repo string) bool {
 	return org != "" && repo != "" &&
 		org != appconstants.DefaultOrgPlaceholder &&
-		repo != appconstants.DefaultRepoPlaceholder
+		repo != appconstants.DefaultRepoPlaceholder &&
+		isValidGitHubPathSegment(org) &&
+		isValidGitHubPathSegment(repo)
+}
+
+// reGitHubPathSegment matches a single GitHub org/repo path segment: letters,
+// digits, "-", "_", and "." (so dotted repos like "my.repo" stay valid). It
+// rejects "/", "@", whitespace, and control characters, which would otherwise
+// inject extra path segments or a bogus version into the generated uses:
+// statement (org/repo flow from config files and git detection).
+var reGitHubPathSegment = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+func isValidGitHubPathSegment(s string) bool {
+	return reGitHubPathSegment.MatchString(s)
 }
 
 // formatVersion ensures version has proper @ prefix.
@@ -150,6 +184,21 @@ func buildUsesString(td *TemplateData, org, repo, version string) string {
 	return validation.FormatUsesStatement(org, repo, version)
 }
 
+// resolveSymlinkedAbs returns the absolute, symlink-resolved form of path. It
+// falls back to the plain absolute path when symlinks cannot be evaluated (e.g.
+// the path does not exist), and returns "" only when even filepath.Abs fails.
+func resolveSymlinkedAbs(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return ""
+	}
+	if resolved, rerr := filepath.EvalSymlinks(abs); rerr == nil {
+		return resolved
+	}
+
+	return abs
+}
+
 // extractActionSubdirectory extracts the subdirectory path for an action relative to repo root.
 // For monorepo actions (e.g., org/repo/subdir/action.yml), returns "subdir".
 // For repo-root actions (e.g., org/repo/action.yml), returns empty string.
@@ -160,14 +209,13 @@ func extractActionSubdirectory(actionPath, repoRoot string) string {
 		return ""
 	}
 
-	// Get absolute paths for reliable comparison
-	absActionPath, err := filepath.Abs(actionPath)
-	if err != nil {
-		return ""
-	}
-
-	absRepoRoot, err := filepath.Abs(repoRoot)
-	if err != nil {
+	// Get absolute, symlink-resolved paths for reliable comparison. Resolving
+	// symlinks on both sides keeps filepath.Rel from producing a spurious ".."
+	// (and silently dropping the subdir) when the action path is reached through
+	// a symlink that diverges from the real repo-root tree.
+	absActionPath := resolveSymlinkedAbs(actionPath)
+	absRepoRoot := resolveSymlinkedAbs(repoRoot)
+	if absActionPath == "" || absRepoRoot == "" {
 		return ""
 	}
 
@@ -198,7 +246,7 @@ func extractActionSubdirectory(actionPath, repoRoot string) string {
 // Priority: 1) Config.Version (explicit override), 2) Default branch (if enabled), 3) "v1" (fallback).
 func getActionVersion(data any) string {
 	td, ok := data.(*TemplateData)
-	if !ok {
+	if !ok || td.Config == nil {
 		return appconstants.VersionTagV1
 	}
 
@@ -218,6 +266,12 @@ func getActionVersion(data any) string {
 
 // BuildTemplateData constructs comprehensive template data from action and configuration.
 func BuildTemplateData(action *ActionYML, config *AppConfig, repoRoot, actionPath string) *TemplateData {
+	// Guard against a nil config: this is an exported entry point and the
+	// template funcs dereference Config unconditionally.
+	if config == nil {
+		config = DefaultAppConfig()
+	}
+
 	data := &TemplateData{
 		ActionYML:  action,
 		Config:     config,
@@ -280,6 +334,9 @@ func analyzeDependencies(actionPath string, config *AppConfig, gitInfo git.RepoI
 	}
 
 	analyzer := dependencies.NewAnalyzer(githubClient, gitInfo, depCache)
+	// Stop the cache's background goroutine and flush pending writes before
+	// returning (this function owns the cache's whole lifecycle).
+	defer func() { _ = analyzer.Close() }()
 
 	// Analyze dependencies
 	deps, err := analyzer.AnalyzeActionFile(actionPath)

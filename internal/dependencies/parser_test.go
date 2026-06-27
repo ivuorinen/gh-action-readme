@@ -1,6 +1,7 @@
 package dependencies
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -47,6 +48,18 @@ func TestValidateFilePath(t *testing.T) {
 			path:    "testdata/action.yml/",
 			wantErr: false,
 		},
+		{
+			// filepath.Clean collapses this to "/etc/passwd"; a cleaned-path
+			// check would miss it, so the original path must be inspected.
+			name:    "absolute traversal collapsed by Clean",
+			path:    "/tmp/x/../../../etc/passwd",
+			wantErr: true,
+		},
+		{
+			name:    "relative traversal that resolves in-bounds is still rejected",
+			path:    "actions/build/../build/action.yml",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -56,6 +69,12 @@ func TestValidateFilePath(t *testing.T) {
 			err := validateFilePath(tt.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateFilePath() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			// For rejected paths, assert the rejection is specifically for
+			// traversal — not some incidental error — so a regression that
+			// changes WHY a path is rejected does not slip past this test.
+			if tt.wantErr && err != nil && !strings.Contains(err.Error(), "traversal") {
+				t.Errorf("validateFilePath() error = %q, want it to mention traversal", err.Error())
 			}
 		})
 	}

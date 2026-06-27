@@ -493,8 +493,49 @@ func TestAssertEqual(t *testing.T) {
 		AssertEqual(t, map1, map2)
 	})
 
-	// Testing failure cases is complex due to t.Fatalf behavior
-	// The map comparison logic is tested implicitly throughout the codebase
+	// The failure path is asserted via equalCheck (the pure function AssertEqual
+	// delegates to), since a *testing.T cannot be mocked to observe t.Fatal.
+}
+
+// TestEqualCheck asserts both the pass and FAIL paths of the comparison that
+// backs AssertEqual. Without this, a regression that made AssertEqual a no-op
+// would silently pass every assertion in the codebase.
+func TestEqualCheck(t *testing.T) {
+	t.Parallel()
+
+	t.Run("equal values report ok", func(t *testing.T) {
+		t.Parallel()
+		for _, c := range []struct{ a, b any }{
+			{42, 42}, {"x", "x"}, {true, true},
+		} {
+			if ok, msg := equalCheck(c.a, c.b); !ok {
+				t.Errorf("equalCheck(%v, %v) = false (%q), want true", c.a, c.b, msg)
+			}
+		}
+		if ok, _ := equalCheck(
+			map[string]string{"k": "v"}, map[string]string{"k": "v"},
+		); !ok {
+			t.Error("equalCheck of equal maps = false, want true")
+		}
+	})
+
+	t.Run("unequal values report not-ok with message", func(t *testing.T) {
+		t.Parallel()
+		for _, c := range []struct{ a, b any }{
+			{1, 2}, {"x", "y"}, {true, false},
+			{map[string]string{"k": "v"}, map[string]string{"k": "w"}}, // value differs
+			{map[string]string{"k": "v"}, map[string]string{}},         // length differs
+			{map[string]string{"k": "v"}, "not a map"},                 // type differs
+		} {
+			ok, msg := equalCheck(c.a, c.b)
+			if ok {
+				t.Errorf("equalCheck(%v, %v) = true, want false", c.a, c.b)
+			}
+			if msg == "" {
+				t.Errorf("equalCheck(%v, %v) returned empty failure message", c.a, c.b)
+			}
+		}
+	})
 }
 
 func TestNewStringReader(t *testing.T) {

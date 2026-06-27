@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/goccy/go-yaml"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -271,4 +272,62 @@ func TestConfigExporterGetDefaultOutputPath(t *testing.T) {
 			t.Error("Expected error for invalid format")
 		}
 	})
+}
+
+func TestExportConfigRefusesLiveConfigOverwrite(t *testing.T) {
+	// Point XDG at a sandbox dir so GetConfigPath() never resolves to the user's
+	// real config. xdg caches its dirs at init, so Reload() after Setenv is
+	// required. The cleanup is registered before Setenv so it runs AFTER the env
+	// is restored (LIFO), reloading xdg back to the real dirs to avoid leaking the
+	// temp path into other tests. Mutating global xdg state precludes t.Parallel.
+	t.Cleanup(xdg.Reload)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "xdg"))
+	xdg.Reload()
+
+	cfgPath, err := internal.GetConfigPath()
+	testutil.AssertNoError(t, err)
+
+	// Create the live config on disk so the overwrite guard has something to protect.
+	testutil.AssertNoError(t, os.MkdirAll(filepath.Dir(cfgPath), appconstants.FilePermDir))
+	const liveContent = "theme: github\n"
+	testutil.AssertNoError(t, os.WriteFile(cfgPath, []byte(liveContent), appconstants.FilePermDefault))
+
+	exporter := NewConfigExporter(internal.NewColoredOutput(true))
+	err = exporter.ExportConfig(createTestConfig(), FormatYAML, cfgPath)
+	if err == nil {
+		t.Fatal("expected ExportConfig to refuse overwriting the live config")
+	}
+	if !strings.Contains(err.Error(), "refusing to overwrite the live config") {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// The guard must reject before any write — original content intact.
+	got, readErr := os.ReadFile(cfgPath) // #nosec G304 -- cfgPath from GetConfigPath under a test-controlled XDG dir
+	testutil.AssertNoError(t, readErr)
+	if string(got) != liveContent {
+		t.Errorf("live config was modified; got %q, want %q", string(got), liveContent)
+	}
+}
+
+func TestExportConfigRejectsTraversal(t *testing.T) {
+	// Isolate the filesystem so a regressed guard cannot write outside the test
+	// sandbox or depend on the ambient working directory. t.Chdir disallows
+	// t.Parallel, which is fine here.
+	t.Chdir(t.TempDir())
+
+	exporter := NewConfigExporter(internal.NewColoredOutput(true))
+	config := createTestConfig()
+
+	const traversalPath = "../../etc/evil.yaml"
+	err := exporter.ExportConfig(config, FormatYAML, traversalPath)
+	if err == nil {
+		t.Fatal("expected ExportConfig to reject a path containing '..'")
+	}
+	if !strings.Contains(err.Error(), "..") {
+		t.Errorf("expected a traversal-rejection error mentioning '..', got: %v", err)
+	}
+	// The guard must reject before any write; the target must not exist.
+	if _, statErr := os.Stat(traversalPath); !os.IsNotExist(statErr) {
+		t.Errorf("traversal target should not have been created; os.Stat err = %v", statErr)
+	}
 }

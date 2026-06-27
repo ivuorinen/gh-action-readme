@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-github/v74/github"
@@ -18,14 +19,24 @@ import (
 )
 
 // MockHTTPClient is a mock HTTP client for testing.
+//
+// The Requests slice is mutex-guarded, so recording requests is safe when a
+// single mock client is shared across parallel subtests (t.Parallel). Responses
+// are NOT deep-cloned per call: every Do for a given method+URL returns the same
+// *http.Response whose Body is a single reader. Two goroutines requesting the
+// same key and reading both Bodies concurrently will race on that reader, so a
+// shared response must not be read from more than one goroutine at a time.
 type MockHTTPClient struct {
+	mu        sync.Mutex
 	Responses map[string]*http.Response
 	Requests  []*http.Request
 }
 
 // Do implements the http.Client interface.
 func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	m.mu.Lock()
 	m.Requests = append(m.Requests, req)
+	m.mu.Unlock()
 
 	key := req.Method + " " + req.URL.String()
 	if resp, ok := m.Responses[key]; ok {
@@ -393,29 +404,43 @@ func AssertStringContains(t *testing.T, str, substring string) {
 func AssertEqual(t *testing.T, expected, actual any) {
 	t.Helper()
 
-	// Handle maps which can't be compared directly
-	if expectedMap, ok := expected.(map[string]string); ok {
-		actualMap, ok := actual.(map[string]string)
-		if !ok {
-			t.Fatalf("expected map[string]string, got %T", actual)
-		}
+	if ok, msg := equalCheck(expected, actual); !ok {
+		t.Fatal(msg)
+	}
+}
 
+// equalCheck reports whether actual equals expected, special-casing
+// map[string]string (which is not directly comparable), and returns a failure
+// message when they differ. It is a pure function so the comparison — including
+// the failure path — can be unit-tested directly; AssertEqual itself takes a
+// *testing.T, which cannot be mocked to assert that it actually fails on
+// unequal values.
+func equalCheck(expected, actual any) (ok bool, msg string) {
+	if expectedMap, isMap := expected.(map[string]string); isMap {
+		actualMap, isMap := actual.(map[string]string)
+		if !isMap {
+			return false, fmt.Sprintf("expected map[string]string, got %T", actual)
+		}
 		if len(expectedMap) != len(actualMap) {
-			t.Fatalf("expected map with %d entries, got %d", len(expectedMap), len(actualMap))
+			return false, fmt.Sprintf("expected map with %d entries, got %d", len(expectedMap), len(actualMap))
 		}
-
 		for k, v := range expectedMap {
-			if actualMap[k] != v {
-				t.Fatalf("expected map[%s] = %s, got %s", k, v, actualMap[k])
+			// Use the two-value form: a missing key reads as "" and would falsely
+			// match an expected "" value when the lengths happen to be equal.
+			actualVal, exists := actualMap[k]
+			if !exists || actualVal != v {
+				return false, fmt.Sprintf("expected map[%s] = %s, got %s", k, v, actualVal)
 			}
 		}
 
-		return
+		return true, ""
 	}
 
 	if expected != actual {
-		t.Fatalf("expected %v, got %v", expected, actual)
+		return false, fmt.Sprintf("expected %v, got %v", expected, actual)
 	}
+
+	return true, ""
 }
 
 // AssertSliceContainsAll fails if any of expectedSubstrings is not found in any item of the slice.
@@ -514,10 +539,14 @@ func InitGitRepo(t *testing.T, dir string) {
 		t.Fatalf("Failed to initialize git repo: %v", err)
 	}
 
-	// Configure git user for commits
+	// Configure git user for commits. Also disable commit signing so the helper
+	// is hermetic: a developer's global commit.gpgsign (e.g. a 1Password/SSH
+	// signer) must not be invoked here, or commits fail non-interactively.
 	configCmds := [][]string{
-		{appconstants.GitCommand, "config", "user.name", "Test User"},
-		{appconstants.GitCommand, "config", "user.email", "test@example.com"},
+		{appconstants.GitCommand, ConfigFieldName, "user.name", "Test User"},
+		{appconstants.GitCommand, ConfigFieldName, "user.email", "test@example.com"},
+		{appconstants.GitCommand, ConfigFieldName, "commit.gpgsign", "false"},
+		{appconstants.GitCommand, ConfigFieldName, "tag.gpgsign", "false"},
 	}
 
 	for _, args := range configCmds {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -48,11 +49,12 @@ func (ce *ContextualError) Error() string {
 	// Add error code for reference
 	fmt.Fprintf(&b, " [%s]", ce.Code)
 
-	// Add details if available
+	// Add details if available (sorted for deterministic, stable output —
+	// Go map iteration order is randomized).
 	if len(ce.Details) > 0 {
 		b.WriteString("\n\nDetails:")
-		for key, value := range ce.Details {
-			fmt.Fprintf(&b, "\n  %s: %s", key, value)
+		for _, key := range slices.Sorted(maps.Keys(ce.Details)) {
+			fmt.Fprintf(&b, "\n  %s: %s", key, ce.Details[key])
 		}
 	}
 
@@ -110,10 +112,13 @@ func Wrap(err error, code appconstants.ErrorCode, context string) *ContextualErr
 	if ce, ok := err.(*ContextualError); ok {
 		// Create a copy to avoid mutating the original
 		errCopy := &ContextualError{
-			Code:        ce.Code,
-			Err:         ce.Err,
-			Context:     ce.Context,
-			Suggestions: ce.Suggestions,
+			Code:    ce.Code,
+			Err:     ce.Err,
+			Context: ce.Context,
+			// Clone the slice so a later WithSuggestions append on the copy cannot
+			// write into the original's backing array (the comment above promises
+			// the original is not mutated).
+			Suggestions: slices.Clone(ce.Suggestions),
 			HelpURL:     ce.HelpURL,
 			Details:     maps.Clone(ce.Details),
 		}

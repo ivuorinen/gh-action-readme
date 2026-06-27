@@ -131,6 +131,18 @@ const (
 	TestFixtureActionSimple                = "actions/simple/action.yml"
 	TestFixtureActionMinimal               = "actions/minimal/action.yml"
 
+	// Composite action stub fixtures (name+description, field-missing, and
+	// dependency-step variants) replacing inline YAML literals in tests.
+	TestFixtureCompositeNameDescOnly      = "actions/composite/name-desc-only.yml"
+	TestFixtureCompositeMissingName       = "actions/composite/missing-name.yml"
+	TestFixtureCompositeMissingDesc       = "actions/composite/missing-description.yml"
+	TestFixtureCompositeActionDescription = "actions/composite/with-action-description.yml"
+	TestFixtureCompositeStepCheckoutV4    = "actions/composite/step-checkout-v4.yml"
+	TestFixtureCompositeStepCheckoutV3    = "actions/composite/step-checkout-v3.yml"
+	TestFixtureCompositeStepSetupNodeV3   = "actions/composite/step-setup-node-v3.yml"
+	TestFixtureCompositeStepSetupNodeV2   = "actions/composite/step-setup-node-v2.yml"
+	TestFixtureInvalidMalformedRuns       = "actions/invalid/malformed-runs.yml"
+
 	// Config test fixtures for configuration tests.
 	TestConfigGlobalGitHubHTML        = "configs/global-github-html.yml"
 	TestConfigGlobalDefaultMD         = "configs/global-default-md.yml"
@@ -351,6 +363,22 @@ const (
 	TestErrorScenarioMissingFields = "error-scenarios/missing-required-fields.yml"
 )
 
+// Standalone test file-name literals shared across test files (reduces
+// duplicated string constants per the no-constant-duplication rule).
+const (
+	// TestNonexistentYML is a deliberately missing action file name used to
+	// exercise not-found / error code paths.
+	TestNonexistentYML = "nonexistent.yml"
+
+	// TestFixtureCompositeActionAnalyzer is the analyzer composite-action
+	// fixture file name (under testdata/analyzer/).
+	TestFixtureCompositeActionAnalyzer = "composite-action.yml"
+
+	// TestTokenGHPExisting is a fake GitHub PAT used to assert token resolution
+	// precedence. Not a real credential.
+	TestTokenGHPExisting = "ghp_existing_token" // #nosec G101 -- test fixture value, not a credential
+)
+
 // TestMinimalAction is the minimal action YAML content for testing.
 const TestMinimalAction = "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
 
@@ -411,6 +439,20 @@ const (
 const (
 	TestToken123 = "test-token-123" // #nosec G101 -- test fixture value, not a credential
 )
+
+// TestActionNameMyAction is the action name literal shared across template and
+// validator tests (avoids duplicating the "MyAction" literal per the
+// no-constant-duplication rule). Distinct from TestMyAction ("My Action").
+const TestActionNameMyAction = "MyAction"
+
+// TestFixturePermissionsTabIndented is a permissions fixture whose comment block
+// uses tab indentation, exercising the tab-aware comment parsing path.
+const TestFixturePermissionsTabIndented = "permissions/tab-indented.yml"
+
+// TestFixturePermissionsTwoBlocksWithProse has two header permission blocks split
+// by a dedented prose comment, exercising that a dedent ends only the current
+// block instead of aborting the whole comment scan.
+const TestFixturePermissionsTwoBlocksWithProse = "permissions/two-blocks-with-prose.yml"
 
 // Test dependency actions - moved from appconstants.
 const (
@@ -624,6 +666,12 @@ const (
 	TestConfigMinimalSimple      = "configs/minimal-simple.yml"
 	TestConfigProfessionalSimple = "configs/professional-simple.yml"
 	TestConfigMinimalDist        = "configs/minimal-dist.yml"
+	// TestConfigRepoOverrideUseDefaultBranchFalse is a global config whose repo
+	// override explicitly sets use_default_branch: false.
+	TestConfigRepoOverrideUseDefaultBranchFalse = "configs/repo-override-use-default-branch-false.yml"
+	// TestConfigAnalyzeDepsFalse explicitly disables analyze_dependencies and
+	// show_security_info to exercise the presence-flag merge path.
+	TestConfigAnalyzeDepsFalse = "configs/analyze-deps-false.yml"
 
 	// Valid/default configs.
 	TestConfigValidSimple = "configs/valid-simple.yml"

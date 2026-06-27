@@ -1,0 +1,10 @@
+# permissions:
+#   contents: read
+# more notes here
+# permissions:
+#   issues: write
+name: Two Permission Blocks
+description: Header comment has two permission blocks split by a prose comment.
+runs:
+  using: composite
+  steps: []

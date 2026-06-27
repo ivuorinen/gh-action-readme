@@ -47,4 +47,9 @@ const (
 
 	// CacheStatsKeyDir is the cache stats key for directory.
 	CacheStatsKeyDir = "cache_dir"
+
+	// CachePathUnknown is the placeholder shown when the cache directory cannot be
+	// resolved from cache stats. It is not a real filesystem path and must not be
+	// passed to os.Stat.
+	CachePathUnknown = "<unknown>"
 )

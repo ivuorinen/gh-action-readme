@@ -123,7 +123,7 @@ func TestGeneratorAllThemes(t *testing.T) {
 	testutil.TestAllThemes(t, func(t *testing.T, theme string) {
 		t.Helper()
 		// Create a simple action for testing
-		actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
+		actionPath := testutil.CreateTemporaryAction(t, testutil.TestFixtureJavaScriptSimple)
 
 		config := &AppConfig{
 			Theme:        theme,
@@ -146,7 +146,7 @@ func TestGeneratorAllFormats(t *testing.T) {
 	testutil.TestAllFormats(t, func(t *testing.T, format string) {
 		t.Helper()
 		// Create a simple action for testing
-		actionPath := testutil.CreateTemporaryAction(t, "actions/javascript/simple.yml")
+		actionPath := testutil.CreateTemporaryAction(t, testutil.TestFixtureJavaScriptSimple)
 
 		config := &AppConfig{
 			Theme:        testGenThemeDefault,

@@ -1,0 +1,10 @@
+# Global config whose repo override explicitly disables use_default_branch.
+# Used to verify that a false value in a repo_overrides entry propagates the
+# explicit-presence flag and can override the default-true behavior.
+theme: default
+output_format: md
+use_default_branch: true
+repo_overrides:
+  'example/repo':
+    theme: github
+    use_default_branch: false

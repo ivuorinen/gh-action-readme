@@ -22,6 +22,8 @@ const (
 	testTplRefMain     = "@main"
 	testTplBranchMain  = "main"
 	testTplActionsRepo = "actions"
+	testTplOrgPlain    = "org"
+	testTplRepoPlain   = "repo"
 )
 
 // TestGetFieldWithFallback_GitValueReturned kills the CONDITIONALS_NEGATION mutation at
@@ -214,6 +216,53 @@ func TestExtractActionSubdirectory(t *testing.T) {
 				t.Errorf("extractActionSubdirectory() = %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+// TestMdCell verifies markdown table-cell escaping of pipes and newlines.
+func TestMdCell(t *testing.T) {
+	t.Parallel()
+
+	noop := "ordinary text"
+	cases := map[string]string{
+		noop:         noop, // no special chars → unchanged
+		"a|b":        "a\\|b",
+		"a | b | c":  "a \\| b \\| c",
+		"line1\nl2":  "line1<br>l2",
+		"crlf\r\nx":  "crlf<br>x",
+		"trailing\r": "trailing<br>",
+	}
+	for in, want := range cases {
+		if got := mdCell(in); got != want {
+			t.Errorf("mdCell(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestIsValidOrgRepo verifies org/repo validation rejects path-injection
+// characters while preserving legitimate dotted names.
+func TestIsValidOrgRepo(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		org, repo string
+		want      bool
+	}{
+		{"actions", "checkout", true},
+		{"my-org", "my.repo", true}, // dotted repo stays valid
+		{"org_1", "repo-2", true},
+		{"", testTplRepoPlain, false},
+		{testTplOrgPlain, "", false},
+		{"evil/x", testTplRepoPlain, false},  // embedded slash injects a path segment
+		{testTplOrgPlain, "repo@v9", false},  // embedded @ injects a version
+		{testTplOrgPlain, "re po", false},    // whitespace
+		{testTplOrgPlain, "repo/sub", false}, // slash in repo
+		{appconstants.DefaultOrgPlaceholder, testTplRepoPlain, false},
+	}
+	for _, c := range cases {
+		if got := isValidOrgRepo(c.org, c.repo); got != c.want {
+			t.Errorf("isValidOrgRepo(%q, %q) = %v, want %v", c.org, c.repo, got, c.want)
+		}
 	}
 }
 
@@ -465,7 +514,7 @@ func TestFormatVersion(t *testing.T) {
 		},
 		{
 			name:    "version without @",
-			version: "v1.2.3",
+			version: testutil.TestVersionSemantic,
 			want:    testutil.TestVersionWithAt,
 		},
 		{
@@ -726,7 +775,7 @@ func prepareTestActionFile(t *testing.T, actionPath string) string {
 	}
 
 	// For nonexistent file test
-	return filepath.Join(t.TempDir(), "nonexistent.yml")
+	return filepath.Join(t.TempDir(), testutil.TestNonexistentYML)
 }
 
 func TestAnalyzeDependencies(t *testing.T) {

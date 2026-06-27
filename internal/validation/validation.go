@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -47,9 +48,17 @@ func ValidateGitBranch(repoRoot, branch string) bool {
 
 // ValidateActionYMLPath validates that a path points to a valid action.yml file.
 func ValidateActionYMLPath(path string) error {
-	// Check if file exists
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return err
+	// Check the file is accessible. Surface every stat failure (not just
+	// not-exist) wrapped with %w, so an unreadable/permission-denied path is
+	// reported rather than silently treated as valid.
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("cannot access action file %q: %w", path, err)
+	}
+	// A directory named action.yml/action.yaml would otherwise pass this check
+	// and fail later with a less precise error.
+	if info.IsDir() {
+		return fmt.Errorf("action file path %q is a directory, not a file", path)
 	}
 
 	// Check if it's an action.yml or action.yaml file

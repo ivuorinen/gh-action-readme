@@ -4,8 +4,8 @@
 :icons: font
 :source-highlighter: highlight.js
 
-{{if .Branding}}image:https://img.shields.io/badge/icon-{{.Branding.Icon}}-{{.Branding.Color}}[{{.Branding.Icon}}] {{end}}+
-image:https://img.shields.io/badge/GitHub%20Action-{{.Name | replace " " "%20"}}-blue[GitHub Action] +
+{{if .Branding}}image:https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}[{{.Branding.Icon}}] {{end}}+
+image:https://img.shields.io/badge/GitHub%20Action-{{.Name | badgeSegment}}-blue[GitHub Action] +
 image:https://img.shields.io/badge/license-MIT-green[License]
 
 [.lead]
@@ -42,9 +42,9 @@ jobs:
 
 {{range $key, $input := .Inputs}}
 | `{{$key}}`
-| {{$input.Description}}
+| {{$input.Description | mdCell}}
 | {{if $input.Required}}✓{{else}}✗{{end}}
-| {{if $input.Default}}`{{$input.Default}}`{{else}}_none_{{end}}
+| {{if $input.Default}}`{{$input.Default | mdCell}}`{{else}}_none_{{end}}
 
 {{end}}
 |===
@@ -80,7 +80,7 @@ with:
 
 {{range $key, $output := .Outputs}}
 | `{{$key}}`
-| {{$output.Description}}
+| {{$output.Description | mdCell}}
 
 {{end}}
 |===

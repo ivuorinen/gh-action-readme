@@ -1,0 +1,6 @@
+name: Test2
+description: Test2
+runs:
+  using: composite
+  steps:
+  - uses: actions/setup-node@v3

@@ -54,7 +54,7 @@ make lint
 - **`internal/generator.go`** - Core generation logic with custom output paths
 - **`internal/config.go`** - Viper configuration (XDG compliant)
 - **`internal/output.go`** - Colored terminal output with progress bars
-- **`internal/errors/`** - Contextual error handling with suggestions
+- **`internal/apperrors/`** - Contextual error handling with suggestions
 - **`internal/wizard/`** - Interactive configuration wizard
 - **`internal/progress.go`** - Progress indicators for batch operations
 
@@ -66,7 +66,7 @@ make lint
   - `gitlab/` - GitLab CI/CD focused
   - `minimal/` - Clean, concise
   - `professional/` - Comprehensive with ToC
-  - `asciidoc/` - AsciiDoc format
+  - `asciidoc/` - Template backing the `asciidoc` output format (not a `--theme` option)
 
 ### Testing Framework
 
@@ -209,14 +209,15 @@ goimports -d .
 ### New Theme
 
 1. Create `templates/themes/THEME_NAME/readme.tmpl`
-2. Add to `resolveThemeTemplate()` in `config.go`
-3. Update `configThemesHandler()` in `main.go`
-4. Add tests and documentation
+2. Add theme and template-path constants in `appconstants/themes.go`
+3. Add an entry to the `themeTemplates` map in `internal/config.go`
+4. Update `configThemesHandler()` in `cmd_config.go`
+5. Add tests and documentation
 
 ### New Output Format
 
 1. Add constant to `generator.go`
-2. Add case to `GenerateFromFile()` switch
+2. Add a case to the format switch in `generateByFormat()` (`internal/generator.go`)
 3. Implement `generate[FORMAT]()` method
 4. Update CLI help and documentation
 
@@ -317,22 +318,27 @@ func maskToken(token string) string {
 // documentation in multiple output formats (Markdown, HTML, JSON, AsciiDoc).
 package generator
 
-// GenerateReadme creates formatted documentation from an ActionYML struct.
+// RenderReadme renders documentation for an action using the given template
+// options, returning the formatted output as a string.
 //
-// The function applies the specified theme and output format to generate
-// comprehensive documentation including input/output tables, usage examples,
-// and metadata sections.
+// The action argument is the parsed action data (typically a *TemplateData or
+// *ActionYML). TemplateOptions selects the template file and output format.
 //
 // Parameters:
-//   - action: Parsed action.yml data structure
-//   - theme: Template theme name (github, gitlab, minimal, professional, default)
-//   - format: Output format (md, html, json, asciidoc)
+//   - action: Parsed action data passed to the template
+//   - opts:   Template path, optional header/footer paths, and format
 //
-// Returns formatted documentation string and any processing error.
-func GenerateReadme(action *ActionYML, theme, format string) (string, error) {
+// Returns the formatted documentation string and any rendering error.
+func RenderReadme(action any, opts TemplateOptions) (string, error) {
     // Implementation...
 }
 ```
+
+The higher-level entry points are the `Generator` methods in
+`internal/generator.go`: `Generator.GenerateFromFile(actionPath string) error`
+generates documentation for a single action file, and
+`Generator.ProcessBatch(paths []string) error` processes multiple files. Both
+ultimately route through `generateByFormat()` to select the output format.
 
 ## 🤝 Contributing Guidelines
 

@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -38,14 +39,19 @@ func TestValidateActionYMLPath(t *testing.T) {
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
 
-				return testutil.WriteActionFixtureAs(t, tmpDir, "action.yaml", testutil.TestFixtureMinimalAction)
+				return testutil.WriteActionFixtureAs(
+					t,
+					tmpDir,
+					appconstants.ActionFileNameYAML,
+					testutil.TestFixtureMinimalAction,
+				)
 			},
 			expectError: false,
 		},
 		{
 			name: "nonexistent file",
 			setupFunc: func(_ *testing.T, tmpDir string) string {
-				return filepath.Join(tmpDir, "nonexistent.yml")
+				return filepath.Join(tmpDir, testutil.TestNonexistentYML)
 			},
 			expectError: true,
 		},
@@ -62,6 +68,19 @@ func TestValidateActionYMLPath(t *testing.T) {
 			name: "empty file path",
 			setupFunc: func(_ *testing.T, _ string) string {
 				return ""
+			},
+			expectError: true,
+		},
+		{
+			name: "directory named action.yml is rejected",
+			setupFunc: func(t *testing.T, tmpDir string) string {
+				t.Helper()
+				dirPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+				if err := os.Mkdir(dirPath, appconstants.FilePermDir); err != nil {
+					t.Fatalf("failed to create directory: %v", err)
+				}
+
+				return dirPath
 			},
 			expectError: true,
 		},
@@ -269,6 +288,10 @@ func initGitRepo(t *testing.T, dir string) string {
 	run("git", "init")
 	run("git", "config", "user.email", "test@example.com")
 	run("git", "config", "user.name", "Test")
+	// Disable commit/tag signing so a developer's global gpgsign (e.g. a
+	// 1Password/SSH signer) is not invoked; it fails non-interactively.
+	run("git", "config", "commit.gpgsign", "false")
+	run("git", "config", "tag.gpgsign", "false")
 	testutil.WriteTestFile(t, filepath.Join(dir, "README.md"), "# test")
 	run("git", "add", ".")
 	run("git", "commit", "-m", "init")
@@ -344,7 +367,7 @@ func TestIsGitRepository(t *testing.T) {
 			name: "directory with .git file",
 			setupFunc: func(t *testing.T, tmpDir string) string {
 				t.Helper()
-				gitFile := filepath.Join(tmpDir, ".git")
+				gitFile := filepath.Join(tmpDir, appconstants.DirGit)
 				testutil.WriteTestFile(t, gitFile, "gitdir: /path/to/git/dir")
 
 				return tmpDir
@@ -487,19 +510,26 @@ func TestSanitizeActionName(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "normal action name",
-			input:    testutil.TestMyAction,
-			expected: testutil.TestMyAction,
+			name:     "lowercases and hyphenates spaces",
+			input:    "My Action",
+			expected: "my-action",
 		},
 		{
-			name:     "action name with special characters",
-			input:    testutil.TestMyAction + "! @#$%",
-			expected: testutil.TestMyAction + "   ",
+			name:     "trims surrounding whitespace",
+			input:    "  My Action  ",
+			expected: "my-action",
 		},
 		{
-			name:     "action name with newlines",
-			input:    "My\nAction",
-			expected: testutil.TestMyAction,
+			name:     "uppercase is lowered",
+			input:    "ALLCAPS",
+			expected: "allcaps",
+		},
+		{
+			// Documents actual behavior: each space maps to one hyphen; runs of
+			// spaces are NOT collapsed, so two spaces yield two hyphens.
+			name:     "consecutive spaces are not collapsed",
+			input:    "My  Action",
+			expected: "my--action",
 		},
 		{
 			name:     testutil.TestCaseNameEmpty,
@@ -512,9 +542,9 @@ func TestSanitizeActionName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := SanitizeActionName(tt.input)
-			// The exact behavior may vary, so we'll just verify it doesn't panic
-			_ = result
+			if got := SanitizeActionName(tt.input); got != tt.expected {
+				t.Errorf("SanitizeActionName(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
 		})
 	}
 }

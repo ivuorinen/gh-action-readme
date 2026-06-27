@@ -159,7 +159,7 @@ func (v *ConfigValidator) validateOrganization(org string, result *ValidationRes
 	v.validateFieldWithEmptyCheck(
 		appconstants.ConfigKeyOrganization,
 		org,
-		v.isValidGitHubName,
+		v.isValidGitHubOrgName,
 		"Organization is empty - will use auto-detected value",
 		"Invalid organization name format",
 		"Organization names can only contain alphanumeric characters and hyphens",
@@ -418,6 +418,20 @@ func (v *ConfigValidator) isValidGitHubName(name string) bool {
 	// GitHub names can contain alphanumeric characters and hyphens
 	// Cannot start or end with hyphen
 	matched, _ := regexp.MatchString(`^[a-zA-Z0-9]([a-zA-Z0-9\-_]*[a-zA-Z0-9])?$`, name)
+
+	return matched
+}
+
+// isValidGitHubOrgName checks GitHub organization/user naming rules, which are
+// stricter than repository names: only alphanumerics and single hyphens are
+// allowed (no underscores or dots), and the limit is 39 characters. This matches
+// the help text shown for the organization field.
+func (v *ConfigValidator) isValidGitHubOrgName(name string) bool {
+	if len(name) == 0 || len(name) > 39 {
+		return false
+	}
+
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9](-?[a-zA-Z0-9])*$`, name)
 
 	return matched
 }

@@ -47,7 +47,7 @@ func testHTMLGeneration(t *testing.T) {
 	testFormatGeneration(
 		t,
 		func(g *Generator, a *ActionYML, out, path string) error {
-			return g.generateHTML(a, out, path)
+			return g.generateHTML(a, out, path, false)
 		},
 		"Test Action.html",
 		"HTML",
@@ -62,7 +62,7 @@ func testJSONGeneration(t *testing.T) {
 	testFormatGeneration(
 		t,
 		func(g *Generator, a *ActionYML, out, _ string) error {
-			return g.generateJSON(a, out)
+			return g.generateJSON(a, out, false)
 		},
 		"action-docs.json",
 		"JSON",
@@ -77,7 +77,7 @@ func testASCIIDocGeneration(t *testing.T) {
 	testFormatGeneration(
 		t,
 		func(g *Generator, a *ActionYML, out, path string) error {
-			return g.generateASCIIDoc(a, out, path)
+			return g.generateASCIIDoc(a, out, path, false)
 		},
 		"README.adoc",
 		"AsciiDoc",

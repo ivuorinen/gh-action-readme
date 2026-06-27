@@ -44,7 +44,7 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 				result.Suggestions = append(
 					result.Suggestions,
 					fmt.Sprintf(
-						"Invalid runtime '%s'. Valid runtimes: node20, docker, composite",
+						"Invalid runtime '%s'. Valid runtimes: node20, node24, docker, composite",
 						using,
 					),
 				)
@@ -53,8 +53,8 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 				result.Suggestions = append(
 					result.Suggestions,
 					fmt.Sprintf(
-						"Runtime '%s' is deprecated and no longer supported by GitHub Actions; migrate to node20",
-						using,
+						"Runtime '%s' is deprecated and no longer supported by GitHub Actions; migrate to %s",
+						using, appconstants.NodeRuntimeNode24,
 					),
 				)
 			}
@@ -93,6 +93,7 @@ func isValidRuntime(runtime string) bool {
 		appconstants.NodeRuntimeNode12,   // Deprecated Node.js runtime
 		appconstants.NodeRuntimeNode16,   // Deprecated Node.js runtime
 		appconstants.NodeRuntimeNode20,   // Current Node.js runtime
+		appconstants.NodeRuntimeNode24,   // Current Node.js runtime
 		"docker",                         // Docker container runtime
 		appconstants.ActionTypeComposite, // Composite action runtime
 	}

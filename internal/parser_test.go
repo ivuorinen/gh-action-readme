@@ -324,6 +324,24 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name:    "tab-indented permission comment block",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsTabIndented)),
+			want: map[string]string{
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "two permission blocks split by a dedented prose comment",
+			content: string(testutil.MustReadFixture(testutil.TestFixturePermissionsTwoBlocksWithProse)),
+			want: map[string]string{
+				testutil.PermissionContents: testutil.PermissionRead,
+				testutil.PermissionIssues:   testutil.PermissionWrite,
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

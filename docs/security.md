@@ -4,10 +4,10 @@
 
 We provide security updates for the following versions of gh-action-readme:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| latest  | :white_check_mark: |
-| < latest| :x:                |
+| Version  | Supported          |
+|----------|--------------------|
+| latest   | :white_check_mark: |
+| < latest | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -92,9 +92,20 @@ gh-action-readme requires GitHub API access for dependency analysis:
 
 Template rendering includes security measures:
 
-- Input sanitization for user-provided data
 - No execution of arbitrary code
 - Limited template functions to prevent injection
+
+#### HTML output escaping
+
+The `html` output format renders through Go's `html/template`, which
+auto-escapes all interpolated action fields (name, description, inputs,
+outputs). Values such as `<`, `>`, and `&` in action metadata are emitted as
+`&lt;`, `&gt;`, and `&amp;`, so HTML generated from untrusted `action.yml` files
+is XSS-safe with respect to the action's own fields.
+
+One nuance: the configured header/footer files are written to the output
+verbatim (not escaped). These are operator-controlled configuration, not
+untrusted action metadata, so only use header/footer content you trust.
 
 ## Security Tools and Commands
 

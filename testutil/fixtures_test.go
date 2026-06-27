@@ -22,7 +22,7 @@ func TestMustReadFixture(t *testing.T) {
 	})
 	t.Run("another valid fixture", func(t *testing.T) {
 		t.Parallel()
-		validateFixtureContent(t, "composite-action.yml")
+		validateFixtureContent(t, TestFixtureCompositeActionAnalyzer)
 	})
 }
 
@@ -259,7 +259,7 @@ func TestFixtureConstants(t *testing.T) {
 // buildFixtureConstantsMap returns the map of fixture names to content.
 func buildFixtureConstantsMap() map[string]string {
 	return map[string]string{
-		"SimpleActionYML":        MustReadFixture("actions/javascript/simple.yml"),
+		"SimpleActionYML":        MustReadFixture(TestFixtureJavaScriptSimple),
 		"CompositeActionYML":     MustReadFixture("actions/composite/basic.yml"),
 		"DockerActionYML":        MustReadFixture("actions/docker/basic.yml"),
 		"InvalidActionYML":       MustReadFixture("actions/invalid/missing-description.yml"),
@@ -341,7 +341,7 @@ func TestFixtureFileSystem(t *testing.T) {
 	// Verify that the fixture files actually exist
 	fixtureFiles := []string{
 		TestFixtureSimpleAction,
-		"composite-action.yml",
+		TestFixtureCompositeActionAnalyzer,
 		"docker-action.yml",
 		"invalid-action.yml",
 		"minimal-action.yml",
@@ -603,7 +603,7 @@ func TestMustReadAnalyzerFixture(t *testing.T) {
 	t.Parallel()
 	t.Run("reads existing fixture", func(t *testing.T) {
 		t.Parallel()
-		content := MustReadAnalyzerFixture("composite-action.yml")
+		content := MustReadAnalyzerFixture(TestFixtureCompositeActionAnalyzer)
 		if content == "" {
 			t.Error("expected non-empty content")
 		}

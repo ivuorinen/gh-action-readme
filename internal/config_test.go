@@ -83,7 +83,7 @@ func TestInitConfig(t *testing.T) {
 		},
 		{
 			name:        "nonexistent config file",
-			configFile:  "nonexistent.yml",
+			configFile:  testutil.TestNonexistentYML,
 			expectError: true,
 		},
 	}
@@ -249,7 +249,7 @@ github_token: config-token
 
 			configFile, repoRoot, currentDir := tt.setupFunc(t, tmpDir)
 
-			config, err := LoadConfiguration(configFile, repoRoot, currentDir)
+			config, err := NewConfigurationLoader().LoadConfiguration(configFile, repoRoot, currentDir)
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
@@ -429,7 +429,7 @@ func TestConfigTokenHierarchy(t *testing.T) {
 			defer tmpCleanup()
 
 			// Use default config
-			config, err := LoadConfiguration("", tmpDir, tmpDir)
+			config, err := NewConfigurationLoader().LoadConfiguration("", tmpDir, tmpDir)
 			testutil.AssertNoError(t, err)
 
 			testutil.AssertEqual(t, tt.ExpectedToken, config.GitHubToken)
@@ -460,7 +460,7 @@ func TestConfigMerging(t *testing.T) {
 		testutil.TestBinaryName,
 		testutil.TestFileConfigYAML,
 	)
-	config, err := LoadConfiguration(configPath, repoRoot, repoRoot)
+	config, err := NewConfigurationLoader().LoadConfiguration(configPath, repoRoot, repoRoot)
 	testutil.AssertNoError(t, err)
 
 	// Should have merged values
@@ -635,6 +635,37 @@ func TestMergeMapFields(t *testing.T) {
 }
 
 // TestMergeSliceFields tests the merging of slice fields in configuration.
+func TestMergeConfigsOutputFilename(t *testing.T) {
+	t.Parallel()
+	const want = "DOCS.md"
+	dst := &AppConfig{}
+	src := &AppConfig{OutputFilename: want}
+
+	MergeConfigs(dst, src, false)
+
+	if dst.OutputFilename != want {
+		t.Errorf("OutputFilename not merged: got %q, want %q", dst.OutputFilename, want)
+	}
+}
+
+func TestMergeDefaultsFields(t *testing.T) {
+	t.Parallel()
+	const wantName = "My Org Action"
+	const keepDesc = "built-in description"
+	dst := &AppConfig{Defaults: DefaultValues{Name: "Built-in", Description: keepDesc}}
+	src := &AppConfig{Defaults: DefaultValues{Name: wantName}}
+
+	MergeConfigs(dst, src, false)
+
+	if dst.Defaults.Name != wantName {
+		t.Errorf("Defaults.Name not merged: got %q, want %q", dst.Defaults.Name, wantName)
+	}
+	if dst.Defaults.Description != keepDesc {
+		t.Errorf("Defaults.Description overwritten by empty src: got %q, want %q",
+			dst.Defaults.Description, keepDesc)
+	}
+}
+
 func TestMergeSliceFields(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -710,7 +741,6 @@ func assertBooleanConfigFields(t *testing.T, got, want *AppConfig) {
 		{"ShowSecurityInfo", got.ShowSecurityInfo, want.ShowSecurityInfo},
 		{"Verbose", got.Verbose, want.Verbose},
 		{"Quiet", got.Quiet, want.Quiet},
-		{"UseDefaultBranch", got.UseDefaultBranch, want.UseDefaultBranch},
 	}
 
 	for _, field := range fields {
@@ -732,21 +762,26 @@ func TestMergeBooleanFields(t *testing.T) {
 	}{
 		createBoolFieldMergeTest(
 			"merge all true values",
-			boolFields{false, false, false, false, false},
-			boolFields{true, true, true, true, true},
-			boolFields{true, true, true, true, true},
+			boolFields{false, false, false, false},
+			boolFields{true, true, true, true},
+			boolFields{true, true, true, true},
 		),
 		createBoolFieldMergeTest(
-			"merge only some true values",
-			boolFields{false, true, false, true, false},
-			boolFields{true, false, true, false, false},
-			boolFields{true, true, true, true, false},
+			// AnalyzeDependencies/ShowSecurityInfo merge on presence: src's
+			// explicit false for ShowSecurityInfo overrides dst's true. Quiet is
+			// OR-merged so dst's true survives src's false.
+			"presence-merged false overrides; OR-merged false does not",
+			boolFields{false, true, false, true},
+			boolFields{true, false, true, false},
+			boolFields{true, false, true, true},
 		),
 		createBoolFieldMergeTest(
-			"merge with all source false",
-			boolFields{true, true, true, true, true},
-			boolFields{false, false, false, false, false},
-			boolFields{true, true, true, true, true},
+			// src explicitly sets the two feature flags false → they override the
+			// dst trues. Verbose/Quiet are OR-merged so dst's trues survive.
+			"explicit source false overrides presence-merged flags only",
+			boolFields{true, true, true, true},
+			boolFields{false, false, false, false},
+			boolFields{false, false, true, true},
 		),
 	}
 
@@ -758,6 +793,112 @@ func TestMergeBooleanFields(t *testing.T) {
 
 			assertBooleanConfigFields(t, tt.dst, tt.want)
 		})
+	}
+}
+
+// TestMergeBooleanFieldsUseDefaultBranchPresence verifies that an explicitly-set
+// use_default_branch=false overrides the default-true value, while an unset source
+// leaves the destination unchanged. Regression test: UseDefaultBranch defaults to
+// true, so a plain "merge if true" pattern could never apply an explicit false.
+func TestMergeBooleanFieldsUseDefaultBranchPresence(t *testing.T) {
+	t.Parallel()
+
+	t.Run("explicit false overrides default true", func(t *testing.T) {
+		t.Parallel()
+		dst := &AppConfig{UseDefaultBranch: true}
+		src := &AppConfig{UseDefaultBranch: false, useDefaultBranchSet: true}
+		mergeBooleanFields(dst, src)
+		if dst.UseDefaultBranch {
+			t.Error("explicit use_default_branch=false should override default true")
+		}
+	})
+
+	t.Run("explicit true sets true", func(t *testing.T) {
+		t.Parallel()
+		dst := &AppConfig{UseDefaultBranch: false}
+		src := &AppConfig{UseDefaultBranch: true, useDefaultBranchSet: true}
+		mergeBooleanFields(dst, src)
+		if !dst.UseDefaultBranch {
+			t.Error("explicit use_default_branch=true should set true")
+		}
+	})
+
+	t.Run("unset source does not override default", func(t *testing.T) {
+		t.Parallel()
+		dst := &AppConfig{UseDefaultBranch: true}
+		src := &AppConfig{UseDefaultBranch: false} // useDefaultBranchSet stays false
+		mergeBooleanFields(dst, src)
+		if !dst.UseDefaultBranch {
+			t.Error("unset source should not override the destination value")
+		}
+	})
+}
+
+// TestLoadConfigFromViperFeatureFlagPresence verifies that an explicit
+// analyze_dependencies/show_security_info:false in a config records the presence
+// flags so the false can override a lower-priority true during merge.
+func TestLoadConfigFromViperFeatureFlagPresence(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := WriteConfigFixture(t, dir, testutil.TestConfigAnalyzeDepsFalse)
+
+	cfg, err := loadConfigFromViper(path)
+	if err != nil {
+		t.Fatalf("loadConfigFromViper returned error: %v", err)
+	}
+
+	if !cfg.analyzeDependenciesSet {
+		t.Error("explicit analyze_dependencies should set analyzeDependenciesSet")
+	}
+	if !cfg.showSecurityInfoSet {
+		t.Error("explicit show_security_info should set showSecurityInfoSet")
+	}
+
+	// Merging into a config where a lower-priority scope enabled the flags must
+	// apply the explicit false.
+	dst := &AppConfig{AnalyzeDependencies: true, ShowSecurityInfo: true}
+	mergeBooleanFields(dst, cfg)
+	if dst.AnalyzeDependencies {
+		t.Error("explicit analyze_dependencies:false should override lower-priority true")
+	}
+	if dst.ShowSecurityInfo {
+		t.Error("explicit show_security_info:false should override lower-priority true")
+	}
+}
+
+// TestLoadConfigFromViperRepoOverrideUseDefaultBranch verifies that a
+// use_default_branch:false set inside a repo_overrides entry propagates the
+// explicit-presence flag so the override can later disable the default-true
+// behavior during merge. Regression test for the repo-override layer of the
+// use_default_branch fix (markRepoOverrideUseDefaultBranch).
+func TestLoadConfigFromViperRepoOverrideUseDefaultBranch(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := WriteConfigFixture(t, dir, testutil.TestConfigRepoOverrideUseDefaultBranchFalse)
+
+	cfg, err := loadConfigFromViper(path)
+	if err != nil {
+		t.Fatalf("loadConfigFromViper returned error: %v", err)
+	}
+
+	override, exists := cfg.RepoOverrides["example/repo"]
+	if !exists {
+		t.Fatalf("expected repo override for example/repo, got: %v", cfg.RepoOverrides)
+	}
+	if !override.useDefaultBranchSet {
+		t.Error("explicit use_default_branch in repo override should set useDefaultBranchSet")
+	}
+	if override.UseDefaultBranch {
+		t.Error("repo override use_default_branch:false should be parsed as false")
+	}
+
+	// Merging the override into a default-true config must apply the false.
+	dst := &AppConfig{UseDefaultBranch: true}
+	mergeBooleanFields(dst, &override)
+	if dst.UseDefaultBranch {
+		t.Error("repo override use_default_branch:false should override default true after merge")
 	}
 }
 
@@ -788,9 +929,9 @@ func TestMergeSecurityFields(t *testing.T) {
 		),
 		createTokenMergeTest(
 			"allow tokens - do not overwrite with empty",
-			"ghp_existing_token",
+			testutil.TestTokenGHPExisting,
 			"",
-			"ghp_existing_token",
+			testutil.TestTokenGHPExisting,
 			true,
 		),
 		createTokenMergeTest(
@@ -1378,7 +1519,7 @@ func TestLoadConfigurationEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			configFile, repoRoot, currentDir := tt.setupFunc(t)
 
-			config, err := LoadConfiguration(configFile, repoRoot, currentDir)
+			config, err := NewConfigurationLoader().LoadConfiguration(configFile, repoRoot, currentDir)
 
 			if tt.expectError {
 				testutil.AssertError(t, err)

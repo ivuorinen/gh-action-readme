@@ -23,6 +23,15 @@ var (
 	reGitSHA          = regexp.MustCompile(appconstants.RegexGitSHA)
 	reSemanticVersion = regexp.MustCompile(`^v?\d+(\.\d+)*(\.\d+)?(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
 	rePinnedVersion   = regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
+	// reSafeTagName accepts only plain git tag characters, blocking newline/YAML
+	// injection from a tag name that gets embedded into a pinned uses-statement.
+	reSafeTagName = regexp.MustCompile(`^[A-Za-z0-9._/+-]+$`)
+)
+
+// Cache map field keys for the stored version/sha entry (see getCachedVersion/cacheVersion).
+const (
+	cacheFieldVersion = "version"
+	cacheFieldSHA     = "sha"
 )
 
 // validActionRuntimes is the authoritative list of valid GitHub Actions runtime identifiers.
@@ -99,6 +108,10 @@ type DependencyCache interface {
 	Get(key string) (any, bool)
 	Set(key string, value any) error
 	SetWithTTL(key string, value any, ttl time.Duration) error
+	// Close stops any background cleanup goroutine and flushes pending writes to
+	// disk. Callers that construct a cache must Close it (e.g. via Analyzer.Close)
+	// so the final async saves are not lost on process exit.
+	Close() error
 }
 
 // Note: Using git.RepoInfo instead of local GitInfo to avoid duplication
@@ -110,6 +123,17 @@ func NewAnalyzer(client *github.Client, repoInfo git.RepoInfo, cache DependencyC
 		Cache:        cache,
 		RepoInfo:     repoInfo,
 	}
+}
+
+// Close releases the analyzer's cache (stopping its background goroutine and
+// flushing pending disk writes). It is safe to call on an analyzer with a nil
+// cache. Callers that construct an analyzer should defer Close.
+func (a *Analyzer) Close() error {
+	if a.Cache == nil {
+		return nil
+	}
+
+	return a.Cache.Close()
 }
 
 // AnalyzeActionFile analyzes dependencies from an action.yml file.
@@ -190,6 +214,17 @@ func (a *Analyzer) GeneratePinnedUpdate(
 ) (*PinnedUpdate, error) {
 	if latestSHA == "" {
 		return nil, fmt.Errorf("no commit SHA available for %s", dep.Uses)
+	}
+
+	// Defense in depth: latestSHA and latestVersion originate from the GitHub API
+	// and are written verbatim into the user's action.yml. Require a full 40-char
+	// commit SHA and a plain tag name so a compromised or proxied response cannot
+	// inject newlines or extra YAML into the pinned reference.
+	if len(latestSHA) != appconstants.FullSHALength || !reGitSHA.MatchString(latestSHA) {
+		return nil, fmt.Errorf("refusing to pin %s: invalid commit SHA %q", dep.Uses, latestSHA)
+	}
+	if !reSafeTagName.MatchString(latestVersion) {
+		return nil, fmt.Errorf("refusing to pin %s: invalid version tag %q", dep.Uses, latestVersion)
 	}
 
 	// Create the new pinned uses string: "owner/repo@sha # version"
@@ -500,12 +535,26 @@ func (a *Analyzer) getCachedVersion(cacheKey string) (version, sha string, found
 		return "", "", false
 	}
 
-	versionInfo, ok := cached.(map[string]string)
+	// Read as map[string]any: an in-memory hit returns the stored map[string]any,
+	// and a hit loaded from cache.json is decoded by encoding/json as
+	// map[string]interface{} (== map[string]any). Asserting map[string]string
+	// here previously failed for every disk-loaded entry, silently defeating the
+	// on-disk cache across CLI invocations.
+	versionInfo, ok := cached.(map[string]any)
 	if !ok {
 		return "", "", false
 	}
 
-	return versionInfo["version"], versionInfo["sha"], true
+	// Treat incomplete cached data as a miss: a partial entry (missing/non-string/
+	// empty version or sha) would otherwise lock the analyzer into unusable data
+	// and skip the refetch path.
+	version, vOK := versionInfo[cacheFieldVersion].(string)
+	sha, sOK := versionInfo[cacheFieldSHA].(string)
+	if !vOK || !sOK || version == "" || sha == "" {
+		return "", "", false
+	}
+
+	return version, sha, true
 }
 
 // getLatestRelease fetches the latest release and its commit SHA.
@@ -522,13 +571,32 @@ func (a *Analyzer) getLatestRelease(ctx context.Context, owner, repo string) (ve
 }
 
 // getCommitSHAForTag retrieves the commit SHA for a given tag.
+//
+// Annotated tags (used by virtually every major action repository) point at a
+// tag object, not a commit; GetRef returns that tag-object SHA. GitHub Actions
+// only accepts commit SHAs in `uses:` pins, so an annotated tag's tag-object SHA
+// would produce a broken pin. When the ref resolves to a tag object, dereference
+// it via GetTag to obtain the underlying commit SHA.
 func (a *Analyzer) getCommitSHAForTag(ctx context.Context, owner, repo, tagName string) string {
-	tag, _, err := a.GitHubClient.Git.GetRef(ctx, owner, repo, "tags/"+tagName)
-	if err != nil || tag.GetObject() == nil {
+	ref, _, err := a.GitHubClient.Git.GetRef(ctx, owner, repo, "tags/"+tagName)
+	if err != nil || ref.GetObject() == nil {
 		return ""
 	}
 
-	return tag.GetObject().GetSHA()
+	obj := ref.GetObject()
+	if obj.GetType() == appconstants.GitObjectTypeTag {
+		if tagObj, _, tagErr := a.GitHubClient.Git.GetTag(ctx, owner, repo, obj.GetSHA()); tagErr == nil &&
+			tagObj.GetObject() != nil {
+			return tagObj.GetObject().GetSHA()
+		}
+		// Dereferencing the annotated tag failed. The ref's object SHA is the
+		// tag-object SHA, not a commit, and GitHub Actions rejects it as a `uses:`
+		// pin. Return "" so callers reject the update instead of writing a broken
+		// pin that a 40-char-hex validation cannot distinguish from a commit SHA.
+		return ""
+	}
+
+	return obj.GetSHA()
 }
 
 // getLatestTag fetches the most recent tag and its commit SHA.
@@ -536,7 +604,12 @@ func (a *Analyzer) getLatestTag(ctx context.Context, owner, repo string) (versio
 	tags, _, err := a.GitHubClient.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{
 		PerPage: 10,
 	})
-	if err != nil || len(tags) == 0 {
+	if err != nil {
+		// Surface the real API error (rate limit, auth, network) rather than
+		// masking it as "no tags", so callers can report the actual cause.
+		return "", "", fmt.Errorf("failed to list tags: %w", err)
+	}
+	if len(tags) == 0 {
 		return "", "", errors.New("no releases or tags found")
 	}
 
@@ -551,7 +624,9 @@ func (a *Analyzer) cacheVersion(cacheKey, version, sha string) {
 		return
 	}
 
-	versionInfo := map[string]string{"version": version, "sha": sha}
+	// Store as map[string]any so the value type is identical whether served from
+	// memory or reloaded from cache.json (see getCachedVersion).
+	versionInfo := map[string]any{cacheFieldVersion: version, cacheFieldSHA: sha}
 	_ = a.Cache.SetWithTTL(cacheKey, versionInfo, appconstants.CacheDefaultTTL)
 }
 
@@ -576,14 +651,28 @@ func (a *Analyzer) compareVersions(current, latest string) string {
 }
 
 // parseVersionParts normalizes version string to 3-part semantic version.
+// Prerelease (-suffix) and build metadata (+suffix) are stripped first so that,
+// per semver, "1.0.0-beta" and "1.0.0+build" both reduce to the core "1.0.0";
+// otherwise the trailing segment ("0-beta") would be string-compared against
+// "0" and misclassified as a patch update.
 func (a *Analyzer) parseVersionParts(version string) []string {
-	parts := strings.Split(version, ".")
+	parts := strings.Split(coreVersion(version), ".")
 	// For floating versions like "v4", treat as "v4.0.0" for comparison
 	for len(parts) < appconstants.VersionPartsCount {
 		parts = append(parts, "0")
 	}
 
 	return parts
+}
+
+// coreVersion strips any semver prerelease (-...) or build-metadata (+...)
+// suffix, returning just the numeric "major.minor.patch" core.
+func coreVersion(version string) string {
+	if i := strings.IndexAny(version, "-+"); i >= 0 {
+		return version[:i]
+	}
+
+	return version
 }
 
 // determineUpdateType compares version parts and returns update type.
@@ -656,44 +745,66 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 // Preserves indentation and YAML list markers.
 func applyUpdatesToLines(lines []string, updates []PinnedUpdate) {
 	for _, update := range updates {
-		target := appconstants.UsesFieldPrefix + update.OldUses
-
 		for i, line := range lines {
-			// Skip comment lines
-			if strings.HasPrefix(strings.TrimLeft(line, " \t"), "#") {
-				continue
+			if rewritten, ok := applyUpdateToLine(line, update); ok {
+				lines[i] = rewritten
 			}
-
-			idx := strings.Index(line, target)
-			if idx < 0 {
-				continue
-			}
-
-			// Skip if the match is inside an inline comment (# before the match position)
-			if commentIdx := strings.Index(line, "#"); commentIdx >= 0 && commentIdx < idx {
-				continue
-			}
-
-			// Require OldUses to be a complete token — not a prefix of a longer version string
-			afterTarget := strings.TrimLeft(line[idx+len(target):], " \t")
-			if afterTarget != "" && !strings.HasPrefix(afterTarget, "#") {
-				continue
-			}
-
-			// Preserve both indentation AND list markers
-			trimmed := strings.TrimLeft(line, " \t")
-			indent := strings.Repeat(" ", len(line)-len(trimmed))
-
-			// Check if this is a list item (starts with "- ")
-			listMarker := ""
-			if strings.HasPrefix(trimmed, "- ") {
-				listMarker = "- "
-			}
-
-			// Reconstruct: indent + list marker + uses field
-			lines[i] = indent + listMarker + appconstants.UsesFieldPrefix + update.NewUses
 		}
 	}
+}
+
+// applyUpdateToLine rewrites a single line if it is a `uses:` field whose value
+// equals update.OldUses. The action reference is matched whether or not it is
+// wrapped in single or double quotes (a quoted `uses: "actions/checkout@v4"` was
+// previously skipped, silently leaving the dependency unpinned). The original
+// leading whitespace and YAML list marker are preserved. Returns the rewritten
+// line and true when a rewrite occurred, otherwise the original line and false.
+func applyUpdateToLine(line string, update PinnedUpdate) (string, bool) {
+	trimmed := strings.TrimLeft(line, " \t")
+	if strings.HasPrefix(trimmed, "#") {
+		return line, false // whole-line comment
+	}
+
+	// Capture the original leading whitespace verbatim so tabs/mixed indentation
+	// survive the rewrite.
+	indent := line[:len(line)-len(trimmed)]
+
+	listMarker := ""
+	body := trimmed
+	if strings.HasPrefix(body, "- ") {
+		listMarker = "- "
+		body = strings.TrimLeft(body[len(listMarker):], " \t")
+	}
+
+	if !strings.HasPrefix(body, appconstants.UsesFieldPrefix) {
+		return line, false
+	}
+
+	value := strings.TrimSpace(body[len(appconstants.UsesFieldPrefix):])
+	// Drop any trailing inline comment before comparing the reference value.
+	if ci := strings.Index(value, "#"); ci >= 0 {
+		value = strings.TrimSpace(value[:ci])
+	}
+	value = unquoteYAMLScalar(value)
+
+	if value != update.OldUses {
+		return line, false
+	}
+
+	return indent + listMarker + appconstants.UsesFieldPrefix + update.NewUses, true
+}
+
+// unquoteYAMLScalar strips a single matching pair of surrounding single or double
+// quotes from a YAML scalar; otherwise returns the input unchanged.
+func unquoteYAMLScalar(s string) string {
+	if len(s) >= 2 {
+		first, last := s[0], s[len(s)-1]
+		if (first == '"' && last == '"') || (first == '\'' && last == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+
+	return s
 }
 
 // validateAndRollbackOnFailure validates the action file and rolls back changes on failure.
@@ -760,8 +871,12 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 	cacheKey := appconstants.CacheKeyRepo + fmt.Sprintf("%s/%s", owner, repo)
 	if a.Cache != nil {
 		if cached, exists := a.Cache.Get(cacheKey); exists {
-			if repository, ok := cached.(*github.Repository); ok {
-				dep.Description = repository.GetDescription()
+			// Cache only the description string (the sole field consumed here).
+			// A string survives the cache.json JSON round-trip as a string, unlike
+			// the *github.Repository SDK struct, whose type assertion would fail
+			// for every disk-loaded entry.
+			if description, ok := cached.(string); ok {
+				dep.Description = description
 
 				return nil
 			}
@@ -776,7 +891,8 @@ func (a *Analyzer) enrichWithGitHubData(dep *Dependency, owner, repo string) err
 
 	// Cache the result with 1 hour TTL
 	if a.Cache != nil {
-		_ = a.Cache.SetWithTTL(cacheKey, repository, appconstants.CacheDefaultTTL) // Ignore cache errors
+		// Ignore cache errors.
+		_ = a.Cache.SetWithTTL(cacheKey, repository.GetDescription(), appconstants.CacheDefaultTTL)
 	}
 
 	// Enrich dependency with API data

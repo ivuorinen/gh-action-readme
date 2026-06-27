@@ -108,7 +108,7 @@ func TestProjectDetectorFindActionFiles(t *testing.T) {
 	subDir := filepath.Join(tempDir, "subaction")
 	testutil.CreateTestDir(t, subDir)
 
-	subActionYAML := filepath.Join(subDir, "action.yaml")
+	subActionYAML := filepath.Join(subDir, appconstants.ActionFileNameYAML)
 	testutil.WriteTestFile(t, subActionYAML, "name: Sub Action")
 
 	detector := NewTestDetector(t, tempDir)
@@ -146,7 +146,7 @@ func TestProjectDetectorIsActionFile(t *testing.T) {
 		expected bool
 	}{
 		{appconstants.ActionFileNameYML, true},
-		{"action.yaml", true},
+		{appconstants.ActionFileNameYAML, true},
 		{"Action.yml", false},
 		{"action.yml.bak", false},
 		{"other.yml", false},
@@ -550,7 +550,7 @@ func TestDetectActionFiles(t *testing.T) {
 			name: "detects action file",
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
-				content := "name: Test Action\ndescription: Test"
+				content := testutil.MustReadFixture(testutil.TestFixtureCompositeNameDescOnly)
 				testutil.WriteFileInDir(t, dir, appconstants.ActionFileNameYML, content)
 			},
 			wantActionCount: 1,
@@ -584,7 +584,7 @@ func TestDetectActionFiles(t *testing.T) {
 			setupFunc: func(t *testing.T, dir string) {
 				t.Helper()
 				// Create subdirectory with action.yml
-				content := "name: Test\ndescription: Test"
+				content := testutil.MustReadFixture(testutil.TestFixtureCompositeNameDescOnly)
 				testutil.CreateNestedAction(t, dir, "subdir", content)
 			},
 			wantActionCount: 1, // Should find the file safely

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -19,7 +20,7 @@ func newTestJSONWriter() *JSONWriter {
 func parseFixtureAction(t *testing.T, fixturePath string) *ActionYML {
 	t.Helper()
 
-	tmpFile := filepath.Join(t.TempDir(), "action.yml")
+	tmpFile := filepath.Join(t.TempDir(), appconstants.ActionFileNameYML)
 	testutil.WriteTestFile(t, tmpFile, testutil.MustReadFixture(fixturePath))
 
 	action, err := ParseActionYML(tmpFile)
@@ -283,5 +284,26 @@ func assertJSONSectionsForType(t *testing.T, out *JSONOutput, sectionType string
 
 	if !wantPresent && found {
 		t.Errorf("expected section of type %q to be absent from documentation sections", sectionType)
+	}
+}
+
+func TestShieldsBadgeEncode(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		"Setup-Node": "Setup--Node", // hyphen must be doubled (it is the separator)
+		"Setup Node": "Setup_Node",  // space → underscore
+		"a_b":        "a__b",        // underscore doubled
+		"plain":      "plain",       // unchanged
+		"git-merge":  "git--merge",  // branding icon with hyphen
+		"a-b c_d":    "a--b_c__d",   // combined
+		"C/C++":      "C%2FC++",     // slash percent-encoded (would break the URL path)
+		"a?b#c":      "a%3Fb%23c",   // query/fragment chars percent-encoded
+		"50%":        "50%25",       // literal percent encoded
+	}
+	for in, want := range cases {
+		if got := shieldsBadgeEncode(in); got != want {
+			t.Errorf("shieldsBadgeEncode(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

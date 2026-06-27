@@ -17,13 +17,70 @@ const (
 	testUpdaterOwner = "test"
 )
 
+// isolatedCacheConfig returns a cache config whose Path points at a per-test
+// temp directory, so cached entries never leak between test cases (or between
+// runs) via the shared real per-user cache.
+func isolatedCacheConfig(t *testing.T) *cache.Config {
+	t.Helper()
+
+	cfg := cache.DefaultConfig()
+	cfg.Path = t.TempDir()
+
+	return cfg
+}
+
+// newIsolatedCache creates a cache backed by a per-test temp directory and
+// registers Close() as test cleanup, so the background save goroutine is stopped
+// (and the final flush completed) before t.TempDir removal runs.
+func newIsolatedCache(t *testing.T) *cache.Cache {
+	t.Helper()
+
+	c, err := cache.NewCache(isolatedCacheConfig(t))
+	testutil.AssertNoError(t, err)
+	t.Cleanup(testutil.CleanupCache(t, c))
+
+	return c
+}
+
+// TestAnalyzerClose verifies Analyzer.Close is nil-safe and delegates to the
+// cache, and that the cache adapters implement Close.
+func TestAnalyzerClose(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil cache is safe", func(t *testing.T) {
+		t.Parallel()
+		a := &Analyzer{}
+		if err := a.Close(); err != nil {
+			t.Errorf("Close() with nil cache = %v, want nil", err)
+		}
+	})
+
+	t.Run("no-op cache closes cleanly", func(t *testing.T) {
+		t.Parallel()
+		a := &Analyzer{Cache: NewNoOpCache()}
+		if err := a.Close(); err != nil {
+			t.Errorf("Close() with no-op cache = %v, want nil", err)
+		}
+	})
+
+	t.Run("real cache closes via adapter", func(t *testing.T) {
+		t.Parallel()
+		c, err := cache.NewCache(isolatedCacheConfig(t))
+		testutil.AssertNoError(t, err)
+		a := &Analyzer{Cache: NewCacheAdapter(c)}
+		if err := a.Close(); err != nil {
+			t.Errorf("Close() with real cache = %v, want nil", err)
+		}
+	})
+}
+
 // newTestAnalyzer creates an Analyzer with cache for testing.
 // Returns the analyzer and a cleanup function.
 // Pattern used 7+ times in updater_test.go.
 func newTestAnalyzer(t *testing.T) (*Analyzer, func()) {
 	t.Helper()
 
-	cacheInstance, err := cache.NewCache(cache.DefaultConfig())
+	cacheInstance, err := cache.NewCache(isolatedCacheConfig(t))
 	testutil.AssertNoError(t, err)
 
 	analyzer := &Analyzer{
@@ -440,7 +497,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 				mockClient := testutil.MockGitHubClient(map[string]string{
 					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "[]",
 				})
-				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+				cacheInstance := newIsolatedCache(t)
 
 				return &Analyzer{
 					GitHubClient: mockClient,
@@ -469,7 +526,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 				mockClient := testutil.MockGitHubClient(map[string]string{
 					"GET https://api.github.com/repos/" + testUpdaterOwner + "/" + testUpdaterRepo + "/tags": "invalid json",
 				})
-				cacheInstance, _ := cache.NewCache(cache.DefaultConfig())
+				cacheInstance := newIsolatedCache(t)
 
 				return &Analyzer{
 					GitHubClient: mockClient,
@@ -543,7 +600,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 			name: "invalid data type",
 			setupFn: func(t *testing.T) (*Analyzer, func()) {
 				t.Helper()
-				c, err := cache.NewCache(cache.DefaultConfig())
+				c, err := cache.NewCache(isolatedCacheConfig(t))
 				testutil.AssertNoError(t, err)
 				_ = c.Set(testutil.CacheTestKey, "invalid-string")
 
@@ -555,7 +612,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 			name: "empty cache entry",
 			setupFn: func(t *testing.T) (*Analyzer, func()) {
 				t.Helper()
-				c, err := cache.NewCache(cache.DefaultConfig())
+				c, err := cache.NewCache(isolatedCacheConfig(t))
 				testutil.AssertNoError(t, err)
 
 				return &Analyzer{Cache: NewCacheAdapter(c)}, testutil.CleanupCache(t, c)
@@ -585,14 +642,14 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 	t.Run("cacheVersion stores and retrieves correctly", func(t *testing.T) {
 		t.Parallel()
 
-		cacheInstance, err := cache.NewCache(cache.DefaultConfig())
+		cacheInstance, err := cache.NewCache(isolatedCacheConfig(t))
 		testutil.AssertNoError(t, err)
 		defer testutil.CleanupCache(t, cacheInstance)()
 
 		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
 
 		// Cache a version
-		analyzer.cacheVersion(testutil.CacheTestKey, "v1.2.3", "def456")
+		analyzer.cacheVersion(testutil.CacheTestKey, testutil.TestVersionSemantic, "def456")
 
 		// Retrieve it
 		version, sha, found := analyzer.getCachedVersion(testutil.CacheTestKey)
@@ -600,7 +657,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		if !found {
 			t.Error("getCachedVersion() should return true after cacheVersion()")
 		}
-		if version != "v1.2.3" {
+		if version != testutil.TestVersionSemantic {
 			t.Errorf("getCachedVersion() version = %s, want v1.2.3", version)
 		}
 		if sha != "def456" {
@@ -681,7 +738,7 @@ func TestUpdateActionFileBackupAndRollback(t *testing.T) {
 		defer cleanup()
 
 		actionPath := filepath.Join(dir, appconstants.ActionFileNameYML)
-		testutil.WriteTestFile(t, actionPath, "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []")
+		testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureActionMinimal))
 
 		// Make file read-only
 		err := os.Chmod(actionPath, 0444) // #nosec G302 -- intentionally read-only for test

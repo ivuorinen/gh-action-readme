@@ -582,3 +582,123 @@ func createTestCache(t *testing.T, tmpDir string) *Cache {
 
 	return cache
 }
+
+// TestCacheEvictsToMaxSize verifies that cleanup enforces the MaxSize bound by
+// evicting entries (previously MaxSize was dead config and the cache was
+// unbounded).
+func TestCacheEvictsToMaxSize(t *testing.T) {
+	t.Parallel()
+
+	const maxSize = int64(60)
+	cache, err := NewCache(&Config{
+		DefaultTTL:      time.Hour, // long TTL so entries are not expiry-evicted
+		CleanupInterval: time.Hour,
+		MaxSize:         maxSize,
+		Path:            t.TempDir(),
+	})
+	testutil.AssertNoError(t, err)
+	defer testutil.CleanupCache(t, cache)()
+
+	// Each ~12-byte value; 10 entries far exceed the 60-byte bound.
+	for i := range 10 {
+		testutil.AssertNoError(t, cache.Set(fmt.Sprintf("k%d", i), strings.Repeat("x", 10)))
+	}
+
+	cache.cleanup() // runs evictToMaxSize under the lock
+
+	var total int64
+	cache.mutex.RLock()
+	remaining := len(cache.data)
+	for _, e := range cache.data {
+		total += e.Size
+	}
+	cache.mutex.RUnlock()
+
+	if total > maxSize {
+		t.Errorf("after eviction total size = %d, want <= %d", total, maxSize)
+	}
+	if remaining == 0 {
+		t.Error("eviction removed all entries; expected some to remain under the bound")
+	}
+	if remaining == 10 {
+		t.Error("no entries evicted; MaxSize bound not enforced")
+	}
+}
+
+// TestNewCacheRejectsTraversalPath verifies an explicit config.Path containing a
+// parent-traversal component is rejected before any directory is created.
+func TestNewCacheRejectsTraversalPath(t *testing.T) {
+	t.Parallel()
+
+	// A literal relative "../" survives filepath.Clean (unlike filepath.Join,
+	// which would resolve it away), so it reaches the guard.
+	_, err := NewCache(&Config{Path: "../evil-cache"})
+	if err == nil {
+		t.Fatal("expected NewCache to reject a path containing '..'")
+	}
+	if !strings.Contains(err.Error(), "parent traversal") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// TestCacheCloseProunesExpiredAndEnforcesMaxSize verifies the final save on Close
+// prunes expired entries and enforces MaxSize. The cleanupLoop ticker never fires
+// in a short-lived process, so without pruning on Close the persisted cache.json
+// would grow without bound. CleanupInterval is set far in the future so the loop
+// cannot run during the test — only Close's prune can produce the asserted state.
+func TestCacheCloseProunesExpiredAndEnforcesMaxSize(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	const maxSize = int64(60)
+	cfg := &Config{
+		DefaultTTL:      time.Millisecond,
+		CleanupInterval: time.Hour,
+		MaxSize:         maxSize,
+		Path:            dir,
+	}
+
+	cache, err := NewCache(cfg)
+	testutil.AssertNoError(t, err)
+
+	// Seed state directly under the lock (no Set, to avoid the async-save race):
+	// one already-expired entry plus live entries that overflow MaxSize.
+	freshCfg := *cfg
+	freshCfg.DefaultTTL = time.Hour
+	cache.mutex.Lock()
+	cache.data["expired"] = Entry{Value: "x", ExpiresAt: time.Now().Add(-time.Hour), Size: 1}
+	for i := range 10 {
+		cache.data[fmt.Sprintf("k%d", i)] = Entry{
+			Value:     strings.Repeat("x", 10),
+			ExpiresAt: time.Now().Add(time.Hour),
+			Size:      12,
+		}
+	}
+	cache.mutex.Unlock()
+
+	testutil.AssertNoError(t, cache.Close())
+
+	// Reopen: loadFromDisk does not filter, so persisted state is observed verbatim.
+	reopened, err := NewCache(&freshCfg)
+	testutil.AssertNoError(t, err)
+	defer testutil.CleanupCache(t, reopened)()
+
+	reopened.mutex.RLock()
+	_, expiredKept := reopened.data["expired"]
+	var total int64
+	for _, e := range reopened.data {
+		total += e.Size
+	}
+	count := len(reopened.data)
+	reopened.mutex.RUnlock()
+
+	if expiredKept {
+		t.Error("Close persisted an expired entry; expiry prune did not run on shutdown")
+	}
+	if total > maxSize {
+		t.Errorf("Close persisted total size %d > MaxSize %d; eviction did not run on shutdown", total, maxSize)
+	}
+	if count == 0 {
+		t.Error("Close evicted everything; expected some live entries to remain")
+	}
+}

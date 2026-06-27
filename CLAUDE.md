@@ -44,7 +44,7 @@ This project enforces strict quality gates aligned with [SonarCloud "Sonar way"]
 - GitLab theme: `templates_embed/templates/themes/gitlab/readme.tmpl`
 - Minimal theme: `templates_embed/templates/themes/minimal/readme.tmpl`
 - Professional: `templates_embed/templates/themes/professional/readme.tmpl`
-- AsciiDoc theme: `templates_embed/templates/themes/asciidoc/readme.adoc`
+- AsciiDoc (output format, not a `--theme`): `templates_embed/templates/themes/asciidoc/readme.adoc`
 
 **Template embedding:** Handled by `templates_embed/embed.go` using Go's embed directive.
 The embedded filesystem is used by default, with fallback to filesystem for development.
@@ -135,13 +135,13 @@ err := myFunction(output, mockConfig, mockReader)
 
 **Examples in codebase:**
 
-- `applyUpdates()` - accepts `InputReader` for stdin mocking (cmd_deps.go:560)
-- `setupDepsUpgrade()` - accepts `*AppConfig` for config injection (cmd_deps.go:455)
+- `applyUpdates()` - accepts `InputReader` for stdin mocking (`cmd_deps.go`)
+- `setupDepsUpgrade()` - accepts `*AppConfig` for config injection (`cmd_deps.go`)
 
-**Interfaces** (production interface in `cmd_deps.go`; test implementation in `main_test.go`):
+**Interfaces** (production interface in `internal/input.go`; test implementation in `main_test.go`):
 
 ```go
-// InputReader is declared in cmd_deps.go (production code, enables testing)
+// InputReader is declared in internal/input.go (production code, enables testing)
 type InputReader interface {
     ReadLine() (string, error)
 }
@@ -430,7 +430,7 @@ pre-commit run --all-files
 ### Configuration Hierarchy (highest to lowest priority)
 
 1. **Command-line flags** - Override everything
-2. **Action-specific config** - `.ghreadme.yaml` in action directory
+2. **Action-specific config** - `config.yaml` in action directory
 3. **Repository config** - `.ghreadme.yaml` in repo root
 4. **Global config** - `~/.config/gh-action-readme/config.yaml`
 5. **Environment variables** - `GH_README_GITHUB_TOKEN`, `GITHUB_TOKEN`
@@ -507,7 +507,7 @@ appconstants.ThemeTHEMENAME: appconstants.TemplatePathTHEMENAME,
 
 1. Add format constant to `appconstants/constants.go`
 
-2. Add case in `internal/generator.go:generateByFormat()` (line ~532):
+2. Add case in `internal/generator.go:generateByFormat()`:
 
 ```go
 case appconstants.OutputFormatNEW:

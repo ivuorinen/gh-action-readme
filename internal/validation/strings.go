@@ -8,8 +8,11 @@ import (
 )
 
 var (
-	reGitHubURLFull   = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/.]+)(?:\.git)?`)
-	reGitHubURLSimple = regexp.MustCompile(`^([^/]+)/([^/.]+)$`)
+	// Repository segment is [^/]+? (non-greedy, allows dots so names like
+	// "my.repo" are preserved) with an explicit optional ".git" suffix stripped
+	// and any trailing path ignored.
+	reGitHubURLFull   = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?(?:/.*)?$`)
+	reGitHubURLSimple = regexp.MustCompile(`^([^/]+)/([^/]+?)(?:\.git)?$`)
 	reWhitespace      = regexp.MustCompile(`\s+`)
 )
 

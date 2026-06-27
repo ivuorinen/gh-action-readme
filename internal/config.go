@@ -29,6 +29,12 @@ type AppConfig struct {
 	Repository       string `mapstructure:"repository"         yaml:"repository,omitempty"`
 	Version          string `mapstructure:"version"            yaml:"version,omitempty"`
 	UseDefaultBranch bool   `mapstructure:"use_default_branch" yaml:"use_default_branch"`
+	// useDefaultBranchSet records whether a loaded source explicitly set
+	// use_default_branch. UseDefaultBranch defaults to true, so a plain bool
+	// cannot distinguish "unset" from an explicit "false"; this flag lets a
+	// source that sets it to false override the default during merge. Not
+	// serialized (unexported), set by the config loaders via viper.IsSet.
+	useDefaultBranchSet bool
 
 	// Template Settings
 	Theme          string `mapstructure:"theme"           yaml:"theme"`
@@ -49,6 +55,13 @@ type AppConfig struct {
 	// Features
 	AnalyzeDependencies bool `mapstructure:"analyze_dependencies" yaml:"analyze_dependencies"`
 	ShowSecurityInfo    bool `mapstructure:"show_security_info"   yaml:"show_security_info"`
+	// analyzeDependenciesSet / showSecurityInfoSet record whether a loaded source
+	// explicitly set these flags. Like useDefaultBranchSet, this lets a
+	// higher-priority source override a lower-priority true with an explicit
+	// false during merge (a plain "merge if true" cannot). Unexported; set by the
+	// config loaders via viper.IsSet.
+	analyzeDependenciesSet bool
+	showSecurityInfoSet    bool
 
 	// Custom Template Variables
 	Variables map[string]string `mapstructure:"variables" yaml:"variables,omitempty"`
@@ -258,10 +271,33 @@ func DefaultAppConfig() *AppConfig {
 // MergeConfigs merges a source config into a destination config, excluding security-sensitive fields.
 func MergeConfigs(dst *AppConfig, src *AppConfig, allowTokens bool) {
 	mergeStringFields(dst, src)
+	mergeDefaultsFields(dst, src)
 	mergeMapFields(dst, src)
 	mergeSliceFields(dst, src)
 	mergeBooleanFields(dst, src)
 	mergeSecurityFields(dst, src, allowTokens)
+}
+
+// mergeDefaultsFields merges the action.yml fallback defaults (Name/Description/
+// Runs/Branding) from src into dst, field by field, when the src value is set.
+// Without this, a `defaults:` block in a repo/action config is parsed but then
+// silently dropped by the merge, leaving the built-in defaults in effect.
+func mergeDefaultsFields(dst *AppConfig, src *AppConfig) {
+	if src.Defaults.Name != "" {
+		dst.Defaults.Name = src.Defaults.Name
+	}
+	if src.Defaults.Description != "" {
+		dst.Defaults.Description = src.Defaults.Description
+	}
+	if len(src.Defaults.Runs) > 0 {
+		dst.Defaults.Runs = src.Defaults.Runs
+	}
+	if src.Defaults.Branding.Icon != "" {
+		dst.Defaults.Branding.Icon = src.Defaults.Branding.Icon
+	}
+	if src.Defaults.Branding.Color != "" {
+		dst.Defaults.Branding.Color = src.Defaults.Branding.Color
+	}
 }
 
 // mergeStringFields merges simple string fields from src to dst if non-empty.
@@ -276,6 +312,7 @@ func mergeStringFields(dst *AppConfig, src *AppConfig) {
 		{&dst.Theme, src.Theme},
 		{&dst.OutputFormat, src.OutputFormat},
 		{&dst.OutputDir, src.OutputDir},
+		{&dst.OutputFilename, src.OutputFilename},
 		{&dst.Template, src.Template},
 		{&dst.Header, src.Header},
 		{&dst.Footer, src.Footer},
@@ -322,13 +359,21 @@ func mergeSliceFields(dst *AppConfig, src *AppConfig) {
 	copySliceIfNotEmpty(&dst.IgnoredDirectories, src.IgnoredDirectories)
 }
 
-// mergeBooleanFields merges boolean fields from src to dst if true.
+// mergeBooleanFields merges boolean fields from src to dst.
+//
+// AnalyzeDependencies, ShowSecurityInfo, and UseDefaultBranch are genuine config
+// knobs: they merge on explicit presence (tracked via the *Set flags) so a
+// higher-priority source can override a lower-priority true with an explicit
+// false. Verbose and Quiet are CLI-flag style and intentionally OR-merged (any
+// scope that turns them on wins).
 func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
-	if src.AnalyzeDependencies {
+	if src.analyzeDependenciesSet {
 		dst.AnalyzeDependencies = src.AnalyzeDependencies
+		dst.analyzeDependenciesSet = true
 	}
-	if src.ShowSecurityInfo {
+	if src.showSecurityInfoSet {
 		dst.ShowSecurityInfo = src.ShowSecurityInfo
+		dst.showSecurityInfoSet = true
 	}
 	if src.Verbose {
 		dst.Verbose = src.Verbose
@@ -336,8 +381,9 @@ func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
 	if src.Quiet {
 		dst.Quiet = src.Quiet
 	}
-	if src.UseDefaultBranch {
+	if src.useDefaultBranchSet {
 		dst.UseDefaultBranch = src.UseDefaultBranch
+		dst.useDefaultBranchSet = true
 	}
 }
 
@@ -413,70 +459,6 @@ func DetectRepositoryName(repoRoot string) string {
 	}
 
 	return info.GetRepositoryName()
-}
-
-// loadAndMergeConfig is a helper that loads config from a directory and merges it.
-// Returns nil if dir is empty (no-op). Returns error if loading fails.
-func loadAndMergeConfig(
-	config *AppConfig,
-	dir string,
-	loadFunc func(string) (*AppConfig, error),
-	errorFormat string,
-	allowTokens bool,
-) error {
-	if dir == "" {
-		return nil
-	}
-
-	loadedConfig, err := loadFunc(dir)
-	if err != nil {
-		return fmt.Errorf(errorFormat, err)
-	}
-
-	MergeConfigs(config, loadedConfig, allowTokens)
-
-	return nil
-}
-
-// LoadConfiguration loads configuration with multi-level hierarchy.
-func LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, error) {
-	// 1. Start with defaults
-	config := DefaultAppConfig()
-
-	// 2. Load global config
-	globalConfig, err := InitConfig(configFile)
-	if err != nil {
-		return nil, fmt.Errorf(appconstants.ErrFailedToLoadGlobalConfig, err)
-	}
-	MergeConfigs(config, globalConfig, true) // Allow tokens for global config
-
-	// 3. Apply repo-specific overrides from global config
-	repoName := DetectRepositoryName(repoRoot)
-	if repoName != "" {
-		if repoOverride, exists := globalConfig.RepoOverrides[repoName]; exists {
-			MergeConfigs(config, &repoOverride, false) // No tokens in overrides
-		}
-	}
-
-	// 4. Load repository root ghreadme.yaml
-	if err := loadAndMergeConfig(config, repoRoot, LoadRepoConfig,
-		appconstants.ErrFailedToLoadRepoConfig, false); err != nil {
-		return nil, err
-	}
-
-	// 5. Load action-specific config.yaml
-	if err := loadAndMergeConfig(config, actionDir, LoadActionConfig,
-		appconstants.ErrFailedToLoadActionConfig, false); err != nil {
-		return nil, err
-	}
-
-	// 6. Apply environment variable overrides for GitHub token
-	// Check environment variables directly with higher priority
-	if token := loadGitHubTokenFromEnv(); token != "" {
-		config.GitHubToken = token
-	}
-
-	return config, nil
 }
 
 // InitConfig initializes the global configuration using Viper with XDG compliance.

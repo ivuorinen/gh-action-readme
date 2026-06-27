@@ -3,16 +3,35 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/internal/validation"
 )
 
 // getVersion returns the current version - can be overridden at build time.
 var getVersion = func() string {
 	return "0.1.0" // Default version, should be overridden at build time
+}
+
+// shieldsBadgeEncode escapes a value for a shields.io badge URL segment. First it
+// applies shields.io's separator escaping ("_" → "__", "-" → "--", " " → "_") so
+// an action name like "Setup-Node" does not split the badge into the wrong
+// label/message/color segments. Then it percent-encodes any remaining
+// URL-reserved characters (e.g. "/", "?", "#", "%", "(", ")") so a legitimate
+// name or color such as "C/C++ build" or a branding value with a slash does not
+// corrupt the URL. url.PathEscape leaves the "-"/"_" produced above untouched
+// (both are RFC 3986 unreserved).
+func shieldsBadgeEncode(s string) string {
+	s = strings.ReplaceAll(s, "_", "__")
+	s = strings.ReplaceAll(s, "-", "--")
+	s = strings.ReplaceAll(s, " ", "_")
+
+	return url.PathEscape(s)
 }
 
 // JSONOutput represents the structured JSON documentation output.
@@ -38,7 +57,7 @@ type ActionYMLForJSON struct {
 	Description string                         `json:"description"`
 	Inputs      map[string]ActionInputForJSON  `json:"inputs,omitempty"`
 	Outputs     map[string]ActionOutputForJSON `json:"outputs,omitempty"`
-	Runs        map[string]any                 `json:"runs"`
+	Runs        map[string]any                 `json:"runs,omitempty"`
 	Branding    *BrandingForJSON               `json:"branding,omitempty"`
 	Permissions map[string]string              `json:"permissions,omitempty"`
 }
@@ -153,14 +172,15 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 	if branding != nil {
 		badges = append(badges, BadgeInfo{
 			Name: "Icon",
-			URL:  "https://img.shields.io/badge/icon-" + branding.Icon + "-" + branding.Color,
-			Alt:  branding.Icon,
+			URL: "https://img.shields.io/badge/icon-" + shieldsBadgeEncode(branding.Icon) +
+				"-" + shieldsBadgeEncode(branding.Color),
+			Alt: branding.Icon,
 		})
 	}
 	badges = append(badges,
 		BadgeInfo{
 			Name: appconstants.LabelGitHubAction,
-			URL:  "https://img.shields.io/badge/GitHub%20Action-" + action.Name + "-blue",
+			URL:  "https://img.shields.io/badge/GitHub%20Action-" + shieldsBadgeEncode(action.Name) + "-blue",
 			Alt:  appconstants.LabelGitHubAction,
 		},
 		BadgeInfo{
@@ -229,7 +249,9 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 			Sections:    sections,
 			Links: map[string]string{
 				appconstants.ActionFileNameYML: "./" + appconstants.ActionFileNameYML,
-				"repository":                   "https://github.com/your-org/" + action.Name,
+				"repository": "https://github.com/your-org/" + validation.SanitizeActionName(
+					action.Name,
+				),
 			},
 		},
 		Examples: examples,
@@ -245,12 +267,20 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 // generateBasicExample creates a basic usage example.
 func (jw *JSONWriter) generateBasicExample(action *ActionYML) string {
 	example := "- name: " + action.Name + "\n"
-	example += "  uses: your-org/" + action.Name + "@v1"
+	example += "  uses: your-org/" + validation.SanitizeActionName(action.Name) + "@v1"
 
 	if len(action.Inputs) > 0 {
 		example += "\n  with:"
 		var exampleSb247 strings.Builder
-		for key, input := range action.Inputs {
+		// Iterate inputs in a stable, sorted order so the generated example is
+		// reproducible across runs (Go map iteration order is randomized).
+		keys := make([]string, 0, len(action.Inputs))
+		for key := range action.Inputs {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			input := action.Inputs[key]
 			value := "value"
 			if input.Default != nil {
 				if str, ok := input.Default.(string); ok {

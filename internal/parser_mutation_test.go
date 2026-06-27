@@ -198,7 +198,7 @@ func testPermissionParsingCase(t *testing.T, yaml string, expected map[string]st
 
 	// Create temporary file with test YAML
 	tmpDir := t.TempDir()
-	testFile := filepath.Join(tmpDir, "action.yml")
+	testFile := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
 
 	testutil.WriteTestFile(t, testFile, yaml)
 

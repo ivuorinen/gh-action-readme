@@ -20,6 +20,8 @@ const (
 	ConfigKeyVersion = "version"
 	// ConfigKeyUseDefaultBranch is the configuration key for use default branch behavior.
 	ConfigKeyUseDefaultBranch = "use_default_branch"
+	// ConfigKeyRepoOverrides is the configuration key for per-repository overrides.
+	ConfigKeyRepoOverrides = "repo_overrides"
 
 	// Template Configuration
 	// ConfigKeyTheme is the configuration key for theme.

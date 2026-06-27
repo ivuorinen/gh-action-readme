@@ -22,12 +22,46 @@ import (
 // It is a variable so tests can replace it to simulate cache-creation failures.
 var newCacheFunc = cache.NewCache
 
+// actionNameReplacer maps path separators and Windows-reserved filename
+// characters to '-' so an action name is safe to use as a file name on any OS.
+var actionNameReplacer = strings.NewReplacer(
+	"/", "-",
+	"\\", "-",
+	":", "-",
+	"*", "-",
+	"?", "-",
+	"\"", "-",
+	"<", "-",
+	">", "-",
+	"|", "-",
+)
+
+// safeActionFilename builds a filesystem-safe per-action filename ("<name><ext>")
+// from the action name, mapping path separators and Windows-reserved characters
+// to '-' and falling back to "action" for an empty result. Used so multiple
+// actions written to one output directory do not collide.
+func safeActionFilename(action *ActionYML, ext string) string {
+	name := actionNameReplacer.Replace(strings.TrimSpace(action.Name))
+	name = strings.Trim(name, ".- ")
+	if name == "" {
+		name = "action"
+	}
+
+	return name + ext
+}
+
 // Generator orchestrates the documentation generation process.
 // It uses focused interfaces to reduce coupling and improve testability.
 type Generator struct {
 	Config   *AppConfig
 	Output   CompleteOutput
 	Progress ProgressManager
+
+	// usedNames tracks output filenames already emitted within a single batch so
+	// per-action names that sanitize to the same string (e.g. two actions named
+	// "Build", or "foo/bar" vs "foo:bar") get a "-N" suffix instead of silently
+	// overwriting each other in a shared --output-dir. Non-nil only during a batch.
+	usedNames map[string]int
 }
 
 // isUnitTestEnvironment detects if we're running unit tests (not integration tests).
@@ -126,18 +160,7 @@ func (g *Generator) CreateDependencyAnalyzer() (*dependencies.Analyzer, error) {
 
 // GenerateFromFile processes a single action.yml file and generates documentation.
 func (g *Generator) GenerateFromFile(actionPath string) error {
-	if g.Config.Verbose {
-		g.Output.Progress("Processing file: %s", actionPath)
-	}
-
-	action, err := g.parseAndValidateAction(actionPath)
-	if err != nil {
-		return err
-	}
-
-	outputDir := g.determineOutputDir(actionPath)
-
-	return g.generateByFormat(action, outputDir, actionPath)
+	return g.generateFromFile(actionPath, false)
 }
 
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory
@@ -213,6 +236,21 @@ func (g *Generator) ProcessBatch(paths []string) error {
 		return errors.New("no action files to process")
 	}
 
+	// A single explicit --output filename cannot disambiguate multiple inputs:
+	// every file would resolve to the same path and silently overwrite the prior
+	// one. Fail fast and point the user at --output-dir instead.
+	if len(paths) > 1 && g.Config.OutputFilename != "" {
+		return fmt.Errorf(
+			"--output filename cannot be used with %d action files; "+
+				"use --output-dir to write one file per action",
+			len(paths),
+		)
+	}
+
+	// Reset the per-batch filename map so collisions are disambiguated across this
+	// run's actions (see disambiguateName).
+	g.usedNames = make(map[string]int)
+
 	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
 	parseErrors, successCount := g.processFiles(paths, bar)
 	g.Progress.FinishProgressBarWithNewline(bar)
@@ -257,15 +295,72 @@ func (g *Generator) ValidateFiles(paths []string) error {
 	return nil
 }
 
+// disambiguateName returns name unchanged the first time it is seen within a batch
+// and appends "-2", "-3", … on subsequent collisions. Deterministic for a given
+// processing order. A no-op (returns name) outside a batch, when usedNames is nil.
+func (g *Generator) disambiguateName(name string) string {
+	if g.usedNames == nil {
+		return name
+	}
+
+	ext := filepath.Ext(name)
+	base := strings.TrimSuffix(name, ext)
+	candidate := name
+	for i := 2; g.usedNames[candidate] > 0; i++ {
+		candidate = fmt.Sprintf("%s-%d%s", base, i, ext)
+	}
+	g.usedNames[candidate]++
+
+	return candidate
+}
+
+// generateFromFile is the implementation behind GenerateFromFile. uniqueNames is
+// set by batch processing when multiple actions share one output directory, so
+// fixed-name formats (JSON) get per-action filenames instead of overwriting.
+func (g *Generator) generateFromFile(actionPath string, uniqueNames bool) error {
+	if g.Config.Verbose {
+		g.Output.Progress("Processing file: %s", actionPath)
+	}
+
+	action, err := g.parseAndValidateAction(actionPath)
+	if err != nil {
+		return err
+	}
+
+	outputDir := g.determineOutputDir(actionPath)
+
+	return g.generateByFormat(action, outputDir, actionPath, uniqueNames)
+}
+
 // resolveTemplatePathForFormat determines the correct template path
 // based on the configured theme or custom template path.
 // If a theme is specified, it takes precedence over the template path.
-func (g *Generator) resolveTemplatePathForFormat() string {
+func (g *Generator) resolveTemplatePathForFormat() (string, error) {
 	if g.Config.Theme != "" {
-		return resolveThemeTemplate(g.Config.Theme)
+		if err := g.validateTheme(); err != nil {
+			return "", err
+		}
+
+		return resolveThemeTemplate(g.Config.Theme), nil
 	}
 
-	return g.Config.Template
+	return g.Config.Template, nil
+}
+
+// validateTheme rejects a non-empty --theme that is not a known theme. An unknown
+// theme must be an explicit error rather than a silent fall-through to the default
+// template — a typo'd --theme would otherwise produce default output with no
+// warning. The valid-theme list is derived from the canonical appconstants source
+// so it cannot drift from the themes the generator actually accepts.
+func (g *Generator) validateTheme() error {
+	if g.Config.Theme != "" && resolveThemeTemplate(g.Config.Theme) == "" {
+		return fmt.Errorf(
+			"unknown theme %q; valid themes: %s",
+			g.Config.Theme, strings.Join(appconstants.GetSupportedThemes(), ", "),
+		)
+	}
+
+	return nil
 }
 
 // renderTemplateForAction builds template data and renders it using the specified options.
@@ -298,8 +393,12 @@ func (g *Generator) generateSimpleFormat(
 	action *ActionYML,
 	outputDir, actionPath string,
 	format, defaultFilename, successMsg string,
+	uniqueNames bool,
 ) error {
-	templatePath := g.resolveTemplatePathForFormat()
+	templatePath, err := g.resolveTemplatePathForFormat()
+	if err != nil {
+		return err
+	}
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
@@ -311,9 +410,20 @@ func (g *Generator) generateSimpleFormat(
 		return fmt.Errorf("failed to render %s template: %w", format, err)
 	}
 
-	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
+	// When multiple actions share one output directory, derive a per-action
+	// filename (keeping the default's extension) so the fixed README name does not
+	// overwrite earlier outputs.
+	filename := defaultFilename
+	if uniqueNames {
+		filename = g.disambiguateName(safeActionFilename(action, filepath.Ext(defaultFilename)))
+	}
+
+	outputPath, err := g.resolveOutputPath(outputDir, filename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
+	if err := ensureParentDir(outputPath); err != nil {
+		return err
 	}
 	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		// #nosec G306 -- output file permissions
@@ -326,16 +436,20 @@ func (g *Generator) generateSimpleFormat(
 }
 
 // generateMarkdown creates a README.md file using the template.
-func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
 		appconstants.OutputFormatMarkdown, appconstants.ReadmeMarkdown, "Generated README.md",
+		uniqueNames,
 	)
 }
 
 // generateHTML creates an HTML file using the template and optional header/footer.
-func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string) error {
-	templatePath := g.resolveTemplatePathForFormat()
+func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
+	templatePath, err := g.resolveTemplatePathForFormat()
+	if err != nil {
+		return err
+	}
 
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
@@ -355,10 +469,20 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Footer: "",
 	}
 
-	defaultFilename := action.Name + ".html"
+	// Per-action filename so multiple actions written to one output directory do
+	// not collide (and to avoid path separators / Windows-reserved characters in
+	// the action name resolving into a bad path). In a shared-dir batch, also
+	// disambiguate names that sanitize to the same string.
+	defaultFilename := safeActionFilename(action, ".html")
+	if uniqueNames {
+		defaultFilename = g.disambiguateName(defaultFilename)
+	}
 	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
+	if err := ensureParentDir(outputPath); err != nil {
+		return err
 	}
 	if err := writer.Write(content, outputPath); err != nil {
 		return fmt.Errorf("failed to write HTML to %s: %w", outputPath, err)
@@ -369,13 +493,24 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 	return nil
 }
 
-// generateJSON creates a JSON file with structured documentation data.
-func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
+// generateJSON creates a JSON file with structured documentation data. When
+// uniqueNames is set (multiple actions sharing one output directory), the file is
+// named per action instead of the fixed action-docs.json so the outputs do not
+// overwrite each other.
+func (g *Generator) generateJSON(action *ActionYML, outputDir string, uniqueNames bool) error {
 	writer := NewJSONWriter(g.Config)
 
-	outputPath, err := g.resolveOutputPath(outputDir, appconstants.ActionDocsJSON)
+	jsonFilename := appconstants.ActionDocsJSON
+	if uniqueNames {
+		jsonFilename = g.disambiguateName(safeActionFilename(action, ".json"))
+	}
+
+	outputPath, err := g.resolveOutputPath(outputDir, jsonFilename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
+	if err := ensureParentDir(outputPath); err != nil {
+		return err
 	}
 	if err := writer.Write(action, outputPath); err != nil {
 		return fmt.Errorf("failed to write JSON to %s: %w", outputPath, err)
@@ -387,10 +522,11 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
 }
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
-func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string) error {
+func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
 		"asciidoc", appconstants.ReadmeASCIIDoc, "Generated AsciiDoc",
+		uniqueNames,
 	)
 }
 
@@ -399,8 +535,15 @@ func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) (
 	var parseErrors []string
 	successCount := 0
 
+	// When several actions are written into one shared --output-dir, fixed-name
+	// formats (JSON) would overwrite each other; request per-action filenames.
+	// With a per-action output dir (OutputDir unset/"."), each file lands in its
+	// own directory, so the stable default names are kept.
+	sharedDir := g.Config.OutputDir != "" && g.Config.OutputDir != "."
+	uniqueNames := len(paths) > 1 && sharedDir
+
 	for _, path := range paths {
-		if err := g.GenerateFromFile(path); err != nil {
+		if err := g.generateFromFile(path, uniqueNames); err != nil {
 			errorMsg := fmt.Sprintf("failed to process %s: %v", path, err)
 			parseErrors = append(parseErrors, errorMsg)
 			if g.Config.Verbose {
@@ -528,17 +671,38 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string
 	return absFinalPath, nil
 }
 
-// generateByFormat generates documentation in the specified format.
-func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
+// ensureParentDir creates the parent directory of path so a subsequent write
+// succeeds even when --output-dir (or a nested --output filename) points at a
+// directory that does not exist yet. Called only after path-traversal validation.
+func ensureParentDir(path string) error {
+	dir := filepath.Dir(path)
+	// #nosec G301 -- generated documentation directory permissions
+	if err := os.MkdirAll(dir, appconstants.FilePermDir); err != nil {
+		return fmt.Errorf("failed to create output directory %q: %w", dir, err)
+	}
+
+	return nil
+}
+
+// generateByFormat generates documentation in the specified format. uniqueNames
+// requests per-action output filenames (used when multiple actions share one
+// output directory) for formats that otherwise use a fixed default name.
+func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
+	// Validate the theme once, up front, so an invalid --theme fails identically
+	// for every output format (the JSON path does not call resolveTemplatePathForFormat).
+	if err := g.validateTheme(); err != nil {
+		return err
+	}
+
 	switch g.Config.OutputFormat {
 	case appconstants.OutputFormatMarkdown:
-		return g.generateMarkdown(action, outputDir, actionPath)
+		return g.generateMarkdown(action, outputDir, actionPath, uniqueNames)
 	case appconstants.OutputFormatHTML:
-		return g.generateHTML(action, outputDir, actionPath)
+		return g.generateHTML(action, outputDir, actionPath, uniqueNames)
 	case appconstants.OutputFormatJSON:
-		return g.generateJSON(action, outputDir)
+		return g.generateJSON(action, outputDir, uniqueNames)
 	case appconstants.OutputFormatASCIIDoc:
-		return g.generateASCIIDoc(action, outputDir, actionPath)
+		return g.generateASCIIDoc(action, outputDir, actionPath, uniqueNames)
 	default:
 		return fmt.Errorf("unsupported output format: %s", g.Config.OutputFormat)
 	}

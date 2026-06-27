@@ -69,8 +69,13 @@ func cacheStatsHandler(_ *cobra.Command, _ []string) error {
 
 	stats := cacheInstance.Stats()
 
+	cacheDir, ok := stats[appconstants.CacheStatsKeyDir].(string)
+	if !ok {
+		cacheDir = appconstants.CachePathUnknown
+	}
+
 	output.Bold("Cache Statistics:")
-	output.Printf("Cache location: %s\n", stats[appconstants.CacheStatsKeyDir])
+	output.Printf("Cache location: %s\n", cacheDir)
 	output.Printf("Total entries: %d\n", stats["total_entries"])
 	output.Printf("Expired entries: %d\n", stats["expired_count"])
 
@@ -97,11 +102,19 @@ func cachePathHandler(_ *cobra.Command, _ []string) error {
 	stats := cacheInstance.Stats()
 	cachePath, ok := stats[appconstants.CacheStatsKeyDir].(string)
 	if !ok {
-		cachePath = appconstants.ScopeUnknown
+		cachePath = appconstants.CachePathUnknown
 	}
 
 	output.Bold("Cache Directory:")
 	output.Printf("%s\n", cachePath)
+
+	// Only stat a real path. The sentinel is not a filesystem path, so statting
+	// it would resolve a bogus relative path in the current directory.
+	if !ok {
+		output.Warning("Cache directory could not be determined")
+
+		return nil
+	}
 
 	// Check if directory exists
 	if _, err := os.Stat(cachePath); err == nil {
