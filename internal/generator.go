@@ -364,6 +364,7 @@ func (g *Generator) generateSimpleFormat(
 	action *ActionYML,
 	outputDir, actionPath string,
 	format, defaultFilename, successMsg string,
+	uniqueNames bool,
 ) error {
 	templatePath, err := g.resolveTemplatePathForFormat()
 	if err != nil {
@@ -380,7 +381,15 @@ func (g *Generator) generateSimpleFormat(
 		return fmt.Errorf("failed to render %s template: %w", format, err)
 	}
 
-	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
+	// When multiple actions share one output directory, derive a per-action
+	// filename (keeping the default's extension) so the fixed README name does not
+	// overwrite earlier outputs.
+	filename := defaultFilename
+	if uniqueNames {
+		filename = safeActionFilename(action, filepath.Ext(defaultFilename))
+	}
+
+	outputPath, err := g.resolveOutputPath(outputDir, filename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
 	}
@@ -398,10 +407,11 @@ func (g *Generator) generateSimpleFormat(
 }
 
 // generateMarkdown creates a README.md file using the template.
-func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string) error {
+func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
 		appconstants.OutputFormatMarkdown, appconstants.ReadmeMarkdown, "Generated README.md",
+		uniqueNames,
 	)
 }
 
@@ -479,10 +489,11 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string, uniqueName
 }
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
-func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string) error {
+func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
 		"asciidoc", appconstants.ReadmeASCIIDoc, "Generated AsciiDoc",
+		uniqueNames,
 	)
 }
 
@@ -652,13 +663,13 @@ func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath st
 
 	switch g.Config.OutputFormat {
 	case appconstants.OutputFormatMarkdown:
-		return g.generateMarkdown(action, outputDir, actionPath)
+		return g.generateMarkdown(action, outputDir, actionPath, uniqueNames)
 	case appconstants.OutputFormatHTML:
 		return g.generateHTML(action, outputDir, actionPath)
 	case appconstants.OutputFormatJSON:
 		return g.generateJSON(action, outputDir, uniqueNames)
 	case appconstants.OutputFormatASCIIDoc:
-		return g.generateASCIIDoc(action, outputDir, actionPath)
+		return g.generateASCIIDoc(action, outputDir, actionPath, uniqueNames)
 	default:
 		return fmt.Errorf("unsupported output format: %s", g.Config.OutputFormat)
 	}

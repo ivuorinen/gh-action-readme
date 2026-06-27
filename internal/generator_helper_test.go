@@ -77,7 +77,7 @@ func testASCIIDocGeneration(t *testing.T) {
 	testFormatGeneration(
 		t,
 		func(g *Generator, a *ActionYML, out, path string) error {
-			return g.generateASCIIDoc(a, out, path)
+			return g.generateASCIIDoc(a, out, path, false)
 		},
 		"README.adoc",
 		"AsciiDoc",
