@@ -36,6 +36,20 @@ var actionNameReplacer = strings.NewReplacer(
 	"|", "-",
 )
 
+// safeActionFilename builds a filesystem-safe per-action filename ("<name><ext>")
+// from the action name, mapping path separators and Windows-reserved characters
+// to '-' and falling back to "action" for an empty result. Used so multiple
+// actions written to one output directory do not collide.
+func safeActionFilename(action *ActionYML, ext string) string {
+	name := actionNameReplacer.Replace(strings.TrimSpace(action.Name))
+	name = strings.Trim(name, ".- ")
+	if name == "" {
+		name = "action"
+	}
+
+	return name + ext
+}
+
 // Generator orchestrates the documentation generation process.
 // It uses focused interfaces to reduce coupling and improve testability.
 type Generator struct {
@@ -140,18 +154,7 @@ func (g *Generator) CreateDependencyAnalyzer() (*dependencies.Analyzer, error) {
 
 // GenerateFromFile processes a single action.yml file and generates documentation.
 func (g *Generator) GenerateFromFile(actionPath string) error {
-	if g.Config.Verbose {
-		g.Output.Progress("Processing file: %s", actionPath)
-	}
-
-	action, err := g.parseAndValidateAction(actionPath)
-	if err != nil {
-		return err
-	}
-
-	outputDir := g.determineOutputDir(actionPath)
-
-	return g.generateByFormat(action, outputDir, actionPath)
+	return g.generateFromFile(actionPath, false)
 }
 
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory
@@ -282,6 +285,24 @@ func (g *Generator) ValidateFiles(paths []string) error {
 	return nil
 }
 
+// generateFromFile is the implementation behind GenerateFromFile. uniqueNames is
+// set by batch processing when multiple actions share one output directory, so
+// fixed-name formats (JSON) get per-action filenames instead of overwriting.
+func (g *Generator) generateFromFile(actionPath string, uniqueNames bool) error {
+	if g.Config.Verbose {
+		g.Output.Progress("Processing file: %s", actionPath)
+	}
+
+	action, err := g.parseAndValidateAction(actionPath)
+	if err != nil {
+		return err
+	}
+
+	outputDir := g.determineOutputDir(actionPath)
+
+	return g.generateByFormat(action, outputDir, actionPath, uniqueNames)
+}
+
 // resolveTemplatePathForFormat determines the correct template path
 // based on the configured theme or custom template path.
 // If a theme is specified, it takes precedence over the template path.
@@ -409,17 +430,10 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Footer: "",
 	}
 
-	// Sanitize the action name for use as a filename: a name containing "/" (valid
-	// in action.yml) would otherwise resolve into a non-existent subdirectory and
-	// fail os.Create with ENOENT. Also strip Windows-reserved characters
-	// (: * ? " < > | and backslash) which fail generation at write time on
-	// Windows. Fall back to a stable default for empty names.
-	safeName := actionNameReplacer.Replace(strings.TrimSpace(action.Name))
-	safeName = strings.Trim(safeName, ".- ")
-	if safeName == "" {
-		safeName = "action"
-	}
-	defaultFilename := safeName + ".html"
+	// Per-action filename so multiple actions written to one output directory do
+	// not collide (and to avoid path separators / Windows-reserved characters in
+	// the action name resolving into a bad path).
+	defaultFilename := safeActionFilename(action, ".html")
 	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
@@ -436,11 +450,19 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 	return nil
 }
 
-// generateJSON creates a JSON file with structured documentation data.
-func (g *Generator) generateJSON(action *ActionYML, outputDir string) error {
+// generateJSON creates a JSON file with structured documentation data. When
+// uniqueNames is set (multiple actions sharing one output directory), the file is
+// named per action instead of the fixed action-docs.json so the outputs do not
+// overwrite each other.
+func (g *Generator) generateJSON(action *ActionYML, outputDir string, uniqueNames bool) error {
 	writer := NewJSONWriter(g.Config)
 
-	outputPath, err := g.resolveOutputPath(outputDir, appconstants.ActionDocsJSON)
+	jsonFilename := appconstants.ActionDocsJSON
+	if uniqueNames {
+		jsonFilename = safeActionFilename(action, ".json")
+	}
+
+	outputPath, err := g.resolveOutputPath(outputDir, jsonFilename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
 	}
@@ -469,8 +491,15 @@ func (g *Generator) processFiles(paths []string, bar *progressbar.ProgressBar) (
 	var parseErrors []string
 	successCount := 0
 
+	// When several actions are written into one shared --output-dir, fixed-name
+	// formats (JSON) would overwrite each other; request per-action filenames.
+	// With a per-action output dir (OutputDir unset/"."), each file lands in its
+	// own directory, so the stable default names are kept.
+	sharedDir := g.Config.OutputDir != "" && g.Config.OutputDir != "."
+	uniqueNames := len(paths) > 1 && sharedDir
+
 	for _, path := range paths {
-		if err := g.GenerateFromFile(path); err != nil {
+		if err := g.generateFromFile(path, uniqueNames); err != nil {
 			errorMsg := fmt.Sprintf("failed to process %s: %v", path, err)
 			parseErrors = append(parseErrors, errorMsg)
 			if g.Config.Verbose {
@@ -611,8 +640,10 @@ func ensureParentDir(path string) error {
 	return nil
 }
 
-// generateByFormat generates documentation in the specified format.
-func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string) error {
+// generateByFormat generates documentation in the specified format. uniqueNames
+// requests per-action output filenames (used when multiple actions share one
+// output directory) for formats that otherwise use a fixed default name.
+func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	// Validate the theme once, up front, so an invalid --theme fails identically
 	// for every output format (the JSON path does not call resolveTemplatePathForFormat).
 	if err := g.validateTheme(); err != nil {
@@ -625,7 +656,7 @@ func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath st
 	case appconstants.OutputFormatHTML:
 		return g.generateHTML(action, outputDir, actionPath)
 	case appconstants.OutputFormatJSON:
-		return g.generateJSON(action, outputDir)
+		return g.generateJSON(action, outputDir, uniqueNames)
 	case appconstants.OutputFormatASCIIDoc:
 		return g.generateASCIIDoc(action, outputDir, actionPath)
 	default:

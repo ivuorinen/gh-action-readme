@@ -432,6 +432,39 @@ func logREADMELocations(t *testing.T, dir string) {
 	})
 }
 
+// TestGeneratorProcessBatchJSONUniqueFilenames verifies that JSON generation for
+// multiple actions into one shared --output-dir writes one file per action instead
+// of overwriting a single fixed action-docs.json (recursive filename collision).
+func TestGeneratorProcessBatchJSONUniqueFilenames(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	testutil.SetupTestTemplates(t, tmpDir)
+
+	setup := createMultiActionSetup(
+		[]string{"action1", "action2"},
+		[]string{testutil.TestFixtureJavaScriptSimple, testutil.TestFixtureCompositeBasic},
+	)
+	files := setup(t, tmpDir)
+
+	outDir := filepath.Join(tmpDir, "shared-out")
+	config := defaultTestConfig()
+	config.OutputFormat = appconstants.OutputFormatJSON
+	config.OutputDir = outDir
+	generator := NewGenerator(config)
+
+	if err := generator.ProcessBatch(files); err != nil {
+		t.Fatalf("ProcessBatch: %v", err)
+	}
+
+	jsonFiles, _ := filepath.Glob(filepath.Join(outDir, "*.json"))
+	if len(jsonFiles) != len(files) {
+		t.Errorf("expected %d distinct JSON files (one per action), got %d: %v",
+			len(files), len(jsonFiles), jsonFiles)
+	}
+}
+
 func TestGeneratorProcessBatch(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

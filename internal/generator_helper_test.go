@@ -62,7 +62,7 @@ func testJSONGeneration(t *testing.T) {
 	testFormatGeneration(
 		t,
 		func(g *Generator, a *ActionYML, out, _ string) error {
-			return g.generateJSON(a, out)
+			return g.generateJSON(a, out, false)
 		},
 		"action-docs.json",
 		"JSON",
