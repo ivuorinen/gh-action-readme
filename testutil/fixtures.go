@@ -741,15 +741,18 @@ func (fm *FixtureManager) validateFixtureContent(content string) bool {
 	return true
 }
 
-// isValidRuntime checks if the given runtime is valid for GitHub Actions.
-// This is duplicated from internal/validator.go to avoid import cycle.
+// isValidRuntime checks if the given runtime is valid for GitHub Actions. It
+// references the canonical appconstants list so it cannot drift — a raw literal
+// list had already gone stale (it omitted node24). appconstants imports nothing,
+// so the "import cycle" the old comment cited does not exist.
 func isValidRuntime(runtime string) bool {
 	validRuntimes := []string{
-		"node12",    // Legacy Node.js runtime (deprecated)
-		"node16",    // Legacy Node.js runtime (deprecated)
-		"node20",    // Current Node.js runtime
-		"docker",    // Docker container runtime
-		"composite", // Composite action runtime
+		appconstants.NodeRuntimeNode12,
+		appconstants.NodeRuntimeNode16,
+		appconstants.NodeRuntimeNode20,
+		appconstants.NodeRuntimeNode24,
+		appconstants.ActionTypeDocker,
+		appconstants.ActionTypeComposite,
 	}
 
 	runtime = strings.TrimSpace(strings.ToLower(runtime))

@@ -3,11 +3,14 @@ package cache
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -312,6 +315,36 @@ func TestCacheClear(t *testing.T) {
 	_, exists2 = cache.Get(testutil.CacheTestKey2)
 	if exists1 || exists2 {
 		t.Error("expected data to be cleared")
+	}
+}
+
+// TestCacheClearNotResurrectedByAsyncSave verifies N138: a Set spawns an async
+// save that clones the map; a Clear racing that save must not let the save rename
+// a stale cache.json back into place. Repeated Set→Clear→drain cycles must never
+// leave the cleared key on disk.
+func TestCacheClearNotResurrectedByAsyncSave(t *testing.T) {
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	cache := createTestCache(t, tmpDir)
+	defer testutil.CleanupCache(t, cache)()
+
+	cacheFile := filepath.Join(cache.path, appconstants.CacheJSON)
+
+	for i := range 100 {
+		_ = cache.Set(testutil.CacheTestKey1, testutil.CacheTestValue1)
+		if err := cache.Clear(); err != nil {
+			t.Fatalf("iteration %d: Clear: %v", i, err)
+		}
+		cache.saveWG.Wait() // let any save that raced Clear finish
+
+		data, err := os.ReadFile(cacheFile) // #nosec G304 -- temp path built in-test
+		if err != nil {
+			continue // file absent is the expected, correct outcome
+		}
+		if strings.Contains(string(data), testutil.CacheTestKey1) {
+			t.Fatalf("iteration %d: Clear() left stale key on disk: %s", i, data)
+		}
 	}
 }
 

@@ -401,6 +401,42 @@ func TestUpdateActionFile(t *testing.T) {
 	}
 }
 
+// TestUpdateActionFileWriteFailureRestoresOriginal verifies N139: when the
+// O_TRUNC write of the updated action.yml fails (e.g. ENOSPC / lost write perm),
+// updateActionFile restores the original from the backup instead of leaving the
+// user's file truncated, and consumes the backup.
+func TestUpdateActionFileWriteFailureRestoresOriginal(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("chmod-based write blocking is unreliable on Windows / as root")
+	}
+
+	dir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	initialYAML := testutil.MustReadFixture(testutil.TestFixtureSimpleCheckout)
+	actionPath := testutil.WriteActionFile(t, dir, initialYAML)
+
+	// Make the target unwritable so the write fails *after* the backup is created.
+	if err := os.Chmod(actionPath, 0o400); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+
+	analyzer, cleanupAnalyzer := newTestAnalyzer(t)
+	defer cleanupAnalyzer()
+
+	updates := []PinnedUpdate{{OldUses: testutil.TestCheckoutV4OldUses, NewUses: testutil.TestCheckoutPinnedV411}}
+	if err := analyzer.updateActionFile(actionPath, updates); err == nil {
+		t.Fatal("expected updateActionFile to fail on an unwritable target")
+	}
+
+	// The original must survive intact (restored from backup), and the backup is
+	// consumed by the restoring rename.
+	validateUpdateFileRollback(t, actionPath, initialYAML)
+	if _, statErr := os.Stat(actionPath + appconstants.BackupExtension); !os.IsNotExist(statErr) {
+		t.Error("expected backup to be consumed by the restore, but it still exists")
+	}
+}
+
 // TestValidateActionFile tests the validateActionFile method.
 func TestValidateActionFile(t *testing.T) {
 	t.Parallel()

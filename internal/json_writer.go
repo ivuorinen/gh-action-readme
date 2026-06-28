@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -13,9 +12,23 @@ import (
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
 )
 
-// getVersion returns the current version - can be overridden at build time.
+// buildVersion is the CLI version reported in generated JSON metadata. main sets
+// it from its ldflags-injected `version` via SetVersion at startup; a func value
+// like the old getVersion could not be set by `-X`, so JSON output was stuck at a
+// hardcoded placeholder regardless of the release version.
+var buildVersion = "dev"
+
+// SetVersion records the CLI build version for inclusion in generated JSON
+// metadata. Called once from main with the ldflags-injected version.
+func SetVersion(v string) {
+	if v != "" {
+		buildVersion = v
+	}
+}
+
+// getVersion returns the recorded build version.
 var getVersion = func() string {
-	return "0.1.0" // Default version, should be overridden at build time
+	return buildVersion
 }
 
 // shieldsBadgeEncode escapes a value for a shields.io badge URL segment. First it
@@ -64,9 +77,9 @@ type ActionYMLForJSON struct {
 
 // ActionInputForJSON represents an input parameter in JSON format.
 type ActionInputForJSON struct {
-	Description string `json:"description"`
-	Required    bool   `json:"required"`
-	Default     any    `json:"default,omitempty"`
+	Description string   `json:"description"`
+	Required    FlexBool `json:"required"`
+	Default     any      `json:"default,omitempty"`
 }
 
 // ActionOutputForJSON represents an output parameter in JSON format.
@@ -140,8 +153,8 @@ func (jw *JSONWriter) Write(action *ActionYML, outputPath string) error {
 		return err
 	}
 
-	// Write to file
-	return os.WriteFile(outputPath, data, appconstants.FilePermDefault) // #nosec G306 -- JSON output file permissions
+	// Write to file, tightening mode on rewrites of an existing file.
+	return writeFileTightMode(outputPath, data, appconstants.FilePermDefault)
 }
 
 // convertToJSONOutput converts ActionYML to structured JSON output.
@@ -264,6 +277,17 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 	}
 }
 
+// escapeYAMLDoubleQuoted escapes a value for embedding inside a double-quoted
+// YAML scalar: backslash first, then double-quote, so an input default that
+// contains `"` or `\` produces valid YAML the user can copy rather than a broken
+// scalar like `key: "a"b"`.
+func escapeYAMLDoubleQuoted(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+
+	return s
+}
+
 // generateBasicExample creates a basic usage example.
 func (jw *JSONWriter) generateBasicExample(action *ActionYML) string {
 	example := "- name: " + action.Name + "\n"
@@ -289,7 +313,11 @@ func (jw *JSONWriter) generateBasicExample(action *ActionYML) string {
 					value = fmt.Sprintf("%v", input.Default)
 				}
 			}
-			exampleSb247.WriteString("\n    " + key + ": \"" + value + "\"")
+			exampleSb247.WriteString("\n    ")
+			exampleSb247.WriteString(key)
+			exampleSb247.WriteString(`: "`)
+			exampleSb247.WriteString(escapeYAMLDoubleQuoted(value))
+			exampleSb247.WriteString(`"`)
 		}
 		example += exampleSb247.String()
 	}

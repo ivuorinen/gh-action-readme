@@ -1,13 +1,39 @@
 # Nitpicker Findings
 
 Generated: 2026-05-04
-Last validated: 2026-06-27 (pass 26 — fresh adversarial branch-diff review)
+Last validated: 2026-06-28 (passes 28–42 — 15 progressively-deeper whole-repo loops)
 
 ## Summary
 
-- Total: 133 | Open: 12 | Fixed: 117 | Invalid: 4
-- Open breakdown: 4 Advisory (N111/N112 validation-regex; N130/N131 defensive-only) + 8 Low. All
-  Critical/High/Medium findings are fixed. N129 was independently fixed via the PR #254 CR pass (see Fixed).
+- Total: 163 | Open: 5 | Fixed: 154 | Invalid: 4
+- Open breakdown: 2 Low (N122 scalar permissions; N161 dead-code inventory — deletion deferred to a
+  focused pass), 3 Advisory (N111/N112 validation-regex; N130 env-prefix). All Critical/High/Medium
+  findings are fixed.
+
+### Passes 28–42 — 2026-06-28 (15 deep loops, one lens each)
+
+- Concurrency (N138), error paths/leaks (N139), parser/YAML edges (N140–N143), template/escaping incl. two
+  HIGH pre-existing bugs — branding-gated default template and dead AsciiDoc template (N144–N147), dependency
+  analysis incl. a regression my own N140 fix exposed (N148–N149), config merge (N150), CLI flag validation
+  (N152), git URL ports (N153), validation depth (N154–N155), test quality (N156–N157), output writers
+  (N158–N159), constant drift (N162–N163), wizard live-config dead-end (N137).
+- Filed N161 (dead-code inventory; deletion deferred). Skipped N151 (folded into N130) and N160 (fail-closed
+  on absurd input). Loops 5 (path/security) and 15 (docs) found nothing new — verified clean.
+- Every fix shipped with a regression test. After all 15 loops: `go test ./...` clean (12 packages),
+  `go test -race` clean, golangci-lint 0 issues, coverage 82.4% (≥ 72% gate).
+
+### Pass 27 — 2026-06-28 (fresh whole-repo review)
+
+- Three parallel adversarial reviewers swept the full tree (parser/template/validation,
+  generator/config/cache, deps/git/wizard/cmd).
+- Fixed 1 High + 2 Medium + 8 Low/Advisory with regression tests (N123–N136): GitHub-token leak in
+  `gen --verbose`, yaml/toml advertised-but-ungeneratable output formats, SHA-pin always misreported
+  as a "major" update, plus the eight carried-over Low/Advisory items (N123–N128, N131, N132) and the
+  newly-found N133 subdir-drop.
+- Filed 1 Medium (N137): the N120 live-config guard makes the only `ExportConfig` caller — the wizard —
+  dead-end on its second run. Deferred because the correct fix is a data-preservation/UX decision.
+- After fixes: `go test ./...` clean (12 packages), `go test -race` clean on cache+deps, golangci-lint
+  0 issues, coverage 82.2% (≥ 72% gate).
 
 ### Pass 26 — 2026-06-27 (fresh branch-diff review)
 
@@ -61,15 +87,12 @@ Problem: AutomaticEnv config overrides require `GH_ACTION_README_THEME` etc., wh
 `GH_README_GITHUB_TOKEN`. A user expecting `GH_README_THEME` to mirror the token var gets a silent no-op.
 Evidence: SetEnvPrefix("GH_ACTION_README") vs github_helper token lookups on `GH_README_*`.
 Decision (Advisory): No documented contract for non-token env overrides exists, so nothing is broken today.
-Fix when addressed: align the prefix to `GH_README` or document `GH_ACTION_README_` for non-token overrides.
-
-#### [N131] GetGitHubToken dereferences config without a nil guard
-
-Category: reliability
-Area: internal/config.go:96-108
-Problem: `config.GitHubToken` is read with no nil check; the exported function panics on a nil config.
-Evidence: all current callers guard `globalConfig`, so no live crash — defensive only.
-Fix when addressed: `if config != nil && config.GitHubToken != ""` before the field access.
+Also (pass 34 / N151): because `AutomaticEnv` binds every defaulted key, an env like `GH_ACTION_README_THEME`
+overrides the *global config file*, inverting the documented hierarchy (global file should rank above env). Same
+root cause as the prefix issue.
+Fix when addressed: align the prefix to `GH_README` (or document `GH_ACTION_README_`), and decide whether env
+should rank above or below the global config file — if below, drop `AutomaticEnv()` (the token is loaded
+explicitly elsewhere, so nothing else depends on it).
 
 ### Low
 
@@ -84,72 +107,381 @@ Impact: Low — action.yml has no official `permissions` field (it is a repo con
 form is non-standard input; impact is poor UX on malformed input, not rejection of valid input.
 Fix: give Permissions a custom UnmarshalYAML that accepts a scalar (`read-all`/`write-all`) or a mapping.
 
+#### [N161] Large dead-code inventory — deletion deferred to a focused pass
+
+Category: maintainability
+Area: internal/ (application module; no external API surface)
+Problem: pass 40 (deadcode + grep) found ~1,100+ lines of production code with zero non-test callers, kept alive
+only by their own tests. Deferred from inline deletion because removing it safely (funcs + their tests + any newly
+unused constants) is a large, regression-prone change better done as one reviewable cleanup, not buried in the
+loop diff.
+Evidence (each grep-confirmed zero non-test callers):
+- internal/errorhandler.go (whole file: ErrorHandler + NewErrorHandler + helpers) + main.go createErrorHandler /
+  setupOutputAndErrorHandling — superseded by wrapHandlerWithErrorHandling.
+- internal/wizard/detector.go (ProjectDetector + ~38 methods); internal/wizard/validator.go +
+  validator_helper.go (ConfigValidator + ~30 methods); wizard/exporter.go GetSupportedFormats.
+- internal/validation: IsCommitSHA, IsSemanticVersion, IsVersionPinned, ValidateGitBranch, ValidateActionYMLPath,
+  IsGitRepository, CleanVersionString, ParseGitHubURL, TrimAndNormalize, path.go EnsureAbsolutePath.
+- internal/config.go InitConfig (superseded by ConfigurationLoader). [LoadRepoConfig / LoadActionConfig were
+  already removed during the 2026-06-28 coverage pass — the internal impls they wrapped remain, used by
+  ConfigurationLoader.]
+  configuration_loader.go NewConfigurationLoaderWithOptions / GetConfigurationSources / EnableSource /
+  DisableSource.
+- generator.go GenerateFromFile (exported wrapper, test-only — callers must move to ProcessBatch);
+  templates_embed/embed.go GetEmbeddedTemplateFS; dependencies/parser.go IsCompositeAction; apperrors Wrap;
+  helpers GetGitRepoRootAndInfo; appconstants ConfigurationSource.String.
+Fix: delete the above plus their tests in a dedicated cleanup; re-point the few tests that exercise GenerateFromFile
+to ProcessBatch. (N111/N112 reference IsCommitSHA/IsSemanticVersion as accepted-by-design, but those functions are
+themselves dead — deletion resolves N111/N112 too.)
+
+## Fixed
+
+### Pass 43 — 2026-06-28 (coverage push)
+
+#### [N164] ConfigExporter data race introduced by the N137 fix (mutable per-call field)
+
+Fixed: 2026-06-28
+Notes: the N137 fix stored allowLiveOverwrite in a ConfigExporter.preserveRepoOverrides field, set at the top of
+ExportConfig — making the exporter non-concurrent-safe, where it had been safe before. The existing
+TestConfigExporterExportConfig shares one exporter across parallel subtests, so `go test -race ./...` reported a
+DATA RACE on that field write (exporter.go:62). Caught by the coverage push's full `-race` run. Root-caused by
+removing the field and threading keepOverrides as a parameter through exportYAML/JSON/TOML → sanitizeConfig (no
+shared mutable state). `go test -race ./...` clean afterward. (Also added two idiomatic DI seams during this pass —
+a `createAnalyzer` var and `wizard.NewConfigWizardWithInput` — to make the deps render branches and
+configWizardHandler unit-testable; coverage 82.3% → 88.4%.)
+
+### Pass 41 — 2026-06-28 (deep loop 14: wizard flows)
+
+#### [N137] Config wizard dead-ended on its second run (live-config guard blocked the only writer)
+
+Fixed: 2026-06-28
+Notes: with no --output the wizard writes GetDefaultOutputPath(FormatYAML), which equals the live config path, and
+the N120 guard then refused — so `config wizard` saved nothing on every run after the first (ExportConfig's only
+non-test caller is the wizard, so the export-only guard blocked the one legitimate writer). Added an
+`allowLiveOverwrite` parameter to ExportConfig: the wizard passes true (guard skipped, repo_overrides preserved via
+a new exporter flag), share-style callers pass false (guard + repo_overrides stripping unchanged). The wizard
+handler now also copies existing repo_overrides into the config so a re-run does not wipe them; the top-level token
+is still never written to disk. Tests: TestExportConfigWizardOverwritesLiveAndKeepsOverrides (succeeds + preserves
+overrides), TestExportConfigRefusesLiveConfigOverwrite (still refuses for allowLiveOverwrite=false).
+
+### Pass 40 — 2026-06-28 (deep loop 13: constants, conventions, dead code)
+
+#### [N162] testutil isValidRuntime had drifted — missing node24
+
+Fixed: 2026-06-28
+Notes: testutil/fixtures.go hardcoded the runtime list and had already gone stale (no node24), so a valid node24
+fixture would be misclassified by test infrastructure; its "duplicated to avoid import cycle" comment was wrong
+(appconstants imports nothing). Repointed it at the canonical appconstants runtime constants.
+
+#### [N163] gen --theme help text omitted the valid "default" theme (drift)
+
+Fixed: 2026-06-28
+Notes: cmd_gen's `--theme` help hardcoded "github, gitlab, minimal, professional", dropping the canonical (and
+default) "default" theme; the `--output-format` help likewise duplicated the format list. Both are now derived from
+appconstants.GetSupportedThemes()/GetSupportedOutputFormats() so they cannot drift. Verified via `gen --help`.
+
+
+
+### Pass 39 — 2026-06-28 (deep loop 12: output writers)
+
+#### [N158] HTML output was world-readable (0644) while markdown/JSON are owner-only (0600)
+
+Fixed: 2026-06-28
+Notes: HTMLWriter.Write used os.Create (0666 & ~umask → typically 0644), so `gen -f html` produced a
+world-readable file while `-f md`/`-f json` wrote 0600 via FilePermDefault — same tool, same data, inconsistent
+and looser permissions. Switched to os.OpenFile with FilePermDefault. Test: TestHTMLWriterWriteFileMode (asserts
+no group/other access, umask-robust).
+
+#### [N159] JSON output always reported version "0.1.0", never the real build version
+
+Fixed: 2026-06-28
+Notes: json_writer's getVersion was a func value returning a hardcoded "0.1.0"; the "overridden at build time"
+comment was false (ldflags -X cannot set a func), so every `gen -f json` emitted `"generated":{"version":"0.1.0"}`
+regardless of release. Added internal.SetVersion, called from main with the ldflags-injected `version`, backing a
+`buildVersion` package var. Test: TestSetVersion. (N160 — a NaN/Inf input default aborting JSON generation — was
+left unfixed: fail-closed, no corrupt output, and `default: .inf` is not a realistic action input.)
+
+### Pass 38 — 2026-06-28 (deep loop 11: test quality)
+
+#### [N156] TestValidateActionYMLPath asserted only THAT an error occurred, not which (dead errorMsg field)
+
+Fixed: 2026-06-28
+Notes: the test declared an `errorMsg` field that was never set or asserted, so the four error cases (nonexistent,
+wrong-extension, empty-path, directory) would all still pass if ValidateActionYMLPath returned the wrong error for
+the wrong reason — weak coverage of a path-validation function with three distinct error returns. Populated
+errorMsg per case and added a wantErrIs field; the assertions now check `strings.Contains` and
+`errors.Is(err, os.ErrInvalid)` for the extension case.
+
+#### [N157] TestSchemaHandler ran t.Parallel() while its subtests reassigned the global globalConfig
+
+Fixed: 2026-06-28
+Notes: the parent test was parallel, so it ran concurrently with other parallel tests in the package while its
+subtests reassigned the shared `globalConfig` pointer (read by wrapHandlerWithErrorHandling and handlers) — a
+latent data race `go test -race` could flag non-deterministically. Removed t.Parallel() from the parent (its work
+is serial and fast), matching how TestSetupDepsUpgrade guards the same hazard.
+
+### Pass 37 — 2026-06-28 (deep loop 10: validation package)
+
+#### [N154] `validate` accepted structurally-invalid actions (missing runtime-required field)
+
+Fixed: 2026-06-28
+Notes: ValidateActionYML checked only that `runs.using` was a known value, never that the runtime's required entry
+point was present — so a node action with no `main` (composite with no `steps`, docker with no `image`) reported
+"all validations passed" though GitHub rejects it. Added validateRunsRequiredField (node→runs.main, docker→
+runs.image, composite→runs.steps) with new appconstants for the keys/fields. Tests:
+TestValidateActionYMLMissingRuntimeFields; two existing struct fixtures completed with `main`.
+
+#### [N155] SanitizeActionName left URL/path-hostile characters, emitting malformed uses:/URLs
+
+Fixed: 2026-06-28
+Notes: it only lowercased and replaced ASCII spaces, so `/`, tabs, `&` survived — `SanitizeActionName("My/Sub
+Action")` → `my/sub-action`, producing `uses: your-org/my/sub-action@v1` (an extra path segment) and a malformed
+repository URL, contradicting its "URL-friendly" contract. Replaced with a narrow regex that maps every char
+outside `[a-z0-9._-]` to a single hyphen (runs not collapsed), preserving all prior documented behavior
+(spaces→hyphens, underscores/dots kept) so no existing test or property changed. Tests added for slash/ampersand/
+underscore handling.
+
+### Pass 36 — 2026-06-28 (deep loop 9: git detection)
+
+#### [N153] A host port in the remote URL was captured as the org, corrupting the uses: statement
+
+Fixed: 2026-06-28
+Notes: reGitHubURL (and its mirror validation.reGitHubURLFull) had no slot for a `:port`, so GitHub's documented
+SSH-over-443 remote `ssh://git@ssh.github.com:443/org/repo.git` parsed as org="443", repo="org" — and since both
+pass isValidGitHubPathSegment, getGitUsesString emitted a confidently-wrong `443/org@v1`. Added an optional
+`(?::\d+)?` port group to both regexes (kept in sync). Tests: TestParseGitHubURL gains SSH-over-443 and
+explicit-port cases. Token-in-remote-URL leakage was separately verified safe (RemoteURL never reaches templates,
+JSON, or logs).
+
+### Pass 35 — 2026-06-28 (deep loop 8: CLI handlers & exit codes)
+
+#### [N152] `gen -f <bad>` / `--theme <bad>` skipped validation and failed mid-batch with a cryptic error
+
+Fixed: 2026-06-28
+Notes: genHandler applied --output-format/--theme via applyCommandFlags AFTER loadGenConfig's ValidateConfiguration,
+so an invalid `-f yaml`/`-f bogus`/`--theme nonexistent` bypassed the format/theme check and failed during batch
+processing with "encountered N errors during batch processing" + a per-file "unsupported output format" (or, for
+themes, a batch error). Added a re-validation immediately after the flags are applied, so invalid values now fail
+upfront with a clear message ("invalid output format 'bogus', must be one of: …" / "invalid theme: …") and exit 1
+before any file is written. Test: TestGenHandlerRejectsInvalidFormatFlagUpfront; integration --theme case updated.
+
+### Pass 34 — 2026-06-28 (deep loop 7: config merge & precedence)
+
+#### [N150] Cross-scope verbose+quiet merge produced a fatal "mutually exclusive" error
+
+Fixed: 2026-06-28
+Notes: mergeBooleanFields OR-merged Verbose and Quiet independently, so a lower-scope `verbose: true` and a
+higher-scope `quiet: true` both survived; ValidateConfiguration then rejected the both-true config and aborted
+generation before flags could be applied — so even `--quiet` couldn't rescue it. Made the merge mutually
+exclusive: the higher-priority src wins and clears the other (quiet-wins when a src sets both). Test:
+TestMergeConfigsVerboseQuietExclusive; existing TestMergeBooleanFields cases updated to the corrected semantics.
+(Field-merge cross-check this pass confirmed every AppConfig field is merged and the tri-state bools are correct.)
+N151 — env vars (`GH_ACTION_README_*` via AutomaticEnv) overriding the global config file, inverting the documented
+hierarchy — is the same root cause as the open advisory [N130] and is tracked there.
+
+### Pass 33 — 2026-06-28 (deep loop 6: dependency analysis)
+
+#### [N148] GeneratePinnedUpdate dropped the monorepo subpath, repointing the pin (regression exposed by N140)
+
+Fixed: 2026-06-28
+Notes: After N140 made parseUsesStatement return a bare repo, GeneratePinnedUpdate still rebuilt NewUses as
+`owner/repo@sha`, so `deps pin` rewrote `github/codeql-action/analyze@v3` → `github/codeql-action@<sha>` and
+`actions/cache/restore@v4` → `actions/cache@<sha>` — silently repointing common sub-actions at the repo root and
+corrupting workflows. Now NewUses preserves the full reference path from dep.Uses (everything before `@`). Test:
+TestAnalyzerGeneratePinnedUpdatePreservesSubpath.
+
+#### [N149] Abbreviated commit-SHA pins were always reported outdated
+
+Fixed: 2026-06-28
+Notes: outdatedUpdateType compared the in-file version against the full 40-char latestSHA with EqualFold, but
+isCommitSHA accepts 7+ char SHAs, so a short pin (`actions/checkout@8f4b7f8`) already at the latest commit never
+matched and was perpetually flagged as a digest update. Added shaMatches: a shorter current value is compared as a
+case-insensitive prefix of the latest SHA. Tests added to TestAnalyzerOutdatedUpdateType.
+
+### Pass 31 — 2026-06-28 (deep loop 4: template rendering & escaping)
+
+#### [N146] Default theme rendered a title-only README for any action without a `branding:` block
+
+Fixed: 2026-06-28
+Notes: templates/readme.tmpl wrapped its ENTIRE body (Usage, Inputs, Outputs, Permissions, Example, footer) in
+`{{if .Branding}}`…`{{end}}` (lines 3–55). Branding is optional in action.yml, so every action without it generated
+a README containing only `# <Name>` (7 bytes for a test action) — silently dropping all documentation in the
+most-used theme. Removed the erroneous branding gate so the body always renders. Test:
+TestRenderReadmeDefaultTemplateNoBranding (asserts Usage/Inputs/description present without branding).
+
+#### [N147] `-f asciidoc` rendered the theme's Markdown template — the AsciiDoc template was dead
+
+Fixed: 2026-06-28
+Notes: generateASCIIDoc → generateSimpleFormat → resolveTemplatePathForFormat selects a template by `--theme` only,
+never by output format, so `-f asciidoc` (default theme) emitted the Markdown template (`# Name`) into a `.adoc`
+file and the dedicated themes/asciidoc/readme.adoc template was never used. Added TemplatePathASCIIDoc and a
+template-override parameter to generateSimpleFormat; generateASCIIDoc now forces the AsciiDoc template regardless of
+theme. Output grew from 7 → 2066 bytes with real AsciiDoc syntax. Test: TestGeneratorAsciiDocUsesAsciiDocTemplate.
+
+#### [N144] Backtick in an input `default` corrupted the inline code span in 5 of 6 themes
+
+Fixed: 2026-06-28
+Notes: every theme wrapped the default in a single-backtick code span but `mdCell` did not handle backticks, so a
+default like ``use `json` here`` closed the span early and corrupted the cell. Added an `mdCode` helper (GFM
+variable-length backtick fencing + pipe/newline escaping, accepts any type) used by the github, professional,
+gitlab, and minimal themes, and `adocCode` (unconstrained double-backtick form) for asciidoc. Tests: TestMdCode,
+TestAdocCode; end-to-end smoke confirmed the value survives intact across all themes.
+
+#### [N145] AsciiDoc cells used markdown `<br>` for newlines, rendering it literally
+
+Fixed: 2026-06-28
+Notes: the asciidoc theme reused `mdCell`, whose `\n`→`<br>` is a GFM break that Asciidoctor prints as literal
+text. Added `adocCell` (escapes the `|` separator, maps newlines to a space-prefixed AsciiDoc hard break `+`)
+used for the asciidoc description/output cells. Test: TestAdocCellNewline.
+
+### Pass 30 — 2026-06-28 (deep loop 3: parser & YAML edge cases)
+
+#### [N140] Monorepo/subpath action refs mis-parsed — repo swallowed the subpath (wrong URLs + API 404s)
+
+Fixed: 2026-06-28
+Notes: reUsesStatement `^([^/]+)/([^@]+)@(.+)$` let `[^@]+` eat slashes, so `actions/cache/restore@v4` parsed as
+repo `cache/restore`. Downstream `Name`, `SourceURL`, `MarketplaceURL`, and `Repositories.Get(owner,"cache/restore")`
+all 404'd — affecting every monorepo sub-action (actions/cache/restore, github/codeql-action/*, etc.). Changed the
+regex to `^([^/]+)/([^/@]+)(?:/[^@]+)?@(.+)$` (bare repo, non-capturing subpath; full ref stays in Uses). Tests:
+TestAnalyzerParseUsesStatement gains two subpath cases.
+
+#### [N142] Quoted/word-form `required` aborted the entire parse (no README generated)
+
+Fixed: 2026-06-28
+Notes: `Required bool` made goccy hard-fail the whole action.yml on `required: "true"`/`yes`/`on` — valid YAML
+GitHub tolerates — so generation died with a cryptic unmarshal error. Introduced `FlexBool` (underlying bool, so
+templates/JSON are unchanged) with an UnmarshalYAML that accepts native booleans and the common string spellings;
+applied to ActionInput and ActionInputForJSON. Fixture: actions/javascript/required-quoted.yml. Test:
+TestParseActionYMLFlexBoolRequired.
+
+#### [N141] Local (./) and docker:// composite steps silently dropped from dependency analysis
+
+Fixed: 2026-06-28
+Notes: parseUsesStatement tags `./local` and `docker://` as LocalPath with empty owner/repo, but
+analyzeActionDependency errored on empty owner/repo and processStep discarded the nil — so local and Docker action
+references never appeared in deps output despite the IsLocalAction field existing. Added localActionDependency
+(emits the dep, labels docker vs local, skips enrichment/marketplace). Fixture: dependencies/local-docker-steps.yml.
+Test: TestAnalyzeActionFileLocalAndDockerSteps.
+
+#### [N143] UTF-8 BOM disabled comment-permission parsing
+
+Fixed: 2026-06-28
+Notes: A leading U+FEFF is not Unicode whitespace, so TrimSpace left it glued to the first `#`, the scan broke on
+line 1, and comment-declared permissions were silently lost (goccy strips the BOM for the YAML body, masking it).
+Strip a leading BOM before scanning. Fixture (real BOM bytes): permissions/with-bom.yml. Test:
+TestParsePermissionsFromCommentsWithBOM.
+
+### Pass 29 — 2026-06-28 (deep loop 2: error paths & resource leaks)
+
+#### [N139] updateActionFile truncated the user's action.yml on write failure with no restore (data loss)
+
+Fixed: 2026-06-28
+Notes: `deps upgrade`/`pin` reads action.yml, writes a `.bak`, then `os.WriteFile`s the update with O_TRUNC. On a
+write failure (ENOSPC, lost permission) the original was already truncated and the code returned an error without
+restoring — while the sibling validation-failure path *does* roll back. Left the user's source corrupt with an
+undocumented `.bak`. Added a restoring `os.Rename(backupPath, cleanPath)` on the write-failure branch (mirrors the
+validation rollback; consumes the backup), reporting both errors if the restore itself fails. Test:
+TestUpdateActionFileWriteFailureRestoresOriginal (chmod-0400 target forces the failure; asserts original survives
+and backup is consumed). Found by the error-path/resource-lifecycle lens.
+
+### Pass 28 — 2026-06-28 (deep loop 1: concurrency)
+
+#### [N138] Cache.Clear() can be undone by a pending async save resurrecting cache.json
+
+Fixed: 2026-06-28
+Notes: A Set/Delete spawns an async saveToDisk that clones c.data under RLock; if Clear ran between the clone and
+the temp+rename, the save renamed a stale cache.json (old entries) back into place, violating Clear's "remove
+file" contract. Added a `clearGen` counter bumped by Clear under the mutex; saveToDisk captures the gen at clone
+time and skips its rename if Clear advanced it. Panic-free (no WaitGroup-during-Wait). Test:
+TestCacheClearNotResurrectedByAsyncSave (100 Set→Clear→drain cycles, never leaves the stale key on disk).
+Found by the concurrency lens; `go test -race -count=3` clean.
+
+### Pass 27 — 2026-06-28
+
+#### [N134] GitHub token leaked in plaintext via `gen --verbose`
+
+Fixed: 2026-06-28
+Notes: logConfigInfo (cmd_gen.go) dumped the whole `*AppConfig` via `%+v`, including GitHubToken (and nested
+RepoOverrides tokens), with no redaction — the sibling dump in `config show` was hardened but this one was missed.
+Extracted a shared `redactConfigForLog` helper (cmd_config.go) that redacts the top-level and per-override tokens
+on a copy; both `config show` and `gen --verbose` now route through it. Test: TestRedactConfigForLog.
+
+#### [N135] yaml/toml advertised as gen output formats but generation always fails
+
+Fixed: 2026-06-28
+Notes: `supportedOutputFormats` (appconstants/themes.go) listed yaml/toml, so ValidateConfiguration accepted
+`output_format: yaml` and the wizard offered them, but generateByFormat has no yaml/toml case and returned
+"unsupported output format" for every file. Removed yaml/toml from the gen list (they remain config-export
+formats); fixed the index-based wizard format menu and its tests accordingly. Tests: TestGetSupportedOutputFormats,
+wizard TestConfigureOutputFormat/TestRun.
+
+#### [N136] SHA-pinned dependencies always reported as a "major" update
+
+Fixed: 2026-06-28
+Notes: CheckOutdated discarded the parsed versionType and semver-compared the 40-char SHA, so parseVersionParts
+treated it as a major version and every correctly-pinned dep was flagged "major" (and "upgraded"). Added
+outdatedUpdateType: a CommitSHA pin equal to the latest release SHA is None, a differing one is the new
+UpdateTypeDigest, and an unknown latest SHA is treated as current. Test: TestAnalyzerOutdatedUpdateType.
+
+#### [N133] extractActionSubdirectory drops a real subdir whose name starts with `..`
+
+Fixed: 2026-06-28
+Notes: The "outside repo" guard used `strings.HasPrefix(relPath, "..")`, which over-matched a legitimate subdir
+like `..build` and emitted `org/repo@v1` instead of `org/repo/..build@v1`. Changed to match an exact `..`
+component (`relPath == ".." || HasPrefix(relPath, ".."+sep)`). Test case added to TestExtractActionSubdirectory.
+
 #### [N123] JSON-writer usage example does not escape quotes in input defaults
 
-Category: correctness
-Area: internal/json_writer.go:292
-Problem: Input default values are interpolated into a double-quoted YAML scalar without escaping, so a default
-containing `"` produces invalid YAML in the generated usage block.
-Evidence: input `default: 'a"b'` yields `key: "a"b"` — broken YAML the user copies.
-Fix: escape `"`/`\` (or single-quote with `'`-doubling) when wrapping the value.
+Fixed: 2026-06-28
+Notes: Added escapeYAMLDoubleQuoted (backslash then double-quote) and used it when wrapping the input default in
+the generated usage block, so a default containing `"`/`\` produces valid YAML. Test: TestEscapeYAMLDoubleQuoted.
 
 #### [N124] Monorepo subdir uses OS-native separators in the `uses:` path
 
-Category: correctness
-Area: internal/template.go:176-184 (extractActionSubdirectory)
-Problem: The subdir comes from `filepath.Rel` (OS separators) and is concatenated into the `uses:` path, so on
-Windows it emits backslashes: `org/repo/actions\build@v1`.
-Evidence: extractActionSubdirectory returns `actions\csharp-build` on Windows; buildUsesString does `repo+"/"+subdir`.
-Fix: `filepath.ToSlash(relPath)` before returning the subdir.
+Fixed: 2026-06-28
+Notes: extractActionSubdirectory now returns `filepath.ToSlash(relPath)`, so the rendered `uses:` path is
+`org/repo/actions/build@v1` on Windows too, not `actions\build`.
 
 #### [N125] Config.Version is not character-validated before entering the `uses:` example
 
-Category: correctness
-Area: internal/template.go:254 / 130-132 (formatVersion)
-Problem: Unlike org/repo (validated via isValidGitHubPathSegment), Config.Version flows into the rendered usage
-example with no validation; a multiline/whitespace value corrupts or injects into the example block.
-Evidence: config `version: "v1\n      run: x"` is emitted verbatim (text/template, no escaping). Trust boundary
-is the user's own config, so impact is Low.
-Fix: reject whitespace/newlines in version before use, mirroring the org/repo segment check.
+Fixed: 2026-06-28
+Notes: getActionVersion now accepts Config.Version only when isValidVersionRef (reVersionRef =
+`^[A-Za-z0-9._/+-]+$`) passes, so a multiline/whitespace value cannot inject extra YAML lines into the rendered
+example; invalid values fall through to the default branch/v1. Test case added to TestGetActionVersion.
 
 #### [N126] HTML header/footer read errors silently swallowed
 
-Category: reliability
-Area: internal/template.go:382-386, 392-396
-Problem: `if h, e := os.ReadFile(...); e == nil` discards the error, so a mistyped `--header`/`--footer` path
-yields output with the fragment silently missing and no diagnostic.
-Evidence: the error variable `e` is never surfaced.
-Fix: return (or warn on) the read error instead of discarding it.
+Fixed: 2026-06-28
+Notes: RenderReadme now returns a wrapped error when the `--header`/`--footer` template read fails instead of
+discarding it, so a mistyped path produces a diagnostic rather than silently-missing output. Test case added to
+TestRenderReadme_HTMLHeaderFooter.
 
 #### [N127] Path-traversal filename check rejects legitimate `..`-containing names
 
-Category: correctness
-Area: internal/generator.go:534
-Problem: `strings.Contains(filename, "..")` rejects valid filenames that merely contain a literal `..`, e.g.
-`report..final.md` or `v1..2.md`, with a path-traversal error.
-Evidence: substring match, not a path-component check.
-Fix: split on the path separator and reject only an exact `..` element.
+Fixed: 2026-06-28
+Notes: resolveOutputPath now checks for an exact `..` path component (split on the separator) rather than a raw
+substring, so `report..final.md` is accepted while `../escape.md` is still rejected. Test case added to
+TestGeneratorResolveOutputPath.
 
 #### [N128] Cache `done` channel is unbuffered — goroutine leak in long-lived embeddings
 
-Category: reliability
-Area: internal/cache/cache.go:90 (done: make(chan bool)) + Close
-Problem: The non-blocking send on the unbuffered `done` channel is dropped if Close races a cleanup tick (the
-loop is inside cleanup(), not at the select); the ticker is then stopped so the loop blocks forever.
-Evidence: `select { case c.done <- true: default: }` with no ready receiver takes the default. Harmless on
-immediate process exit; a real leak in any longer-lived embedding.
-Fix: `done: make(chan bool, 1)` so the send always buffers.
+Fixed: 2026-06-28
+Notes: Changed `done: make(chan bool)` to `make(chan bool, 1)` so Close's non-blocking send always buffers even
+when the cleanup goroutine is mid-cleanup (not parked in its select), preventing the leak after the ticker stops.
+Covered by the existing cache lifecycle/race suite (one-token idiomatic fix).
+
+#### [N131] GetGitHubToken dereferences config without a nil guard
+
+Fixed: 2026-06-28
+Notes: Added `config != nil` before reading `config.GitHubToken`, so the exported function degrades gracefully
+instead of panicking on a nil config. Test: TestGetGitHubTokenNilConfig.
 
 #### [N132] Repository-name validator rejects valid names with dots or >39 chars
 
-Category: correctness
-Area: internal/wizard/validator.go:171/413 (validateRepository/isValidGitHubName)
-Problem: The regex and `len > 39` cap reject GitHub repo names containing `.` and names up to 100 chars, which
-GitHub allows; `config validate` on repo `my.cool.action` reports an invalid-name error.
-Evidence: regex `^[a-zA-Z0-9]([a-zA-Z0-9\-_]*[a-zA-Z0-9])?$` + `len > 39` reuse the org-grade strictness.
-Fix: allow `.` and raise the length cap for repository names (separate from the org validator).
-
-## Fixed
+Fixed: 2026-06-28
+Notes: isValidGitHubName (repository-only) now allows `.` in the middle and raises the cap to GitHub's real
+100-char limit, keeping the start/end-alphanumeric anchor; the suggestion text now mentions dots. Org validation
+is unchanged. Tests updated in TestConfigValidatorIsValidGitHubName (dots valid, 100 ok, 101 over).
 
 ### Pass 26 — 2026-06-27
 

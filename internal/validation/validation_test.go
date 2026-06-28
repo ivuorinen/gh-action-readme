@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +24,8 @@ func TestValidateActionYMLPath(t *testing.T) {
 		name        string
 		setupFunc   func(t *testing.T, tmpDir string) string
 		expectError bool
-		errorMsg    string
+		errorMsg    string // substring the error must contain (N156)
+		wantErrIs   error  // sentinel the error must wrap (N156)
 	}{
 		{
 			name: "valid action.yml file",
@@ -54,6 +56,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 				return filepath.Join(tmpDir, testutil.TestNonexistentYML)
 			},
 			expectError: true,
+			errorMsg:    "cannot access action file",
 		},
 		{
 			name: "file with wrong extension",
@@ -63,6 +66,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 				return testutil.WriteActionFixtureAs(t, tmpDir, "action.txt", testutil.TestFixtureJavaScriptSimple)
 			},
 			expectError: true,
+			wantErrIs:   os.ErrInvalid,
 		},
 		{
 			name: "empty file path",
@@ -70,6 +74,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 				return ""
 			},
 			expectError: true,
+			errorMsg:    "cannot access action file",
 		},
 		{
 			name: "directory named action.yml is rejected",
@@ -83,6 +88,7 @@ func TestValidateActionYMLPath(t *testing.T) {
 				return dirPath
 			},
 			expectError: true,
+			errorMsg:    "is a directory, not a file",
 		},
 	}
 
@@ -99,6 +105,12 @@ func TestValidateActionYMLPath(t *testing.T) {
 
 			if tt.expectError {
 				testutil.AssertError(t, err)
+				if tt.errorMsg != "" && !strings.Contains(err.Error(), tt.errorMsg) {
+					t.Errorf("expected error containing %q, got: %v", tt.errorMsg, err)
+				}
+				if tt.wantErrIs != nil && !errors.Is(err, tt.wantErrIs) {
+					t.Errorf("expected error wrapping %v, got: %v", tt.wantErrIs, err)
+				}
 			} else {
 				testutil.AssertNoError(t, err)
 			}
@@ -488,6 +500,13 @@ func TestParseGitHubURL(t *testing.T) {
 			expectedOrg:  "",
 			expectedRepo: "",
 		},
+		{
+			// A host that merely ends with github.com must not be parsed as GitHub.
+			name:         "lookalike host rejected",
+			url:          "https://notgithub.com/" + testValidationOrgOwner + "/" + testValidationRepoRepo,
+			expectedOrg:  "",
+			expectedRepo: "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -530,6 +549,23 @@ func TestSanitizeActionName(t *testing.T) {
 			name:     "consecutive spaces are not collapsed",
 			input:    "My  Action",
 			expected: "my--action",
+		},
+		{
+			// N155: '/' must not survive — it would inject an extra path segment
+			// into the generated uses: statement (your-org/my-sub-action@v1).
+			name:     "slash is replaced, not preserved",
+			input:    "My/Sub Action",
+			expected: "my-sub-action",
+		},
+		{
+			name:     "ampersand and other unsafe chars become hyphens",
+			input:    "Foo & Bar",
+			expected: "foo---bar",
+		},
+		{
+			name:     "underscores and dots are preserved",
+			input:    "my_action.v2",
+			expected: "my_action.v2",
 		},
 		{
 			name:     testutil.TestCaseNameEmpty,

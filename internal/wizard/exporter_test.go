@@ -75,7 +75,7 @@ func testYAMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, testutil.TestFileConfigYAML)
 
-		err := exporter.ExportConfig(config, FormatYAML, outputPath)
+		err := exporter.ExportConfig(config, FormatYAML, outputPath, false)
 		if err != nil {
 			t.Fatalf(testutil.TestMsgExportConfigError, err)
 		}
@@ -92,7 +92,7 @@ func testJSONExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "config.json")
 
-		err := exporter.ExportConfig(config, FormatJSON, outputPath)
+		err := exporter.ExportConfig(config, FormatJSON, outputPath, false)
 		if err != nil {
 			t.Fatalf(testutil.TestMsgExportConfigError, err)
 		}
@@ -109,7 +109,7 @@ func testTOMLExport(exporter *ConfigExporter, config *internal.AppConfig) func(*
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "config.toml")
 
-		err := exporter.ExportConfig(config, FormatTOML, outputPath)
+		err := exporter.ExportConfig(config, FormatTOML, outputPath, false)
 		if err != nil {
 			t.Fatalf(testutil.TestMsgExportConfigError, err)
 		}
@@ -192,7 +192,7 @@ func TestConfigExporterSanitizeConfig(t *testing.T) {
 		},
 	}
 
-	sanitized := exporter.sanitizeConfig(config)
+	sanitized := exporter.sanitizeConfig(config, false)
 
 	// Verify sensitive data is removed
 	if sanitized.GitHubToken != "" {
@@ -293,7 +293,7 @@ func TestExportConfigRefusesLiveConfigOverwrite(t *testing.T) {
 	testutil.AssertNoError(t, os.WriteFile(cfgPath, []byte(liveContent), appconstants.FilePermDefault))
 
 	exporter := NewConfigExporter(internal.NewColoredOutput(true))
-	err = exporter.ExportConfig(createTestConfig(), FormatYAML, cfgPath)
+	err = exporter.ExportConfig(createTestConfig(), FormatYAML, cfgPath, false)
 	if err == nil {
 		t.Fatal("expected ExportConfig to refuse overwriting the live config")
 	}
@@ -309,6 +309,34 @@ func TestExportConfigRefusesLiveConfigOverwrite(t *testing.T) {
 	}
 }
 
+// TestExportConfigWizardOverwritesLiveAndKeepsOverrides verifies N137: with
+// allowLiveOverwrite=true (the wizard path) ExportConfig writes the live config
+// instead of dead-ending, and preserves repo_overrides instead of dropping them.
+func TestExportConfigWizardOverwritesLiveAndKeepsOverrides(t *testing.T) {
+	t.Cleanup(xdg.Reload)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "xdg"))
+	xdg.Reload()
+
+	cfgPath, err := internal.GetConfigPath()
+	testutil.AssertNoError(t, err)
+	testutil.AssertNoError(t, os.MkdirAll(filepath.Dir(cfgPath), appconstants.FilePermDir))
+	testutil.AssertNoError(t, os.WriteFile(cfgPath, []byte("theme: github\n"), appconstants.FilePermDefault))
+
+	cfg := createTestConfig()
+	cfg.RepoOverrides = map[string]internal.AppConfig{"org/repo": {Theme: appconstants.ThemeMinimal}}
+
+	exporter := NewConfigExporter(internal.NewColoredOutput(true))
+	if err := exporter.ExportConfig(cfg, FormatYAML, cfgPath, true); err != nil {
+		t.Fatalf("wizard live-config write should succeed, got: %v", err)
+	}
+
+	got, readErr := os.ReadFile(cfgPath) // #nosec G304 -- test-controlled XDG path
+	testutil.AssertNoError(t, readErr)
+	if !strings.Contains(string(got), "org/repo") {
+		t.Errorf("repo_overrides were not preserved in the written config:\n%s", got)
+	}
+}
+
 func TestExportConfigRejectsTraversal(t *testing.T) {
 	// Isolate the filesystem so a regressed guard cannot write outside the test
 	// sandbox or depend on the ambient working directory. t.Chdir disallows
@@ -319,7 +347,7 @@ func TestExportConfigRejectsTraversal(t *testing.T) {
 	config := createTestConfig()
 
 	const traversalPath = "../../etc/evil.yaml"
-	err := exporter.ExportConfig(config, FormatYAML, traversalPath)
+	err := exporter.ExportConfig(config, FormatYAML, traversalPath, false)
 	if err == nil {
 		t.Fatal("expected ExportConfig to reject a path containing '..'")
 	}

@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"os"
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // HTMLWriter writes HTML output with optional header/footer.
@@ -11,26 +11,8 @@ type HTMLWriter struct {
 }
 
 func (w *HTMLWriter) Write(output, path string) error {
-	f, err := os.Create(path) // #nosec G304 -- path from function parameter
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = f.Close() // Ignore close error in defer
-	}()
-	if w.Header != "" {
-		if _, err := f.WriteString(w.Header); err != nil {
-			return err
-		}
-	}
-	if _, err := f.WriteString(output); err != nil {
-		return err
-	}
-	if w.Footer != "" {
-		if _, err := f.WriteString(w.Footer); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	// Write through writeFileTightMode (FilePermDefault 0600) so the HTML output
+	// matches the markdown/JSON writers and is not world-readable, even when
+	// regenerating over an existing file.
+	return writeFileTightMode(path, []byte(w.Header+output+w.Footer), appconstants.FilePermDefault)
 }

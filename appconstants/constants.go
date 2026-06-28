@@ -33,6 +33,10 @@ const (
 	UpdateTypeMinor = "minor"
 	// UpdateTypePatch indicates a patch version update.
 	UpdateTypePatch = "patch"
+	// UpdateTypeDigest indicates a commit-SHA-pinned dependency whose pin differs
+	// from the latest release's SHA. The semver bump magnitude is unknowable from
+	// a SHA, so it is reported as a digest update rather than misclassified.
+	UpdateTypeDigest = "digest"
 )
 
 // Timeout constants for API operations.

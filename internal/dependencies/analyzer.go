@@ -19,7 +19,12 @@ import (
 
 // Package-level compiled regexps for performance (compiled once at startup).
 var (
-	reUsesStatement   = regexp.MustCompile(`^([^/]+)/([^@]+)@(.+)$`)
+	// owner/repo@version, with an optional subdirectory for monorepo actions
+	// (actions/cache/restore@v4, github/codeql-action/analyze@v3). The subpath is
+	// non-capturing: repo must be the bare repository name so GitHub API lookups
+	// and source/marketplace URLs resolve (a "cache/restore" repo 404s). The full
+	// reference is preserved in Dependency.Uses.
+	reUsesStatement   = regexp.MustCompile(`^([^/]+)/([^/@]+)(?:/[^@]+)?@(.+)$`)
 	reGitSHA          = regexp.MustCompile(appconstants.RegexGitSHA)
 	reSemanticVersion = regexp.MustCompile(`^v?\d+(\.\d+)*(\.\d+)?(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$`)
 	rePinnedVersion   = regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
@@ -178,7 +183,7 @@ func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error
 			continue // Skip shell scripts and local actions
 		}
 
-		owner, repo, currentVersion, _ := a.parseUsesStatement(dep.Uses)
+		owner, repo, currentVersion, versionType := a.parseUsesStatement(dep.Uses)
 		if owner == "" || repo == "" {
 			continue
 		}
@@ -188,7 +193,7 @@ func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error
 			continue // Skip on error, don't fail the whole operation
 		}
 
-		updateType := a.compareVersions(currentVersion, latestVersion)
+		updateType := a.outdatedUpdateType(versionType, currentVersion, latestVersion, latestSHA)
 		if updateType != appconstants.UpdateTypeNone {
 			outdated = append(outdated, OutdatedDependency{
 				Current:       dep,
@@ -227,11 +232,21 @@ func (a *Analyzer) GeneratePinnedUpdate(
 		return nil, fmt.Errorf("refusing to pin %s: invalid version tag %q", dep.Uses, latestVersion)
 	}
 
-	// Create the new pinned uses string: "owner/repo@sha # version"
-	owner, repo, currentVersion, _ := a.parseUsesStatement(dep.Uses)
-	newUses := fmt.Sprintf("%s/%s@%s # %s", owner, repo, latestSHA, latestVersion)
+	// Create the new pinned uses string, preserving the full reference path
+	// (including any monorepo subpath such as codeql-action/analyze). Rebuilding
+	// from the bare owner/repo would drop the subpath and silently repoint the pin
+	// at the repo-root action (parseUsesStatement returns a bare repo by design).
+	_, _, currentVersion, versionType := a.parseUsesStatement(dep.Uses)
+	refPath := dep.Uses
+	if at := strings.LastIndex(refPath, "@"); at >= 0 {
+		refPath = refPath[:at]
+	}
+	newUses := fmt.Sprintf("%s@%s # %s", refPath, latestSHA, latestVersion)
 
-	updateType := a.compareVersions(currentVersion, latestVersion)
+	// Classify through outdatedUpdateType so a SHA-pinned ref is reported as a
+	// digest update, not "major" — compareVersions would parse the 40-char SHA as a
+	// version and always return major.
+	updateType := a.outdatedUpdateType(versionType, currentVersion, latestVersion, latestSHA)
 
 	return &PinnedUpdate{
 		FilePath:   actionPath,
@@ -337,10 +352,45 @@ func (a *Analyzer) processStep(step CompositeStep, stepNumber int) *Dependency {
 	return nil
 }
 
+// localActionDependency builds a Dependency for a local (./, ../) or docker://
+// reference. These have no owner/repo, so no GitHub enrichment or marketplace
+// URL is attempted; the full reference is kept in Uses.
+func (a *Analyzer) localActionDependency(step CompositeStep) *Dependency {
+	name := step.Name
+	if name == "" {
+		name = step.Uses
+	}
+
+	isDocker := strings.HasPrefix(step.Uses, appconstants.DockerPrefix)
+	description := "Local action (same repository)"
+	if isDocker {
+		description = "Docker container action"
+	}
+
+	return &Dependency{
+		Name:          name,
+		Uses:          step.Uses,
+		Version:       step.Uses,
+		VersionType:   LocalPath,
+		IsPinned:      true, // local/docker refs are fixed to the given path/tag
+		Description:   description,
+		WithParams:    a.convertWithParams(step.With),
+		IsLocalAction: !isDocker,
+	}
+}
+
 // analyzeActionDependency analyzes a single action dependency.
 func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependency, error) {
 	// Parse the uses statement
 	owner, repo, version, versionType := a.parseUsesStatement(step.Uses)
+
+	// Local (./, ../) and docker:// references resolve to no owner/repo, but they
+	// are still real dependencies — emit them instead of dropping the step, which
+	// is what returning an error here used to do (processStep discards nil).
+	if versionType == LocalPath {
+		return a.localActionDependency(step), nil
+	}
+
 	if owner == "" || repo == "" {
 		return nil, fmt.Errorf("invalid uses statement: %s", step.Uses)
 	}
@@ -434,7 +484,11 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 	// Standard GitHub action format: owner/repo@version
 	matches := reUsesStatement.FindStringSubmatch(uses)
 	if len(matches) != 4 {
-		return "", "", "", LocalPath
+		// A malformed uses string (not owner/repo@version, and not a ./ or docker://
+		// ref handled above) is not a local action. Return an empty version type so
+		// analyzeActionDependency's owner/repo check rejects it instead of emitting
+		// it as a bogus "Local action (same repository)".
+		return "", "", "", ""
 	}
 
 	owner = matches[1]
@@ -631,6 +685,41 @@ func (a *Analyzer) cacheVersion(cacheKey, version, sha string) {
 }
 
 // compareVersions compares two version strings and returns the update type.
+// outdatedUpdateType classifies how far a dependency is behind. For commit-SHA
+// pins the version string is a 40-char hex SHA, which cannot be semver-compared
+// (parseVersionParts would treat the SHA as a major version and always report
+// "major"). A SHA pin is current iff it already equals the latest release's SHA;
+// otherwise it is behind by an unknowable amount, reported as a digest update.
+// When the latest SHA is unknown we cannot compare, so it is treated as current.
+func (a *Analyzer) outdatedUpdateType(versionType VersionType, currentVersion, latestVersion, latestSHA string) string {
+	if versionType == CommitSHA {
+		if latestSHA == "" || shaMatches(currentVersion, latestSHA) {
+			return appconstants.UpdateTypeNone
+		}
+
+		return appconstants.UpdateTypeDigest
+	}
+
+	return a.compareVersions(currentVersion, latestVersion)
+}
+
+// shaMatches reports whether a pinned commit SHA refers to the latest SHA. A pin
+// may be abbreviated (isCommitSHA accepts 7+ chars), so a shorter current value
+// is compared as a case-insensitive prefix of the full 40-char latest SHA rather
+// than required to equal it (which would flag every short pin as outdated).
+func shaMatches(current, latest string) bool {
+	current = strings.ToLower(current)
+	latest = strings.ToLower(latest)
+	if current == "" {
+		return false
+	}
+	if len(current) < len(latest) {
+		return strings.HasPrefix(latest, current)
+	}
+
+	return current == latest
+}
+
 func (a *Analyzer) compareVersions(current, latest string) string {
 	currentClean := strings.TrimPrefix(current, "v")
 	latestClean := strings.TrimPrefix(latest, "v")
@@ -726,8 +815,16 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 		[]byte(updatedContent),
 		appconstants.FilePermDefault,
 	); err != nil {
-		// Do not remove backupPath here — it is the recovery copy for this failure.
-		return fmt.Errorf("failed to write updated file: %w", err)
+		// os.WriteFile opened the original with O_TRUNC, so a mid-write failure
+		// (e.g. ENOSPC) has already truncated the user's action.yml. Restore it
+		// from the backup instead of leaving it corrupt — mirroring the rollback
+		// the validation-failure path below performs.
+		if rollbackErr := os.Rename(backupPath, cleanPath); rollbackErr != nil {
+			return fmt.Errorf("failed to write updated file: %w (restore from %s also failed: %w)",
+				err, backupPath, rollbackErr)
+		}
+
+		return fmt.Errorf("failed to write updated file, restored original: %w", err)
 	}
 
 	// Validate and rollback on failure

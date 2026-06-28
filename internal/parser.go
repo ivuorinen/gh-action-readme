@@ -26,9 +26,58 @@ type ActionYML struct {
 
 // ActionInput represents an input parameter for a GitHub Action.
 type ActionInput struct {
-	Description string `yaml:"description"`
-	Required    bool   `yaml:"required"`
-	Default     any    `yaml:"default"`
+	Description string   `yaml:"description"`
+	Required    FlexBool `yaml:"required"`
+	Default     any      `yaml:"default"`
+}
+
+// FlexBool is a bool that also accepts the quoted/alternate YAML boolean forms
+// GitHub tolerates (`required: "true"`, `yes`, `on`, `1` and their negatives).
+// Its underlying type is bool, so it renders as true/false in templates and
+// marshals as a JSON boolean — transparent everywhere except parsing.
+type FlexBool bool
+
+// UnmarshalYAML decodes a scalar into a FlexBool, accepting native booleans and
+// the common string spellings rather than failing the whole file on a quoted
+// value (a strict bool field returns "cannot unmarshal string into bool").
+func (b *FlexBool) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	switch v := raw.(type) {
+	case bool:
+		*b = FlexBool(v)
+	case nil:
+		*b = false
+	case string:
+		return b.fromString(v)
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		// Unquoted YAML numbers (required: 1 / required: 0) decode as numeric
+		// scalars, not strings; normalize to the string form so they accept the same
+		// 1/0 spellings as quoted values instead of failing the whole file.
+		return b.fromString(fmt.Sprintf("%v", v))
+	default:
+		return fmt.Errorf("invalid type %T for required", raw)
+	}
+
+	return nil
+}
+
+// fromString sets the FlexBool from one of the accepted string spellings, returning
+// an error for anything else.
+func (b *FlexBool) fromString(v string) error {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "true", "yes", "on", "1":
+		*b = true
+	case "false", "no", "off", "0", "":
+		*b = false
+	default:
+		return fmt.Errorf("invalid boolean value for required: %q", v)
+	}
+
+	return nil
 }
 
 // ActionOutput represents an output parameter for a GitHub Action.
@@ -112,6 +161,10 @@ func parsePermissionsFromComments(path string) (map[string]string, error) {
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		// A UTF-8 BOM on the first line is not Unicode whitespace, so TrimSpace
+		// leaves it glued to the leading "#" and the scan would abort on line 1,
+		// silently dropping comment-declared permissions. Strip it.
+		line = strings.TrimPrefix(line, "\ufeff")
 		trimmed := strings.TrimSpace(line)
 
 		// Stop parsing at first non-comment line

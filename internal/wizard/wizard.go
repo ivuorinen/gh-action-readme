@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,9 +33,17 @@ type ConfigWizard struct {
 // beyond any realistic field (e.g. a token) while still bounding memory.
 const wizardScannerMaxBytes = 1024 * 1024
 
-// NewConfigWizard creates a new configuration wizard instance.
+// NewConfigWizard creates a new configuration wizard instance reading from stdin.
 func NewConfigWizard(output internal.MessageLogger) *ConfigWizard {
-	scanner := bufio.NewScanner(os.Stdin)
+	return NewConfigWizardWithInput(output, os.Stdin)
+}
+
+// NewConfigWizardWithInput creates a wizard that reads scripted input from in
+// instead of stdin, so the prompt flow can be driven in tests. (The optional
+// GitHub-token prompt still reads the password from the real terminal, so tests
+// drive the flow by declining it.)
+func NewConfigWizardWithInput(output internal.MessageLogger, in io.Reader) *ConfigWizard {
+	scanner := bufio.NewScanner(in)
 	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), wizardScannerMaxBytes)
 
 	return &ConfigWizard{

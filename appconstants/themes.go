@@ -45,6 +45,10 @@ const (
 	TemplatePathMinimal = "templates/themes/minimal/readme.tmpl"
 	// TemplatePathProfessional is the professional theme template path.
 	TemplatePathProfessional = "templates/themes/professional/readme.tmpl"
+	// TemplatePathASCIIDoc is the AsciiDoc output-format template path. AsciiDoc is
+	// an output format (selected by -f asciidoc), not a --theme, so it has a single
+	// template used regardless of the configured theme.
+	TemplatePathASCIIDoc = "templates/themes/asciidoc/readme.adoc"
 	// TemplateNameReadme is the template name used in template.New().
 	TemplateNameReadme = "readme"
 )
@@ -65,13 +69,16 @@ const (
 	OutputFormatASCIIDoc = "asciidoc"
 )
 
-// supportedOutputFormats lists all available output format names (unexported to prevent modification).
+// supportedOutputFormats lists the output formats the `gen` command can actually
+// produce (unexported to prevent modification). It must stay in sync with the
+// switch in internal/generator.go:generateByFormat — yaml/toml are config-export
+// formats only and have no document generator, so they are excluded here;
+// listing them made ValidateConfiguration accept `output_format: yaml` and then
+// fail every file with "unsupported output format".
 var supportedOutputFormats = []string{
 	OutputFormatMarkdown,
 	OutputFormatHTML,
 	OutputFormatJSON,
-	OutputFormatYAML,
-	OutputFormatTOML,
 	OutputFormatASCIIDoc,
 }
 

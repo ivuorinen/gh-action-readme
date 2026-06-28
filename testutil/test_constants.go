@@ -166,6 +166,20 @@ const (
 	TestFixturePermissionsMixed          = "permissions/mixed-format.yml"
 	TestFixturePermissionsEmpty          = "permissions/empty-block.yml"
 	TestFixturePermissionsNone           = "permissions/no-permissions.yml"
+	// TestFixturePermissionsWithBOM is a permissions fixture for the UTF-8 BOM path
+	// (regression for N143). It is stored BOM-free (a committed BOM fails
+	// editorconfig's charset=utf-8 check); the test prepends the BOM at runtime.
+	TestFixturePermissionsWithBOM = "permissions/with-bom.yml"
+)
+
+// Fixtures for parser/dependency edge cases (loop-3 regressions).
+const (
+	// TestFixtureRequiredQuoted is a JavaScript action whose inputs use quoted and
+	// word-form boolean values for `required` (regression for N142).
+	TestFixtureRequiredQuoted = "actions/javascript/required-quoted.yml"
+	// TestFixtureLocalDockerSteps is a composite action referencing local (./) and
+	// docker:// actions alongside a remote one (regression for N141).
+	TestFixtureLocalDockerSteps = "dependencies/local-docker-steps.yml"
 )
 
 // Dependency update test constants for reducing string duplication in updater_test.go.

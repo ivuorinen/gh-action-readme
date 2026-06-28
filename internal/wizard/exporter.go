@@ -46,7 +46,15 @@ func NewConfigExporter(output internal.MessageLogger) *ConfigExporter {
 }
 
 // ExportConfig exports the configuration to the specified format and path.
-func (e *ConfigExporter) ExportConfig(config *internal.AppConfig, format ExportFormat, outputPath string) error {
+// allowLiveOverwrite lets the wizard write its result over the live config it is
+// meant to populate (preserving repo_overrides); share-style exports pass false so
+// the live-config guard and repo_overrides stripping still apply.
+func (e *ConfigExporter) ExportConfig(
+	config *internal.AppConfig,
+	format ExportFormat,
+	outputPath string,
+	allowLiveOverwrite bool,
+) error {
 	// Reject path traversal before creating any directory or writing the file:
 	// outputPath comes from the --output flag and must not escape via a ".."
 	// path segment. Check segments rather than a substring so legitimate names
@@ -56,15 +64,18 @@ func (e *ConfigExporter) ExportConfig(config *internal.AppConfig, format ExportF
 		return fmt.Errorf("refusing to export to a path containing a '..' segment: %q", outputPath)
 	}
 
-	// Refuse to overwrite the live config file. Export sanitizes the config
-	// (strips the token and drops repo_overrides), so writing over the active
-	// config — which is also GetDefaultOutputPath's default target — would
-	// silently discard those fields. Require an explicit, different --output.
-	if cfgPath, cfgErr := internal.GetConfigPath(); cfgErr == nil && samePath(cfgPath, outputPath) {
-		if _, statErr := os.Stat(outputPath); statErr == nil {
-			return fmt.Errorf(
-				"refusing to overwrite the live config %q (export drops tokens and repo_overrides); "+
-					"pass --output to choose a different file", outputPath)
+	// Refuse to overwrite the live config file for share-style exports, which
+	// sanitize the config (strip the token and drop repo_overrides) and would
+	// silently discard those fields. The wizard passes allowLiveOverwrite=true: it
+	// is meant to populate the live config and preserves repo_overrides, so the
+	// guard must not turn it into a dead-end.
+	if !allowLiveOverwrite {
+		if cfgPath, cfgErr := internal.GetConfigPath(); cfgErr == nil && samePath(cfgPath, outputPath) {
+			if _, statErr := os.Stat(outputPath); statErr == nil {
+				return fmt.Errorf(
+					"refusing to overwrite the live config %q (export drops tokens and repo_overrides); "+
+						"pass --output to choose a different file", outputPath)
+			}
 		}
 	}
 
@@ -77,11 +88,11 @@ func (e *ConfigExporter) ExportConfig(config *internal.AppConfig, format ExportF
 
 	switch format {
 	case FormatYAML:
-		return e.exportYAML(config, outputPath)
+		return e.exportYAML(config, outputPath, allowLiveOverwrite)
 	case FormatJSON:
-		return e.exportJSON(config, outputPath)
+		return e.exportJSON(config, outputPath, allowLiveOverwrite)
 	case FormatTOML:
-		return e.exportTOML(config, outputPath)
+		return e.exportTOML(config, outputPath, allowLiveOverwrite)
 	default:
 		return fmt.Errorf("unsupported export format: %s", format)
 	}
@@ -205,9 +216,9 @@ func writeFileAtomic(outputPath string, write func(*os.File) error) (retErr erro
 }
 
 // exportYAML exports configuration as YAML.
-func (e *ConfigExporter) exportYAML(config *internal.AppConfig, outputPath string) error {
+func (e *ConfigExporter) exportYAML(config *internal.AppConfig, outputPath string, keepOverrides bool) error {
 	// Create a clean config without sensitive data for export
-	exportConfig := e.sanitizeConfig(config)
+	exportConfig := e.sanitizeConfig(config, keepOverrides)
 
 	if err := writeFileAtomic(outputPath, func(file *os.File) error {
 		// Route header and encoder through a sticky writer so a failed write
@@ -241,9 +252,9 @@ func (e *ConfigExporter) exportYAML(config *internal.AppConfig, outputPath strin
 }
 
 // exportJSON exports configuration as JSON.
-func (e *ConfigExporter) exportJSON(config *internal.AppConfig, outputPath string) error {
+func (e *ConfigExporter) exportJSON(config *internal.AppConfig, outputPath string, keepOverrides bool) error {
 	// Create a clean config without sensitive data for export
-	exportConfig := e.sanitizeConfig(config)
+	exportConfig := e.sanitizeConfig(config, keepOverrides)
 
 	if err := writeFileAtomic(outputPath, func(file *os.File) error {
 		encoder := json.NewEncoder(file)
@@ -263,10 +274,10 @@ func (e *ConfigExporter) exportJSON(config *internal.AppConfig, outputPath strin
 }
 
 // exportTOML exports configuration as TOML.
-func (e *ConfigExporter) exportTOML(config *internal.AppConfig, outputPath string) error {
+func (e *ConfigExporter) exportTOML(config *internal.AppConfig, outputPath string, keepOverrides bool) error {
 	// For now, we'll use a basic TOML export since the TOML library adds dependencies
 	// In a full implementation, you would use "github.com/BurntSushi/toml"
-	exportConfig := e.sanitizeConfig(config)
+	exportConfig := e.sanitizeConfig(config, keepOverrides)
 
 	if err := writeFileAtomic(outputPath, func(file *os.File) error {
 		// Route all writes through a sticky writer so an I/O failure (disk-full,
@@ -296,13 +307,16 @@ func (e *ConfigExporter) exportTOML(config *internal.AppConfig, outputPath strin
 }
 
 // sanitizeConfig removes sensitive information from config for export.
-func (e *ConfigExporter) sanitizeConfig(config *internal.AppConfig) *internal.AppConfig {
-	// Create a copy of the config
-	sanitized := *config
-
-	// Remove sensitive information
-	sanitized.GitHubToken = ""    // Never export tokens
-	sanitized.RepoOverrides = nil // Don't export repo overrides
+func (e *ConfigExporter) sanitizeConfig(config *internal.AppConfig, keepOverrides bool) *internal.AppConfig {
+	// Strip every token — top-level and any nested under repo_overrides — through
+	// the shared recursive sanitizer, so no override layer serializes a token to
+	// disk. The token belongs in an env var, never on disk. repo_overrides are
+	// dropped for share-style exports but preserved when saving the user's own live
+	// config (the wizard), so a second wizard run does not wipe them.
+	sanitized := *config.RedactTokens("")
+	if !keepOverrides {
+		sanitized.RepoOverrides = nil
+	}
 
 	// Remove legacy fields if they match defaults
 	defaults := internal.DefaultAppConfig()

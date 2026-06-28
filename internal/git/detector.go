@@ -18,9 +18,14 @@ var (
 	// reGitHubURL captures org/repo from any GitHub remote URL. The repo group is
 	// dot-tolerant ([^/]+?) and an optional .git suffix (plus any trailing path)
 	// is stripped, so names like "my.repo" are preserved even when the URL omits
-	// the .git suffix (common for HTTPS web-clone URLs). Mirrors
+	// the .git suffix (common for HTTPS web-clone URLs). The optional (?::\d+)?
+	// tolerates a host port (GitHub's documented SSH-over-443:
+	// ssh://git@ssh.github.com:443/org/repo) so the port is not captured as the
+	// org. The leading (?:^|[@/.]) anchors the host so a hostname that merely ends
+	// with github.com (e.g. "notgithub.com") is not parsed as a GitHub repo, while
+	// real subdomains like ssh.github.com still match. Mirrors
 	// validation.reGitHubURLFull so both parsers agree.
-	reGitHubURL = regexp.MustCompile(`github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?(?:/.*)?$`)
+	reGitHubURL = regexp.MustCompile(`(?:^|[@/.])github\.com(?::\d+)?[:/]([^/]+)/([^/]+?)(?:\.git)?(?:/.*)?$`)
 	// reSafeBranchName accepts only plain git ref characters, so a hostile or
 	// malformed symbolic-ref value cannot inject newlines/metacharacters into
 	// generated README output or constructed URLs.

@@ -172,12 +172,16 @@ func TestConfigValidatorIsValidGitHubName(t *testing.T) {
 		{"valid name", "test-org", true},
 		{"valid name with numbers", "test123", true},
 		{"valid name with underscore", "test_org", true},
+		{"valid name with dots", "my.cool.action", true},
 		{"empty name", "", false},
 		{"name with spaces", "test org", false},
 		{"name starting with hyphen", "-test", false},
 		{"name ending with hyphen", "test-", false},
+		{"name starting with dot", ".test", false},
 		{"name with special chars", "test@org", false},
-		{"very long name", "this-is-a-very-long-organization-name-that-exceeds-the-limit", false},
+		// Repository names allow up to 100 chars; 101 is over the cap.
+		{"over-length name", strings.Repeat("a", 101), false},
+		{"max-length name", strings.Repeat("a", 100), true},
 	}
 
 	runValidationTests(t, tests, validator.isValidGitHubName, "isValidGitHubName")

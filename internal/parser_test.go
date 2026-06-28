@@ -478,6 +478,52 @@ func TestParseActionYMLNoPermissions(t *testing.T) {
 	}
 }
 
+// TestParseActionYMLFlexBoolRequired verifies N142: quoted and word-form boolean
+// values for `required` parse instead of failing the whole file.
+func TestParseActionYMLFlexBoolRequired(t *testing.T) {
+	t.Parallel()
+
+	action, err := parseActionFromContent(t, testutil.MustReadFixture(testutil.TestFixtureRequiredQuoted))
+	if err != nil {
+		t.Fatalf("ParseActionYML must accept quoted/word boolean required, got: %v", err)
+	}
+
+	if !bool(action.Inputs["token"].Required) {
+		t.Error(`required: "true" should parse as true`)
+	}
+	if !bool(action.Inputs["flag"].Required) {
+		t.Error("required: yes should parse as true")
+	}
+	if bool(action.Inputs["optional"].Required) {
+		t.Error("required: false should parse as false")
+	}
+	if !bool(action.Inputs["num_true"].Required) {
+		t.Error("required: 1 (numeric scalar) should parse as true")
+	}
+	if bool(action.Inputs["num_false"].Required) {
+		t.Error("required: 0 (numeric scalar) should parse as false")
+	}
+}
+
+// TestParsePermissionsFromCommentsWithBOM verifies N143: a UTF-8 BOM at the start
+// of the file does not abort the comment-permission scan.
+func TestParsePermissionsFromCommentsWithBOM(t *testing.T) {
+	t.Parallel()
+
+	// The fixture is stored BOM-free (a committed BOM fails editorconfig's
+	// charset=utf-8 check); prepend the BOM here to exercise the parser's BOM path.
+	const bom = "\ufeff"
+	action, err := parseActionFromContent(t, bom+testutil.MustReadFixture(testutil.TestFixturePermissionsWithBOM))
+	if err != nil {
+		t.Fatalf(testutil.TestErrorFormat, err)
+	}
+
+	if action.Permissions[testutil.PermissionContents] != testutil.PermissionRead ||
+		action.Permissions[testutil.PermissionIssues] != testutil.PermissionWrite {
+		t.Errorf("BOM-prefixed permission comments not parsed: %#v", action.Permissions)
+	}
+}
+
 // TestParseActionYMLMalformedYAML tests parsing with malformed YAML.
 func TestParseActionYMLMalformedYAML(t *testing.T) {
 	t.Parallel()

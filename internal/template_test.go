@@ -183,6 +183,14 @@ func TestExtractActionSubdirectory(t *testing.T) {
 			want:       "",
 		},
 		{
+			// N133: a real subdir whose name merely starts with ".." must not be
+			// dropped by the parent-traversal guard.
+			name:       "subdirectory name starting with dots",
+			actionPath: "/repo/..build/action.yml",
+			repoRoot:   testTplRepoRoot,
+			want:       "..build",
+		},
+		{
 			name:       "empty action path",
 			actionPath: "",
 			repoRoot:   testTplRepoRoot,
@@ -371,6 +379,19 @@ func TestGetActionVersion(t *testing.T) {
 		{
 			name: "use default branch when enabled",
 			data: newTemplateData(templateDataParams{useDefaultBranch: true, defaultBranch: testTplBranchMain}),
+			want: testTplBranchMain,
+		},
+		{
+			// N125: a version with whitespace/newlines is rejected (would inject
+			// extra lines into the rendered uses: example) and falls through.
+			name: "invalid version with newline falls through to default branch",
+			data: newTemplateData(
+				templateDataParams{
+					version:          "v1\n      run: x",
+					useDefaultBranch: true,
+					defaultBranch:    testTplBranchMain,
+				},
+			),
 			want: testTplBranchMain,
 		},
 		{
@@ -682,6 +703,100 @@ func TestBuildTemplateData_RealGitRepo(t *testing.T) {
 
 // TestRenderReadme_HTMLHeaderFooter tests that HTML rendering includes header and footer content
 // from files on the filesystem (kills mutations on lines 305 and 309 of template.go).
+// TestRenderReadmeDefaultTemplateNoBranding verifies N146: an action without a
+// branding block still renders the full README, not just the title (the body was
+// erroneously wrapped in {{if .Branding}}).
+func TestRenderReadmeDefaultTemplateNoBranding(t *testing.T) {
+	t.Parallel()
+
+	action := &ActionYML{
+		Name:        "NoBrand",
+		Description: "the description",
+		Inputs:      map[string]ActionInput{"token": {Description: "a token"}},
+	}
+	td := BuildTemplateData(action, DefaultAppConfig(), "", "")
+
+	out, err := RenderReadme(td, TemplateOptions{
+		TemplatePath: resolveTemplatePath(appconstants.TemplatePathDefault),
+		Format:       appconstants.OutputFormatMarkdown,
+	})
+	if err != nil {
+		t.Fatalf("RenderReadme: %v", err)
+	}
+
+	for _, want := range []string{"## Usage", "## Inputs", "the description", "token"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("default README missing %q for a branding-less action:\n%s", want, out)
+		}
+	}
+}
+
+// TestMdCode verifies N144: a value with a backtick is fenced so the Markdown
+// inline code span is not closed early, and table specials stay escaped.
+func TestMdCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   any
+		want string
+	}{
+		{"no specials", "v1.0", "`v1.0`"},
+		{"pipe escaped", "a|b", "`a\\|b`"},
+		{"backtick fenced", "use `json`", "`` use `json` ``"},
+		{"non-string", 5, "`5`"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := mdCode(tt.in); got != tt.want {
+				t.Errorf("mdCode(%v) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestAdocCode verifies N144/N145: AsciiDoc inline code uses the unconstrained
+// double-backtick form when the value contains a backtick, and pipes are escaped.
+func TestAdocCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   any
+		want string
+	}{
+		{"simple", "v1", "`v1`"},
+		{"backtick unconstrained", "a`b", "``a`b``"},
+		{"pipe escaped", "x|y", "`x\\|y`"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := adocCode(tt.in); got != tt.want {
+				t.Errorf("adocCode(%v) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestAdocCellNewline verifies N145: AsciiDoc cells turn newlines into an AsciiDoc
+// hard break (" +"), not the markdown "<br>" that AsciiDoc renders literally.
+func TestAdocCellNewline(t *testing.T) {
+	t.Parallel()
+
+	if got := adocCell("a\nb"); got != "a +\nb" {
+		t.Errorf("adocCell newline = %q, want %q", got, "a +\nb")
+	}
+	if got := adocCell("x|y"); got != "x\\|y" {
+		t.Errorf("adocCell pipe = %q, want %q", got, "x\\|y")
+	}
+}
+
 func TestRenderReadme_HTMLHeaderFooter(t *testing.T) {
 	t.Parallel()
 
@@ -752,6 +867,22 @@ func TestRenderReadme_HTMLHeaderFooter(t *testing.T) {
 
 		if strings.Contains(out, footerContent) {
 			t.Errorf("output should not contain footer content %q when FooterPath is empty", footerContent)
+		}
+	})
+
+	t.Run("missing header path surfaces an error", func(t *testing.T) {
+		t.Parallel()
+
+		// N126: a mistyped --header path must produce a diagnostic, not output
+		// with the fragment silently missing.
+		opts := TemplateOptions{
+			TemplatePath: tmplPath,
+			HeaderPath:   filepath.Join(tmpDir, "does-not-exist.html"),
+			Format:       appconstants.OutputFormatHTML,
+		}
+
+		if _, err := RenderReadme(action, opts); err == nil {
+			t.Error("expected an error for a missing HTML header path, got nil")
 		}
 	})
 }
@@ -846,5 +977,30 @@ func TestAnalyzeDependencies(t *testing.T) {
 				t.Error("analyzeDependencies() returned nil, expected non-nil slice")
 			}
 		})
+	}
+}
+
+// TestHasDefault verifies the template presence check distinguishes an absent
+// default (nil) from an explicit falsey default (false, 0, ""), which plain
+// template truthiness cannot — so documentation cells render "(default: false)"
+// instead of silently dropping it.
+func TestHasDefault(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		val  any
+		want bool
+	}{
+		{"nil is absent", nil, false},
+		{"false is present", false, true},
+		{"zero int is present", 0, true},
+		{"empty string is present", "", true},
+		{"non-empty value is present", "x", true},
+	}
+	for _, tc := range cases {
+		if got := hasDefault(tc.val); got != tc.want {
+			t.Errorf("%s: hasDefault(%#v) = %v, want %v", tc.name, tc.val, got, tc.want)
+		}
 	}
 }

@@ -106,6 +106,29 @@ func TestHTMLWriterWrite(t *testing.T) {
 	}
 }
 
+// TestHTMLWriterWriteFileMode verifies N158: HTML output is written with the same
+// owner-only permission as the markdown/JSON writers, not os.Create's
+// world-readable 0644 (asserted as no group/other access to be umask-robust).
+func TestHTMLWriterWriteFileMode(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	outputPath := filepath.Join(tmpDir, "perm.html")
+
+	writer := &HTMLWriter{}
+	if err := writer.Write("<h1>x</h1>", outputPath); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	info, err := os.Stat(mustSafePath(t, outputPath))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := info.Mode().Perm(); perm&0o077 != 0 {
+		t.Errorf("HTML output mode = %o, expected no group/other access (owner-only)", perm)
+	}
+}
+
 // TestHTMLWriterWriteErrorPaths tests error handling in HTMLWriter.Write.
 func TestHTMLWriterWriteErrorPaths(t *testing.T) {
 	t.Parallel()

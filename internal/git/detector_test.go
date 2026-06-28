@@ -232,6 +232,19 @@ func TestParseGitHubURL(t *testing.T) {
 			expectedRepo: "my.repo",
 		},
 		{
+			// N153: a host port must not be captured as the org.
+			name:         "SSH over HTTPS port (ssh.github.com:443)",
+			remoteURL:    "ssh://git@ssh.github.com:443/" + testGitOrgOwner + "/" + testGitRepoRepo + ".git",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
+		},
+		{
+			name:         "HTTPS URL with explicit port",
+			remoteURL:    "https://github.com:443/" + testGitOrgOwner + "/" + testGitRepoRepo + ".git",
+			expectedOrg:  testGitOrgOwner,
+			expectedRepo: testGitRepoRepo,
+		},
+		{
 			name:         "Invalid URL",
 			remoteURL:    "not-a-valid-url",
 			expectedOrg:  "",

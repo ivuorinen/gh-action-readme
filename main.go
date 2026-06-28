@@ -65,7 +65,10 @@ func setupOutputAndErrorHandling() (*internal.ColoredOutput, *internal.ErrorHand
 	return output, errorHandler
 }
 
-func createAnalyzer(generator *internal.Generator, output *internal.ColoredOutput) *dependencies.Analyzer {
+// createAnalyzer builds the dependency analyzer used by the deps handlers. It is
+// a var so tests can inject an analyzer backed by a mock GitHub client and
+// exercise the outdated/security result-rendering branches without live network.
+var createAnalyzer = func(generator *internal.Generator, output *internal.ColoredOutput) *dependencies.Analyzer {
 	return internal.CreateAnalyzer(generator, output)
 }
 
@@ -119,6 +122,9 @@ func handleNoFilesFoundError(err error, output *internal.ColoredOutput) error {
 }
 
 func main() {
+	// Propagate the ldflags-injected build version into generated JSON metadata.
+	internal.SetVersion(version)
+
 	rootCmd := &cobra.Command{
 		Use:   "gh-action-readme",
 		Short: "Auto-generate beautiful README and HTML documentation for GitHub Actions.",

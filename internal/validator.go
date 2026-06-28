@@ -48,15 +48,18 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 						using,
 					),
 				)
-			} else if isDeprecatedRuntime(using) {
-				result.Warnings = append(result.Warnings, appconstants.FieldRunsUsing)
-				result.Suggestions = append(
-					result.Suggestions,
-					fmt.Sprintf(
-						"Runtime '%s' is deprecated and no longer supported by GitHub Actions; migrate to %s",
-						using, appconstants.NodeRuntimeNode24,
-					),
-				)
+			} else {
+				if isDeprecatedRuntime(using) {
+					result.Warnings = append(result.Warnings, appconstants.FieldRunsUsing)
+					result.Suggestions = append(
+						result.Suggestions,
+						fmt.Sprintf(
+							"Runtime '%s' is deprecated and no longer supported by GitHub Actions; migrate to %s",
+							using, appconstants.NodeRuntimeNode24,
+						),
+					)
+				}
+				validateRunsRequiredField(using, action.Runs, &result)
 			}
 		} else {
 			result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
@@ -87,6 +90,53 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 	return result
 }
 
+// validateRunsRequiredField appends a MissingField when the runs section lacks
+// the entry point GitHub requires for the given runtime: main for node*, image
+// for docker, steps for composite. Without this, ValidateActionYML reports
+// "all validations passed" for an action GitHub would reject (e.g. a node action
+// with no main).
+func validateRunsRequiredField(using string, runs map[string]any, result *ValidationResult) {
+	normalized := strings.TrimSpace(strings.ToLower(using))
+
+	var key, field, suggestion string
+	switch {
+	case strings.HasPrefix(normalized, "node"):
+		key, field = appconstants.RunsKeyMain, appconstants.FieldRunsMain
+		suggestion = "Add 'main:' (the JavaScript entry point, e.g. index.js) to the runs section"
+	case normalized == appconstants.ActionTypeDocker:
+		key, field = appconstants.RunsKeyImage, appconstants.FieldRunsImage
+		suggestion = "Add 'image:' (a Dockerfile path or a docker:// image) to the runs section"
+	case normalized == appconstants.ActionTypeComposite:
+		key, field = appconstants.RunsKeySteps, appconstants.FieldRunsSteps
+		suggestion = "Add 'steps:' to the runs section for a composite action"
+	default:
+		return
+	}
+
+	if val, ok := runs[key]; !ok || isEmptyRuntimeValue(val) {
+		result.MissingFields = append(result.MissingFields, field)
+		result.Suggestions = append(result.Suggestions, suggestion)
+	}
+}
+
+// isEmptyRuntimeValue reports whether a present runs.* entry carries no usable
+// value (runs.main:, runs.image: "", runs.steps: with no items). GitHub rejects
+// such actions even though the key exists, so key presence alone is insufficient.
+func isEmptyRuntimeValue(v any) bool {
+	switch val := v.(type) {
+	case nil:
+		return true
+	case string:
+		return strings.TrimSpace(val) == ""
+	case []any:
+		return len(val) == 0
+	case map[string]any:
+		return len(val) == 0
+	default:
+		return false
+	}
+}
+
 // isValidRuntime checks if the given runtime is valid for GitHub Actions.
 func isValidRuntime(runtime string) bool {
 	validRuntimes := []string{
@@ -94,7 +144,7 @@ func isValidRuntime(runtime string) bool {
 		appconstants.NodeRuntimeNode16,   // Deprecated Node.js runtime
 		appconstants.NodeRuntimeNode20,   // Current Node.js runtime
 		appconstants.NodeRuntimeNode24,   // Current Node.js runtime
-		"docker",                         // Docker container runtime
+		appconstants.ActionTypeDocker,    // Docker container runtime
 		appconstants.ActionTypeComposite, // Composite action runtime
 	}
 

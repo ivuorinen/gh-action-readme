@@ -35,11 +35,16 @@ Examples:
 		appconstants.FlagOutputFormat,
 		"f",
 		appconstants.OutputFormatMarkdown,
-		"output format: md, html, json, asciidoc",
+		// Derived from the canonical list so the help text cannot drift.
+		"output format: "+strings.Join(appconstants.GetSupportedOutputFormats(), ", "),
 	)
 	cmd.Flags().StringP(appconstants.FlagOutputDir, "o", ".", "output directory")
 	cmd.Flags().StringP(appconstants.FlagOutput, "", "", "custom output filename (overrides default naming)")
-	cmd.Flags().StringP(appconstants.ConfigKeyTheme, "t", "", "template theme: github, gitlab, minimal, professional")
+	cmd.Flags().StringP(
+		appconstants.ConfigKeyTheme, "t", "",
+		// Derived from the canonical list (the hardcoded text had dropped "default").
+		"template theme: "+strings.Join(appconstants.GetSupportedThemes(), ", "),
+	)
 	cmd.Flags().BoolP(appconstants.FlagRecursive, "r", false, "search for action.yml files recursively")
 	cmd.Flags().StringSlice(
 		appconstants.FlagIgnoreDirs,
@@ -98,6 +103,14 @@ func genHandler(cmd *cobra.Command, args []string) error {
 	}
 	applyGlobalFlags(config)
 	applyCommandFlags(cmd, config)
+
+	// Re-validate after applying CLI flags: --output-format and --theme are applied
+	// AFTER loadGenConfig's validation, so an invalid `-f bogus`/`--theme bogus`
+	// would otherwise fail mid-batch with a cryptic per-file error instead of a
+	// clean upfront message.
+	if err := internal.NewConfigurationLoader().ValidateConfiguration(config); err != nil {
+		return fmt.Errorf("configuration validation error: %w", err)
+	}
 
 	generator := internal.NewGenerator(config)
 	logConfigInfo(generator, config, repoRoot)
@@ -188,7 +201,7 @@ func applyCommandFlags(cmd *cobra.Command, config *internal.AppConfig) {
 // logConfigInfo logs configuration details if verbose.
 func logConfigInfo(generator *internal.Generator, config *internal.AppConfig, repoRoot string) {
 	if config.Verbose {
-		generator.Output.Info("Using effective config: %+v", config)
+		generator.Output.Info("Using effective config: %+v", redactConfigForLog(config))
 		if repoRoot != "" {
 			generator.Output.Info("Repository root: %s", repoRoot)
 		}

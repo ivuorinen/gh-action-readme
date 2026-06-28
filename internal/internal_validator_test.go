@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestValidateActionYMLValid(t *testing.T) {
 	a := &ActionYML{
 		Name:        testutil.TestActionNameMyAction,
 		Description: testGenShortDesc,
-		Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+		Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20, "main": "index.js"},
 	}
 	res := ValidateActionYML(a)
 	if len(res.MissingFields) != 0 {
@@ -61,7 +62,7 @@ func TestValidateActionYML_DeprecatedRuntime(t *testing.T) {
 			a := &ActionYML{
 				Name:        testGenActionName,
 				Description: testGenShortDesc,
-				Runs:        map[string]any{testGenRunsUsing: runtime},
+				Runs:        map[string]any{testGenRunsUsing: runtime, "main": "index.js"},
 			}
 			res := ValidateActionYML(a)
 
@@ -74,6 +75,40 @@ func TestValidateActionYML_DeprecatedRuntime(t *testing.T) {
 			}
 
 			assertHasDeprecationSuggestion(t, res.Suggestions, runtime)
+		})
+	}
+}
+
+// TestValidateActionYMLMissingRuntimeFields verifies N154: an action whose runtime
+// lacks its required entry point (node→main, composite→steps, docker→image) is
+// reported as structurally invalid instead of passing validation.
+func TestValidateActionYMLMissingRuntimeFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		using     string
+		wantField string
+	}{
+		{"node without main", appconstants.NodeRuntimeNode20, "runs.main"},
+		{"composite without steps", appconstants.ActionTypeComposite, "runs.steps"},
+		{"docker without image", "docker", "runs.image"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			a := &ActionYML{
+				Name:        testGenActionName,
+				Description: testGenShortDesc,
+				Runs:        map[string]any{testGenRunsUsing: tt.using},
+			}
+			res := ValidateActionYML(a)
+
+			if !slices.Contains(res.MissingFields, tt.wantField) {
+				t.Errorf("expected missing field %q for runtime %q, got: %v", tt.wantField, tt.using, res.MissingFields)
+			}
 		})
 	}
 }
