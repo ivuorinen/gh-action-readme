@@ -497,6 +497,12 @@ func TestParseActionYMLFlexBoolRequired(t *testing.T) {
 	if bool(action.Inputs["optional"].Required) {
 		t.Error("required: false should parse as false")
 	}
+	if !bool(action.Inputs["num_true"].Required) {
+		t.Error("required: 1 (numeric scalar) should parse as true")
+	}
+	if bool(action.Inputs["num_false"].Required) {
+		t.Error("required: 0 (numeric scalar) should parse as false")
+	}
 }
 
 // TestParsePermissionsFromCommentsWithBOM verifies N143: a UTF-8 BOM at the start
@@ -504,7 +510,10 @@ func TestParseActionYMLFlexBoolRequired(t *testing.T) {
 func TestParsePermissionsFromCommentsWithBOM(t *testing.T) {
 	t.Parallel()
 
-	action, err := parseActionFromContent(t, testutil.MustReadFixture(testutil.TestFixturePermissionsWithBOM))
+	// The fixture is stored BOM-free (a committed BOM fails editorconfig's
+	// charset=utf-8 check); prepend the BOM here to exercise the parser's BOM path.
+	const bom = "\ufeff"
+	action, err := parseActionFromContent(t, bom+testutil.MustReadFixture(testutil.TestFixturePermissionsWithBOM))
 	if err != nil {
 		t.Fatalf(testutil.TestErrorFormat, err)
 	}

@@ -804,12 +804,14 @@ func TestMergeBooleanFields(t *testing.T) {
 		want *AppConfig
 	}{
 		createBoolFieldMergeTest(
-			// A src with both verbose and quiet resolves to quiet (the exclusive
-			// winner), not both — N150. AnalyzeDeps/ShowSec merge on presence.
-			"merge all true values: quiet wins over verbose",
+			// Both verbose and quiet set in a single source is invalid; the merge
+			// preserves both so ValidateConfiguration rejects it, instead of silently
+			// normalizing the bad source into quiet-only and accepting it.
+			// AnalyzeDeps/ShowSec merge on presence.
+			"merge all true: invalid verbose+quiet preserved for validation",
 			boolFields{false, false, false, false},
 			boolFields{true, true, true, true},
-			boolFields{true, true, false, true},
+			boolFields{true, true, true, true},
 		),
 		createBoolFieldMergeTest(
 			// AnalyzeDependencies/ShowSecurityInfo merge on presence: src's explicit
@@ -1647,5 +1649,42 @@ func TestInitConfigEdgeCases(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestRedactTokensNestedOverrides verifies tokens are redacted at every depth,
+// including tokens buried under nested repo_overrides, so a verbose config dump or
+// an on-disk export cannot leak a token from an override layer. It also confirms the
+// original config is not mutated.
+func TestRedactTokensNestedOverrides(t *testing.T) {
+	t.Parallel()
+
+	cfg := &AppConfig{
+		GitHubToken: testutil.TestTokenGHPExisting,
+		RepoOverrides: map[string]AppConfig{
+			"org/repo": {
+				GitHubToken: testutil.TestTokenGHPExisting,
+				RepoOverrides: map[string]AppConfig{
+					"org/nested": {GitHubToken: testutil.TestTokenGHPExisting},
+				},
+			},
+		},
+	}
+
+	got := cfg.RedactTokens(appconstants.RedactedPlaceholder)
+
+	if got.GitHubToken != appconstants.RedactedPlaceholder {
+		t.Errorf("top-level token not redacted: %q", got.GitHubToken)
+	}
+	override := got.RepoOverrides["org/repo"]
+	if override.GitHubToken != appconstants.RedactedPlaceholder {
+		t.Errorf("override token not redacted: %q", override.GitHubToken)
+	}
+	if nested := override.RepoOverrides["org/nested"]; nested.GitHubToken != appconstants.RedactedPlaceholder {
+		t.Errorf("nested override token not redacted: %q", nested.GitHubToken)
+	}
+	orig := cfg.RepoOverrides["org/repo"].RepoOverrides["org/nested"].GitHubToken
+	if orig != testutil.TestTokenGHPExisting {
+		t.Errorf("RedactTokens mutated the original config: nested token = %q", orig)
 	}
 }

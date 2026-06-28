@@ -148,8 +148,12 @@ func TestCovSeamConfigWizardWritesConfig(t *testing.T) {
 	globalConfig.Quiet = true
 
 	xdgHome := filepath.Join(t.TempDir(), "xdg")
-	t.Setenv("XDG_CONFIG_HOME", xdgHome)
+	// Register the xdg.Reload cleanup before t.Setenv so it runs *after* Setenv's
+	// env-restore cleanup (cleanups are LIFO). Otherwise Reload would re-cache paths
+	// while XDG_CONFIG_HOME still points at the temp dir, leaking stale paths to
+	// later tests in this package.
 	t.Cleanup(xdg.Reload)
+	t.Setenv("XDG_CONFIG_HOME", xdgHome)
 	xdg.Reload()
 
 	// Blank lines accept every default; "Set up GitHub token now?" defaults to false

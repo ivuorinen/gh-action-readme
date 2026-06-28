@@ -331,8 +331,8 @@ TestAdocCode; end-to-end smoke confirmed the value survives intact across all th
 
 Fixed: 2026-06-28
 Notes: the asciidoc theme reused `mdCell`, whose `\n`→`<br>` is a GFM break that Asciidoctor prints as literal
-text. Added `adocCell` (escapes the `|` separator, maps newlines to the AsciiDoc hard break ` +`) used for the
-asciidoc description/output cells. Test: TestAdocCellNewline.
+text. Added `adocCell` (escapes the `|` separator, maps newlines to a space-prefixed AsciiDoc hard break `+`)
+used for the asciidoc description/output cells. Test: TestAdocCellNewline.
 
 ### Pass 30 — 2026-06-28 (deep loop 3: parser & YAML edge cases)
 

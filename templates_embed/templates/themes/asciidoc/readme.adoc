@@ -44,7 +44,7 @@ jobs:
 | `{{$key}}`
 | {{$input.Description | adocCell}}
 | {{if $input.Required}}✓{{else}}✗{{end}}
-| {{if $input.Default}}{{$input.Default | adocCode}}{{else}}_none_{{end}}
+| {{if hasDefault $input.Default}}{{$input.Default | adocCode}}{{else}}_none_{{end}}
 
 {{end}}
 |===
@@ -59,7 +59,7 @@ jobs:
 [horizontal]
 Type:: String
 Required:: {{if $input.Required}}Yes{{else}}No{{end}}
-{{if $input.Default}}Default:: {{$input.Default | adocCode}}{{end}}
+{{if hasDefault $input.Default}}Default:: {{$input.Default | adocCode}}{{end}}
 
 .Example
 [source,yaml]

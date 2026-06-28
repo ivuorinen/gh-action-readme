@@ -433,14 +433,25 @@ func (g *Generator) generateSimpleFormat(
 	if err := ensureParentDir(outputPath); err != nil {
 		return err
 	}
-	if err := os.WriteFile(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
-		// #nosec G306 -- output file permissions
+	if err := writeFileTightMode(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
 		return fmt.Errorf("failed to write %s to %s: %w", format, outputPath, err)
 	}
 
 	g.Output.Success("%s: %s", successMsg, outputPath)
 
 	return nil
+}
+
+// writeFileTightMode writes data to path and enforces perm even when path already
+// exists. os.WriteFile (and OpenFile's O_CREATE mode) only apply perm when the file
+// is created, so rewriting an existing 0644 output would otherwise stay
+// world-readable and defeat the 0600 guarantee the markdown/HTML/JSON writers share.
+func writeFileTightMode(path string, data []byte, perm os.FileMode) error {
+	if err := os.WriteFile(path, data, perm); err != nil { // #nosec G306 -- output file permissions
+		return err
+	}
+
+	return os.Chmod(path, perm) // #nosec G302 -- output file permissions
 }
 
 // generateMarkdown creates a README.md file using the template.
@@ -531,10 +542,18 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir string, uniqueName
 
 // generateASCIIDoc creates an AsciiDoc file using the template.
 func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
+	// Honor an explicit --template (a custom .adoc); fall back to the bundled
+	// AsciiDoc template. Without this the always-non-empty override below wins and
+	// `-f asciidoc --template custom.adoc` silently renders the bundled template.
+	override := g.Config.Template
+	if override == "" {
+		override = resolveTemplatePath(appconstants.TemplatePathASCIIDoc)
+	}
+
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
 		"asciidoc", appconstants.ReadmeASCIIDoc, "Generated AsciiDoc",
-		resolveTemplatePath(appconstants.TemplatePathASCIIDoc),
+		override,
 		uniqueNames,
 	)
 }
@@ -674,8 +693,10 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string
 		return "", fmt.Errorf(appconstants.ErrInvalidOutputPath, err)
 	}
 
-	// If relative path starts with "..", it's outside the output directory
-	if strings.HasPrefix(relPath, "..") {
+	// Outside the output directory iff the first path component is "..". Match the
+	// whole "..") component, not a ".." prefix, so a legitimate directory whose name
+	// merely starts with ".." (e.g. "..reports/readme.md") is not falsely rejected.
+	if relPath == ".." || strings.HasPrefix(filepath.ToSlash(relPath), "../") {
 		return "", fmt.Errorf(appconstants.ErrPathTraversal, filename, outputDir)
 	}
 

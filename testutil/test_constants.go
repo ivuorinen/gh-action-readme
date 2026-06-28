@@ -166,8 +166,9 @@ const (
 	TestFixturePermissionsMixed          = "permissions/mixed-format.yml"
 	TestFixturePermissionsEmpty          = "permissions/empty-block.yml"
 	TestFixturePermissionsNone           = "permissions/no-permissions.yml"
-	// TestFixturePermissionsWithBOM is a permissions fixture whose file begins with
-	// a UTF-8 BOM before the comment block (regression for N143).
+	// TestFixturePermissionsWithBOM is a permissions fixture for the UTF-8 BOM path
+	// (regression for N143). It is stored BOM-free (a committed BOM fails
+	// editorconfig's charset=utf-8 check); the test prepends the BOM at runtime.
 	TestFixturePermissionsWithBOM = "permissions/with-bom.yml"
 )
 

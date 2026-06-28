@@ -66,7 +66,17 @@ func templateFuncs() texttemplate.FuncMap {
 		"adocCell":      adocCell,
 		"adocCode":      adocCode,
 		"badgeSegment":  shieldsBadgeEncode,
+		"hasDefault":    hasDefault,
 	}
+}
+
+// hasDefault reports whether an action input declared a default value. ActionInput.
+// Default is `any`, so an absent default is nil while an explicit falsey default
+// (false, 0, "") is a non-nil zero value. Template truthiness (`if .Default`) treats
+// those falsey defaults as unset and drops them, so the documentation cells use this
+// presence check to render them instead of silently omitting "(default: false)".
+func hasDefault(v any) bool {
+	return v != nil
 }
 
 // mdCode renders v as a Markdown inline code span that survives table cells and

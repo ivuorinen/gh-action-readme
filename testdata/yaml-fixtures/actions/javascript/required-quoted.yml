@@ -10,6 +10,12 @@ inputs:
   optional:
     description: An optional input
     required: false
+  num_true:
+    description: Required given as the numeric scalar 1
+    required: 1
+  num_false:
+    description: Required given as the numeric scalar 0
+    required: 0
 runs:
   using: node20
   main: index.js

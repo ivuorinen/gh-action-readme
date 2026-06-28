@@ -500,6 +500,13 @@ func TestParseGitHubURL(t *testing.T) {
 			expectedOrg:  "",
 			expectedRepo: "",
 		},
+		{
+			// A host that merely ends with github.com must not be parsed as GitHub.
+			name:         "lookalike host rejected",
+			url:          "https://notgithub.com/" + testValidationOrgOwner + "/" + testValidationRepoRepo,
+			expectedOrg:  "",
+			expectedRepo: "",
+		},
 	}
 
 	for _, tt := range tests {

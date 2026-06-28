@@ -46,29 +46,7 @@ func configRootHandler(_ *cobra.Command, _ []string) error {
 // logs, or screen shares. Returns nil unchanged. Shared by `config show` and
 // `gen --verbose`; any future config dump must route through here too.
 func redactConfigForLog(config *internal.AppConfig) *internal.AppConfig {
-	if config == nil {
-		return nil
-	}
-	redacted := *config
-	if redacted.GitHubToken != "" {
-		redacted.GitHubToken = appconstants.RedactedPlaceholder
-	}
-	// RepoOverrides is a map of AppConfig, each with its own GitHubToken. The
-	// shallow copy above aliases the same map, and %+v recurses into it, so a
-	// token configured under a repo override would print in plaintext. Deep-copy
-	// the map and redact each nested token.
-	if len(redacted.RepoOverrides) > 0 {
-		overrides := make(map[string]internal.AppConfig, len(redacted.RepoOverrides))
-		for name, override := range redacted.RepoOverrides {
-			if override.GitHubToken != "" {
-				override.GitHubToken = appconstants.RedactedPlaceholder
-			}
-			overrides[name] = override
-		}
-		redacted.RepoOverrides = overrides
-	}
-
-	return &redacted
+	return config.RedactTokens(appconstants.RedactedPlaceholder)
 }
 
 func newConfigCmd() *cobra.Command {

@@ -182,7 +182,14 @@ func (c *Cache) Clear() error {
 	c.clearGen++
 	c.mutex.Unlock()
 
-	// Remove cache file (outside the lock — no in-memory state is touched).
+	// Serialize the removal with saveToDisk's check→rename critical section. The
+	// clearGen bump above is published before we take saveMutex, so a save still
+	// inside that section sees the new generation and skips its rename; a save that
+	// already holds saveMutex finishes its rename first, then this Remove deletes
+	// the file it wrote. Without this lock the Remove could land between a save's
+	// stale check and its rename, resurrecting (or deleting a fresh) cache.json.
+	c.saveMutex.Lock()
+	defer c.saveMutex.Unlock()
 	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
 	if err := os.Remove(cacheFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove cache file: %w", err)

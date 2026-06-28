@@ -1,8 +1,8 @@
-﻿# permissions:
+# permissions:
 #   contents: read
 #   issues: write
 name: BOM Permissions
-description: Action file beginning with a UTF-8 BOM before the permission comments
+description: Action file whose permission comments are exercised with a UTF-8 BOM prepended by the test
 runs:
   using: node20
   main: index.js

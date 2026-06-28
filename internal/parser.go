@@ -52,16 +52,29 @@ func (b *FlexBool) UnmarshalYAML(unmarshal func(any) error) error {
 	case nil:
 		*b = false
 	case string:
-		switch strings.ToLower(strings.TrimSpace(v)) {
-		case "true", "yes", "on", "1":
-			*b = true
-		case "false", "no", "off", "0", "":
-			*b = false
-		default:
-			return fmt.Errorf("invalid boolean value for required: %q", v)
-		}
+		return b.fromString(v)
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		// Unquoted YAML numbers (required: 1 / required: 0) decode as numeric
+		// scalars, not strings; normalize to the string form so they accept the same
+		// 1/0 spellings as quoted values instead of failing the whole file.
+		return b.fromString(fmt.Sprintf("%v", v))
 	default:
 		return fmt.Errorf("invalid type %T for required", raw)
+	}
+
+	return nil
+}
+
+// fromString sets the FlexBool from one of the accepted string spellings, returning
+// an error for anything else.
+func (b *FlexBool) fromString(v string) error {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "true", "yes", "on", "1":
+		*b = true
+	case "false", "no", "off", "0", "":
+		*b = false
+	default:
+		return fmt.Errorf("invalid boolean value for required: %q", v)
 	}
 
 	return nil

@@ -12,7 +12,10 @@ var (
 	// "my.repo" are preserved) with an explicit optional ".git" suffix stripped
 	// and any trailing path ignored. The optional (?::\d+)? tolerates a host port
 	// (e.g. ssh://git@ssh.github.com:443/org/repo) so it is not captured as the org.
-	reGitHubURLFull   = regexp.MustCompile(`github\.com(?::\d+)?[:/]([^/]+)/([^/]+?)(?:\.git)?(?:/.*)?$`)
+	// The leading (?:^|[@/.]) anchors the host so only a real github.com host (or a
+	// subdomain like ssh.github.com) matches — without it "notgithub.com/org/repo"
+	// would match on the github.com suffix. Mirrors git.reGitHubURL.
+	reGitHubURLFull   = regexp.MustCompile(`(?:^|[@/.])github\.com(?::\d+)?[:/]([^/]+)/([^/]+?)(?:\.git)?(?:/.*)?$`)
 	reGitHubURLSimple = regexp.MustCompile(`^([^/]+)/([^/]+?)(?:\.git)?$`)
 	reWhitespace      = regexp.MustCompile(`\s+`)
 	// reUnsafeActionNameChar matches any character not allowed in a single

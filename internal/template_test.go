@@ -979,3 +979,28 @@ func TestAnalyzeDependencies(t *testing.T) {
 		})
 	}
 }
+
+// TestHasDefault verifies the template presence check distinguishes an absent
+// default (nil) from an explicit falsey default (false, 0, ""), which plain
+// template truthiness cannot — so documentation cells render "(default: false)"
+// instead of silently dropping it.
+func TestHasDefault(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		val  any
+		want bool
+	}{
+		{"nil is absent", nil, false},
+		{"false is present", false, true},
+		{"zero int is present", 0, true},
+		{"empty string is present", "", true},
+		{"non-empty value is present", "x", true},
+	}
+	for _, tc := range cases {
+		if got := hasDefault(tc.val); got != tc.want {
+			t.Errorf("%s: hasDefault(%#v) = %v, want %v", tc.name, tc.val, got, tc.want)
+		}
+	}
+}

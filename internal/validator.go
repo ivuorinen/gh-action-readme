@@ -113,9 +113,27 @@ func validateRunsRequiredField(using string, runs map[string]any, result *Valida
 		return
 	}
 
-	if _, ok := runs[key]; !ok {
+	if val, ok := runs[key]; !ok || isEmptyRuntimeValue(val) {
 		result.MissingFields = append(result.MissingFields, field)
 		result.Suggestions = append(result.Suggestions, suggestion)
+	}
+}
+
+// isEmptyRuntimeValue reports whether a present runs.* entry carries no usable
+// value (runs.main:, runs.image: "", runs.steps: with no items). GitHub rejects
+// such actions even though the key exists, so key presence alone is insufficient.
+func isEmptyRuntimeValue(v any) bool {
+	switch val := v.(type) {
+	case nil:
+		return true
+	case string:
+		return strings.TrimSpace(val) == ""
+	case []any:
+		return len(val) == 0
+	case map[string]any:
+		return len(val) == 0
+	default:
+		return false
 	}
 }
 

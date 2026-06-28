@@ -64,7 +64,7 @@ This action supports various configuration options to customize its behavior acc
 | Parameter | Description | Type | Required | Default Value |
 |-----------|-------------|------|----------|---------------|
 {{- range $key, $input := .Inputs}}
-| **`{{$key}}`** | {{$input.Description | mdCell}} | `string` | {{if $input.Required}}✅ Yes{{else}}❌ No{{end}} | {{if $input.Default}}{{$input.Default | mdCode}}{{else}}_None_{{end}} |
+| **`{{$key}}`** | {{$input.Description | mdCell}} | `string` | {{if $input.Required}}✅ Yes{{else}}❌ No{{end}} | {{if hasDefault $input.Default}}{{$input.Default | mdCode}}{{else}}_None_{{end}} |
 {{- end}}
 
 #### Parameter Details
@@ -75,7 +75,7 @@ This action supports various configuration options to customize its behavior acc
 {{$input.Description}}
 
 - **Type**: String
-- **Required**: {{if $input.Required}}Yes{{else}}No{{end}}{{if $input.Default}}
+- **Required**: {{if $input.Required}}Yes{{else}}No{{end}}{{if hasDefault $input.Default}}
 - **Default**: {{$input.Default | mdCode}}{{end}}
 
 ```yaml

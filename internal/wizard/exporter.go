@@ -308,14 +308,12 @@ func (e *ConfigExporter) exportTOML(config *internal.AppConfig, outputPath strin
 
 // sanitizeConfig removes sensitive information from config for export.
 func (e *ConfigExporter) sanitizeConfig(config *internal.AppConfig, keepOverrides bool) *internal.AppConfig {
-	// Create a copy of the config
-	sanitized := *config
-
-	// Remove sensitive information. The token is always stripped (it belongs in an
-	// env var, never on disk). repo_overrides are dropped for share-style exports
-	// but preserved when saving the user's own live config (the wizard), so a
-	// second wizard run does not wipe them.
-	sanitized.GitHubToken = ""
+	// Strip every token — top-level and any nested under repo_overrides — through
+	// the shared recursive sanitizer, so no override layer serializes a token to
+	// disk. The token belongs in an env var, never on disk. repo_overrides are
+	// dropped for share-style exports but preserved when saving the user's own live
+	// config (the wizard), so a second wizard run does not wipe them.
+	sanitized := *config.RedactTokens("")
 	if !keepOverrides {
 		sanitized.RepoOverrides = nil
 	}

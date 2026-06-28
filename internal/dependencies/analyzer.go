@@ -236,14 +236,17 @@ func (a *Analyzer) GeneratePinnedUpdate(
 	// (including any monorepo subpath such as codeql-action/analyze). Rebuilding
 	// from the bare owner/repo would drop the subpath and silently repoint the pin
 	// at the repo-root action (parseUsesStatement returns a bare repo by design).
-	_, _, currentVersion, _ := a.parseUsesStatement(dep.Uses)
+	_, _, currentVersion, versionType := a.parseUsesStatement(dep.Uses)
 	refPath := dep.Uses
 	if at := strings.LastIndex(refPath, "@"); at >= 0 {
 		refPath = refPath[:at]
 	}
 	newUses := fmt.Sprintf("%s@%s # %s", refPath, latestSHA, latestVersion)
 
-	updateType := a.compareVersions(currentVersion, latestVersion)
+	// Classify through outdatedUpdateType so a SHA-pinned ref is reported as a
+	// digest update, not "major" — compareVersions would parse the 40-char SHA as a
+	// version and always return major.
+	updateType := a.outdatedUpdateType(versionType, currentVersion, latestVersion, latestSHA)
 
 	return &PinnedUpdate{
 		FilePath:   actionPath,
@@ -481,7 +484,11 @@ func (a *Analyzer) parseUsesStatement(uses string) (owner, repo, version string,
 	// Standard GitHub action format: owner/repo@version
 	matches := reUsesStatement.FindStringSubmatch(uses)
 	if len(matches) != 4 {
-		return "", "", "", LocalPath
+		// A malformed uses string (not owner/repo@version, and not a ./ or docker://
+		// ref handled above) is not a local action. Return an empty version type so
+		// analyzeActionDependency's owner/repo check rejects it instead of emitting
+		// it as a bogus "Local action (same repository)".
+		return "", "", "", ""
 	}
 
 	owner = matches[1]

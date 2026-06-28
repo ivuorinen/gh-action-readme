@@ -1748,13 +1748,13 @@ func TestValidateHandlerIntegration(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "validates empty action file with no steps",
+			name: "rejects composite action with empty steps list",
 			setupFunc: func(t *testing.T, tmpDir string) {
 				t.Helper()
 				fixtureContent := testutil.MustReadFixture(testutil.TestFixtureEmptyAction)
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, appconstants.ActionFileNameYML), string(fixtureContent))
 			},
-			wantErr: false, // Empty steps is valid YAML structure
+			wantErr: true, // composite with steps: [] is rejected — GitHub requires >=1 step
 		},
 	}
 

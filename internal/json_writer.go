@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -154,8 +153,8 @@ func (jw *JSONWriter) Write(action *ActionYML, outputPath string) error {
 		return err
 	}
 
-	// Write to file
-	return os.WriteFile(outputPath, data, appconstants.FilePermDefault) // #nosec G306 -- JSON output file permissions
+	// Write to file, tightening mode on rewrites of an existing file.
+	return writeFileTightMode(outputPath, data, appconstants.FilePermDefault)
 }
 
 // convertToJSONOutput converts ActionYML to structured JSON output.

@@ -382,6 +382,12 @@ func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
 	// mutual-exclusion error that not even --quiet could rescue. The higher-priority
 	// src now wins exclusively: setting one clears the other.
 	switch {
+	case src.Quiet && src.Verbose:
+		// An invalid source that sets both must survive the merge so
+		// ValidateConfiguration rejects it, rather than being silently normalized
+		// into quiet-only and accepted.
+		dst.Quiet = true
+		dst.Verbose = true
 	case src.Quiet:
 		dst.Quiet = true
 		dst.Verbose = false
@@ -393,6 +399,30 @@ func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
 		dst.UseDefaultBranch = src.UseDefaultBranch
 		dst.useDefaultBranchSet = true
 	}
+}
+
+// RedactTokens returns a deep copy of the config with every non-empty GitHubToken
+// — the top-level field and every token nested at any depth under RepoOverrides —
+// replaced by replacement. The receiver is not modified. It is the single sanitizer
+// path for both verbose config dumps (placeholder) and on-disk exports (empty), so
+// no recursive override layer can leak a token. A nil receiver returns nil.
+func (c *AppConfig) RedactTokens(replacement string) *AppConfig {
+	if c == nil {
+		return nil
+	}
+	redacted := *c
+	if redacted.GitHubToken != "" {
+		redacted.GitHubToken = replacement
+	}
+	if len(redacted.RepoOverrides) > 0 {
+		overrides := make(map[string]AppConfig, len(redacted.RepoOverrides))
+		for name, override := range redacted.RepoOverrides {
+			overrides[name] = *override.RedactTokens(replacement)
+		}
+		redacted.RepoOverrides = overrides
+	}
+
+	return &redacted
 }
 
 // mergeSecurityFields merges security-sensitive fields if allowed.
