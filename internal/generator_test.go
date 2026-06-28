@@ -505,6 +505,41 @@ func TestGeneratorProcessBatchUniqueFilenames(t *testing.T) {
 	}
 }
 
+// TestGeneratorAsciiDocUsesAsciiDocTemplate verifies N147: `-f asciidoc` renders
+// the AsciiDoc template (output starts with "= ") rather than the theme's Markdown
+// template (which would start with "# ").
+func TestGeneratorAsciiDocUsesAsciiDocTemplate(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	actionPath := testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+	outDir := filepath.Join(tmpDir, "out")
+
+	config := defaultTestConfig()
+	config.OutputFormat = appconstants.OutputFormatASCIIDoc
+	config.OutputDir = outDir
+	generator := NewGenerator(config)
+
+	if err := generator.GenerateFromFile(actionPath); err != nil {
+		t.Fatalf("GenerateFromFile: %v", err)
+	}
+
+	out, err := os.ReadFile(filepath.Join(outDir, appconstants.ReadmeASCIIDoc)) // #nosec G304 -- test temp path
+	if err != nil {
+		t.Fatalf("read asciidoc output: %v", err)
+	}
+
+	content := string(out)
+	if !strings.HasPrefix(content, "= ") {
+		t.Errorf("asciidoc output should start with AsciiDoc title '= ', got:\n%.80s", content)
+	}
+	if !strings.Contains(content, ":toc:") {
+		t.Errorf("asciidoc output is missing AsciiDoc attributes (rendered the wrong template):\n%.200s", content)
+	}
+}
+
 func TestGeneratorProcessBatch(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1052,6 +1087,16 @@ func TestGeneratorResolveOutputPath(t *testing.T) {
 			outputDir:       "/tmp/output/../escape",
 			defaultFilename: appconstants.ReadmeMarkdown,
 			wantPath:        "/tmp/escape/file.md",
+			wantErr:         false,
+		},
+		{
+			// N127: a filename that merely contains ".." (but has no ".." path
+			// component) is legitimate and must not be rejected as traversal.
+			name:            "filename containing literal dots is not traversal",
+			outputFilename:  "report..final.md",
+			outputDir:       testutil.TestOutputPath,
+			defaultFilename: appconstants.ReadmeMarkdown,
+			wantPath:        "/tmp/output/report..final.md",
 			wantErr:         false,
 		},
 

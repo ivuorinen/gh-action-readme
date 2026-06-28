@@ -16,7 +16,7 @@
 ## Inputs
 
 {{range $key, $input := .Inputs}}
-- `{{$key}}` - {{$input.Description}}{{if $input.Required}} (required){{end}}{{if $input.Default}} (default: `{{$input.Default}}`){{end}}
+- `{{$key}}` - {{$input.Description}}{{if $input.Required}} (required){{end}}{{if $input.Default}} (default: {{$input.Default | mdCode}}){{end}}
 {{end}}
 {{end}}
 

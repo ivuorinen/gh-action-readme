@@ -1,0 +1,11 @@
+name: Composite With Local And Docker
+description: Composite action referencing local and docker actions plus a remote one
+runs:
+  using: composite
+  steps:
+    - name: Local setup
+      uses: ./setup
+    - name: Docker step
+      uses: docker://alpine:3.14
+    - name: Remote step
+      uses: actions/checkout@v4

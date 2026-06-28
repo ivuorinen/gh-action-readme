@@ -345,19 +345,16 @@ func TestConfigureOutputFormat(t *testing.T) {
 			wantFormat: appconstants.OutputFormatJSON,
 		},
 		{
-			name:       "select yaml (4)",
+			// asciidoc is option 4 now that yaml/toml (which gen cannot produce)
+			// are no longer offered as output formats.
+			name:       "select asciidoc (4)",
 			input:      "4\n",
-			wantFormat: appconstants.OutputFormatYAML,
-		},
-		{
-			name:       "select toml (5)",
-			input:      "5\n",
-			wantFormat: appconstants.OutputFormatTOML,
-		},
-		{
-			name:       "select asciidoc (6)",
-			input:      "6\n",
 			wantFormat: appconstants.OutputFormatASCIIDoc,
+		},
+		{
+			name:       "out-of-range choice keeps default",
+			input:      "5\n",
+			wantFormat: appconstants.OutputFormatMarkdown, // Only 4 formats; 5 is invalid
 		},
 		{
 			name:       "invalid choice keeps default",
@@ -986,7 +983,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "gitlab theme with asciidoc format",
 			inputs: "gitlab-org\nmy-project\nv2.5.0\n" + // Basic
-				"3\n6\n" + testutil.TestDirDocs + "\n" + // GitLab theme, AsciiDoc format (6th in list)
+				"3\n4\n" + testutil.TestDirDocs + "\n" + // GitLab theme, AsciiDoc format (4th in list)
 				"yes\nno\n" + // Features: deps yes, security no
 				testutil.WizardInputNo + // GitHub: skip
 				"yes\n", // Confirm with 'yes'

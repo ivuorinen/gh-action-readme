@@ -1103,9 +1103,11 @@ func TestErrorScenarioIntegration(t *testing.T) {
 			setupFunc: setupTemplateErrorScenario,
 			scenarios: []errorScenario{
 				{
+					// N152: an invalid --theme flag now fails upfront via config
+					// validation, not mid-batch with a cryptic "batch processing" error.
 					cmd:           []string{appconstants.CommandGen, testutil.TestFlagTheme, "nonexistent"},
 					expectFailure: true,
-					expectError:   "batch processing",
+					expectError:   "invalid theme",
 				},
 				{
 					cmd:           []string{appconstants.CommandGen, "--template", "/nonexistent/template.tmpl"},

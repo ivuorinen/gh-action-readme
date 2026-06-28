@@ -540,6 +540,15 @@ func TestGetGitHubToken(t *testing.T) {
 	}
 }
 
+// TestGetGitHubTokenNilConfig verifies GetGitHubToken degrades gracefully on a
+// nil config instead of panicking (N131), once env tokens are absent.
+func TestGetGitHubTokenNilConfig(t *testing.T) {
+	t.Setenv(appconstants.EnvGitHubToken, "")
+	t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+
+	testutil.AssertEqual(t, "", GetGitHubToken(nil))
+}
+
 // TestMergeMapFields tests the merging of map fields in configuration.
 func TestMergeMapFields(t *testing.T) {
 	t.Parallel()
@@ -646,6 +655,40 @@ func TestMergeConfigsOutputFilename(t *testing.T) {
 	if dst.OutputFilename != want {
 		t.Errorf("OutputFilename not merged: got %q, want %q", dst.OutputFilename, want)
 	}
+}
+
+// TestMergeConfigsVerboseQuietExclusive verifies N150: a lower-scope verbose and
+// a higher-scope quiet must not both survive (ValidateConfiguration rejects
+// both); the higher-priority src wins exclusively.
+func TestMergeConfigsVerboseQuietExclusive(t *testing.T) {
+	t.Parallel()
+
+	t.Run("higher-scope quiet clears verbose", func(t *testing.T) {
+		t.Parallel()
+		dst := &AppConfig{Verbose: true}
+		MergeConfigs(dst, &AppConfig{Quiet: true}, false)
+		if dst.Verbose || !dst.Quiet {
+			t.Errorf("quiet should win: got Verbose=%v Quiet=%v", dst.Verbose, dst.Quiet)
+		}
+	})
+
+	t.Run("higher-scope verbose clears quiet", func(t *testing.T) {
+		t.Parallel()
+		dst := &AppConfig{Quiet: true}
+		MergeConfigs(dst, &AppConfig{Verbose: true}, false)
+		if dst.Quiet || !dst.Verbose {
+			t.Errorf("verbose should win: got Verbose=%v Quiet=%v", dst.Verbose, dst.Quiet)
+		}
+	})
+
+	t.Run("src sets neither leaves dst untouched", func(t *testing.T) {
+		t.Parallel()
+		dst := &AppConfig{Verbose: true}
+		MergeConfigs(dst, &AppConfig{}, false)
+		if !dst.Verbose || dst.Quiet {
+			t.Errorf("dst should be unchanged: got Verbose=%v Quiet=%v", dst.Verbose, dst.Quiet)
+		}
+	})
 }
 
 func TestMergeDefaultsFields(t *testing.T) {
@@ -761,23 +804,26 @@ func TestMergeBooleanFields(t *testing.T) {
 		want *AppConfig
 	}{
 		createBoolFieldMergeTest(
-			"merge all true values",
+			// A src with both verbose and quiet resolves to quiet (the exclusive
+			// winner), not both — N150. AnalyzeDeps/ShowSec merge on presence.
+			"merge all true values: quiet wins over verbose",
 			boolFields{false, false, false, false},
 			boolFields{true, true, true, true},
-			boolFields{true, true, true, true},
+			boolFields{true, true, false, true},
 		),
 		createBoolFieldMergeTest(
-			// AnalyzeDependencies/ShowSecurityInfo merge on presence: src's
-			// explicit false for ShowSecurityInfo overrides dst's true. Quiet is
-			// OR-merged so dst's true survives src's false.
-			"presence-merged false overrides; OR-merged false does not",
+			// AnalyzeDependencies/ShowSecurityInfo merge on presence: src's explicit
+			// false for ShowSecurityInfo overrides dst's true. Verbose/Quiet are now
+			// mutually exclusive (N150): the higher-priority src's verbose wins and
+			// clears dst's quiet.
+			"presence-merged false overrides; higher-scope verbose clears quiet",
 			boolFields{false, true, false, true},
 			boolFields{true, false, true, false},
-			boolFields{true, false, true, true},
+			boolFields{true, false, true, false},
 		),
 		createBoolFieldMergeTest(
 			// src explicitly sets the two feature flags false → they override the
-			// dst trues. Verbose/Quiet are OR-merged so dst's trues survive.
+			// dst trues. src sets neither verbose nor quiet, so dst's values survive.
 			"explicit source false overrides presence-merged flags only",
 			boolFields{true, true, true, true},
 			boolFields{false, false, false, false},

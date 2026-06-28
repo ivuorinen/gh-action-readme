@@ -36,6 +36,7 @@ type Cache struct {
 	saveWG     sync.WaitGroup   // Wait group for pending save operations
 	saveMutex  sync.Mutex       // Serializes disk writes in saveToDisk
 	closed     bool             // Set under mutex by Close; gates new async saves
+	clearGen   uint64           // Bumped by Clear under mutex; stale saves skip their rename
 }
 
 // Config represents cache configuration.
@@ -98,7 +99,11 @@ func NewCache(config *Config) (*Cache, error) {
 		data:       make(map[string]Entry),
 		defaultTTL: config.DefaultTTL,
 		maxSize:    config.MaxSize,
-		done:       make(chan bool),
+		// Buffered so Close's non-blocking send always lands even if the cleanup
+		// goroutine is mid-cleanup (not parked in its select) at the time; an
+		// unbuffered send would hit default and be dropped, leaking the goroutine
+		// once the ticker is stopped and never fires again.
+		done: make(chan bool, 1),
 	}
 
 	// Load existing cache from disk
@@ -171,11 +176,13 @@ func (c *Cache) Delete(key string) {
 // Clear removes all entries from the cache.
 func (c *Cache) Clear() error {
 	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
 	c.data = make(map[string]Entry)
+	// Bump the generation so any async save that cloned the map before this Clear
+	// skips its rename instead of resurrecting cache.json with the stale entries.
+	c.clearGen++
+	c.mutex.Unlock()
 
-	// Remove cache file
+	// Remove cache file (outside the lock — no in-memory state is touched).
 	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
 	if err := os.Remove(cacheFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove cache file: %w", err)
@@ -358,6 +365,7 @@ func (c *Cache) loadFromDisk() error {
 func (c *Cache) saveToDisk() error {
 	c.mutex.RLock()
 	data := maps.Clone(c.data)
+	gen := c.clearGen
 	c.mutex.RUnlock()
 
 	jsonData, err := json.MarshalIndent(data, "", "  ")
@@ -372,6 +380,15 @@ func (c *Cache) saveToDisk() error {
 	// a crash mid-write never observes a torn cache.json.
 	c.saveMutex.Lock()
 	defer c.saveMutex.Unlock()
+
+	// If Clear() ran after we cloned the map, this snapshot is stale; writing it
+	// would resurrect the removed cache.json with old entries. Skip the persist.
+	c.mutex.RLock()
+	stale := c.clearGen != gen
+	c.mutex.RUnlock()
+	if stale {
+		return nil
+	}
 
 	tmp, err := os.CreateTemp(c.path, appconstants.CacheJSON+".tmp-*")
 	if err != nil {

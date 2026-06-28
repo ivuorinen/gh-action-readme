@@ -147,6 +147,45 @@ func TestAnalyzerAnalyzeActionFile(t *testing.T) {
 	}
 }
 
+// TestAnalyzeActionFileLocalAndDockerSteps verifies N141: composite steps that
+// reference local (./) and docker:// actions are emitted as dependencies instead
+// of being silently dropped.
+func TestAnalyzeActionFileLocalAndDockerSteps(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureLocalDockerSteps))
+
+	analyzer := &Analyzer{} // no GitHub client: local/docker/remote all parse without enrichment
+	deps, err := analyzer.AnalyzeActionFile(actionPath)
+	testutil.AssertNoError(t, err)
+
+	var sawLocal, sawDocker, sawRemote bool
+	for _, d := range deps {
+		switch d.Uses {
+		case "./setup":
+			sawLocal = d.IsLocalAction && d.VersionType == LocalPath
+		case "docker://alpine:3.14":
+			sawDocker = d.VersionType == LocalPath && !d.IsLocalAction
+		case testutil.TestActionCheckoutV4:
+			sawRemote = true
+		}
+	}
+
+	if !sawLocal {
+		t.Error("local ./setup step was dropped or mislabeled")
+	}
+	if !sawDocker {
+		t.Error("docker:// step was dropped or mislabeled")
+	}
+	if !sawRemote {
+		t.Error("remote checkout step missing")
+	}
+}
+
 func TestAnalyzerParseUsesStatement(t *testing.T) {
 	t.Parallel()
 
@@ -188,6 +227,24 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 			expectedOwner:   "octocat",
 			expectedRepo:    "hello-world",
 			expectedVersion: "main",
+			expectedType:    BranchName,
+		},
+		{
+			// N140: monorepo subpath action — repo must be the bare repository so
+			// API/URL lookups resolve; the subpath stays in Uses.
+			name:            "monorepo subpath action",
+			uses:            "actions/cache/restore@v4",
+			expectedOwner:   testDepOwnerActions,
+			expectedRepo:    "cache",
+			expectedVersion: testDepVersionV4,
+			expectedType:    SemanticVersion,
+		},
+		{
+			name:            "monorepo subpath action with branch",
+			uses:            "github/codeql-action/analyze@" + testutil.TestBranchMain,
+			expectedOwner:   "github",
+			expectedRepo:    "codeql-action",
+			expectedVersion: testutil.TestBranchMain,
 			expectedType:    BranchName,
 		},
 	}
@@ -445,6 +502,119 @@ func TestAnalyzerCompareVersions(t *testing.T) {
 
 			updateType := analyzer.compareVersions(tt.current, tt.latest)
 			testutil.AssertEqual(t, tt.expectedType, updateType)
+		})
+	}
+}
+
+// TestAnalyzerGeneratePinnedUpdatePreservesSubpath verifies N148: pinning a
+// monorepo sub-action keeps the subpath instead of collapsing the reference to
+// the repo-root action.
+func TestAnalyzerGeneratePinnedUpdatePreservesSubpath(t *testing.T) {
+	t.Parallel()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
+	testutil.WriteTestFile(t, actionPath, testutil.MustReadFixture(testutil.TestFixtureTestCompositeAction))
+
+	analyzer := &Analyzer{} // GeneratePinnedUpdate formats from its args; no client/cache needed
+
+	dep := Dependency{
+		Name:        "github.com/github/codeql-action",
+		Uses:        "github/codeql-action/analyze@v3",
+		Version:     "v3",
+		VersionType: SemanticVersion,
+	}
+
+	update, err := analyzer.GeneratePinnedUpdate(
+		actionPath,
+		dep,
+		testutil.TestVersionV4_1_1,
+		testutil.TestSHAForTesting,
+	)
+	testutil.AssertNoError(t, err)
+
+	testutil.AssertStringContains(t, update.NewUses, "github/codeql-action/analyze@")
+	testutil.AssertEqual(t, "github/codeql-action/analyze@v3", update.OldUses)
+}
+
+// TestAnalyzerOutdatedUpdateType verifies that a commit-SHA pin is classified by
+// SHA equality rather than semver-compared (N136). A SHA pin equal to the latest
+// release SHA is up to date; a differing one is a digest update — never a bogus
+// "major". Non-SHA versions keep semver classification.
+func TestAnalyzerOutdatedUpdateType(t *testing.T) {
+	t.Parallel()
+
+	analyzer := &Analyzer{}
+	const sha = "8f4b7f84bd579b95d7f0b90f8d8b6e5d9b8a7f6e"
+	const otherSHA = "1111111111111111111111111111111111111111"
+
+	tests := []struct {
+		name           string
+		versionType    VersionType
+		currentVersion string
+		latestVersion  string
+		latestSHA      string
+		want           string
+	}{
+		{
+			name:           "sha pin equal to latest sha is current",
+			versionType:    CommitSHA,
+			currentVersion: sha,
+			latestVersion:  testutil.TestVersionV4_1_1,
+			latestSHA:      sha,
+			want:           appconstants.UpdateTypeNone,
+		},
+		{
+			name:           "sha pin differing from latest sha is a digest update",
+			versionType:    CommitSHA,
+			currentVersion: otherSHA,
+			latestVersion:  testutil.TestVersionV4_1_1,
+			latestSHA:      sha,
+			want:           appconstants.UpdateTypeDigest,
+		},
+		{
+			name:           "sha pin with unknown latest sha cannot be compared",
+			versionType:    CommitSHA,
+			currentVersion: otherSHA,
+			latestVersion:  testutil.TestVersionV4_1_1,
+			latestSHA:      "",
+			want:           appconstants.UpdateTypeNone,
+		},
+		{
+			// N149: an abbreviated SHA pin that is a prefix of the latest SHA is
+			// current, not perpetually "digest".
+			name:           "short sha pin matching latest prefix is current",
+			versionType:    CommitSHA,
+			currentVersion: "8f4b7f8",
+			latestVersion:  testutil.TestVersionV4_1_1,
+			latestSHA:      sha,
+			want:           appconstants.UpdateTypeNone,
+		},
+		{
+			name:           "short sha pin not matching latest is a digest update",
+			versionType:    CommitSHA,
+			currentVersion: "deadbee",
+			latestVersion:  testutil.TestVersionV4_1_1,
+			latestSHA:      sha,
+			want:           appconstants.UpdateTypeDigest,
+		},
+		{
+			name:           "semver still classified by version",
+			versionType:    SemanticVersion,
+			currentVersion: "v3.0.0",
+			latestVersion:  testutil.TestVersionV4_0_0,
+			latestSHA:      sha,
+			want:           appconstants.UpdateTypeMajor,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := analyzer.outdatedUpdateType(tt.versionType, tt.currentVersion, tt.latestVersion, tt.latestSHA)
+			testutil.AssertEqual(t, tt.want, got)
 		})
 	}
 }

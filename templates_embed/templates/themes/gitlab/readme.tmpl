@@ -45,7 +45,7 @@ steps:
 - **Type**: String{{if $input.Required}}
 - **Required**: Yes{{else}}
 - **Required**: No{{end}}{{if $input.Default}}
-- **Default**: `{{$input.Default}}`{{end}}
+- **Default**: {{$input.Default | mdCode}}{{end}}
 
 {{end}}
 {{end}}

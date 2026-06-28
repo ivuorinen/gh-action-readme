@@ -207,12 +207,18 @@ func TestGetSupportedOutputFormats(t *testing.T) {
 	}
 
 	expectedFormats := []string{
-		OutputFormatMarkdown, OutputFormatHTML, OutputFormatJSON,
-		OutputFormatYAML, OutputFormatTOML, OutputFormatASCIIDoc,
+		OutputFormatMarkdown, OutputFormatHTML, OutputFormatJSON, OutputFormatASCIIDoc,
 	}
 	for _, expected := range expectedFormats {
 		if !slices.Contains(formats, expected) {
 			t.Errorf("GetSupportedOutputFormats() missing expected format: %s", expected)
+		}
+	}
+	// yaml/toml are config-export formats with no document generator; they must
+	// NOT be advertised as gen output formats (see generateByFormat).
+	for _, unsupported := range []string{OutputFormatYAML, OutputFormatTOML} {
+		if slices.Contains(formats, unsupported) {
+			t.Errorf("GetSupportedOutputFormats() must not list ungeneratable format: %s", unsupported)
 		}
 	}
 

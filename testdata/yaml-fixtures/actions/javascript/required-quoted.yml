@@ -1,0 +1,15 @@
+name: Required Quoted
+description: Action whose inputs use quoted/alternate boolean forms for required
+inputs:
+  token:
+    description: A token, required as a quoted string
+    required: "true"
+  flag:
+    description: A flag, required as the YAML word form
+    required: yes
+  optional:
+    description: An optional input
+    required: false
+runs:
+  using: node20
+  main: index.js

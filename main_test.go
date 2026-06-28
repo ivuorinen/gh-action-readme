@@ -28,6 +28,39 @@ const (
 	testVersionV4        = "v4"
 )
 
+// TestRedactConfigForLog verifies token redaction (N134) covers the top-level
+// token and nested repo-override tokens, leaves the original untouched, and is
+// nil-safe — so neither `config show` nor `gen --verbose` leaks secrets via %+v.
+func TestRedactConfigForLog(t *testing.T) {
+	t.Parallel()
+
+	if redactConfigForLog(nil) != nil {
+		t.Fatal("redactConfigForLog(nil) must return nil")
+	}
+
+	const overrideKey = "org/repo"
+	cfg := &internal.AppConfig{
+		GitHubToken: testutil.TestTokenConfig,
+		RepoOverrides: map[string]internal.AppConfig{
+			overrideKey: {GitHubToken: testutil.TestTokenConfig},
+		},
+	}
+
+	got := redactConfigForLog(cfg)
+
+	if got.GitHubToken != appconstants.RedactedPlaceholder {
+		t.Errorf("top-level token = %q, want redacted", got.GitHubToken)
+	}
+	if got.RepoOverrides[overrideKey].GitHubToken != appconstants.RedactedPlaceholder {
+		t.Errorf("override token = %q, want redacted", got.RepoOverrides[overrideKey].GitHubToken)
+	}
+	// Redaction must operate on a copy: the original config keeps its real tokens.
+	if cfg.GitHubToken != testutil.TestTokenConfig ||
+		cfg.RepoOverrides[overrideKey].GitHubToken != testutil.TestTokenConfig {
+		t.Error("redactConfigForLog mutated the original config")
+	}
+}
+
 // TestInputReader allows injecting test responses for testing.
 type TestInputReader struct {
 	responses []string
@@ -812,9 +845,9 @@ func TestCachePathHandler(t *testing.T) {
 	testSimpleHandler(t, cachePathHandler, "cachePathHandler")
 }
 
+// Not parallel: the subtests reassign the shared globalConfig, so running the
+// parent concurrently with other parallel tests would race on it (N157).
 func TestSchemaHandler(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name    string
 		verbose bool
@@ -1630,6 +1663,30 @@ func TestGenHandlerIntegration(t *testing.T) {
 				t.Errorf("genHandler() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// TestGenHandlerRejectsInvalidFormatFlagUpfront verifies N152: an invalid
+// --output-format flag fails with a clear validation error before any batch
+// processing, not a cryptic per-file "unsupported output format" batch error.
+func TestGenHandlerRejectsInvalidFormatFlagUpfront(t *testing.T) {
+	origConfig := globalConfig
+	defer func() { globalConfig = origConfig }()
+
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureJavaScriptSimple)
+
+	globalConfig = internal.DefaultAppConfig()
+	cmd := newGenCmd()
+	_ = cmd.Flags().Set(appconstants.FlagOutputFormat, "bogus")
+
+	err := genHandler(cmd, []string{tmpDir})
+	if err == nil {
+		t.Fatal("expected an error for an invalid --output-format flag")
+	}
+	if !strings.Contains(err.Error(), "invalid output format") {
+		t.Errorf("expected an upfront 'invalid output format' validation error, got: %v", err)
 	}
 }
 

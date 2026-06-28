@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"fmt"
 	htmltemplate "html/template"
 	"io"
 	"path/filepath"
@@ -61,8 +62,65 @@ func templateFuncs() texttemplate.FuncMap {
 		"gitUsesString": getGitUsesString,
 		"actionVersion": getActionVersion,
 		"mdCell":        mdCell,
+		"mdCode":        mdCode,
+		"adocCell":      adocCell,
+		"adocCode":      adocCode,
 		"badgeSegment":  shieldsBadgeEncode,
 	}
+}
+
+// mdCode renders v as a Markdown inline code span that survives table cells and
+// values containing backticks. Pipes/newlines are escaped like mdCell; a value
+// containing backticks is fenced with one more backtick than its longest internal
+// run (the GFM rule) and space-padded so the backticks render literally. A plain
+// `...`-wrapped value would otherwise be closed early by an embedded backtick.
+func mdCode(v any) string {
+	s := mdCell(fmt.Sprintf("%v", v))
+
+	longest, run := 0, 0
+	for _, r := range s {
+		if r == '`' {
+			run++
+			if run > longest {
+				longest = run
+			}
+
+			continue
+		}
+		run = 0
+	}
+
+	if longest == 0 {
+		return "`" + s + "`"
+	}
+	fence := strings.Repeat("`", longest+1)
+
+	return fence + " " + s + " " + fence
+}
+
+// adocCell escapes v for an AsciiDoc table cell: the `|` separator is escaped and
+// newlines become an AsciiDoc hard break (" +"), unlike mdCell's markdown `<br>`,
+// which AsciiDoc renders as literal text.
+func adocCell(v any) string {
+	s := fmt.Sprintf("%v", v)
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "|", "\\|")
+	s = strings.ReplaceAll(s, "\n", " +\n")
+	s = strings.ReplaceAll(s, "\r", " +\n")
+
+	return s
+}
+
+// adocCode renders v as an AsciiDoc inline monospace span (table-cell safe). A
+// value containing a backtick uses the unconstrained double-backtick form so the
+// inner backticks render literally instead of closing the span early.
+func adocCode(v any) string {
+	s := adocCell(v)
+	if strings.Contains(s, "`") {
+		return "``" + s + "``"
+	}
+
+	return "`" + s + "`"
 }
 
 // mdCell escapes a value for safe interpolation into a Markdown (or AsciiDoc)
@@ -152,6 +210,16 @@ func isValidGitHubPathSegment(s string) bool {
 	return reGitHubPathSegment.MatchString(s)
 }
 
+// reVersionRef matches a valid git ref/version for a uses: statement: tags,
+// branches, and SHAs are made of letters, digits, and "._/+-" (branch names may
+// contain "/"). Rejecting whitespace and control characters stops a multiline
+// Config.Version from injecting extra YAML lines into the rendered usage example.
+var reVersionRef = regexp.MustCompile(`^[A-Za-z0-9._/+-]+$`)
+
+func isValidVersionRef(v string) bool {
+	return reVersionRef.MatchString(v)
+}
+
 // formatVersion ensures version has proper @ prefix.
 func formatVersion(version string) string {
 	version = strings.TrimSpace(version)
@@ -233,13 +301,17 @@ func extractActionSubdirectory(actionPath, repoRoot string) string {
 		return ""
 	}
 
-	// If relative path starts with "..", action is outside repo (shouldn't happen)
-	if strings.HasPrefix(relPath, "..") {
+	// If the relative path escapes the repo root, the action is outside the repo
+	// (shouldn't happen). Match an exact ".." component rather than a "*.." prefix
+	// so a legitimate subdirectory named "..build" is not silently dropped.
+	if relPath == ".." || strings.HasPrefix(relPath, ".."+string(filepath.Separator)) {
 		return ""
 	}
 
-	// Return the subdirectory path (e.g., "actions/csharp-build")
-	return relPath
+	// Return the subdirectory with forward slashes (filepath.Rel yields OS-native
+	// separators) so the generated uses: path is valid on Windows too:
+	// "actions/csharp-build", never "actions\csharp-build".
+	return filepath.ToSlash(relPath)
 }
 
 // getActionVersion returns the action version from template data.
@@ -250,8 +322,11 @@ func getActionVersion(data any) string {
 		return appconstants.VersionTagV1
 	}
 
-	// Priority 1: Explicit version override
-	if td.Config.Version != "" {
+	// Priority 1: Explicit version override. Reject values with whitespace or
+	// control characters so a multiline Config.Version cannot inject extra YAML
+	// lines into the rendered uses: example (text/template does not escape it),
+	// mirroring the org/repo path-segment check. An invalid value falls through.
+	if td.Config.Version != "" && isValidVersionRef(td.Config.Version) {
 		return td.Config.Version
 	}
 
@@ -380,9 +455,11 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	var buf bytes.Buffer
 
 	if opts.Format == appconstants.OutputFormatHTML && opts.HeaderPath != "" {
-		if h, e := templatesembed.ReadTemplate(opts.HeaderPath); e == nil {
-			buf.Write(h)
+		h, e := templatesembed.ReadTemplate(opts.HeaderPath)
+		if e != nil {
+			return "", fmt.Errorf("reading HTML header %q: %w", opts.HeaderPath, e)
 		}
+		buf.Write(h)
 	}
 
 	if err := tmpl.Execute(&buf, action); err != nil {
@@ -390,9 +467,11 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	}
 
 	if opts.Format == appconstants.OutputFormatHTML && opts.FooterPath != "" {
-		if f, e := templatesembed.ReadTemplate(opts.FooterPath); e == nil {
-			buf.Write(f)
+		f, e := templatesembed.ReadTemplate(opts.FooterPath)
+		if e != nil {
+			return "", fmt.Errorf("reading HTML footer %q: %w", opts.FooterPath, e)
 		}
+		buf.Write(f)
 	}
 
 	return buf.String(), nil

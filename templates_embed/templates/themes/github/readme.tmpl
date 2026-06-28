@@ -31,7 +31,7 @@ jobs:
 | Parameter | Description | Required | Default |
 |-----------|-------------|----------|---------|
 {{- range $key, $input := .Inputs}}
-| `{{$key}}` | {{$input.Description | mdCell}} | {{if $input.Required}}✅{{else}}❌{{end}} | {{if $input.Default}}`{{$input.Default | mdCell}}`{{else}}-{{end}} |
+| `{{$key}}` | {{$input.Description | mdCell}} | {{if $input.Required}}✅{{else}}❌{{end}} | {{if $input.Default}}{{$input.Default | mdCode}}{{else}}-{{end}} |
 {{- end}}
 {{end}}
 

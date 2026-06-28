@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -392,12 +393,19 @@ func (g *Generator) renderTemplateForAction(
 func (g *Generator) generateSimpleFormat(
 	action *ActionYML,
 	outputDir, actionPath string,
-	format, defaultFilename, successMsg string,
+	format, defaultFilename, successMsg, templateOverride string,
 	uniqueNames bool,
 ) error {
-	templatePath, err := g.resolveTemplatePathForFormat()
-	if err != nil {
-		return err
+	// templateOverride forces a specific template (used by AsciiDoc, whose template
+	// is selected by output format, not by --theme). When empty, fall back to the
+	// theme-resolved template.
+	templatePath := templateOverride
+	if templatePath == "" {
+		var err error
+		templatePath, err = g.resolveTemplatePathForFormat()
+		if err != nil {
+			return err
+		}
 	}
 
 	opts := TemplateOptions{
@@ -439,7 +447,7 @@ func (g *Generator) generateSimpleFormat(
 func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
-		appconstants.OutputFormatMarkdown, appconstants.ReadmeMarkdown, "Generated README.md",
+		appconstants.OutputFormatMarkdown, appconstants.ReadmeMarkdown, "Generated README.md", "",
 		uniqueNames,
 	)
 }
@@ -526,6 +534,7 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
 		"asciidoc", appconstants.ReadmeASCIIDoc, "Generated AsciiDoc",
+		resolveTemplatePath(appconstants.TemplatePathASCIIDoc),
 		uniqueNames,
 	)
 }
@@ -628,8 +637,10 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string
 		filename = g.Config.OutputFilename
 	}
 
-	// Reject paths containing .. components (path traversal attempt)
-	if strings.Contains(filename, "..") {
+	// Reject paths containing a ".." path component (traversal attempt). Check
+	// path components, not a raw substring, so a legitimate filename that merely
+	// contains ".." (e.g. "report..final.md" or "v1..2.md") is not rejected.
+	if slices.Contains(strings.Split(filepath.ToSlash(filename), "/"), "..") {
 		return "", fmt.Errorf(appconstants.ErrPathTraversal, filename, outputDir)
 	}
 

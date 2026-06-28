@@ -34,30 +34,41 @@ func configRootHandler(_ *cobra.Command, _ []string) error {
 	}
 	output.Info("Configuration file location: %s", path)
 	if globalConfig.Verbose {
-		// Redact GitHub tokens before dumping the whole struct so they do not
-		// leak into terminals, CI logs, or screen shares via %+v.
-		redacted := *globalConfig
-		if redacted.GitHubToken != "" {
-			redacted.GitHubToken = appconstants.RedactedPlaceholder
-		}
-		// RepoOverrides is a map of AppConfig, each with its own GitHubToken. The
-		// shallow copy above aliases the same map, and %+v recurses into it, so a
-		// token configured under a repo override would print in plaintext. Deep-copy
-		// the map and redact each nested token.
-		if len(redacted.RepoOverrides) > 0 {
-			overrides := make(map[string]internal.AppConfig, len(redacted.RepoOverrides))
-			for name, override := range redacted.RepoOverrides {
-				if override.GitHubToken != "" {
-					override.GitHubToken = appconstants.RedactedPlaceholder
-				}
-				overrides[name] = override
-			}
-			redacted.RepoOverrides = overrides
-		}
-		output.Info("Current config: %+v", &redacted)
+		output.Info("Current config: %+v", redactConfigForLog(globalConfig))
 	}
 
 	return nil
+}
+
+// redactConfigForLog returns a copy of config with every GitHub token (the
+// top-level field and each nested repo override) replaced by a placeholder, so
+// the result is safe to dump via %+v without leaking secrets into terminals, CI
+// logs, or screen shares. Returns nil unchanged. Shared by `config show` and
+// `gen --verbose`; any future config dump must route through here too.
+func redactConfigForLog(config *internal.AppConfig) *internal.AppConfig {
+	if config == nil {
+		return nil
+	}
+	redacted := *config
+	if redacted.GitHubToken != "" {
+		redacted.GitHubToken = appconstants.RedactedPlaceholder
+	}
+	// RepoOverrides is a map of AppConfig, each with its own GitHubToken. The
+	// shallow copy above aliases the same map, and %+v recurses into it, so a
+	// token configured under a repo override would print in plaintext. Deep-copy
+	// the map and redact each nested token.
+	if len(redacted.RepoOverrides) > 0 {
+		overrides := make(map[string]internal.AppConfig, len(redacted.RepoOverrides))
+		for name, override := range redacted.RepoOverrides {
+			if override.GitHubToken != "" {
+				override.GitHubToken = appconstants.RedactedPlaceholder
+			}
+			overrides[name] = override
+		}
+		redacted.RepoOverrides = overrides
+	}
+
+	return &redacted
 }
 
 func newConfigCmd() *cobra.Command {
@@ -169,11 +180,16 @@ func configThemesHandler(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
+// newConfigWizard builds the interactive wizard. It is a var so tests can inject
+// a wizard reading scripted input (via wizard.NewConfigWizardWithInput) and drive
+// configWizardHandler end-to-end without a real terminal.
+var newConfigWizard = wizard.NewConfigWizard
+
 func configWizardHandler(cmd *cobra.Command, _ []string) error {
 	output := createOutputManager(globalConfig.Quiet)
 
 	// Create and run the wizard
-	configWizard := wizard.NewConfigWizard(output)
+	configWizard := newConfigWizard(output)
 	config, err := configWizard.Run()
 	if err != nil {
 		return fmt.Errorf("wizard failed: %w", err)
@@ -196,10 +212,17 @@ func configWizardHandler(cmd *cobra.Command, _ []string) error {
 		outputPath = defaultPath
 	}
 
-	// Export the configuration
+	// Preserve repo_overrides from the existing config: the wizard writes the live
+	// config but never prompts for overrides, so without this a second run would
+	// wipe them. allowLiveOverwrite=true lets the wizard populate the live config
+	// (the guard only blocks share-style exports).
+	if config.RepoOverrides == nil && globalConfig != nil {
+		config.RepoOverrides = globalConfig.RepoOverrides
+	}
+
 	exportFormat := resolveExportFormat(format)
 
-	if err := exporter.ExportConfig(config, exportFormat, outputPath); err != nil {
+	if err := exporter.ExportConfig(config, exportFormat, outputPath, true); err != nil {
 		return fmt.Errorf("failed to export configuration: %w", err)
 	}
 

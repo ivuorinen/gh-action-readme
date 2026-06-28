@@ -2,6 +2,8 @@ package internal
 
 import (
 	"os"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
 
 // HTMLWriter writes HTML output with optional header/footer.
@@ -11,7 +13,13 @@ type HTMLWriter struct {
 }
 
 func (w *HTMLWriter) Write(output, path string) error {
-	f, err := os.Create(path) // #nosec G304 -- path from function parameter
+	// Use OpenFile with FilePermDefault (0600) rather than os.Create's 0644 so the
+	// HTML output mode matches the markdown/JSON writers and is not world-readable.
+	f, err := os.OpenFile( // #nosec G304 -- path from function parameter
+		path,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		appconstants.FilePermDefault,
+	)
 	if err != nil {
 		return err
 	}

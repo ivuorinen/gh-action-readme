@@ -175,7 +175,7 @@ func (v *ConfigValidator) validateRepository(repo string, result *ValidationResu
 		v.isValidGitHubName,
 		"Repository is empty - will use auto-detected value",
 		"Invalid repository name format",
-		"Repository names can only contain alphanumeric characters, hyphens, and underscores",
+		"Repository names can contain alphanumeric characters, dots, hyphens, and underscores",
 		result,
 	)
 }
@@ -409,15 +409,17 @@ func (v *ConfigValidator) isValueInList(value string, validOptions []string) boo
 	return slices.Contains(validOptions, value)
 }
 
-// isValidGitHubName checks if a name follows GitHub naming rules.
+// isValidGitHubName checks if a repository name follows GitHub naming rules:
+// up to 100 characters of letters, digits, ".", "-", and "_", starting and
+// ending with an alphanumeric. Dotted names like "my.cool.action" are valid.
+// (Organization/user names are stricter — no dots or underscores, 39-char cap —
+// see isValidGitHubOrgName.)
 func (v *ConfigValidator) isValidGitHubName(name string) bool {
-	if len(name) == 0 || len(name) > 39 {
+	if len(name) == 0 || len(name) > 100 {
 		return false
 	}
 
-	// GitHub names can contain alphanumeric characters and hyphens
-	// Cannot start or end with hyphen
-	matched, _ := regexp.MatchString(`^[a-zA-Z0-9]([a-zA-Z0-9\-_]*[a-zA-Z0-9])?$`, name)
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`, name)
 
 	return matched
 }

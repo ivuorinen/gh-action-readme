@@ -111,6 +111,52 @@ func TestConvertToJSONOutput_WithOutputs(t *testing.T) {
 	assertJSONSectionsForType(t, out, "outputs", true)
 }
 
+// TestSetVersion verifies N159: SetVersion wires the build version into the JSON
+// metadata (getVersion), and an empty value is ignored rather than blanking it.
+func TestSetVersion(t *testing.T) {
+	orig := buildVersion
+	defer func() { buildVersion = orig }()
+
+	SetVersion("v9.9.9")
+	if got := getVersion(); got != "v9.9.9" {
+		t.Errorf("getVersion() = %q, want v9.9.9 after SetVersion", got)
+	}
+
+	SetVersion("")
+	if got := getVersion(); got != "v9.9.9" {
+		t.Errorf("empty SetVersion should be ignored, got %q", got)
+	}
+}
+
+// TestEscapeYAMLDoubleQuoted verifies that input defaults are escaped for a
+// double-quoted YAML scalar (N123): backslash first, then double-quote, so a
+// default containing `"` or `\` produces valid YAML rather than a broken scalar.
+func TestEscapeYAMLDoubleQuoted(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"no special chars", "hello", "hello"},
+		{"double quote", `a"b`, `a\"b`},
+		{"backslash", `a\b`, `a\\b`},
+		{"backslash then quote", `a"\b`, `a\"\\b`},
+		{"empty", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := escapeYAMLDoubleQuoted(tt.in); got != tt.want {
+				t.Errorf("escapeYAMLDoubleQuoted(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
 // TestGenerateBasicExample_NoInputs verifies that generateBasicExample with no
 // inputs produces YAML that does not include a "with:" block.
 func TestGenerateBasicExample_NoInputs(t *testing.T) {

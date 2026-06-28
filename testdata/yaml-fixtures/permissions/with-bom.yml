@@ -1,0 +1,8 @@
+﻿# permissions:
+#   contents: read
+#   issues: write
+name: BOM Permissions
+description: Action file beginning with a UTF-8 BOM before the permission comments
+runs:
+  using: node20
+  main: index.js

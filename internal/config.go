@@ -99,8 +99,9 @@ func GetGitHubToken(config *AppConfig) string {
 		return token
 	}
 
-	// Priority 3: Global config only (never repo/action configs)
-	if config.GitHubToken != "" {
+	// Priority 3: Global config only (never repo/action configs). Guard against a
+	// nil config so the exported function degrades gracefully instead of panicking.
+	if config != nil && config.GitHubToken != "" {
 		return config.GitHubToken
 	}
 
@@ -375,11 +376,18 @@ func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
 		dst.ShowSecurityInfo = src.ShowSecurityInfo
 		dst.showSecurityInfoSet = true
 	}
-	if src.Verbose {
-		dst.Verbose = src.Verbose
-	}
-	if src.Quiet {
-		dst.Quiet = src.Quiet
+	// Verbose and Quiet are mutually exclusive (ValidateConfiguration rejects
+	// both true). OR-merging them independently let a lower-scope `verbose: true`
+	// and a higher-scope `quiet: true` both survive, aborting generation with a
+	// mutual-exclusion error that not even --quiet could rescue. The higher-priority
+	// src now wins exclusively: setting one clears the other.
+	switch {
+	case src.Quiet:
+		dst.Quiet = true
+		dst.Verbose = false
+	case src.Verbose:
+		dst.Verbose = true
+		dst.Quiet = false
 	}
 	if src.useDefaultBranchSet {
 		dst.UseDefaultBranch = src.UseDefaultBranch
@@ -401,11 +409,6 @@ func mergeSecurityFields(dst *AppConfig, src *AppConfig, allowTokens bool) {
 			dst.RepoOverrides[k] = v
 		}
 	}
-}
-
-// LoadRepoConfig loads repository-level configuration from hidden config files.
-func LoadRepoConfig(repoRoot string) (*AppConfig, error) {
-	return loadRepoConfigInternal(repoRoot)
 }
 
 // loadRepoConfigInternal is the shared internal implementation for repo config loading.
@@ -430,11 +433,6 @@ func findFirstExistingConfig(basePath string, configNames []string) (string, boo
 	}
 
 	return "", false
-}
-
-// LoadActionConfig loads action-level configuration from config.yaml.
-func LoadActionConfig(actionDir string) (*AppConfig, error) {
-	return loadActionConfigInternal(actionDir)
 }
 
 // loadActionConfigInternal is the shared internal implementation for action config loading.
