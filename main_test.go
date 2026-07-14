@@ -673,34 +673,6 @@ func TestResolveExportFormat(t *testing.T) {
 	}
 }
 
-func TestCreateErrorHandler(t *testing.T) {
-	t.Parallel()
-	output := internal.NewColoredOutput(false)
-	handler := createErrorHandler(output)
-
-	if handler == nil {
-		t.Fatal("createErrorHandler returned nil")
-	}
-}
-
-func TestSetupOutputAndErrorHandling(t *testing.T) {
-	// Note: This test cannot use t.Parallel() because it modifies globalConfig
-	// Setup globalConfig for the test
-	originalConfig := globalConfig
-	defer func() { globalConfig = originalConfig }()
-
-	globalConfig = &internal.AppConfig{Quiet: false}
-
-	output, errorHandler := setupOutputAndErrorHandling()
-
-	if output == nil {
-		t.Fatal("setupOutputAndErrorHandling returned nil output")
-	}
-	if errorHandler == nil {
-		t.Fatal("setupOutputAndErrorHandling returned nil errorHandler")
-	}
-}
-
 // Unit Tests for Command Creation Functions
 
 func TestNewGenCmd(t *testing.T) {

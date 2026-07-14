@@ -489,16 +489,6 @@ func DetectRepositoryName(repoRoot string) string {
 	return info.GetRepositoryName()
 }
 
-// InitConfig initializes the global configuration using Viper with XDG compliance.
-func InitConfig(configFile string) (*AppConfig, error) {
-	v, err := initializeViperInstance()
-	if err != nil {
-		return nil, err
-	}
-
-	return loadAndUnmarshalConfig(configFile, v)
-}
-
 // WriteDefaultConfig writes a default configuration file to the XDG config directory.
 func WriteDefaultConfig() error {
 	configFile, err := xdg.ConfigFile(appconstants.PathXDGConfig)

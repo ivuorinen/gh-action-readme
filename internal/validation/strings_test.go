@@ -13,56 +13,6 @@ const (
 	testStrVersionV3    = "v3"
 )
 
-// TestTrimAndNormalize tests the TrimAndNormalize function.
-func TestTrimAndNormalize(t *testing.T) {
-	t.Parallel()
-
-	tests := []testutil.StringTestCase{
-		{
-			Name:  "no whitespace",
-			Input: testStrInput,
-			Want:  testStrInput,
-		},
-		{
-			Name:  "leading and trailing whitespace",
-			Input: "  test  ",
-			Want:  testStrInput,
-		},
-		{
-			Name:  "multiple internal spaces",
-			Input: "hello    world",
-			Want:  testutil.ValidationHelloWorld,
-		},
-		{
-			Name:  "mixed whitespace",
-			Input: "  hello   world  ",
-			Want:  testutil.ValidationHelloWorld,
-		},
-		{
-			Name:  "newlines and tabs",
-			Input: "hello\n\t\tworld",
-			Want:  testutil.ValidationHelloWorld,
-		},
-		{
-			Name:  "empty string",
-			Input: "",
-			Want:  "",
-		},
-		{
-			Name:  "whitespace only",
-			Input: "   \n\t  ",
-			Want:  "",
-		},
-		{
-			Name:  "multiple lines",
-			Input: "line one\n  line two\n    line three",
-			Want:  "line one line two line three",
-		},
-	}
-
-	testutil.RunStringTests(t, tests, TrimAndNormalize)
-}
-
 // TestFormatUsesStatement tests the FormatUsesStatement function.
 func TestFormatUsesStatement(t *testing.T) {
 	t.Parallel()

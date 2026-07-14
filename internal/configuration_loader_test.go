@@ -42,7 +42,7 @@ func TestNewConfigurationLoader(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("expected source %s to be enabled by default", source)
+			t.Errorf("expected source %d to be enabled by default", source)
 		}
 	}
 }
@@ -443,34 +443,6 @@ func TestConfigurationLoaderSourceManagement(t *testing.T) {
 		t.Error("expected SourceRepoConfig to be re-enabled")
 	}
 }
-
-func TestConfigurationSourceString(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		source   appconstants.ConfigurationSource
-		expected string
-	}{
-		{appconstants.SourceDefaults, "defaults"},
-		{appconstants.SourceGlobal, "global"},
-		{appconstants.SourceRepoOverride, "repo-override"},
-		{appconstants.SourceRepoConfig, "repo-config"},
-		{appconstants.SourceActionConfig, "action-config"},
-		{appconstants.SourceEnvironment, "environment"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.source.String()
-			if result != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, result)
-			}
-		})
-	}
-}
-
 func TestConfigurationLoaderEnvironmentOverrides(t *testing.T) {
 	tests := []struct {
 		name        string

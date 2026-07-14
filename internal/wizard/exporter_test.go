@@ -212,31 +212,6 @@ func TestConfigExporterSanitizeConfig(t *testing.T) {
 	}
 }
 
-func TestConfigExporterGetSupportedFormats(t *testing.T) {
-	t.Parallel()
-	output := internal.NewColoredOutput(true)
-	exporter := NewConfigExporter(output)
-
-	formats := exporter.GetSupportedFormats()
-
-	expectedFormats := []ExportFormat{FormatYAML, FormatJSON, FormatTOML}
-	if len(formats) != len(expectedFormats) {
-		t.Errorf("GetSupportedFormats() returned %d formats, want %d", len(formats), len(expectedFormats))
-	}
-
-	// Check that all expected formats are present
-	formatMap := make(map[ExportFormat]bool)
-	for _, format := range formats {
-		formatMap[format] = true
-	}
-
-	for _, expected := range expectedFormats {
-		if !formatMap[expected] {
-			t.Errorf("Expected format %v not found in supported formats", expected)
-		}
-	}
-}
-
 func TestConfigExporterGetDefaultOutputPath(t *testing.T) {
 	t.Parallel()
 	output := internal.NewColoredOutput(true)

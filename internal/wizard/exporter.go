@@ -111,11 +111,6 @@ func samePath(a, b string) bool {
 	return absA == absB
 }
 
-// GetSupportedFormats returns the list of supported export formats.
-func (e *ConfigExporter) GetSupportedFormats() []ExportFormat {
-	return []ExportFormat{FormatYAML, FormatJSON, FormatTOML}
-}
-
 // GetDefaultOutputPath returns the default output path for a given format.
 func (e *ConfigExporter) GetDefaultOutputPath(format ExportFormat) (string, error) {
 	configPath, err := internal.GetConfigPath()

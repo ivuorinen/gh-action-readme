@@ -652,28 +652,6 @@ func SetupTestEnvironment(t *testing.T) (tmpDir string, cleanup func()) {
 	return tmpDir, cleanup
 }
 
-// SetupTestEnvironmentWithSetup creates test environment and runs a custom setup function.
-// Returns temp directory path and cleanup function.
-//
-// Example:
-//
-//	tmpDir, cleanup := testutil.SetupTestEnvironmentWithSetup(t, func(t *testing.T, dir string) {
-//		testutil.WriteFileInDir(t, dir, "config.yml", "theme: default")
-//	})
-//	defer cleanup()
-func SetupTestEnvironmentWithSetup(
-	t *testing.T,
-	setupFunc func(t *testing.T, tmpDir string),
-) (tmpDir string, cleanup func()) {
-	t.Helper()
-	tmpDir, cleanup = SetupTestEnvironment(t)
-	if setupFunc != nil {
-		setupFunc(t, tmpDir)
-	}
-
-	return tmpDir, cleanup
-}
-
 // SetupTokenEnv sets up GitHub token environment variables for testing.
 // Pass empty string to clear a token.
 //

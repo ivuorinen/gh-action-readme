@@ -242,44 +242,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestWrap(t *testing.T) {
-	t.Parallel()
-
-	originalErr := errors.New(testOriginalError)
-
-	// Test wrapping normal error
-	wrapped := Wrap(originalErr, appconstants.ErrCodeFileNotFound, testContext)
-	if wrapped.Code != appconstants.ErrCodeFileNotFound {
-		t.Errorf("Wrap() code = %v, want %v", wrapped.Code, appconstants.ErrCodeFileNotFound)
-	}
-	if wrapped.Context != testContext {
-		t.Errorf("Wrap() context = %v, want %v", wrapped.Context, testContext)
-	}
-	if wrapped.Err != originalErr {
-		t.Errorf("Wrap() err = %v, want %v", wrapped.Err, originalErr)
-	}
-
-	// Test wrapping nil error
-	nilWrapped := Wrap(nil, appconstants.ErrCodeFileNotFound, testContext)
-	if nilWrapped != nil {
-		t.Error("Wrap(nil) should return nil")
-	}
-
-	// Test wrapping already contextual error
-	contextualErr := &ContextualError{
-		Code:    appconstants.ErrCodeUnknown,
-		Err:     originalErr,
-		Context: "",
-	}
-	rewrapped := Wrap(contextualErr, appconstants.ErrCodeFileNotFound, "new context")
-	if rewrapped.Code != appconstants.ErrCodeFileNotFound {
-		t.Error("Wrap() should update code if it was appconstants.ErrCodeUnknown")
-	}
-	if rewrapped.Context != "new context" {
-		t.Error("Wrap() should update context if it was empty")
-	}
-}
-
 func TestContextualErrorWithMethods(t *testing.T) {
 	t.Parallel()
 

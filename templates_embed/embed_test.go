@@ -78,24 +78,6 @@ func TestGetEmbeddedTemplate(t *testing.T) {
 }
 
 // TestGetEmbeddedTemplateFS verifies the filesystem is accessible.
-func TestGetEmbeddedTemplateFS(t *testing.T) {
-	t.Parallel()
-
-	fs := GetEmbeddedTemplateFS()
-	if fs == nil {
-		t.Fatal("GetEmbeddedTemplateFS() returned nil")
-	}
-
-	// Verify we can read from the filesystem
-	file, err := fs.Open(testutil.TestTemplateWithPrefix)
-	if err != nil {
-		t.Errorf("failed to open default template: %v", err)
-	}
-	if file != nil {
-		_ = file.Close()
-	}
-}
-
 // TestIsEmbeddedTemplateAvailable tests template existence checking.
 func TestIsEmbeddedTemplateAvailable(t *testing.T) {
 	t.Parallel()

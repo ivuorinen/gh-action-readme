@@ -35,11 +35,6 @@ func GetEmbeddedTemplate(templatePath string) ([]byte, error) {
 	return embeddedTemplates.ReadFile(cleanPath)
 }
 
-// GetEmbeddedTemplateFS returns the embedded filesystem for templates.
-func GetEmbeddedTemplateFS() fs.FS {
-	return embeddedTemplates
-}
-
 // IsEmbeddedTemplateAvailable checks if a template exists in the embedded filesystem.
 func IsEmbeddedTemplateAvailable(templatePath string) bool {
 	cleanPath := strings.TrimPrefix(filepath.ToSlash(templatePath), "/")

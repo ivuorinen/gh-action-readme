@@ -124,25 +124,3 @@ func GetConfigSearchPaths() []string {
 
 	return paths
 }
-
-// String returns a string representation of a ConfigurationSource.
-func (s ConfigurationSource) String() string {
-	switch s {
-	case SourceDefaults:
-		return ConfigKeyDefaults
-	case SourceGlobal:
-		return ScopeGlobal
-	case SourceRepoOverride:
-		return "repo-override"
-	case SourceRepoConfig:
-		return "repo-config"
-	case SourceActionConfig:
-		return "action-config"
-	case SourceEnvironment:
-		return "environment"
-	case SourceCLIFlags:
-		return "cli-flags"
-	default:
-		return ScopeUnknown
-	}
-}

@@ -159,11 +159,6 @@ func (g *Generator) CreateDependencyAnalyzer() (*dependencies.Analyzer, error) {
 	return dependencies.NewAnalyzer(githubClient, *gitInfo, cacheAdapter), nil
 }
 
-// GenerateFromFile processes a single action.yml file and generates documentation.
-func (g *Generator) GenerateFromFile(actionPath string) error {
-	return g.generateFromFile(actionPath, false)
-}
-
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory
 // using the centralized parser function and adds verbose logging.
 func (g *Generator) DiscoverActionFiles(dir string, recursive bool, ignoredDirs []string) ([]string, error) {

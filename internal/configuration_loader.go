@@ -40,28 +40,6 @@ func NewConfigurationLoader() *ConfigurationLoader {
 	}
 }
 
-// NewConfigurationLoaderWithOptions creates a configuration loader with custom options.
-func NewConfigurationLoaderWithOptions(opts ConfigurationOptions) *ConfigurationLoader {
-	loader := &ConfigurationLoader{
-		sources: make(map[appconstants.ConfigurationSource]bool),
-	}
-
-	// Set default sources if none specified
-	if len(opts.EnabledSources) == 0 {
-		opts.EnabledSources = []appconstants.ConfigurationSource{
-			appconstants.SourceDefaults, appconstants.SourceGlobal, appconstants.SourceRepoOverride,
-			appconstants.SourceRepoConfig, appconstants.SourceActionConfig, appconstants.SourceEnvironment,
-		}
-	}
-
-	// Configure enabled sources
-	for _, source := range opts.EnabledSources {
-		loader.sources[source] = true
-	}
-
-	return loader
-}
-
 // LoadConfiguration loads configuration with multi-level hierarchy.
 func (cl *ConfigurationLoader) LoadConfiguration(configFile, repoRoot, actionDir string) (*AppConfig, error) {
 	config := &AppConfig{}
@@ -134,28 +112,6 @@ func containsString(slice []string, str string) bool {
 	}
 
 	return false
-}
-
-// GetConfigurationSources returns the currently enabled configuration sources.
-func (cl *ConfigurationLoader) GetConfigurationSources() []appconstants.ConfigurationSource {
-	var sources []appconstants.ConfigurationSource
-	for source, enabled := range cl.sources {
-		if enabled {
-			sources = append(sources, source)
-		}
-	}
-
-	return sources
-}
-
-// EnableSource enables a specific configuration source.
-func (cl *ConfigurationLoader) EnableSource(source appconstants.ConfigurationSource) {
-	cl.sources[source] = true
-}
-
-// DisableSource disables a specific configuration source.
-func (cl *ConfigurationLoader) DisableSource(source appconstants.ConfigurationSource) {
-	cl.sources[source] = false
 }
 
 // loadDefaultsStep loads default configuration values.

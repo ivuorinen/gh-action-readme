@@ -133,69 +133,6 @@ func TestGetDefaultIgnoredDirectories(t *testing.T) {
 	}
 }
 
-// TestConfigurationSourceString tests the String method for ConfigurationSource.
-func TestConfigurationSourceString(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name   string
-		source ConfigurationSource
-		want   string
-	}{
-		{
-			name:   "defaults source",
-			source: SourceDefaults,
-			want:   ConfigKeyDefaults,
-		},
-		{
-			name:   "global source",
-			source: SourceGlobal,
-			want:   ScopeGlobal,
-		},
-		{
-			name:   "repo override source",
-			source: SourceRepoOverride,
-			want:   "repo-override",
-		},
-		{
-			name:   "repo config source",
-			source: SourceRepoConfig,
-			want:   "repo-config",
-		},
-		{
-			name:   "action config source",
-			source: SourceActionConfig,
-			want:   "action-config",
-		},
-		{
-			name:   "environment source",
-			source: SourceEnvironment,
-			want:   "environment",
-		},
-		{
-			name:   "CLI flags source",
-			source: SourceCLIFlags,
-			want:   "cli-flags",
-		},
-		{
-			name:   "unknown source",
-			source: ConfigurationSource(999),
-			want:   "unknown",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := tt.source.String()
-			if got != tt.want {
-				t.Errorf("ConfigurationSource.String() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 // TestGetSupportedOutputFormats tests the GetSupportedOutputFormats function.
 func TestGetSupportedOutputFormats(t *testing.T) {
 	t.Parallel()

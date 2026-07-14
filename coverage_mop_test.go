@@ -37,16 +37,29 @@ func covMopXDGCacheAsFile(t *testing.T) {
 	xdg.Reload()
 }
 
-// covMopXDGConfigAsFile points XDG_CONFIG_HOME at a regular file so xdg.ConfigFile
-// — and therefore GetConfigPath — fails, exercising the config-path error branches.
+// covMopXDGConfigAsFile neutralizes every config candidate xdg.ConfigFile searches
+// so that GetConfigPath fails, exercising the config-path error branches. Unlike
+// xdg.CacheFile (single candidate), xdg.ConfigFile falls back through a chain —
+// XDG_CONFIG_HOME, then the platform home defaults (on darwin: ~/Library/Application
+// Support, ~/Library/Preferences, ~/.config). Pointing only XDG_CONFIG_HOME at a file
+// lets xdg fall back to a writable home default and succeed, so HOME and
+// XDG_CONFIG_DIRS must be neutralized too, or the test passes on Linux CI but fails
+// on darwin.
 func covMopXDGConfigAsFile(t *testing.T) {
 	t.Helper()
-	cfgFile := filepath.Join(t.TempDir(), "config-home-is-a-file")
-	if err := os.WriteFile(cfgFile, []byte("x"), 0o600); err != nil {
-		t.Fatalf("failed to seed config-home file: %v", err)
+	dir := t.TempDir()
+	seed := func(name string) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte("x"), 0o600); err != nil {
+			t.Fatalf("failed to seed %s: %v", name, err)
+		}
+
+		return p
 	}
 	t.Cleanup(xdg.Reload)
-	t.Setenv("XDG_CONFIG_HOME", cfgFile)
+	t.Setenv("HOME", seed("home-is-a-file"))
+	t.Setenv("XDG_CONFIG_HOME", seed("config-home-is-a-file"))
+	t.Setenv("XDG_CONFIG_DIRS", "")
 	xdg.Reload()
 }
 

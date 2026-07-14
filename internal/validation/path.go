@@ -16,12 +16,3 @@ func GetBinaryDir() (string, error) {
 
 	return filepath.Dir(executable), nil
 }
-
-// EnsureAbsolutePath converts a relative path to an absolute path.
-func EnsureAbsolutePath(path string) (string, error) {
-	if filepath.IsAbs(path) {
-		return path, nil
-	}
-
-	return filepath.Abs(path)
-}
