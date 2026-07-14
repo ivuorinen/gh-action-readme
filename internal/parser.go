@@ -20,8 +20,58 @@ type ActionYML struct {
 	Outputs     map[string]ActionOutput `yaml:"outputs"`
 	Runs        map[string]any          `yaml:"runs"`
 	Branding    *Branding               `yaml:"branding,omitempty"`
-	Permissions map[string]string       `yaml:"permissions,omitempty"`
+	Permissions PermissionMap           `yaml:"permissions,omitempty"`
 	// Add more fields as the schema evolves
+}
+
+// PermissionMap is a scope→level permission mapping that also accepts GitHub's
+// scalar shorthand (`permissions: read-all` / `write-all` / `none`). Its
+// underlying type is map[string]string, so it ranges in templates and marshals to
+// a JSON object exactly like a plain map — the only difference is parsing.
+type PermissionMap map[string]string
+
+// UnmarshalYAML decodes either the mapping form (`permissions:\n  contents: read`)
+// or the scalar shorthand into a PermissionMap, instead of failing the whole file
+// on the scalar form (goccy returns "string was used where mapping is expected").
+// The scalars map to an `all` scope so they render sensibly (`all: read`).
+func (p *PermissionMap) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	switch v := raw.(type) {
+	case nil:
+		*p = nil
+	case string:
+		return p.fromScalar(v)
+	case map[string]any:
+		m := make(PermissionMap, len(v))
+		for key, val := range v {
+			m[key] = fmt.Sprintf("%v", val)
+		}
+		*p = m
+	default:
+		return fmt.Errorf("invalid type %T for permissions", raw)
+	}
+
+	return nil
+}
+
+// fromScalar handles the `read-all` / `write-all` / `none` shorthand.
+func (p *PermissionMap) fromScalar(v string) error {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "read-all":
+		*p = PermissionMap{"all": appconstants.PermissionRead}
+	case "write-all":
+		*p = PermissionMap{"all": appconstants.PermissionWrite}
+	case "none", "":
+		*p = PermissionMap{}
+	default:
+		return fmt.Errorf("invalid permissions scalar %q (want read-all, write-all, or none)", v)
+	}
+
+	return nil
 }
 
 // ActionInput represents an input parameter for a GitHub Action.
@@ -127,7 +177,7 @@ func mergePermissions(action *ActionYML, commentPerms map[string]string) {
 		return
 	}
 	if action.Permissions == nil {
-		action.Permissions = commentPerms
+		action.Permissions = PermissionMap(commentPerms)
 
 		return
 	}

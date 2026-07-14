@@ -478,6 +478,25 @@ func TestParseActionYMLNoPermissions(t *testing.T) {
 	}
 }
 
+// TestParseActionYMLScalarPermissions verifies N122: the scalar `permissions:
+// read-all` shorthand parses into an `all` scope instead of failing the whole file
+// with "string was used where mapping is expected".
+func TestParseActionYMLScalarPermissions(t *testing.T) {
+	t.Parallel()
+
+	action, err := parseActionFromContent(
+		t,
+		string(testutil.MustReadFixture(testutil.TestFixturePermissionsScalarReadAll)),
+	)
+	if err != nil {
+		t.Fatalf("ParseActionYML must accept the scalar permissions form, got: %v", err)
+	}
+
+	if got := action.Permissions["all"]; got != testutil.PermissionRead {
+		t.Errorf("permissions: read-all should parse to all: read, got %v", action.Permissions)
+	}
+}
+
 // TestParseActionYMLFlexBoolRequired verifies N142: quoted and word-form boolean
 // values for `required` parse instead of failing the whole file.
 func TestParseActionYMLFlexBoolRequired(t *testing.T) {
@@ -795,10 +814,10 @@ func TestMergePermissionsEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			action := &ActionYML{Permissions: tt.yamlPerms}
+			action := &ActionYML{Permissions: PermissionMap(tt.yamlPerms)}
 			mergePermissions(action, tt.commentPerms)
 
-			if !reflect.DeepEqual(action.Permissions, tt.wantPerms) {
+			if !reflect.DeepEqual(action.Permissions, PermissionMap(tt.wantPerms)) {
 				t.Errorf("mergePermissions() = %v, want %v", action.Permissions, tt.wantPerms)
 			}
 		})

@@ -162,6 +162,7 @@ const (
 	TestFixturePermissionsDashSingle     = "permissions/dash-format-single.yml"
 	TestFixturePermissionsDashMultiple   = "permissions/dash-format-multiple.yml"
 	TestFixturePermissionsObject         = "permissions/object-format.yml"
+	TestFixturePermissionsScalarReadAll  = "permissions/scalar-read-all.yml"
 	TestFixturePermissionsInlineComments = "permissions/inline-comments.yml"
 	TestFixturePermissionsMixed          = "permissions/mixed-format.yml"
 	TestFixturePermissionsEmpty          = "permissions/empty-block.yml"

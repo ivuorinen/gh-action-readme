@@ -252,7 +252,7 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 			Outputs:     outputs,
 			Runs:        action.Runs,
 			Branding:    branding,
-			Permissions: action.Permissions,
+			Permissions: map[string]string(action.Permissions),
 		},
 		Documentation: DocumentationInfo{
 			Title:       action.Name,

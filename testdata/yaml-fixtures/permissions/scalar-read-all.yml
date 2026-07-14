@@ -1,0 +1,6 @@
+name: Scalar Permissions
+description: Action using GitHub's scalar permissions shorthand instead of a mapping
+permissions: read-all
+runs:
+  using: composite
+  steps: []
