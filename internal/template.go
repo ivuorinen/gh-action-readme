@@ -465,11 +465,11 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	var buf bytes.Buffer
 
 	if opts.Format == appconstants.OutputFormatHTML && opts.HeaderPath != "" {
-		h, e := templatesembed.ReadTemplate(opts.HeaderPath)
+		rendered, e := renderPartial(opts.HeaderPath, opts.Format, action)
 		if e != nil {
-			return "", fmt.Errorf("reading HTML header %q: %w", opts.HeaderPath, e)
+			return "", fmt.Errorf("HTML header %q: %w", opts.HeaderPath, e)
 		}
-		buf.Write(h)
+		buf.WriteString(rendered)
 	}
 
 	if err := tmpl.Execute(&buf, action); err != nil {
@@ -477,12 +477,34 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 	}
 
 	if opts.Format == appconstants.OutputFormatHTML && opts.FooterPath != "" {
-		f, e := templatesembed.ReadTemplate(opts.FooterPath)
+		rendered, e := renderPartial(opts.FooterPath, opts.Format, action)
 		if e != nil {
-			return "", fmt.Errorf("reading HTML footer %q: %w", opts.FooterPath, e)
+			return "", fmt.Errorf("HTML footer %q: %w", opts.FooterPath, e)
 		}
-		buf.Write(f)
+		buf.WriteString(rendered)
 	}
 
 	return buf.String(), nil
+}
+
+// renderPartial reads the header/footer template at path and executes it with the
+// same template data as the body, so placeholders like {{.Name}} render instead of
+// leaking literally into the output (header.tmpl carries a {{.Name}} in its <title>).
+func renderPartial(path, format string, data any) (string, error) {
+	content, err := templatesembed.ReadTemplate(path)
+	if err != nil {
+		return "", err
+	}
+
+	tmpl, err := parseReadmeTemplate(content, format)
+	if err != nil {
+		return "", err
+	}
+
+	var b bytes.Buffer
+	if err := tmpl.Execute(&b, data); err != nil {
+		return "", err
+	}
+
+	return b.String(), nil
 }
