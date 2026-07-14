@@ -65,13 +65,3 @@ func (a *Analyzer) parseCompositeAction(actionPath string) (*ActionWithComposite
 
 	return action, nil
 }
-
-// IsCompositeAction checks if an action file defines a composite action.
-func IsCompositeAction(actionPath string) (bool, error) {
-	action, err := (&Analyzer{}).parseCompositeActionFromFile(actionPath)
-	if err != nil {
-		return false, err
-	}
-
-	return action.Runs.Using == appconstants.ActionTypeComposite, nil
-}

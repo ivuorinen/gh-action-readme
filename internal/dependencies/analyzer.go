@@ -82,12 +82,11 @@ type Dependency struct {
 
 // OutdatedDependency represents a dependency that has newer versions available.
 type OutdatedDependency struct {
-	Current          Dependency `json:"current"`
-	LatestVersion    string     `json:"latest_version"`
-	LatestSHA        string     `json:"latest_sha"`
-	UpdateType       string     `json:"update_type"` // "major", "minor", "patch"
-	Changelog        string     `json:"changelog,omitempty"`
-	IsSecurityUpdate bool       `json:"is_security_update"`
+	Current       Dependency `json:"current"`
+	LatestVersion string     `json:"latest_version"`
+	LatestSHA     string     `json:"latest_sha"`
+	UpdateType    string     `json:"update_type"` // "major", "minor", "patch"
+	Changelog     string     `json:"changelog,omitempty"`
 }
 
 // PinnedUpdate represents an update that pins to a specific commit SHA.
@@ -200,10 +199,6 @@ func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error
 				LatestVersion: latestVersion,
 				LatestSHA:     latestSHA,
 				UpdateType:    updateType,
-				// Don't assume major version bumps are security updates
-				// This should only be set if confirmed by security advisory data
-				// Future enhancement: integrate with GitHub Security Advisories API
-				IsSecurityUpdate: false,
 			})
 		}
 	}
@@ -257,6 +252,34 @@ func (a *Analyzer) GeneratePinnedUpdate(
 		UpdateType: updateType,
 		LineNumber: 0, // Will be determined during file update
 	}, nil
+}
+
+// GeneratePinInPlace pins a floating dependency to the commit SHA of its CURRENT
+// ref, without upgrading it. This is what `deps pin` promises ("convert floating
+// versions like @v4 to pinned commit SHAs") and differs from GeneratePinnedUpdate,
+// which resolves the LATEST release and therefore silently upgrades.
+//
+// It returns (nil, nil) for dependencies that are not floating remote-action semver
+// refs — already SHA/patch-pinned, local, shell, docker, or branch refs — which the
+// caller skips. A non-nil error means a dep that should have been pinnable could not
+// be resolved.
+func (a *Analyzer) GeneratePinInPlace(actionPath string, dep Dependency) (*PinnedUpdate, error) {
+	if dep.IsShellScript || dep.IsLocalAction || dep.IsPinned {
+		return nil, nil
+	}
+
+	owner, repo, currentVersion, versionType := a.parseUsesStatement(dep.Uses)
+	if owner == "" || repo == "" || versionType != SemanticVersion {
+		return nil, nil
+	}
+
+	sha := a.getCommitSHAForTag(context.Background(), owner, repo, currentVersion)
+	if sha == "" {
+		return nil, fmt.Errorf("could not resolve commit SHA for %s", dep.Uses)
+	}
+
+	// Pin at the current version, not the latest — this is a pin, not an upgrade.
+	return a.GeneratePinnedUpdate(actionPath, dep, currentVersion, sha)
 }
 
 // ApplyPinnedUpdates applies pinned updates to action files.

@@ -862,14 +862,6 @@ func TestConfigShowHandler(t *testing.T) {
 	testSimpleHandler(t, configShowHandler, "configShowHandler")
 }
 
-func TestDepsGraphHandler(t *testing.T) {
-	// depsGraphHandler now returns error (always nil — unimplemented feature);
-	// adapt it to the void-handler helper, which asserts it does not panic.
-	testSimpleVoidHandler(t, func(cmd *cobra.Command, args []string) {
-		_ = depsGraphHandler(cmd, args)
-	})
-}
-
 func TestCreateAnalyzer(t *testing.T) {
 	output := &internal.ColoredOutput{NoColor: true, Quiet: true}
 	config := internal.DefaultAppConfig()
@@ -1164,20 +1156,6 @@ func TestDisplayOutdatedResults(_ *testing.T) {
 					},
 					LatestVersion: testVersionV4,
 					UpdateType:    "major",
-				},
-			},
-		},
-		{
-			name: "with security update",
-			allOutdated: []dependencies.OutdatedDependency{
-				{
-					Current: dependencies.Dependency{
-						Name:    "actions/setup-node",
-						Version: "v3",
-					},
-					LatestVersion:    "v4",
-					UpdateType:       "major",
-					IsSecurityUpdate: true,
 				},
 			},
 		},

@@ -936,68 +936,6 @@ func TestValidateActionType(t *testing.T) {
 	}
 }
 
-func TestIsCompositeAction(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		fixture string
-		want    bool
-		wantErr bool
-	}{
-		{
-			name:    testutil.TestCaseNameCompositeAction,
-			fixture: testutil.TestFixtureCompositeActionAnalyzer,
-			want:    true,
-			wantErr: false,
-		},
-		{
-			name:    "docker action",
-			fixture: "docker-action.yml",
-			want:    false,
-			wantErr: false,
-		},
-		{
-			name:    testutil.TestCaseNameJavaScriptAction,
-			fixture: "javascript-action.yml",
-			want:    false,
-			wantErr: false,
-		},
-		{
-			name:    testutil.TestCaseNameInvalidYAML,
-			fixture: "invalid.yml",
-			want:    false,
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Read fixture content using safe helper
-			yamlContent := testutil.MustReadAnalyzerFixture(tt.fixture)
-
-			// Create temp file with action YAML
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
-
-			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, yamlContent)
-
-			got, err := IsCompositeAction(actionPath)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("IsCompositeAction() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
-			if got != tt.want {
-				t.Errorf("IsCompositeAction() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 // TestGetCommitSHAForTag_AnnotatedTag verifies that an annotated tag (ref object
 // type "tag") is dereferenced via GetTag to the underlying commit SHA, instead of
 // returning the unusable tag-object SHA that would produce a broken `uses:` pin.
@@ -1074,6 +1012,59 @@ func TestGetCommitSHAForTag_AnnotatedTagDerefFailure(t *testing.T) {
 	}
 	if sha != "" {
 		t.Errorf("sha = %q, want \"\" (deref failed; must not fall back to tag-object SHA %q)", sha, annTagObjSHA)
+	}
+}
+
+// TestGeneratePinInPlace verifies that pin resolves a floating ref to the SHA of its
+// CURRENT tag (not the latest release, which would silently upgrade) and skips deps
+// that are not floating remote-action semver refs.
+func TestGeneratePinInPlace(t *testing.T) {
+	t.Parallel()
+
+	const (
+		curTag    = "v4"
+		commitSHA = "3333333333333333333333333333333333333333"
+	)
+
+	base := "GET https://api.github.com/repos/pinorg/pinrepo"
+	refJSON := `{"ref":"refs/tags/` + curTag + `","object":{"type":"commit","sha":"` + commitSHA + `"}}`
+	mockResponses := map[string]string{
+		base + "/git/ref/tags/" + curTag: refJSON,
+	}
+
+	analyzer := &Analyzer{
+		GitHubClient: testutil.MockGitHubClient(mockResponses),
+		Cache:        newIsolatedCache(t),
+	}
+
+	update, err := analyzer.GeneratePinInPlace("action.yml", Dependency{Uses: "pinorg/pinrepo@" + curTag})
+	if err != nil {
+		t.Fatalf("GeneratePinInPlace returned error: %v", err)
+	}
+	if update == nil {
+		t.Fatal("GeneratePinInPlace returned nil for a floating ref; want a pin")
+	}
+
+	wantUses := "pinorg/pinrepo@" + commitSHA + " # " + curTag
+	if update.NewUses != wantUses {
+		t.Errorf("NewUses = %q, want %q (pin must use the current ref's SHA, not upgrade)", update.NewUses, wantUses)
+	}
+	if update.Version != curTag {
+		t.Errorf("Version = %q, want %q (pin must not upgrade the version)", update.Version, curTag)
+	}
+
+	// Deps that are not floating remote-action semver refs yield (nil, nil).
+	skips := map[string]Dependency{
+		"already pinned": {Uses: "pinorg/pinrepo@v4", IsPinned: true},
+		"local action":   {Uses: "./local", IsLocalAction: true},
+		"shell script":   {Uses: "run.sh", IsShellScript: true},
+		"branch ref":     {Uses: "pinorg/pinrepo@main"},
+	}
+	for name, dep := range skips {
+		u, err := analyzer.GeneratePinInPlace("action.yml", dep)
+		if err != nil || u != nil {
+			t.Errorf("GeneratePinInPlace(%s) = (%v, %v), want (nil, nil)", name, u, err)
+		}
 	}
 }
 
