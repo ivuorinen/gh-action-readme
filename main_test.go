@@ -704,8 +704,8 @@ func TestNewValidateCmd(t *testing.T) {
 	t.Parallel()
 	cmd := newValidateCmd()
 
-	if cmd.Use != appconstants.CommandValidate {
-		t.Errorf("expected Use to be 'validate', got %q", cmd.Use)
+	if cmd.Use != appconstants.CommandValidate+" [path]" {
+		t.Errorf("expected Use to be 'validate [path]', got %q", cmd.Use)
 	}
 
 	if cmd.Short == "" {
@@ -1637,6 +1637,29 @@ func TestGenHandlerRejectsInvalidFormatFlagUpfront(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid output format") {
 		t.Errorf("expected an upfront 'invalid output format' validation error, got: %v", err)
+	}
+}
+
+// TestValidateTargetDir verifies validate resolves its optional path argument:
+// an existing path is used, a nonexistent path errors (rather than silently
+// falling back to the current directory), and no argument falls back to CWD.
+func TestValidateTargetDir(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	got, err := validateTargetDir([]string{dir})
+	if err != nil || got != dir {
+		t.Errorf("validateTargetDir([dir]) = (%q, %v), want (%q, nil)", got, err, dir)
+	}
+
+	if _, err := validateTargetDir([]string{filepath.Join(dir, "nope")}); err == nil {
+		t.Error("validateTargetDir([nonexistent]) error = nil, want error")
+	}
+
+	got, err = validateTargetDir(nil)
+	if err != nil || got == "" {
+		t.Errorf("validateTargetDir(nil) = (%q, %v), want (cwd, nil)", got, err)
 	}
 }
 
