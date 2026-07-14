@@ -39,3 +39,7 @@ coverage.*
 /megalinter-reports/
 cr.txt
 pr.txt
+
+!docs/audit/**
+!**/.claude/*
+.claude/settings.local.json

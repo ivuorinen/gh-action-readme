@@ -1,75 +1,58 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**gh-action-readme** — CLI tool for GitHub Actions documentation generation.
 
-**gh-action-readme** - CLI tool for GitHub Actions documentation generation
+Deep references live under `docs/` — this file holds only the agent-critical,
+non-obvious guidance. Enforced conventions live in `.claude/rules/`.
 
 ## 🛡️ Quality Standards
 
-This project enforces strict quality gates aligned with [SonarCloud "Sonar way"](https://docs.sonarsource.com/sonarqube-cloud/standards/managing-quality-gates/):
+Strict gates aligned with [SonarCloud "Sonar way"](https://docs.sonarsource.com/sonarqube-cloud/standards/managing-quality-gates/):
 
-| Metric | Threshold | Check Command |
-| ------ | --------- | ------------- |
+| Metric | Threshold | Check |
+| ------ | --------- | ----- |
 | Code Coverage | ≥ 72% (overall); 80% target | `make test-coverage-check` |
-| Duplicated Lines | ≤ 3% (new code) | `make lint` (via dupl) |
+| Duplicated Lines | ≤ 3% (new code) | `make lint` (dupl) |
 | Security Rating | A (no issues) | `make security` |
-| Reliability Rating | A (no bugs) | `make lint` |
-| Maintainability | A (tech debt ≤ 5%) | `make lint` |
-| Cyclomatic Complexity | ≤ 10 per function | `make lint` (via gocyclo) |
-| Line Length | ≤ 120 characters | `make lint` (via lll) |
+| Reliability / Maintainability | A | `make lint` |
+| Cyclomatic Complexity | ≤ 10 per function | `make lint` (gocyclo) |
+| Line Length | ≤ 120 characters | `make lint` (lll) |
 
-**Current Coverage:** varies (run `make test-coverage` to check; target: 80%)
-**Coverage Threshold:** Set in `Makefile` as `COVERAGE_THRESHOLD := 72.0`
-
-**Pre-commit Quality Checks:**
-
-- All linters run automatically via pre-commit hooks
-- EditorConfig compliance enforced
-- Security scans (gitleaks) prevent secret commits
-
-## 📝 Template Updates
-
-**Templates are embedded from:** `templates_embed/templates/`
-
-**To modify templates:**
-
-1. Edit template files directly in `templates_embed/templates/`
-2. Rebuild the binary: `go build .`
-3. Templates are automatically embedded via `//go:embed` directive
-
-**Available template locations:**
-
-- Default: `templates_embed/templates/readme.tmpl`
-- GitHub theme: `templates_embed/templates/themes/github/readme.tmpl`
-- GitLab theme: `templates_embed/templates/themes/gitlab/readme.tmpl`
-- Minimal theme: `templates_embed/templates/themes/minimal/readme.tmpl`
-- Professional: `templates_embed/templates/themes/professional/readme.tmpl`
-- AsciiDoc (output format, not a `--theme`): `templates_embed/templates/themes/asciidoc/readme.adoc`
-
-**Template embedding:** Handled by `templates_embed/embed.go` using Go's embed directive.
-The embedded filesystem is used by default, with fallback to filesystem for development.
+Threshold is `COVERAGE_THRESHOLD := 72.0` in the `Makefile`. All linters, EditorConfig,
+and gitleaks run via pre-commit hooks.
 
 ## 🚨 CRITICAL: README Protection
 
-**For testing generation commands:**
+Enforced by [`.claude/rules/readme-protection.md`](.claude/rules/readme-protection.md).
+When testing generation, always write to `/tmp/` or `testdata/`:
 
 ```bash
-# Safe testing approaches
-gh-action-readme gen testdata/example-action/
-gh-action-readme gen testdata/composite-action/action.yml
 gh-action-readme gen testdata/ --output /tmp/test-output.md
 ```
 
-## 🏗️ Architecture Overview
+## 📝 Template Updates
+
+Templates are embedded from `templates_embed/templates/` via a `//go:embed` directive in
+`templates_embed/embed.go` (embedded FS by default, filesystem fallback for development).
+To modify: edit the file, then `go build .`.
+
+- Default: `templates_embed/templates/readme.tmpl`
+- Themes: `templates_embed/templates/themes/{github,gitlab,minimal,professional}/readme.tmpl`
+- AsciiDoc (an output format, not a `--theme`): `templates_embed/templates/themes/asciidoc/readme.adoc`
+
+Adding a theme or output format is a multi-step change (constant, map/registry, handler,
+CLI help) — see `docs/development.md` and follow the existing theme as the template.
+
+## 🏗️ Architecture
 
 ### Command Handler Pattern
 
-**All Cobra command handlers return errors** instead of calling `os.Exit()` directly. This enables comprehensive unit testing.
-
-**Pattern:**
+All Cobra command handlers **return an error** instead of calling `os.Exit()`, so they are
+unit-testable. `wrapHandlerWithErrorHandling()` (in `main.go`) adapts them to Cobra's `Run`:
+it initializes `globalConfig` if nil (important for tests), runs the handler, and on error
+prints via `ColoredOutput` and exits with `appconstants.ExitCodeError`.
 
 ```go
-// Handler function signature - returns error
 func myHandler(cmd *cobra.Command, args []string) error {
     if err := someOperation(); err != nil {
         return fmt.Errorf("operation failed: %w", err)
@@ -77,632 +60,135 @@ func myHandler(cmd *cobra.Command, args []string) error {
     return nil
 }
 
-// Wrapped in command definition for Cobra compatibility
-var myCmd = &cobra.Command{
-    Use:   "my-command",
-    Short: "Description",
-    Run:   wrapHandlerWithErrorHandling(myHandler),
-}
-```
-
-The `wrapHandlerWithErrorHandling()` wrapper (in `main.go`):
-
-- Initializes `globalConfig` if nil (important for testing)
-- Calls the handler and captures the error
-- Displays error via `ColoredOutput` and exits with `appconstants.ExitCodeError` if error occurs
-
-**Testing handlers:**
-
-```go
-func TestMyHandler(t *testing.T) {
-    cmd := &cobra.Command{}
-    cmd.Flags().String("some-flag", "default", "")
-
-    err := myHandler(cmd, []string{})
-
-    // Can now test error conditions without os.Exit()
-    if err != nil {
-        t.Errorf("unexpected error: %v", err)
-    }
-}
+var myCmd = &cobra.Command{Use: "my-command", Run: wrapHandlerWithErrorHandling(myHandler)}
 ```
 
 ### Dependency Injection for Testing
 
-Functions that interact with I/O or global state use **nil-default parameter pattern** for testability:
+I/O- or global-state-touching functions use the **nil-default parameter pattern**: optional
+deps default to the real implementation when nil, and tests pass mocks.
 
 ```go
-// Production signature with optional injectable dependencies
 func myFunction(output *ColoredOutput, config *AppConfig, reader InputReader) error {
-    // Default to real implementations if not provided
-    if config == nil {
-        config = globalConfig
-    }
-    if reader == nil {
-        reader = &StdinReader{}  // Real stdin
-    }
-    // ... function logic
-}
-
-// Production usage (pass nil for defaults)
-err := myFunction(output, nil, nil)
-
-// Test usage (inject mocks)
-mockConfig := internal.DefaultAppConfig()
-mockReader := &TestInputReader{responses: []string{"y"}}
-err := myFunction(output, mockConfig, mockReader)
-```
-
-**Examples in codebase:**
-
-- `applyUpdates()` - accepts `InputReader` for stdin mocking (`cmd_deps.go`)
-- `setupDepsUpgrade()` - accepts `*AppConfig` for config injection (`cmd_deps.go`)
-
-**Interfaces** (production interface in `internal/input.go`; test implementation in `main_test.go`):
-
-```go
-// InputReader is declared in internal/input.go (production code, enables testing)
-type InputReader interface {
-    ReadLine() (string, error)
-}
-
-// TestInputReader is defined in main_test.go (test-only)
-type TestInputReader struct {
-    responses []string
-    index     int
+    if config == nil { config = globalConfig }
+    if reader == nil { reader = &StdinReader{} }
+    // ...
 }
 ```
+
+Production passes `nil`; tests inject mocks. `InputReader` is declared in
+`internal/input.go` (production, enables testing); `TestInputReader` lives in `main_test.go`.
 
 ### Template Rendering Pipeline
 
-1. **Parser** (`internal/parser.go`):
-
-- Parses `action.yml` files using `goccy/go-yaml`
-- Extracts permissions from header comments via `parsePermissionsFromComments()`
-- Merges comment and YAML permissions (YAML takes precedence)
-- Returns `*ActionYML` struct with all parsed data
-
-1. **Template Data Builder** (`internal/template.go`):
-
-- `BuildTemplateData()` creates comprehensive `TemplateData` struct
-- Embeds `*ActionYML` (all action fields accessible via `.Name`, `.Inputs`, `.Permissions`, etc.)
-- Detects git repository info (org, repo, default branch)
-- Extracts action subdirectory for monorepo support
-- Builds `uses:` statement with proper path/version
-
-1. **Template Functions** (`internal/template.go:templateFuncs()`):
-
-- `gitUsesString` - Generates complete `org/repo/path@version` string
-- `actionVersion` - Determines version (config override → default branch → "v1")
-- `gitOrg`, `gitRepo` - Extract git repository information
-- Standard Go template functions: `lower`, `upper`, `replace`, `join`
-
-1. **Renderer** (`internal/template.go:RenderReadme()`):
-
-- Reads template from embedded filesystem via `templates_embed.ReadTemplate()`
-- Executes template with `TemplateData`
-- Supports multiple formats (md, html, json, asciidoc)
+1. **Parser** (`internal/parser.go`) — parses `action.yml` with `goccy/go-yaml`; extracts
+  permissions from header comments via `parsePermissionsFromComments()`; merges comment +
+  YAML permissions (YAML wins); returns `*ActionYML`.
+2. **Template Data Builder** (`internal/template.go:BuildTemplateData()`) — builds
+  `TemplateData`, embeds `*ActionYML`, detects git info, extracts the action subdirectory
+  for monorepos, builds the `uses:` statement.
+3. **Template Functions** (`internal/template.go:templateFuncs()`) — `gitUsesString`,
+  `actionVersion`, `gitOrg`, `gitRepo`, plus `lower`/`upper`/`replace`/`join`.
+4. **Renderer** (`internal/template.go:RenderReadme()`) — reads the template via
+  `templates_embed.ReadTemplate()` and executes it (formats: md, html, json, asciidoc).
 
 ### Key Data Structures
 
-**ActionYML** - Parsed action.yml data:
-
 ```go
 type ActionYML struct {
-    Name        string
-    Description string
+    Name, Description string
     Inputs      map[string]ActionInput
     Outputs     map[string]ActionOutput
     Runs        map[string]any
     Branding    *Branding
-    Permissions map[string]string  // From comments or YAML field
+    Permissions PermissionMap // scope→level; also accepts the read-all/write-all scalar
 }
-```
 
-**TemplateData** - Complete data for rendering:
-
-```go
 type TemplateData struct {
-    *ActionYML           // Embedded - all fields accessible directly
-    Git          git.RepoInfo
-    Config       *AppConfig
-    UsesStatement string  // Pre-built "org/repo/path@version"
-    ActionPath   string   // For subdirectory extraction
-    RepoRoot     string
-    Dependencies []dependencies.Dependency
+    *ActionYML                 // embedded — fields accessible directly
+    Git           git.RepoInfo
+    Config        *AppConfig
+    UsesStatement string       // pre-built "org/repo/path@version"
+    ActionPath, RepoRoot string
+    Dependencies  []dependencies.Dependency
 }
 ```
+
+When adding an `ActionYML` field, also update `ActionYMLForJSON` in
+`internal/json_writer.go`, add parser tests, and update templates if it should render.
 
 ### Monorepo Action Path Resolution
 
-The tool automatically detects and handles monorepo actions:
-
-```text
-Input:  /repo/actions/csharp-build/action.yml
-Root:   /repo
-Output: org/repo/actions/csharp-build@main
-```
-
-Implementation in `internal/template.go:extractActionSubdirectory()`:
-
-- Calculates relative path from repo root to action directory
-- Returns empty string for root-level actions
-- Returns subdirectory path for monorepo actions
-- Used by `buildUsesString()` to construct proper `uses:` statements
+`internal/template.go:extractActionSubdirectory()` computes the action's path relative to the
+repo root (empty for root-level actions) so `buildUsesString()` emits a correct `uses:`, e.g.
+`/repo/actions/csharp-build/action.yml` (root `/repo`) → `org/repo/actions/csharp-build@main`.
 
 ### Permissions Parsing
 
-Supports three sources (merged with priority):
-
-1. **Header comments** (lowest priority):
-
-```yaml
-# permissions:
-#   - contents: read
-#   - issues: write
-```
-
-1. **YAML field** (highest priority):
-
-```yaml
-permissions:
-  contents: write
-```
-
-1. **Merged result**: YAML overrides comment values for duplicate keys, all unique keys included
-
-## 🛠️ Development Commands
-
-### Building and Running
-
-```bash
-# Build binary
-go build .
-
-# Run without installing
-go run . gen testdata/example-action/
-go run . validate
-go run . config show
-
-# Build and run tests
-make build
-make test
-make test-coverage          # With coverage report
-make test-coverage-html     # HTML coverage + open in browser
-```
-
-### Testing
-
-```bash
-# Run all tests
-go test ./...
-
-# Run specific test package
-go test ./internal
-go test ./internal/wizard
-
-# Run specific test by name
-go test ./internal -run TestParsePermissions
-go test ./internal -v -run "TestParseActionYML_.*Permissions"
-
-# Run tests with race detection
-go test -race ./...
-
-# Test all themes
-for theme in default github gitlab minimal professional; do
-  ./gh-action-readme gen testdata/example-action/ --theme $theme --output /tmp/test-$theme.md
-done
-```
-
-### Advanced Testing
-
-#### Mutation Testing
-
-Mutation testing verifies test effectiveness by modifying source code and checking if tests catch the changes.
-
-**Tool:** [gremlins](https://github.com/go-gremlins/gremlins) v0.6.0 (Go 1.26+ compatible, actively maintained). Replaced the unmaintained go-mutesting (last release 2021, incompatible with Go 1.24+).
-
-```bash
-# Run all mutation tests
-make test-mutation
-
-# Run by component
-make test-mutation-parser      # internal package (permission parsing)
-make test-mutation-validation  # internal/validation package
-```
-
-**Test files:**
-
-- `internal/parser_mutation_test.go` - Permission parsing mutations
-- `internal/validation/validation_mutation_test.go` - Version validation mutations
-- `internal/validation/strings_mutation_test.go` - URL/string parsing mutations
-
-**What they test:**
-
-- Parser: permission extraction, indentation logic, comment handling
-- Validation: version format checks, URL parsing, string sanitization
-
-**Expected results:** gremlins prints a mutation score table per package. Some surviving mutations are normal; the goal is high kill rate on critical logic paths.
-
-#### Property-Based Testing
-
-Property-based testing uses random input generation to verify mathematical properties and invariants:
-
-```bash
-# Run all property tests
-make test-property
-
-# Run property tests by component
-make test-property-validation   # String manipulation properties
-make test-property-parser       # Permission merging properties
-```
-
-**What it tests:**
-
-- Idempotency: `f(f(x)) == f(x)`
-- Invariants: No consecutive spaces, no boundary whitespace
-- Structural properties: Required symbols present, correct format
-- Identity properties: Empty inputs produce empty outputs
-
-**Test generation:** Each property is verified with 100+ random inputs
-
-#### Quick vs Comprehensive Testing
-
-```bash
-# Quick test (unit tests only, ~4 seconds)
-make test-quick
-
-# Comprehensive test (unit + property tests, ~6 seconds)
-make test
-
-# Coverage analysis
-make test-coverage              # CLI coverage report
-make test-coverage-html         # HTML coverage report + browser
-make test-coverage-check        # Verify coverage >= 72%
-```
-
-**Note:** Mutation tests use gremlins and run separately from the standard test suite. Not included in `make test` by default as they take significantly longer.
-
-### Linting and Quality
-
-```bash
-# Run all linters via pre-commit
-make lint
-
-# Run golangci-lint directly
-golangci-lint run
-golangci-lint run --timeout=5m
-
-# Check editor config compliance
-make editorconfig
-
-# Auto-fix editorconfig issues
-make editorconfig-fix
-
-# Format code
-make format
-```
-
-### Security Scanning
-
-```bash
-# Run all security checks
-make security
-
-# Individual security tools
-make vulncheck    # Go vulnerability check
-make audit        # Nancy dependency audit
-make trivy        # Container security scanner
-make gitleaks     # Secret detection
-```
-
-### Dependencies
-
-```bash
-# Check for outdated dependencies
-make deps-check
-
-# Update dependencies interactively
-make deps-update
-
-# Update all dependencies to latest
-make deps-update-all
-
-# Install development tools
-make devtools
-```
-
-### Pre-commit Hooks
-
-```bash
-# Install hooks (run once per clone)
-make pre-commit-install
-
-# Update hooks to latest versions
-make pre-commit-update
-
-# Run hooks manually
-pre-commit run --all-files
-```
+Merged from two sources — **header comments** (lowest priority) and the **YAML field**
+(highest). YAML overrides comment values per key; all unique keys are kept. Comment formats
+supported: list (`#   - key: value`), object (`#   key: value`), mixed, and inline comments.
+The scalar `permissions: read-all` / `write-all` / `none` shorthand is accepted via
+`PermissionMap.UnmarshalYAML` (maps to an `all` scope). See `internal/parser.go`.
 
 ## ⚙️ Configuration System
 
-### Configuration Hierarchy (highest to lowest priority)
+### Hierarchy (highest → lowest priority)
 
-1. **Command-line flags** - Override everything
-2. **Action-specific config** - `config.yaml` in action directory
-3. **Repository config** - `.ghreadme.yaml` in repo root
-4. **Global config** - `~/.config/gh-action-readme/config.yaml`
-5. **Environment variables** - `GH_README_GITHUB_TOKEN`, `GITHUB_TOKEN`
-6. **Defaults** - Built-in fallbacks
+1. **Command-line flags** — override everything.
+2. **Environment variables** — config overrides use the `GH_ACTION_README_` prefix (e.g.
+  `GH_ACTION_README_THEME`, `GH_ACTION_README_QUIET`), applied via viper `AutomaticEnv()`
+  so they override config-file values. The GitHub token is a separate lookup using
+  `GH_README_GITHUB_TOKEN` / `GITHUB_TOKEN` (note the different `GH_README_` prefix).
+  Matches `docs/configuration.md`.
+3. **Action-specific config** — `config.yaml` in the action directory.
+4. **Repository config** — `.ghreadme.yaml` in the repo root.
+5. **Global config** — `~/.config/gh-action-readme/config.yaml`.
+6. **Defaults** — built-in fallbacks.
 
-### Version Resolution for Usage Examples
+### Version Resolution for `uses: org/repo@VERSION`
 
-Priority order for `uses: org/repo@VERSION`:
+`internal/template.go:getActionVersion()`, in priority order:
 
-1. `Config.Version` - Explicit override (e.g., `version: "v2.0.0"`)
-2. `Config.UseDefaultBranch` + `Git.DefaultBranch` - Detected branch (e.g., `@main`)
-3. Fallback - `"v1"`
-
-Implemented in `internal/template.go:getActionVersion()`.
-
-### Permissions Parsing
-
-**Comment Format Support:**
-
-- List format: `# permissions:\n#   - key: value`
-- Object format: `# permissions:\n#   key: value`
-- Mixed format: Both styles in same block
-- Inline comments: `# key: value  # explanation`
-
-**Merge Behavior:**
-
-```go
-// internal/parser.go:ParseActionYML()
-if a.Permissions == nil && commentPermissions != nil {
-    a.Permissions = commentPermissions  // Use comments
-} else if a.Permissions != nil && commentPermissions != nil {
-    // Merge: YAML overrides, add missing from comments
-    for key, value := range commentPermissions {
-        if _, exists := a.Permissions[key]; !exists {
-            a.Permissions[key] = value
-        }
-    }
-}
-```
-
-## 🔄 Adding New Features
-
-### New Theme
-
-1. Create template file:
-
-```bash
-touch templates_embed/templates/themes/THEME_NAME/readme.tmpl
-```
-
-1. Add theme constant to `appconstants/constants.go`:
-
-```go
-ThemeTHEMENAME     = "theme-name"
-TemplatePathTHEMENAME = "templates/themes/theme-name/readme.tmpl"
-```
-
-**Note:** The template path constant still uses `templates/` prefix (not
-`templates_embed/templates/`) as this is the logical path used by the code.
-The physical file lives in `templates_embed/templates/` but is referenced as
-`templates/` in the code.
-
-1. Add to the `themeTemplates` map in `internal/config.go` (around line 189):
-
-```go
-appconstants.ThemeTHEMENAME: appconstants.TemplatePathTHEMENAME,
-```
-
-1. Update `cmd_config.go:configThemesHandler()` to list the new theme
-
-2. Rebuild: `go build .`
-
-### New Output Format
-
-1. Add format constant to `appconstants/constants.go`
-
-2. Add case in `internal/generator.go:generateByFormat()`:
-
-```go
-case appconstants.OutputFormatNEW:
-    return g.generateNEW(action, outputDir, actionPath)
-```
-
-1. Implement generator method:
-
-```go
-func (g *Generator) generateNEW(action *ActionYML, outputDir, actionPath string) error {
-    opts := TemplateOptions{
-        TemplatePath: g.resolveTemplatePathForFormat(),
-        Format:       "new",
-    }
-    // ... implementation
-}
-```
-
-1. Update CLI help text in `main.go`
-
-### New Template Function
-
-Add to `internal/template.go:templateFuncs()`:
-
-```go
-func templateFuncs() template.FuncMap {
-    return template.FuncMap{
-        "myFunc": myFuncImplementation,
-        // ... existing functions
-    }
-}
-```
-
-### New Parser Field
-
-When adding fields to `ActionYML`:
-
-1. Update struct in `internal/parser.go`
-2. Update `ActionYMLForJSON` in `internal/json_writer.go` (for JSON output)
-3. Add field to JSON struct initialization
-4. Add tests in `internal/parser_test.go`
-5. Update templates if field should be displayed
+1. `Config.Version` — explicit override (e.g. `version: "v2.0.0"`).
+2. `Config.UseDefaultBranch` + `Git.DefaultBranch` — detected branch (e.g. `@main`).
+3. Fallback — `"v1"`.
 
 ## 📊 Package Structure
 
-- **`main.go`** - CLI entry point (Cobra commands)
-- **`cmd_gen.go`** - `gen` command implementation
-- **`cmd_deps.go`** - `deps` command implementation
-- **`cmd_config.go`** - `config` command implementation
-- **`cmd_cache.go`** - `cache` command implementation
-- **`cmd_validate.go`** - `validate` command implementation
-- **`internal/generator.go`** - Core generation orchestration
-- **`internal/analyzer_helpers.go`** - Dependency analyzer construction helpers
-- **`internal/parser.go`** - Action.yml parsing (including permissions from comments)
-- **`internal/template.go`** - Template data building and rendering
-- **`internal/config.go`** - Configuration management (Viper)
-- **`internal/json_writer.go`** - JSON output format
-- **`internal/output.go`** - Colored CLI output
-- **`internal/progress.go`** - Progress bars for batch operations
-- **`internal/git/`** - Git repository detection
-- **`internal/validation/`** - Action.yml validation
-- **`internal/wizard/`** - Interactive configuration wizard
-- **`internal/dependencies/`** - Dependency analysis for actions
-- **`internal/apperrors/`** - Contextual error handling with suggestions
-- **`internal/cache/`** - Dependency analysis caching
-- **`appconstants/`** - Application constants
-- **`testutil/`** - Testing utilities
-- **`templates_embed/`** - Embedded template filesystem
+- `main.go` — CLI entry point (Cobra); `cmd_*.go` — per-command handlers (gen, deps, config,
+  cache, validate).
+- `internal/generator.go` — generation orchestration; `internal/parser.go` — action.yml
+  parsing; `internal/template.go` — template data + rendering; `internal/config.go` — Viper
+  config; `internal/json_writer.go` — JSON output; `internal/output.go` — colored output;
+  `internal/progress.go` — batch progress bars.
+- `internal/git/` — repo detection; `internal/validation/` — validation;
+  `internal/wizard/` — interactive config wizard; `internal/dependencies/` — action
+  dependency analysis; `internal/apperrors/` — contextual errors; `internal/cache/` —
+  analysis cache.
+- `appconstants/` — constants; `testutil/` — test utilities; `templates_embed/` — embedded
+  templates.
 
 ## 🧪 Testing Guidelines
 
-### Test File Locations
+- Unit tests live in `internal/*_test.go` alongside source; fixtures in
+  `testdata/yaml-fixtures/` (organized by type: `actions/{composite,docker,javascript,…}`,
+  `permissions/`, `configs/`, `validation/`, …).
+- **CRITICAL: never inline YAML/config in tests.** Use a fixture file loaded via
+  `testutil` helpers, and register its path constant in `testutil/test_constants.go` first
+  (see `.claude/rules/no-inline-yaml-in-tests.md`).
+- Adding a fixture: create the YAML under the right subdir, add its constant to
+  `testutil/test_constants.go`, then reference it (e.g.
+  `testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)`).
 
-- Unit tests: `internal/*_test.go` alongside source files
-- Test fixtures: `testdata/yaml-fixtures/` (organized by type)
-- Integration tests: Manual CLI testing with testdata
-
-### Test Fixture Organization
-
-**CRITICAL:** Always use fixtures, never inline YAML in tests.
-
-**Fixture Structure:**
-
-```text
-testdata/yaml-fixtures/
-├── actions/
-│   ├── composite/         # Composite actions
-│   ├── docker/            # Docker actions
-│   ├── invalid/           # Invalid actions for error testing
-│   ├── javascript/        # JavaScript actions
-│   ├── json-writer/       # Actions for JSON output tests
-│   ├── minimal/           # Minimal action stubs
-│   └── simple/            # Simple single-step actions
-├── configs/               # Configuration files
-├── dependencies/          # Actions with specific dependencies
-├── error-scenarios/       # Edge cases and error conditions
-├── json-fixtures/         # JSON output fixtures
-├── permissions/           # Permission block variations
-├── scenarios/             # Multi-file scenario fixtures
-├── template-fixtures/     # Template rendering fixtures
-└── validation/            # Validation rule fixtures
-```
-
-**Using Fixtures in Tests:**
-
-```go
-// Use fixture constants from testutil/test_constants.go
-testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureCompositeBasic)
-
-// Available fixture constants:
-// - TestFixtureJavaScriptSimple
-// - TestFixtureCompositeBasic
-// - TestFixtureCompositeWithDeps
-// - TestFixtureCompositeMultipleNamedSteps
-// - TestFixtureActionWithCheckoutV3/V4
-// See testutil/test_constants.go for complete list
-```
-
-**Adding New Fixtures:**
-
-1. Create YAML file in appropriate subdirectory: `testdata/yaml-fixtures/actions/composite/my-new-fixture.yml`
-2. Add constant to `testutil/test_constants.go`: `TestFixtureMyNewFixture = "actions/composite/my-new-fixture.yml"`
-3. Use in tests: `testutil.WriteActionFixture(t, tmpDir, testutil.TestFixtureMyNewFixture)`
-
-### Running Specific Tests
-
-```bash
-# Parser tests
-go test ./internal -v -run TestParse
-
-# Permissions tests
-go test ./internal -run ".*Permissions"
-
-# Template tests
-go test ./internal -run ".*Template|.*Uses"
-
-# Generator tests
-go test ./internal -run "TestGenerator"
-
-# Wizard tests
-go test ./internal/wizard -v
-```
-
-### Template Testing After Updates
-
-```bash
-# 1. Rebuild with updated templates
-go build .
-
-# 2. Test all themes
-for theme in default github gitlab minimal professional; do
-  ./gh-action-readme gen testdata/example-action/ --theme $theme --output /tmp/test-$theme.md
-  echo "=== $theme theme ==="
-  grep -i "permissions" /tmp/test-$theme.md && echo "✅ Found" || echo "❌ Missing"
-done
-
-# 4. Test JSON output
-./gh-action-readme gen testdata/example-action/ -f json -o /tmp/test.json
-cat /tmp/test.json | python3 -m json.tool | grep -A 3 permissions
-```
-
-## 📦 Dependency Management
-
-**Automated Updates:**
-
-- Renovate bot runs weekly (Mondays 4am UTC)
-- Auto-merges minor/patch updates
-- Major updates require manual review
-- Groups `golang.org/x` packages together
-
-**Manual Updates:**
-
-```bash
-make deps-check          # Show outdated
-make deps-update         # Interactive with go-mod-upgrade
-make deps-update-all     # Update all to latest
-```
+Full command reference (build, test, coverage, mutation/property testing, lint, security,
+deps, pre-commit, dependency automation, security tooling) is in `docs/development.md`; the
+Makefile is the source of truth for targets.
 
 ## 🔐 Security
 
-**Pre-commit Hooks:**
-
-- `gitleaks` - Secret detection
-- `golangci-lint` - Static analysis including security checks
-- `editorconfig-checker` - File format validation
-
-**Security Scanning:**
-
-- CodeQL analysis on push/PR
-- Go vulnerability check (govulncheck)
-- Trivy container scanning
-- Nancy dependency audit
-
-**Path Validation:**
-All file reads use validated paths to prevent path traversal:
+Enforced by pre-commit (`gitleaks`, `golangci-lint`, `editorconfig-checker`) and CI (CodeQL,
+`govulncheck`, Trivy, Nancy). All file reads use validated paths to prevent traversal:
 
 ```go
 // templates_embed/embed.go:ReadTemplate()
