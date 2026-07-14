@@ -44,7 +44,22 @@ analyze_dependencies: true
 | -------- | ------ | --------- | ------------- |
 | `github_token` | string | `""` | GitHub personal access token |
 | `analyze_dependencies` | boolean | `true` | Enable dependency analysis |
-| `show_security_info` | boolean | `false` | Show security/permissions info |
+| `show_security_info` | boolean | `false` | Reserved — accepted but not yet consumed (see [Legacy and Reserved Settings](#legacy-and-reserved-settings)) |
+
+### Legacy and Reserved Settings
+
+Some configuration keys are accepted for backward compatibility or planned
+features but do **not** affect output in the current release:
+
+| Key | Status |
+| --- | --- |
+| `template` | Legacy custom-template path. Ignored while a `theme` is set, and `default` is set out of the box. Set `theme: ""` to use the `template` path instead. |
+| `header` / `footer` | Applied to **HTML output only** (`--output-format html`). Markdown, AsciiDoc, and JSON output ignore them. |
+| `schema` | Informational only. The `schema` command and key print/record the schema path, but the tool does not validate `action.yml` against a JSON schema — validation is structural. |
+| `permissions`, `runs_on`, `show_security_info`, `variables` | Accepted and merged from config but not consumed by any generator or template, so they have no effect on output. |
+
+> Note: the `permissions:` block *inside* an `action.yml` file is parsed and rendered
+> separately — only the config key of the same name has no effect.
 
 ## 🌍 Environment Variables
 
