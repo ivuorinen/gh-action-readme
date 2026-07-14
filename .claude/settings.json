@@ -20,6 +20,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/pre-bash-dangerous-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-bash-context-mode-guard.sh"
           }
         ]
       }
