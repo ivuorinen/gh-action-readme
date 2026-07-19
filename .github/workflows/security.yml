@@ -12,6 +12,12 @@ on:
     - cron: "0 2 * * 0"
   merge_group:
 
+# Cancel superseded in-progress runs for the same PR only; merge_group,
+# scheduled, and main runs must always complete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions: {}
 
 jobs:
@@ -38,7 +44,7 @@ jobs:
           check-latest: true
 
       - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
       - name: Run govulncheck
         run: govulncheck ./...

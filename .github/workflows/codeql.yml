@@ -11,6 +11,12 @@ on:
     - cron: "30 1 * * 0"
   merge_group:
 
+# Cancel superseded in-progress runs for the same PR only; merge_group,
+# scheduled, and main runs must always complete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions: {}
 
 jobs:
