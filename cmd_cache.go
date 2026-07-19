@@ -48,6 +48,7 @@ func cacheClearHandler(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
+	defer func() { _ = cacheInstance.Close() }()
 
 	if err := cacheInstance.Clear(); err != nil {
 		return fmt.Errorf("failed to clear cache: %w", err)
@@ -66,6 +67,7 @@ func cacheStatsHandler(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
+	defer func() { _ = cacheInstance.Close() }()
 
 	stats := cacheInstance.Stats()
 
@@ -100,6 +102,7 @@ func cachePathHandler(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
+	defer func() { _ = cacheInstance.Close() }()
 
 	stats := cacheInstance.Stats()
 	cachePath, ok := stats[appconstants.CacheStatsKeyDir].(string)
