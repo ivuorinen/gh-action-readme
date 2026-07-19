@@ -50,6 +50,33 @@ chore: prepare release v1.2.3
 ci: update cosign version to v2.4.0
 ```
 
+### Breaking changes
+
+Any commit that changes an existing user-facing contract **must** be marked as
+breaking, even under a `feat`/`fix`/`refactor` type. This drives the major
+version bump and warns downstream users. A contract change includes:
+
+- changing or removing a CLI command, subcommand, or flag (or altering the
+  meaning of an existing positional argument);
+- changing a generated output format (Markdown/HTML/JSON/AsciiDoc structure,
+  JSON schema keys) or a config-file key, default, or precedence;
+- changing an exported Go API signature or behavior.
+
+Mark it in one of two ways:
+
+- append `!` after the type/scope — `feat(validate)!: require an existing path`;
+- or add a `BREAKING CHANGE:` footer describing the change and migration.
+
+```text
+feat(deps)!: remove the unimplemented `deps graph` command
+
+BREAKING CHANGE: `deps graph` is gone; use `deps list` instead.
+```
+
+Rule of thumb: if a previously-working invocation, output, or import would break
+after the change, it is a breaking change — mark it, and update the affected
+docs in the same commit.
+
 ## Validation
 
 Commit messages are validated using commitlint:

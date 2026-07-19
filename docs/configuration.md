@@ -24,7 +24,7 @@ output_format: md
 output_dir: .
 verbose: false
 github_token: ""
-analyze_dependencies: true
+analyze_dependencies: false # default is false; set true to opt in
 ```
 
 ## 🔧 Configuration Options
@@ -43,7 +43,7 @@ analyze_dependencies: true
 | Option | Type | Default | Description |
 | -------- | ------ | --------- | ------------- |
 | `github_token` | string | `""` | GitHub personal access token |
-| `analyze_dependencies` | boolean | `true` | Enable dependency analysis |
+| `analyze_dependencies` | boolean | `false` | Enable dependency analysis |
 | `show_security_info` | boolean | `false` | Reserved — accepted but not yet consumed (see [Legacy and Reserved Settings](#legacy-and-reserved-settings)) |
 
 ### Legacy and Reserved Settings
@@ -72,7 +72,9 @@ export GH_ACTION_README_OUTPUT_FORMAT=html
 export GH_ACTION_README_OUTPUT_DIR=docs
 export GH_ACTION_README_VERBOSE=true
 
-# GitHub settings
+# GitHub settings (GH_README_GITHUB_TOKEN takes precedence over GITHUB_TOKEN;
+# see "Setting Token" below)
+export GH_README_GITHUB_TOKEN=your_token_here
 export GITHUB_TOKEN=your_token_here
 export GH_ACTION_README_ANALYZE_DEPENDENCIES=true
 ```
