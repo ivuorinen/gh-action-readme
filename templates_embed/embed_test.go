@@ -1,10 +1,36 @@
 package templatesembed
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
+
+// TestReadTemplateRejectsSymlinkEscapingCWD verifies the S1 defensive hardening:
+// a relative symlink that resolves outside the working directory is rejected, so an
+// in-repo symlink cannot make ReadTemplate open an arbitrary file. Not parallel: it
+// uses t.Chdir.
+func TestReadTemplateRejectsSymlinkEscapingCWD(t *testing.T) {
+	outsideDir := t.TempDir()
+	secret := filepath.Join(outsideDir, "secret.txt")
+	if err := os.WriteFile(secret, []byte("top secret"), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	workDir := t.TempDir()
+	link := filepath.Join(workDir, "escape.tmpl")
+	if err := os.Symlink(secret, link); err != nil {
+		t.Fatalf("create symlink: %v", err)
+	}
+
+	t.Chdir(workDir)
+
+	if _, err := ReadTemplate("escape.tmpl"); err == nil {
+		t.Error("ReadTemplate should reject a symlink escaping the working directory")
+	}
+}
 
 // TestGetEmbeddedTemplate tests reading templates from embedded filesystem.
 func TestGetEmbeddedTemplate(t *testing.T) {
