@@ -72,27 +72,6 @@ const (
 	ConfigKeyDefaultsBrandingColor = "defaults.branding.color"
 )
 
-// ConfigurationSource represents different sources of configuration.
-type ConfigurationSource int
-
-// Configuration source priority constants (lowest to highest priority).
-const (
-	// SourceDefaults represents default configuration values.
-	SourceDefaults ConfigurationSource = iota
-	// SourceGlobal represents global user configuration.
-	SourceGlobal
-	// SourceRepoOverride represents repository-specific overrides from global config.
-	SourceRepoOverride
-	// SourceRepoConfig represents repository-level configuration.
-	SourceRepoConfig
-	// SourceActionConfig represents action-specific configuration.
-	SourceActionConfig
-	// SourceEnvironment represents environment variable configuration.
-	SourceEnvironment
-	// SourceCLIFlags represents command-line flag configuration.
-	SourceCLIFlags
-)
-
 // Config file search patterns.
 const (
 	// ConfigFilePatternHidden is the primary hidden config file pattern.

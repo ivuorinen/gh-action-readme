@@ -1035,7 +1035,10 @@ func findGeneratedFiles(tmpDir, extension string) []string {
 	return files
 }
 
-// handleMissingFiles logs information about missing files and skips if expected.
+// handleMissingFiles fails the test when a format produced no output files.
+// Every supported format (including AsciiDoc, which emits README.adoc) must
+// generate at least one file, so an empty result is a real regression rather
+// than an expected condition to be skipped.
 func handleMissingFiles(t *testing.T, format, extension, stdout, stderr string) {
 	t.Helper()
 	patterns := []string{
@@ -1043,15 +1046,8 @@ func handleMissingFiles(t *testing.T, format, extension, stdout, stderr string) 
 		"**/" + extension,
 	}
 
-	t.Logf("No %s files generated for format %s", extension, format)
-	t.Logf("Searched patterns: %v", patterns)
-	t.Logf("Command output: %s", stdout)
-	t.Logf("Command errors: %s", stderr)
-
-	// For some formats, this might be expected behavior
-	if format == "asciidoc" {
-		t.Skip("AsciiDoc format may not be fully implemented")
-	}
+	t.Errorf("no %s files generated for format %s\nSearched patterns: %v\nstdout: %s\nstderr: %s",
+		extension, format, patterns, stdout, stderr)
 }
 
 // validateGeneratedFiles validates the content of generated files.

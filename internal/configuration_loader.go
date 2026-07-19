@@ -10,34 +10,11 @@ import (
 )
 
 // ConfigurationLoader handles loading and merging configuration from multiple sources.
-type ConfigurationLoader struct {
-	// sources tracks which sources are enabled
-	sources map[appconstants.ConfigurationSource]bool
-}
+type ConfigurationLoader struct{}
 
-// ConfigurationOptions configures how configuration loading behaves.
-type ConfigurationOptions struct {
-	// ConfigFile specifies a custom global config file path
-	ConfigFile string
-	// AllowTokens controls whether security-sensitive fields can be loaded
-	AllowTokens bool
-	// EnabledSources controls which configuration sources are used
-	EnabledSources []appconstants.ConfigurationSource
-}
-
-// NewConfigurationLoader creates a new configuration loader with default options.
+// NewConfigurationLoader creates a new configuration loader.
 func NewConfigurationLoader() *ConfigurationLoader {
-	return &ConfigurationLoader{
-		sources: map[appconstants.ConfigurationSource]bool{
-			appconstants.SourceDefaults:     true,
-			appconstants.SourceGlobal:       true,
-			appconstants.SourceRepoOverride: true,
-			appconstants.SourceRepoConfig:   true,
-			appconstants.SourceActionConfig: true,
-			appconstants.SourceEnvironment:  true,
-			appconstants.SourceCLIFlags:     false, // CLI flags are applied separately
-		},
-	}
+	return &ConfigurationLoader{}
 }
 
 // LoadConfiguration loads configuration with multi-level hierarchy.
@@ -116,18 +93,12 @@ func containsString(slice []string, str string) bool {
 
 // loadDefaultsStep loads default configuration values.
 func (cl *ConfigurationLoader) loadDefaultsStep(config *AppConfig) {
-	if cl.sources[appconstants.SourceDefaults] {
-		defaults := DefaultAppConfig()
-		*config = *defaults
-	}
+	defaults := DefaultAppConfig()
+	*config = *defaults
 }
 
 // loadGlobalStep loads global configuration.
 func (cl *ConfigurationLoader) loadGlobalStep(config *AppConfig, configFile string) error {
-	if !cl.sources[appconstants.SourceGlobal] {
-		return nil
-	}
-
 	globalConfig, err := cl.loadGlobalConfig(configFile)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToLoadGlobalConfig, err)
@@ -139,7 +110,7 @@ func (cl *ConfigurationLoader) loadGlobalStep(config *AppConfig, configFile stri
 
 // loadRepoOverrideStep applies repo-specific overrides from global config.
 func (cl *ConfigurationLoader) loadRepoOverrideStep(config *AppConfig, repoRoot string) {
-	if !cl.sources[appconstants.SourceRepoOverride] || repoRoot == "" {
+	if repoRoot == "" {
 		return
 	}
 
@@ -149,13 +120,12 @@ func (cl *ConfigurationLoader) loadRepoOverrideStep(config *AppConfig, repoRoot 
 // loadConfigStep is a generic helper for loading and merging configuration from a specific source.
 func (cl *ConfigurationLoader) loadConfigStep(
 	config *AppConfig,
-	sourceName appconstants.ConfigurationSource,
 	dirPath string,
 	loadFunc func(string) (*AppConfig, error),
 	errorFormat string,
 	mergeTokens bool,
 ) error {
-	if !cl.sources[sourceName] || dirPath == "" {
+	if dirPath == "" {
 		return nil
 	}
 
@@ -172,7 +142,6 @@ func (cl *ConfigurationLoader) loadConfigStep(
 func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot string) error {
 	return cl.loadConfigStep(
 		config,
-		appconstants.SourceRepoConfig,
 		repoRoot,
 		cl.loadRepoConfig,
 		appconstants.ErrFailedToLoadRepoConfig,
@@ -184,7 +153,6 @@ func (cl *ConfigurationLoader) loadRepoConfigStep(config *AppConfig, repoRoot st
 func (cl *ConfigurationLoader) loadActionConfigStep(config *AppConfig, actionDir string) error {
 	return cl.loadConfigStep(
 		config,
-		appconstants.SourceActionConfig,
 		actionDir,
 		cl.loadActionConfig,
 		appconstants.ErrFailedToLoadActionConfig,
@@ -194,9 +162,7 @@ func (cl *ConfigurationLoader) loadActionConfigStep(config *AppConfig, actionDir
 
 // loadEnvironmentStep applies environment variable overrides.
 func (cl *ConfigurationLoader) loadEnvironmentStep(config *AppConfig) {
-	if cl.sources[appconstants.SourceEnvironment] {
-		cl.applyEnvironmentOverrides(config)
-	}
+	cl.applyEnvironmentOverrides(config)
 }
 
 // loadGlobalConfig initializes and loads the global configuration using Viper.

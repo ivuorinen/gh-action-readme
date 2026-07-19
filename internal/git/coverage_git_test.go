@@ -25,7 +25,9 @@ const (
 func initRealGitRepo(t *testing.T, dir string) {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git binary not available")
+		// Tracked: CI provisions git in PATH, so these real-git coverage tests
+		// run there; skipping only affects local runs without git installed.
+		t.Skip("git binary not available in PATH")
 	}
 	runRealGit(t, dir, "-c", "init.defaultBranch="+testGitBranchMain, "init")
 }
@@ -123,7 +125,9 @@ func TestCovGitBranchExistsMissing(t *testing.T) {
 // when the directory is not a git repository (the git command exits non-zero).
 func TestCovGitGetRemoteURLFromGitError(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git binary not available")
+		// Tracked: CI provisions git in PATH, so these real-git coverage tests
+		// run there; skipping only affects local runs without git installed.
+		t.Skip("git binary not available in PATH")
 	}
 	// A bare temp dir with no .git: `git remote get-url origin` fails.
 	nonRepo := filepath.Join(t.TempDir(), "plain")

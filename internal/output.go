@@ -21,8 +21,6 @@ type ColoredOutput struct {
 // Compile-time interface checks.
 var (
 	_ MessageLogger    = (*ColoredOutput)(nil)
-	_ ErrorReporter    = (*ColoredOutput)(nil)
-	_ ErrorFormatter   = (*ColoredOutput)(nil)
 	_ ProgressReporter = (*ColoredOutput)(nil)
 	_ QuietChecker     = (*ColoredOutput)(nil)
 	_ CompleteOutput   = (*ColoredOutput)(nil)

@@ -6,7 +6,22 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
+
+	"github.com/ivuorinen/gh-action-readme/appconstants"
 )
+
+// permissionScopeGen draws a real per-scope permission key, excluding the
+// reserved `all` global scope (which the scalar shorthand owns and which
+// mergePermissions treats as authoritative, not a mergeable per-scope key).
+func permissionScopeGen() gopter.Gen {
+	return gen.OneConstOf("contents", "issues", "pull-requests", "actions", "packages", "deployments")
+}
+
+// permissionLevelGen draws a real permission level, matching the domain the
+// parser actually accepts rather than arbitrary alpha strings.
+func permissionLevelGen() gopter.Gen {
+	return gen.OneConstOf(appconstants.PermissionRead, appconstants.PermissionWrite, "none")
+}
 
 // TestPermissionMergingProperties verifies properties of permission merging.
 func TestPermissionMergingProperties(t *testing.T) {
@@ -37,9 +52,9 @@ func registerYAMLOverridesProperty(properties *gopter.Properties) {
 
 				return action.Permissions[key] == yamlVal
 			},
-			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
-			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
-			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
+			permissionScopeGen(),
+			permissionLevelGen(),
+			permissionLevelGen(),
 		),
 	)
 }
@@ -59,9 +74,9 @@ func registerNonConflictingKeysProperty(properties *gopter.Properties) {
 
 				return hasYaml && hasComment
 			},
-			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
-			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
-			gen.AlphaString().SuchThat(func(s string) bool { return s != "" }),
+			permissionScopeGen(),
+			permissionScopeGen(),
+			permissionLevelGen(),
 		),
 	)
 }

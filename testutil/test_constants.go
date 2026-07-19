@@ -130,6 +130,7 @@ const (
 	TestFixtureRepoConfig                  = "repo-config.yml"
 	TestFixtureActionSimple                = "actions/simple/action.yml"
 	TestFixtureActionMinimal               = "actions/minimal/action.yml"
+	TestFixtureActionNameOnly              = "actions/name-only/action.yml"
 
 	// Composite action stub fixtures (name+description, field-missing, and
 	// dependency-step variants) replacing inline YAML literals in tests.
@@ -159,10 +160,18 @@ const (
 	TestJSONPackageVersionOnly = "json-fixtures/package-version-only.json"
 
 	// Permission test fixtures for parser tests.
-	TestFixturePermissionsDashSingle     = "permissions/dash-format-single.yml"
-	TestFixturePermissionsDashMultiple   = "permissions/dash-format-multiple.yml"
-	TestFixturePermissionsObject         = "permissions/object-format.yml"
-	TestFixturePermissionsScalarReadAll  = "permissions/scalar-read-all.yml"
+	TestFixturePermissionsDashSingle    = "permissions/dash-format-single.yml"
+	TestFixturePermissionsDashMultiple  = "permissions/dash-format-multiple.yml"
+	TestFixturePermissionsObject        = "permissions/object-format.yml"
+	TestFixturePermissionsScalarReadAll = "permissions/scalar-read-all.yml"
+	// TestFixturePermissionsScalarNoneWithComment / ...ReadAllWithComment pair a
+	// header-comment permission block with a scalar YAML permissions value; the
+	// scalar is authoritative and the comment must not leak past it.
+	TestFixturePermissionsScalarNoneWithComment    = "permissions/scalar-none-with-comment.yml"
+	TestFixturePermissionsScalarReadAllWithComment = "permissions/scalar-readall-with-comment.yml"
+	// TestFixturePermissionsProseInBlock has a prose line (with a colon) inside the
+	// permissions comment block that must not be parsed as a permission.
+	TestFixturePermissionsProseInBlock   = "permissions/prose-in-block.yml"
 	TestFixturePermissionsInlineComments = "permissions/inline-comments.yml"
 	TestFixturePermissionsMixed          = "permissions/mixed-format.yml"
 	TestFixturePermissionsEmpty          = "permissions/empty-block.yml"
@@ -393,9 +402,6 @@ const (
 	// precedence. Not a real credential.
 	TestTokenGHPExisting = "ghp_existing_token" // #nosec G101 -- test fixture value, not a credential
 )
-
-// TestMinimalAction is the minimal action YAML content for testing.
-const TestMinimalAction = "name: Test\ndescription: Test\nruns:\n  using: composite\n  steps: []"
 
 // TestScenarioNoDeps is the common test scenario description for actions with no dependencies.
 const TestScenarioNoDeps = "handles action with no dependencies"

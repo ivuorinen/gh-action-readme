@@ -18,10 +18,37 @@ type ActionYML struct {
 	Description string                  `yaml:"description"`
 	Inputs      map[string]ActionInput  `yaml:"inputs"`
 	Outputs     map[string]ActionOutput `yaml:"outputs"`
-	Runs        map[string]any          `yaml:"runs"`
+	Runs        ActionRuns              `yaml:"runs"`
 	Branding    *Branding               `yaml:"branding,omitempty"`
 	Permissions PermissionMap           `yaml:"permissions,omitempty"`
 	// Add more fields as the schema evolves
+}
+
+// ActionRuns models the `runs:` section, covering every valid GitHub Actions key
+// across composite, docker, and javascript action types. Steps stay as loosely
+// typed maps (deep-typing steps is out of scope). Parsing is lossless for valid
+// action.yml files.
+type ActionRuns struct {
+	Using          string            `json:"using,omitempty"           yaml:"using,omitempty"`
+	Main           string            `json:"main,omitempty"            yaml:"main,omitempty"`
+	Pre            string            `json:"pre,omitempty"             yaml:"pre,omitempty"`
+	Post           string            `json:"post,omitempty"            yaml:"post,omitempty"`
+	PreIf          string            `json:"pre-if,omitempty"          yaml:"pre-if,omitempty"`
+	PostIf         string            `json:"post-if,omitempty"         yaml:"post-if,omitempty"`
+	Image          string            `json:"image,omitempty"           yaml:"image,omitempty"`
+	Entrypoint     string            `json:"entrypoint,omitempty"      yaml:"entrypoint,omitempty"`
+	PreEntrypoint  string            `json:"pre-entrypoint,omitempty"  yaml:"pre-entrypoint,omitempty"`
+	PostEntrypoint string            `json:"post-entrypoint,omitempty" yaml:"post-entrypoint,omitempty"`
+	Args           []string          `json:"args,omitempty"            yaml:"args,omitempty"`
+	Env            map[string]string `json:"env,omitempty"             yaml:"env,omitempty"`
+	Steps          []map[string]any  `json:"steps,omitempty"           yaml:"steps,omitempty"`
+}
+
+// IsEmpty reports whether the runs section carries no entry point. Every valid
+// action sets `using`; the entry-point fields cover the rare malformed cases where
+// it is missing, so this stands in for the old `len(Runs) == 0` map check.
+func (r ActionRuns) IsEmpty() bool {
+	return r.Using == "" && len(r.Steps) == 0 && r.Image == "" && r.Main == ""
 }
 
 // PermissionMap is a scope→level permission mapping that also accepts GitHub's
@@ -62,10 +89,10 @@ func (p *PermissionMap) UnmarshalYAML(unmarshal func(any) error) error {
 func (p *PermissionMap) fromScalar(v string) error {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case "read-all":
-		*p = PermissionMap{"all": appconstants.PermissionRead}
+		*p = PermissionMap{appconstants.PermissionScopeAll: appconstants.PermissionRead}
 	case "write-all":
-		*p = PermissionMap{"all": appconstants.PermissionWrite}
-	case "none", "":
+		*p = PermissionMap{appconstants.PermissionScopeAll: appconstants.PermissionWrite}
+	case appconstants.PermissionNone, "":
 		*p = PermissionMap{}
 	default:
 		return fmt.Errorf("invalid permissions scalar %q (want read-all, write-all, or none)", v)
@@ -181,6 +208,18 @@ func mergePermissions(action *ActionYML, commentPerms map[string]string) {
 
 		return
 	}
+	// A scalar shorthand or an explicit empty map is a GLOBAL, authoritative
+	// statement, so comment-declared per-scope permissions must not leak past it:
+	// `permissions: none` / `{}` decode to a non-nil empty map, and
+	// `permissions: read-all` / `write-all` decode to a single {all: ...} entry.
+	// Only a per-scope YAML map (no reserved `all` key) merges with comments,
+	// keeping the documented "YAML wins per key, all unique keys kept" behavior.
+	if len(action.Permissions) == 0 {
+		return
+	}
+	if _, isGlobal := action.Permissions[appconstants.PermissionScopeAll]; isGlobal {
+		return
+	}
 	for key, value := range commentPerms {
 		if _, exists := action.Permissions[key]; !exists {
 			action.Permissions[key] = value
@@ -283,6 +322,17 @@ func parsePermissionLine(content string) (key, value string, ok bool) {
 	return "", "", false
 }
 
+// isValidPermissionValue reports whether v is a GitHub Actions permission level
+// (read, write, or none); the match is case-insensitive.
+func isValidPermissionValue(v string) bool {
+	switch strings.ToLower(v) {
+	case appconstants.PermissionRead, appconstants.PermissionWrite, appconstants.PermissionNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // processPermissionEntry processes a single line in the permissions block.
 // Returns true if the line is dedented out of the current block (the caller
 // should end the block but keep scanning), false otherwise.
@@ -303,8 +353,11 @@ func processPermissionEntry(line, content string, expectedItemIndent *int, permi
 		return true
 	}
 
-	// Parse permission line and add to map if valid
-	if key, value, ok := parsePermissionLine(content); ok {
+	// Parse permission line and add to map only when the value is a real
+	// permission level. This rejects a prose line with a colon inside the
+	// permissions comment block (e.g. "Note: needs network access") that would
+	// otherwise be recorded as a bogus permission.
+	if key, value, ok := parsePermissionLine(content); ok && isValidPermissionValue(value) {
 		permissions[key] = value
 	}
 

@@ -13,7 +13,7 @@ func TestFillMissing(t *testing.T) {
 	defs := DefaultValues{
 		Name:        "Default Name",
 		Description: "Default Desc",
-		Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+		Runs:        ActionRuns{Using: appconstants.NodeRuntimeNode20},
 		Branding:    Branding{Icon: "zap", Color: "yellow"},
 	}
 	FillMissing(a, defs)
@@ -23,7 +23,7 @@ func TestFillMissing(t *testing.T) {
 	if a.Branding == nil || a.Branding.Icon != "zap" {
 		t.Error("branding default not set")
 	}
-	if a.Runs["using"] != appconstants.NodeRuntimeNode20 {
+	if a.Runs.Using != appconstants.NodeRuntimeNode20 {
 		t.Error("runs default not set")
 	}
 }
@@ -35,17 +35,17 @@ func TestFillMissing_RunsNotOverwritten(t *testing.T) {
 	t.Parallel()
 
 	a := &ActionYML{
-		Runs: map[string]any{testGenRunsUsing: appconstants.ActionTypeComposite},
+		Runs: ActionRuns{Using: appconstants.ActionTypeComposite},
 	}
 	defs := DefaultValues{
-		Runs: map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+		Runs: ActionRuns{Using: appconstants.NodeRuntimeNode20},
 	}
 
 	FillMissing(a, defs)
 
-	if a.Runs["using"] != appconstants.ActionTypeComposite {
+	if a.Runs.Using != appconstants.ActionTypeComposite {
 		t.Errorf("FillMissing() must not overwrite non-empty Runs; got %q, want %q",
-			a.Runs["using"], appconstants.ActionTypeComposite)
+			a.Runs.Using, appconstants.ActionTypeComposite)
 	}
 }
 
@@ -56,12 +56,12 @@ func TestFillMissing_RunsEmptyDefsEmpty(t *testing.T) {
 
 	a := &ActionYML{}
 	defs := DefaultValues{
-		Runs: map[string]any{}, // empty defs
+		Runs: ActionRuns{}, // empty defs
 	}
 
 	FillMissing(a, defs)
 
-	if len(a.Runs) != 0 {
+	if !a.Runs.IsEmpty() {
 		t.Errorf("FillMissing() should not set Runs when defs.Runs is empty; got %v", a.Runs)
 	}
 }

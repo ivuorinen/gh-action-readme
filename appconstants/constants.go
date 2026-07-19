@@ -63,6 +63,8 @@ const (
 	CacheKeyLatest = "latest:"
 	// CacheKeyRepo is the cache key prefix for repository data.
 	CacheKeyRepo = "repo:"
+	// CacheKeyTagSHA is the cache key prefix for a resolved tag->commit-SHA lookup.
+	CacheKeyTagSHA = "tagsha:"
 )
 
 // Miscellaneous analysis constants.
@@ -156,6 +158,11 @@ const (
 	PermissionRead = "read"
 	// PermissionWrite is the write permission level.
 	PermissionWrite = "write"
+	// PermissionScopeAll is the reserved global scope produced by the
+	// `permissions: read-all` / `write-all` scalar shorthand.
+	PermissionScopeAll = "all"
+	// PermissionNone is the "no access" permission level.
+	PermissionNone = "none"
 	// PermScopeActions is the actions permission scope.
 	PermScopeActions = "actions"
 	// PermScopeChecks is the checks permission scope.

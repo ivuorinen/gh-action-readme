@@ -439,7 +439,7 @@ func TestFixtureManagerActionTypes(t *testing.T) {
 		},
 		{
 			name:     "minimal action",
-			content:  "name: test",
+			content:  MustReadFixture(TestFixtureActionNameOnly),
 			expected: ActionTypeMinimal,
 		},
 	}
@@ -551,7 +551,8 @@ func TestHelperFunctions(t *testing.T) {
 		t.Parallel()
 		validFixtures := GetValidFixtures()
 		if len(validFixtures) == 0 {
-			t.Skip("no valid fixtures available")
+			// Valid fixtures are committed; an empty result is a loader regression.
+			t.Fatal("no valid fixtures available (loader regression?)")
 		}
 
 		for _, fixture := range validFixtures {

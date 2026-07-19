@@ -32,7 +32,7 @@ func covSeamMockAnalyzer(t *testing.T) *dependencies.Analyzer {
 
 	return &dependencies.Analyzer{
 		GitHubClient: testutil.MockGitHubClient(testutil.MockGitHubResponses()),
-		Cache:        dependencies.NewCacheAdapter(c),
+		Cache:        c,
 	}
 }
 

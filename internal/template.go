@@ -332,12 +332,15 @@ func getActionVersion(data any) string {
 		return appconstants.VersionTagV1
 	}
 
-	// Priority 1: Explicit version override. Reject values with whitespace or
-	// control characters so a multiline Config.Version cannot inject extra YAML
-	// lines into the rendered uses: example (text/template does not escape it),
-	// mirroring the org/repo path-segment check. An invalid value falls through.
-	if td.Config.Version != "" && isValidVersionRef(td.Config.Version) {
-		return td.Config.Version
+	// Priority 1: Explicit version override. Strip a single leading @ first — a
+	// user may paste "@v2" straight from a uses: line — so a valid ref is not
+	// silently dropped (@ is not in the allowed set; formatVersion re-adds it).
+	// Reject values with whitespace or control characters so a multiline
+	// Config.Version cannot inject extra YAML lines into the rendered uses:
+	// example (text/template does not escape it), mirroring the org/repo
+	// path-segment check. An invalid value falls through.
+	if v := strings.TrimPrefix(td.Config.Version, "@"); v != "" && isValidVersionRef(v) {
+		return v
 	}
 
 	// Priority 2: Use default branch if enabled and available
@@ -351,6 +354,18 @@ func getActionVersion(data any) string {
 
 // BuildTemplateData constructs comprehensive template data from action and configuration.
 func BuildTemplateData(action *ActionYML, config *AppConfig, repoRoot, actionPath string) *TemplateData {
+	return buildTemplateData(action, config, repoRoot, actionPath, nil)
+}
+
+// buildTemplateData is the implementation behind BuildTemplateData. When res is
+// non-nil, dependency analysis reuses the caller-owned shared cache+client
+// (read/written once per run); nil preserves the standalone per-call behavior.
+func buildTemplateData(
+	action *ActionYML,
+	config *AppConfig,
+	repoRoot, actionPath string,
+	res *depResources,
+) *TemplateData {
 	// Guard against a nil config: this is an exported entry point and the
 	// template funcs dereference Config unconditionally.
 	if config == nil {
@@ -384,44 +399,66 @@ func BuildTemplateData(action *ActionYML, config *AppConfig, repoRoot, actionPat
 
 	// Add dependency analysis if enabled
 	if config.AnalyzeDependencies && actionPath != "" {
-		data.Dependencies = analyzeDependencies(actionPath, config, data.Git)
+		data.Dependencies = analyzeDependencies(actionPath, config, data.Git, res)
 	}
 
 	return data
 }
 
-// analyzeDependencies performs dependency analysis on the action file.
-func analyzeDependencies(actionPath string, config *AppConfig, gitInfo git.RepoInfo) []dependencies.Dependency {
-	// Create GitHub client if we have a token
-	var client *GitHubClient
+// depResources holds the GitHub client and dependency cache shared across a
+// generation run, so cache.json is read/rewritten once per run instead of once
+// per action file. Build with newDepResources; release with Close.
+type depResources struct {
+	cache  dependencies.DependencyCache
+	client *github.Client
+}
+
+// newDepResources builds the shared GitHub client and dependency cache once.
+// The client is nil when no token is configured (graceful degradation); the
+// cache falls back to a no-op cache when creation fails.
+func newDepResources(config *AppConfig) *depResources {
+	res := &depResources{}
+
 	if token := GetGitHubToken(config); token != "" {
-		var err error
-		client, err = NewGitHubClient(token)
-		if err != nil {
-			// Log error but continue with no client (graceful degradation)
-			client = nil
+		if client, err := NewGitHubClient(token); err == nil {
+			res.client = client.Client
 		}
 	}
 
-	// Create high-performance cache
-	var depCache dependencies.DependencyCache
+	// *cache.Cache implements DependencyCache directly; on creation failure leave
+	// res.cache nil, which the analyzer's nil-guards treat as caching disabled.
 	if cacheInstance, err := cache.NewCache(cache.DefaultConfig()); err == nil {
-		depCache = dependencies.NewCacheAdapter(cacheInstance)
-	} else {
-		// Fallback to no-op cache if cache creation fails
-		depCache = dependencies.NewNoOpCache()
+		res.cache = cacheInstance
 	}
 
-	// Create dependency analyzer
-	var githubClient *github.Client
-	if client != nil {
-		githubClient = client.Client
+	return res
+}
+
+// Close stops the cache's background goroutine and flushes pending writes once.
+func (r *depResources) Close() error {
+	if r == nil || r.cache == nil {
+		return nil
 	}
 
-	analyzer := dependencies.NewAnalyzer(githubClient, gitInfo, depCache)
-	// Stop the cache's background goroutine and flush pending writes before
-	// returning (this function owns the cache's whole lifecycle).
-	defer func() { _ = analyzer.Close() }()
+	return r.cache.Close()
+}
+
+// analyzeDependencies performs dependency analysis on the action file. When res
+// is non-nil the shared cache+client are reused and left open for the owner to
+// close; when nil it builds and owns its own cache+client for this single call.
+func analyzeDependencies(
+	actionPath string,
+	config *AppConfig,
+	gitInfo git.RepoInfo,
+	res *depResources,
+) []dependencies.Dependency {
+	if res == nil {
+		res = newDepResources(config)
+		// This call owns the resources it built; release them on return.
+		defer func() { _ = res.Close() }()
+	}
+
+	analyzer := dependencies.NewAnalyzer(res.client, gitInfo, res.cache)
 
 	// Analyze dependencies
 	deps, err := analyzer.AnalyzeActionFile(actionPath)

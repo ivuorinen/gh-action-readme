@@ -497,6 +497,65 @@ func TestParseActionYMLScalarPermissions(t *testing.T) {
 	}
 }
 
+// TestParseActionYMLScalarNoneOverridesComment verifies that a scalar
+// `permissions: none` is authoritative: a header-comment permission block must
+// not leak past it (YAML wins over comments).
+func TestParseActionYMLScalarNoneOverridesComment(t *testing.T) {
+	t.Parallel()
+
+	action, err := parseActionFromContent(
+		t,
+		string(testutil.MustReadFixture(testutil.TestFixturePermissionsScalarNoneWithComment)),
+	)
+	if err != nil {
+		t.Fatalf(testutil.TestErrorFormat, err)
+	}
+
+	if len(action.Permissions) != 0 {
+		t.Errorf("permissions: none must yield no permissions, but comment leaked: %#v", action.Permissions)
+	}
+}
+
+// TestParseActionYMLScalarReadAllOverridesComment verifies that a scalar
+// `permissions: read-all` is authoritative: comment-declared per-scope
+// permissions must not be merged into the global scalar result.
+func TestParseActionYMLScalarReadAllOverridesComment(t *testing.T) {
+	t.Parallel()
+
+	action, err := parseActionFromContent(
+		t,
+		string(testutil.MustReadFixture(testutil.TestFixturePermissionsScalarReadAllWithComment)),
+	)
+	if err != nil {
+		t.Fatalf(testutil.TestErrorFormat, err)
+	}
+
+	if len(action.Permissions) != 1 || action.Permissions["all"] != testutil.PermissionRead {
+		t.Errorf("permissions: read-all must yield only {all: read}, got %#v", action.Permissions)
+	}
+}
+
+// TestParsePermissionsProseNotParsed verifies that a prose line with a colon
+// inside the permissions comment block is not recorded as a permission.
+func TestParsePermissionsProseNotParsed(t *testing.T) {
+	t.Parallel()
+
+	action, err := parseActionFromContent(
+		t,
+		string(testutil.MustReadFixture(testutil.TestFixturePermissionsProseInBlock)),
+	)
+	if err != nil {
+		t.Fatalf(testutil.TestErrorFormat, err)
+	}
+
+	if _, ok := action.Permissions["Note"]; ok {
+		t.Errorf("prose line was parsed as a permission: %#v", action.Permissions)
+	}
+	if action.Permissions[testutil.PermissionContents] != testutil.PermissionRead {
+		t.Errorf("valid permission before the prose line should still parse: %#v", action.Permissions)
+	}
+}
+
 // TestParseActionYMLFlexBoolRequired verifies N142: quoted and word-form boolean
 // values for `required` parse instead of failing the whole file.
 func TestParseActionYMLFlexBoolRequired(t *testing.T) {

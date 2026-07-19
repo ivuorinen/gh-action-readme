@@ -1003,7 +1003,7 @@ func TestAnalyzeDependencies(t *testing.T) {
 				Repository:   testTplTestRepo,
 			}
 
-			result := analyzeDependencies(actionPath, tt.config, gitInfo)
+			result := analyzeDependencies(actionPath, tt.config, gitInfo, nil)
 
 			if tt.expectNil && result != nil {
 				t.Errorf("analyzeDependencies() expected nil, got %v", result)
@@ -1013,6 +1013,36 @@ func TestAnalyzeDependencies(t *testing.T) {
 				t.Error("analyzeDependencies() returned nil, expected non-nil slice")
 			}
 		})
+	}
+}
+
+// TestAnalyzeDependenciesSharedResources verifies that a shared, caller-owned
+// depResources is reused across multiple action files (the cache/client are not
+// reconstructed per call) and that both files still yield dependency results.
+func TestAnalyzeDependenciesSharedResources(t *testing.T) {
+	t.Parallel()
+
+	config := &AppConfig{}
+	res := newDepResources(config)
+
+	defer func() {
+		if err := res.Close(); err != nil {
+			t.Errorf("depResources.Close() returned error: %v", err)
+		}
+	}()
+
+	gitInfo := git.RepoInfo{Organization: testTplTestOrg, Repository: testTplTestRepo}
+
+	for _, fixture := range []string{
+		"../../testdata/analyzer/composite-action.yml",
+		"../../testdata/analyzer/docker-action.yml",
+	} {
+		actionPath := prepareTestActionFile(t, fixture)
+
+		result := analyzeDependencies(actionPath, config, gitInfo, res)
+		if result == nil {
+			t.Errorf("analyzeDependencies(%s) returned nil, expected non-nil slice", fixture)
+		}
 	}
 }
 

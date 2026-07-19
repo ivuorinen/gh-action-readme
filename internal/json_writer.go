@@ -70,7 +70,7 @@ type ActionYMLForJSON struct {
 	Description string                         `json:"description"`
 	Inputs      map[string]ActionInputForJSON  `json:"inputs,omitempty"`
 	Outputs     map[string]ActionOutputForJSON `json:"outputs,omitempty"`
-	Runs        map[string]any                 `json:"runs,omitempty"`
+	Runs        ActionRuns                     `json:"runs,omitempty"`
 	Branding    *BrandingForJSON               `json:"branding,omitempty"`
 	Permissions map[string]string              `json:"permissions,omitempty"`
 }
@@ -136,6 +136,12 @@ type GeneratedInfo struct {
 // JSONWriter handles JSON output generation.
 type JSONWriter struct {
 	Config *AppConfig
+	// usesStatement is the resolved "org/repo[/path]@version" for the action, and
+	// repoURL its source repository URL. Both are populated from detected git info
+	// when available; when empty a generic placeholder is used so the writer still
+	// works without a repository context (e.g. in isolated unit tests).
+	usesStatement string
+	repoURL       string
 }
 
 // NewJSONWriter creates a new JSON writer.
@@ -155,6 +161,26 @@ func (jw *JSONWriter) Write(action *ActionYML, outputPath string) error {
 
 	// Write to file, tightening mode on rewrites of an existing file.
 	return writeFileTightMode(outputPath, data, appconstants.FilePermDefault)
+}
+
+// usesReference returns the resolved uses reference for the action, falling back
+// to a "your-org/<name>@v1" placeholder when git info was unavailable.
+func (jw *JSONWriter) usesReference(action *ActionYML) string {
+	if jw.usesStatement != "" {
+		return jw.usesStatement
+	}
+
+	return "your-org/" + validation.SanitizeActionName(action.Name) + appconstants.VersionRefV1
+}
+
+// repositoryLink returns the resolved source repository URL, falling back to a
+// "your-org" placeholder when git info was unavailable.
+func (jw *JSONWriter) repositoryLink(action *ActionYML) string {
+	if jw.repoURL != "" {
+		return jw.repoURL
+	}
+
+	return appconstants.GitHubBaseURL + "/your-org/" + validation.SanitizeActionName(action.Name)
 }
 
 // convertToJSONOutput converts ActionYML to structured JSON output.
@@ -262,9 +288,7 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 			Sections:    sections,
 			Links: map[string]string{
 				appconstants.ActionFileNameYML: "./" + appconstants.ActionFileNameYML,
-				"repository": "https://github.com/your-org/" + validation.SanitizeActionName(
-					action.Name,
-				),
+				"repository":                   jw.repositoryLink(action),
 			},
 		},
 		Examples: examples,
@@ -291,7 +315,7 @@ func escapeYAMLDoubleQuoted(s string) string {
 // generateBasicExample creates a basic usage example.
 func (jw *JSONWriter) generateBasicExample(action *ActionYML) string {
 	example := "- name: " + action.Name + "\n"
-	example += "  uses: your-org/" + validation.SanitizeActionName(action.Name) + "@v1"
+	example += "  uses: " + jw.usesReference(action)
 
 	if len(action.Inputs) > 0 {
 		example += "\n  with:"

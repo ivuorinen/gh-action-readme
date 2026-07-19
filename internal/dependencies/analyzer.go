@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/go-github/v74/github"
@@ -173,33 +174,37 @@ func (a *Analyzer) AnalyzeActionFileWithProgress(
 	return a.processCompositeSteps(action.Runs.Steps, progressCallback)
 }
 
-// CheckOutdated analyzes dependencies and finds those with newer versions available.
+// outdatedConcurrency bounds the number of dependencies whose latest version is
+// resolved in parallel. Each resolution is up to a few GitHub round-trips, so a
+// small pool turns a serial file×dep fan-out into concurrent lookups without
+// risking secondary-rate-limit bursts. The shared cache and go-github client are
+// both safe for concurrent use.
+const outdatedConcurrency = 6
+
+// CheckOutdated analyzes dependencies and finds those with newer versions
+// available. Lookups run in a bounded worker pool; results are written to a
+// slot indexed by the dependency's original position so output order stays
+// deterministic regardless of completion order.
 func (a *Analyzer) CheckOutdated(deps []Dependency) ([]OutdatedDependency, error) {
-	var outdated []OutdatedDependency
+	results := make([]*OutdatedDependency, len(deps))
 
-	for _, dep := range deps {
-		if dep.IsShellScript || dep.IsLocalAction {
-			continue // Skip shell scripts and local actions
-		}
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, outdatedConcurrency)
+	for i := range deps {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(idx int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			results[idx] = a.checkDepOutdated(deps[idx])
+		}(i)
+	}
+	wg.Wait()
 
-		owner, repo, currentVersion, versionType := a.parseUsesStatement(dep.Uses)
-		if owner == "" || repo == "" {
-			continue
-		}
-
-		latestVersion, latestSHA, err := a.getLatestVersion(owner, repo)
-		if err != nil {
-			continue // Skip on error, don't fail the whole operation
-		}
-
-		updateType := a.outdatedUpdateType(versionType, currentVersion, latestVersion, latestSHA)
-		if updateType != appconstants.UpdateTypeNone {
-			outdated = append(outdated, OutdatedDependency{
-				Current:       dep,
-				LatestVersion: latestVersion,
-				LatestSHA:     latestSHA,
-				UpdateType:    updateType,
-			})
+	outdated := make([]OutdatedDependency, 0, len(deps))
+	for _, r := range results {
+		if r != nil {
+			outdated = append(outdated, *r)
 		}
 	}
 
@@ -273,7 +278,12 @@ func (a *Analyzer) GeneratePinInPlace(actionPath string, dep Dependency) (*Pinne
 		return nil, nil
 	}
 
-	sha := a.getCommitSHAForTag(context.Background(), owner, repo, currentVersion)
+	// Bound the lookup like every other GitHub call path; a bare context.Background()
+	// here means a host that never responds hangs `deps pin` indefinitely.
+	ctx, cancel := context.WithTimeout(context.Background(), appconstants.APICallTimeout)
+	defer cancel()
+
+	sha := a.getCommitSHAForTag(ctx, owner, repo, currentVersion)
 	if sha == "" {
 		return nil, fmt.Errorf("could not resolve commit SHA for %s", dep.Uses)
 	}
@@ -298,6 +308,38 @@ func (a *Analyzer) ApplyPinnedUpdates(updates []PinnedUpdate) error {
 	}
 
 	return nil
+}
+
+// checkDepOutdated resolves the latest version for one dependency and returns an
+// OutdatedDependency when it is behind, or nil when it should be skipped (shell
+// script, local action, unparseable ref), when the lookup fails, or when it is
+// already current. It is safe for concurrent use.
+func (a *Analyzer) checkDepOutdated(dep Dependency) *OutdatedDependency {
+	if dep.IsShellScript || dep.IsLocalAction {
+		return nil
+	}
+
+	owner, repo, currentVersion, versionType := a.parseUsesStatement(dep.Uses)
+	if owner == "" || repo == "" {
+		return nil
+	}
+
+	latestVersion, latestSHA, err := a.getLatestVersion(owner, repo)
+	if err != nil {
+		return nil // Skip on error, don't fail the whole operation
+	}
+
+	updateType := a.outdatedUpdateType(versionType, currentVersion, latestVersion, latestSHA)
+	if updateType == appconstants.UpdateTypeNone {
+		return nil
+	}
+
+	return &OutdatedDependency{
+		Current:       dep,
+		LatestVersion: latestVersion,
+		LatestSHA:     latestSHA,
+		UpdateType:    updateType,
+	}
 }
 
 // validateAndCheckComposite validates action type and checks if it's composite.
@@ -655,6 +697,28 @@ func (a *Analyzer) getLatestRelease(ctx context.Context, owner, repo string) (ve
 // would produce a broken pin. When the ref resolves to a tag object, dereference
 // it via GetTag to obtain the underlying commit SHA.
 func (a *Analyzer) getCommitSHAForTag(ctx context.Context, owner, repo, tagName string) string {
+	// A tag's commit SHA is effectively immutable, so cache the resolution: without
+	// this, `deps pin` re-runs GetRef(+GetTag) for every occurrence of the same
+	// dependency across every file.
+	cacheKey := appconstants.CacheKeyTagSHA + fmt.Sprintf("%s/%s@%s", owner, repo, tagName)
+	if a.Cache != nil {
+		if cached, ok := a.Cache.Get(cacheKey); ok {
+			if sha, isStr := cached.(string); isStr && sha != "" {
+				return sha
+			}
+		}
+	}
+
+	sha := a.resolveCommitSHAForTag(ctx, owner, repo, tagName)
+	if sha != "" && a.Cache != nil {
+		_ = a.Cache.SetWithTTL(cacheKey, sha, appconstants.CacheDefaultTTL)
+	}
+
+	return sha
+}
+
+// resolveCommitSHAForTag performs the uncached GetRef(+GetTag) resolution.
+func (a *Analyzer) resolveCommitSHAForTag(ctx context.Context, owner, repo, tagName string) string {
 	ref, _, err := a.GitHubClient.Git.GetRef(ctx, owner, repo, "tags/"+tagName)
 	if err != nil || ref.GetObject() == nil {
 		return ""
@@ -721,6 +785,13 @@ func (a *Analyzer) outdatedUpdateType(versionType VersionType, currentVersion, l
 		}
 
 		return appconstants.UpdateTypeDigest
+	}
+
+	// A branch ref (e.g. @main) tracks a moving target and cannot be semver-compared;
+	// treating it as current avoids compareVersions misreading the branch name as a
+	// major update and rewriting @main into a SHA pin, destroying branch-tracking.
+	if versionType == BranchName {
+		return appconstants.UpdateTypeNone
 	}
 
 	return a.compareVersions(currentVersion, latestVersion)
@@ -802,6 +873,30 @@ func (a *Analyzer) determineUpdateType(currentParts, latestParts []string) strin
 	return appconstants.UpdateTypeNone
 }
 
+// createBackup writes content to a unique temp file alongside cleanPath and
+// returns its path. Using os.CreateTemp guarantees a fresh name, so an existing
+// "<file>.backup" the user maintains is left untouched.
+func createBackup(cleanPath string, content []byte) (string, error) {
+	f, err := os.CreateTemp(filepath.Dir(cleanPath), filepath.Base(cleanPath)+".bak-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup: %w", err)
+	}
+	backupPath := f.Name()
+	if _, err := f.Write(content); err != nil {
+		_ = f.Close()
+		_ = os.Remove(backupPath)
+
+		return "", fmt.Errorf("failed to create backup: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(backupPath)
+
+		return "", fmt.Errorf("failed to create backup: %w", err)
+	}
+
+	return backupPath, nil
+}
+
 // updateActionFile applies updates to a single action file.
 func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) error {
 	// filepath.Clean normalises the path (removes redundant separators, ".", "..").
@@ -817,14 +912,11 @@ func (a *Analyzer) updateActionFile(filePath string, updates []PinnedUpdate) err
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Create backup
-	backupPath := cleanPath + appconstants.BackupExtension
-	if err := os.WriteFile( // #nosec G306 G703 -- path from tool-internal filesystem scan
-		backupPath,
-		content,
-		appconstants.FilePermDefault,
-	); err != nil {
-		return fmt.Errorf("failed to create backup: %w", err)
+	// Create backup in a unique temp file so a pre-existing "<file>.backup" the
+	// user keeps is never overwritten or deleted (silent data loss).
+	backupPath, err := createBackup(cleanPath, content)
+	if err != nil {
+		return err
 	}
 
 	// Apply updates to content

@@ -150,7 +150,7 @@ func TestDetectGeneratedFiles(t *testing.T) {
 	t.Run("skips action.yml file", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
-		WriteTestFile(t, filepath.Join(dir, appconstants.ActionFileNameYML), "name: test")
+		WriteTestFile(t, filepath.Join(dir, appconstants.ActionFileNameYML), MustReadFixture(TestFixtureActionNameOnly))
 		requireDetectedFile(
 			t,
 			dir,

@@ -20,27 +20,32 @@ import (
 
 // MockHTTPClient is a mock HTTP client for testing.
 //
-// The Requests slice is mutex-guarded, so recording requests is safe when a
-// single mock client is shared across parallel subtests (t.Parallel). Responses
-// are NOT deep-cloned per call: every Do for a given method+URL returns the same
-// *http.Response whose Body is a single reader. Two goroutines requesting the
-// same key and reading both Bodies concurrently will race on that reader, so a
-// shared response must not be read from more than one goroutine at a time.
+// The Requests slice is mutex-guarded, and each Do returns a shallow copy of the
+// configured response with a FRESH body reader (the configured body is buffered
+// once, on first use, into bodies). That makes a single mock client safe to share
+// across parallel callers requesting the same method+URL — e.g. the bounded
+// worker pool in Analyzer.CheckOutdated — without racing on a single-use body.
 type MockHTTPClient struct {
 	mu        sync.Mutex
 	Responses map[string]*http.Response
 	Requests  []*http.Request
+	bodies    map[string][]byte // buffered response bodies, keyed by method+URL
 }
 
 // Do implements the http.Client interface.
 func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.Requests = append(m.Requests, req)
-	m.mu.Unlock()
 
 	key := req.Method + " " + req.URL.String()
 	if resp, ok := m.Responses[key]; ok {
-		return resp, nil
+		body := m.bufferBodyLocked(key, resp)
+		clone := *resp
+		clone.Body = io.NopCloser(bytes.NewReader(body))
+
+		return &clone, nil
 	}
 
 	// Default 404 response
@@ -50,8 +55,38 @@ func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
+// bufferBodyLocked reads a configured response body once into a byte buffer so
+// every subsequent Do can serve an independent reader. Must be called with m.mu
+// held.
+func (m *MockHTTPClient) bufferBodyLocked(key string, resp *http.Response) []byte {
+	if m.bodies == nil {
+		m.bodies = make(map[string][]byte)
+	}
+	if buf, ok := m.bodies[key]; ok {
+		return buf
+	}
+
+	var buf []byte
+	if resp.Body != nil {
+		buf, _ = io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+	}
+	m.bodies[key] = buf
+
+	return buf
+}
+
 // MockGitHubClient creates a GitHub client with mocked responses.
 func MockGitHubClient(responses map[string]string) *github.Client {
+	client, _ := MockGitHubClientWithSpy(responses)
+
+	return client
+}
+
+// MockGitHubClientWithSpy is like MockGitHubClient but also returns the underlying
+// MockHTTPClient so tests can inspect how many upstream requests were made (via its
+// Requests slice) — e.g. to prove a cache prevented a second fetch.
+func MockGitHubClientWithSpy(responses map[string]string) (*github.Client, *MockHTTPClient) {
 	mockClient := &MockHTTPClient{
 		Responses: make(map[string]*http.Response),
 	}
@@ -66,7 +101,7 @@ func MockGitHubClient(responses map[string]string) *github.Client {
 
 	client := github.NewClient(&http.Client{Transport: &MockTransport{Client: mockClient}})
 
-	return client
+	return client, mockClient
 }
 
 // MockTransport implements http.RoundTripper for testing HTTP clients.

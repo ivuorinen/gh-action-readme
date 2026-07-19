@@ -20,19 +20,6 @@ type MessageLogger interface {
 	Fprintf(w *os.File, format string, args ...any)
 }
 
-// ErrorReporter handles error output and reporting.
-type ErrorReporter interface {
-	Error(format string, args ...any)
-	ErrorWithSuggestions(err *apperrors.ContextualError)
-	ErrorWithContext(code appconstants.ErrorCode, message string, context map[string]string)
-	ErrorWithSimpleFix(message, suggestion string)
-}
-
-// ErrorFormatter handles formatting of contextual errors.
-type ErrorFormatter interface {
-	FormatContextualError(err *apperrors.ContextualError) string
-}
-
 // ProgressReporter handles progress indication and status updates.
 type ProgressReporter interface {
 	Progress(format string, args ...any)
@@ -57,12 +44,6 @@ type ProgressManager interface {
 	)
 }
 
-// MessagingOutput combines message logging and error reporting for components that need both.
-type MessagingOutput interface {
-	MessageLogger
-	ErrorReporter
-}
-
 // OutputWriter combines message logging and progress reporting for general output needs.
 type OutputWriter interface {
 	MessageLogger
@@ -70,18 +51,18 @@ type OutputWriter interface {
 	QuietChecker
 }
 
-// ErrorManager combines error reporting and formatting for comprehensive error handling.
-type ErrorManager interface {
-	ErrorReporter
-	ErrorFormatter
-}
-
-// CompleteOutput combines all output interfaces for backward compatibility.
-// This should be used sparingly and only where all capabilities are truly needed.
+// CompleteOutput combines every output capability the generator and CLI use.
+// Use sparingly — only where message logging, error reporting and formatting,
+// progress, and quiet-mode are all genuinely needed.
 type CompleteOutput interface {
 	MessageLogger
-	ErrorReporter
-	ErrorFormatter
+	// Error reporting.
+	Error(format string, args ...any)
+	ErrorWithSuggestions(err *apperrors.ContextualError)
+	ErrorWithContext(code appconstants.ErrorCode, message string, context map[string]string)
+	ErrorWithSimpleFix(message, suggestion string)
+	// Contextual error formatting.
+	FormatContextualError(err *apperrors.ContextualError) string
 	ProgressReporter
 	QuietChecker
 }

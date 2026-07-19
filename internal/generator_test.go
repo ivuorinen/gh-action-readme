@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
 	"github.com/ivuorinen/gh-action-readme/internal/apperrors"
 	"github.com/ivuorinen/gh-action-readme/internal/cache"
-	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
@@ -26,7 +26,6 @@ const (
 	testGenShortDesc   = "desc"
 	testGenTokenKey    = "token"
 	testGenHelpSection = "For more help"
-	testGenRunsUsing   = "using"
 	testGenActionName  = "Action"
 )
 
@@ -1157,18 +1156,34 @@ func TestGeneratorDiscoverActionFilesErrorPaths(t *testing.T) {
 		t.Error("Expected error for non-existent directory, got nil")
 	}
 
-	// Test with unreadable directory (if we can create one)
+	// Test with an unreadable directory: its action file must be excluded from
+	// discovery. Skipped where 0000 permissions are not enforced.
+	if runtime.GOOS == "windows" {
+		t.Skip("directory read permissions are not enforced on Windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses directory permissions, so an unreadable directory cannot be simulated")
+	}
+
 	tmpDir := t.TempDir()
 	unreadableDir := filepath.Join(tmpDir, "unreadable")
-	err = os.Mkdir(unreadableDir, 0000)
-	if err != nil {
-		t.Skip("Cannot create unreadable directory for testing")
+	// Plant an action file, then make its directory unreadable so the walker
+	// cannot descend into it.
+	hiddenAction := testutil.WriteActionFixture(t, unreadableDir, testutil.TestFixtureActionMinimal)
+	if err := os.Chmod(unreadableDir, 0000); err != nil {
+		t.Skipf("cannot make directory unreadable: %v", err)
 	}
-	defer func() { _ = os.Chmod(unreadableDir, 0700) }() //nolint:gosec // Test cleanup needs to restore permissions
+	defer func() { _ = os.Chmod(unreadableDir, 0o700) }() //nolint:gosec // restore perms so cleanup can remove the dir
 
-	_, _ = gen.DiscoverActionFiles(unreadableDir, true, []string{})
-	// May succeed or fail depending on platform permissions
-	// Just ensure it doesn't panic
+	files, err := gen.DiscoverActionFiles(unreadableDir, true, []string{})
+	// The walker skips permission-denied subtrees (filepath.SkipDir) instead of
+	// erroring, so discovery succeeds but the unreadable action file is excluded.
+	testutil.AssertNoError(t, err)
+	for _, f := range files {
+		if f == hiddenAction {
+			t.Errorf("unreadable action file should be excluded from results, got %v", files)
+		}
+	}
 }
 
 // TestGeneratorParseAndValidateActionErrorPaths tests validation error scenarios.
@@ -1207,7 +1222,7 @@ func TestGeneratorParseAndValidateActionErrorPaths(t *testing.T) {
 		},
 		{
 			name:    testutil.TestCaseNameInvalidYAML,
-			content: "name: Test\ninvalid: [\n  - item",
+			content: testutil.MustReadFixture(testutil.TestErrorScenarioInvalidYAML),
 			wantErr: true,
 		},
 	}
@@ -1464,8 +1479,8 @@ func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 }
 
 // TestCreateDependencyAnalyzer_CacheSelectionBranches exercises the success branch
-// of the depCache guard (line 122): when cache creation succeeds, a CacheAdapter
-// is selected and wrapped in the returned Analyzer.
+// of the depCache guard: when cache creation succeeds, the *cache.Cache is attached
+// directly (it implements DependencyCache) to the returned Analyzer.
 func TestCreateDependencyAnalyzer_CacheSelectionBranches(t *testing.T) {
 	t.Parallel()
 
@@ -1477,14 +1492,14 @@ func TestCreateDependencyAnalyzer_CacheSelectionBranches(t *testing.T) {
 	if analyzer == nil {
 		t.Fatal("expected non-nil analyzer when cache succeeds")
 	}
-	if _, ok := analyzer.Cache.(*dependencies.CacheAdapter); !ok {
-		t.Errorf("expected CacheAdapter when cache creation succeeds, got %T", analyzer.Cache)
+	if _, ok := analyzer.Cache.(*cache.Cache); !ok {
+		t.Errorf("expected *cache.Cache when cache creation succeeds, got %T", analyzer.Cache)
 	}
 }
 
 // TestCreateDependencyAnalyzer_NoOpCacheOnCacheFailure exercises the failure branch
-// of the depCache guard: when cache creation fails, the analyzer falls through to
-// NoOpCache so the caller still gets a valid, usable analyzer.
+// of the depCache guard: when cache creation fails, the analyzer is left with a nil
+// cache (caching disabled) so the caller still gets a valid, usable analyzer.
 func TestCreateDependencyAnalyzer_NoOpCacheOnCacheFailure(t *testing.T) {
 	// Temporarily replace newCacheFunc to simulate cache creation failure.
 	orig := newCacheFunc
@@ -1501,8 +1516,8 @@ func TestCreateDependencyAnalyzer_NoOpCacheOnCacheFailure(t *testing.T) {
 	if analyzer == nil {
 		t.Fatal("expected non-nil analyzer even when cache creation fails")
 	}
-	if _, ok := analyzer.Cache.(*dependencies.NoOpCache); !ok {
-		t.Errorf("expected NoOpCache when cache creation fails, got %T", analyzer.Cache)
+	if analyzer.Cache != nil {
+		t.Errorf("expected nil cache when cache creation fails, got %T", analyzer.Cache)
 	}
 }
 
@@ -1609,7 +1624,7 @@ func TestParseAndValidateAction_FieldBoundary(t *testing.T) {
 		},
 		{
 			name:    "all required fields present does not error",
-			content: testutil.TestMinimalAction,
+			content: testutil.MustReadFixture(testutil.TestFixtureActionMinimal),
 			wantErr: false,
 		},
 	}

@@ -521,7 +521,7 @@ func TestCLIErrorHandling(t *testing.T) {
 				testutil.WriteTestFile(
 					t,
 					filepath.Join(tmpDir, appconstants.ActionFileNameYML),
-					testutil.TestMinimalAction,
+					testutil.MustReadFixture(testutil.TestFixtureActionMinimal),
 				)
 			},
 			wantExit: 0, // Not an error, just no dependencies
@@ -1065,86 +1065,83 @@ func TestValidateGitHubToken(t *testing.T) {
 	}
 }
 
-// TestLogConfigInfo tests configuration info logging.
-func TestLogConfigInfo(_ *testing.T) {
+// assertOutputContains checks that captured CLI output contains (want=true) or
+// omits (want=false) substr, printing the captured text on failure.
+func assertOutputContains(t *testing.T, out, substr string, want bool) {
+	t.Helper()
+	if got := strings.Contains(out, substr); got != want {
+		t.Errorf("output contains %q = %v, want %v; output:\n%s", substr, got, want, out)
+	}
+}
+
+// TestLogConfigInfo verifies that config info is logged only in verbose mode and
+// that the repository-root line appears only when a repo root is known.
+func TestLogConfigInfo(t *testing.T) {
+	tests := []struct {
+		name       string
+		verbose    bool
+		repoRoot   string
+		wantConfig bool
+		wantRepo   bool
+	}{
+		{name: "verbose with repo root", verbose: true, repoRoot: "/path/to/repo", wantConfig: true, wantRepo: true},
+		{name: "verbose without repo root", verbose: true, repoRoot: "", wantConfig: true, wantRepo: false},
+		{name: "not verbose", verbose: false, repoRoot: "/path/to/repo", wantConfig: false, wantRepo: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &internal.AppConfig{Verbose: tt.verbose}
+			// NewGenerator swaps in NullOutput under `go test`, so wire the
+			// generator explicitly with a capturable ColoredOutput.
+			co := &internal.ColoredOutput{NoColor: true}
+			generator := internal.NewGeneratorWithDependencies(config, co, internal.NewNullProgressManager())
+
+			out := testutil.CaptureStdout(func() {
+				logConfigInfo(generator, config, tt.repoRoot)
+			})
+
+			assertOutputContains(t, out, "Using effective config", tt.wantConfig)
+			assertOutputContains(t, out, "Repository root", tt.wantRepo)
+		})
+	}
+}
+
+// TestShowUpgradeMode verifies each upgrade mode announces the correct banner.
+func TestShowUpgradeMode(t *testing.T) {
 	tests := []struct {
 		name     string
-		verbose  bool
-		repoRoot string
+		ciMode   bool
+		isPinCmd bool
+		wantSub  string
 	}{
-		{
-			name:     "verbose with repo root",
-			verbose:  true,
-			repoRoot: "/path/to/repo",
-		},
-		{
-			name:     "verbose without repo root",
-			verbose:  true,
-			repoRoot: "",
-		},
-		{
-			name:     "not verbose",
-			verbose:  false,
-			repoRoot: "/path/to/repo",
-		},
+		{name: "CI mode", ciMode: true, isPinCmd: false, wantSub: "CI/CD Mode"},
+		{name: "pin command", ciMode: false, isPinCmd: true, wantSub: "Pinning floating dependencies"},
+		{name: "interactive mode", ciMode: false, isPinCmd: false, wantSub: "Interactive dependency upgrade"},
 	}
 
 	for _, tt := range tests {
-		config := &internal.AppConfig{
-			Verbose: tt.verbose,
-			Quiet:   true,
-		}
-		generator := internal.NewGenerator(config)
-
-		// Just call it to ensure it doesn't panic
-		logConfigInfo(generator, config, tt.repoRoot)
+		t.Run(tt.name, func(t *testing.T) {
+			out := testutil.CaptureStdout(func() {
+				showUpgradeMode(&internal.ColoredOutput{NoColor: true}, tt.ciMode, tt.isPinCmd)
+			})
+			assertOutputContains(t, out, tt.wantSub, true)
+		})
 	}
 }
 
-// TestShowUpgradeMode tests upgrade mode display.
-func TestShowUpgradeMode(_ *testing.T) {
-	tests := []struct {
-		name      string
-		ciMode    bool
-		isPinCmd  bool
-		wantEmpty bool
-	}{
-		{
-			name:      "CI mode",
-			ciMode:    true,
-			isPinCmd:  false,
-			wantEmpty: false,
-		},
-		{
-			name:      "pin command",
-			ciMode:    false,
-			isPinCmd:  true,
-			wantEmpty: false,
-		},
-		{
-			name:      "interactive mode",
-			ciMode:    false,
-			isPinCmd:  false,
-			wantEmpty: false,
-		},
-	}
-
-	for _, tt := range tests {
-		output := createOutputManager(true)
-		// Just call it to ensure it doesn't panic
-		showUpgradeMode(output, tt.ciMode, tt.isPinCmd)
-	}
-}
-
-// TestDisplayOutdatedResults tests outdated dependencies display.
-func TestDisplayOutdatedResults(_ *testing.T) {
+// TestDisplayOutdatedResults verifies the up-to-date banner and the per-dependency
+// listing of outdated dependencies.
+func TestDisplayOutdatedResults(t *testing.T) {
 	tests := []struct {
 		name        string
 		allOutdated []dependencies.OutdatedDependency
+		wantSubs    []string
 	}{
 		{
 			name:        "no outdated dependencies",
 			allOutdated: []dependencies.OutdatedDependency{},
+			wantSubs:    []string{"up to date"},
 		},
 		{
 			name: "with outdated dependencies",
@@ -1158,20 +1155,24 @@ func TestDisplayOutdatedResults(_ *testing.T) {
 					UpdateType:    "major",
 				},
 			},
+			wantSubs: []string{"outdated dependencies", testutil.TestActionCheckout, testVersionV4, "major"},
 		},
 	}
 
 	for _, tt := range tests {
-		output := createOutputManager(true)
-		// Just call it to ensure it doesn't panic
-		displayOutdatedResults(output, tt.allOutdated)
+		t.Run(tt.name, func(t *testing.T) {
+			out := testutil.CaptureStdout(func() {
+				displayOutdatedResults(&internal.ColoredOutput{NoColor: true}, tt.allOutdated)
+			})
+			for _, sub := range tt.wantSubs {
+				assertOutputContains(t, out, sub, true)
+			}
+		})
 	}
 }
 
-// TestDisplayFloatingDeps tests floating dependencies display.
-func TestDisplayFloatingDeps(_ *testing.T) {
-
-	output := createOutputManager(true)
+// TestDisplayFloatingDeps verifies the floating-dependency listing names each dep.
+func TestDisplayFloatingDeps(t *testing.T) {
 	floatingDeps := []fileDep{
 		{
 			file: testutil.TestTmpActionFile,
@@ -1182,21 +1183,31 @@ func TestDisplayFloatingDeps(_ *testing.T) {
 		},
 	}
 
-	// Just call it to ensure it doesn't panic
-	displayFloatingDeps(output, testutil.TestTmpDir, floatingDeps)
+	out := testutil.CaptureStdout(func() {
+		displayFloatingDeps(&internal.ColoredOutput{NoColor: true}, testutil.TestTmpDir, floatingDeps)
+	})
+
+	assertOutputContains(t, out, "Floating dependencies", true)
+	assertOutputContains(t, out, testutil.TestActionCheckout, true)
+	assertOutputContains(t, out, testVersionV4, true)
 }
 
-// TestDisplaySecuritySummary tests security summary display.
-func TestDisplaySecuritySummary(_ *testing.T) {
+// TestDisplaySecuritySummary verifies the pinned/floating summary lines emitted
+// for each mix of pinned counts and floating dependencies.
+func TestDisplaySecuritySummary(t *testing.T) {
 	tests := []struct {
 		name         string
 		pinnedCount  int
 		floatingDeps []fileDep
+		wantSubs     []string
+		wantAbsent   []string
 	}{
 		{
 			name:         "all pinned",
 			pinnedCount:  5,
 			floatingDeps: nil,
+			wantSubs:     []string{"Pinned versions: 5", "properly pinned"},
+			wantAbsent:   []string{"Floating versions"},
 		},
 		{
 			name:        "with floating dependencies",
@@ -1210,18 +1221,34 @@ func TestDisplaySecuritySummary(_ *testing.T) {
 					},
 				},
 			},
+			wantSubs: []string{"Pinned versions: 3", "Floating versions: 1", testutil.TestActionCheckout},
 		},
 		{
 			name:         "no dependencies",
 			pinnedCount:  0,
 			floatingDeps: nil,
+			wantSubs:     []string{"Pinned versions: 0"},
+			wantAbsent:   []string{"properly pinned", "Floating versions"},
 		},
 	}
 
 	for _, tt := range tests {
-		output := createOutputManager(true)
-		// Just call it to ensure it doesn't panic
-		displaySecuritySummary(output, testutil.TestTmpDir, tt.pinnedCount, tt.floatingDeps)
+		t.Run(tt.name, func(t *testing.T) {
+			out := testutil.CaptureStdout(func() {
+				displaySecuritySummary(
+					&internal.ColoredOutput{NoColor: true},
+					testutil.TestTmpDir,
+					tt.pinnedCount,
+					tt.floatingDeps,
+				)
+			})
+			for _, sub := range tt.wantSubs {
+				assertOutputContains(t, out, sub, true)
+			}
+			for _, sub := range tt.wantAbsent {
+				assertOutputContains(t, out, sub, false)
+			}
+		})
 	}
 }
 
@@ -1966,7 +1993,8 @@ func TestProcessActionFilesIntegration(t *testing.T) {
 			config.Quiet = true
 			generator := internal.NewGenerator(config)
 
-			// Execute handler - just test that it doesn't panic
+			// The recover guard is a secondary safety net; the real assertion
+			// below verifies generation produced README output on disk.
 			defer func() {
 				if r := recover(); r != nil && !tt.wantErr {
 					t.Errorf("processActionFiles() unexpected panic: %v", r)
@@ -1975,6 +2003,12 @@ func TestProcessActionFilesIntegration(t *testing.T) {
 
 			err := processActionFiles(generator, actionFiles)
 			testutil.AssertNoError(t, err)
+
+			// Each processed action.yml must yield a README.md alongside it.
+			for _, actionFile := range actionFiles {
+				readme := filepath.Join(filepath.Dir(actionFile), appconstants.ReadmeMarkdown)
+				testutil.AssertFileExists(t, readme)
+			}
 		})
 	}
 }
@@ -2267,13 +2301,28 @@ func TestConfigWizardHandlerIntegration(t *testing.T) {
 
 	// Create command with output flag pointing to temp file
 	cmd := &cobra.Command{}
-	cmd.Flags().String("format", "yaml", "")
+	cmd.Flags().String(appconstants.FlagFormat, "yaml", "")
 	outputPath := filepath.Join(tmpDir, "test-config.yaml")
-	cmd.Flags().String("output", outputPath, "")
+	cmd.Flags().String(appconstants.FlagOutput, outputPath, "")
 
-	// Note: We can't fully test wizard handler without mocking stdin
-	// The wizard requires interactive input which is tested in wizard package
-	// This test just ensures the handler doesn't panic on setup
+	// Drive the handler end-to-end with an empty stdin: every wizard prompt hits
+	// EOF immediately and falls back to its default, so the handler completes and
+	// exports the config. Non-parallel because it swaps the global os.Stdin.
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe() failed: %v", err)
+	}
+	_ = w.Close() // closed write end => reader yields EOF on first read
+	os.Stdin = r
+	defer func() { os.Stdin = origStdin; _ = r.Close() }()
+
+	if err := configWizardHandler(cmd, nil); err != nil {
+		t.Fatalf("configWizardHandler() returned error: %v", err)
+	}
+
+	// The wizard must have exported the resulting config to the requested path.
+	testutil.AssertFileExists(t, outputPath)
 }
 
 // Phase 6: Tests for zero-coverage business logic functions
@@ -2297,7 +2346,7 @@ func TestCheckAllOutdated(t *testing.T) {
 		},
 		{
 			name:            testutil.TestScenarioNoDeps,
-			setupFunc:       setupWithActionContent(testutil.TestMinimalAction),
+			setupFunc:       setupWithActionContent(testutil.MustReadFixture(testutil.TestFixtureActionMinimal)),
 			mockAnalyzer:    true,
 			wantOutdatedCnt: 0,
 		},
@@ -2369,7 +2418,7 @@ func TestAnalyzeSecurityDeps(t *testing.T) {
 		},
 		{
 			name:       testutil.TestScenarioNoDeps,
-			setupFunc:  setupWithActionContent(testutil.TestMinimalAction),
+			setupFunc:  setupWithActionContent(testutil.MustReadFixture(testutil.TestFixtureActionMinimal)),
 			wantPinned: 0,
 		},
 		{
@@ -2456,7 +2505,7 @@ func TestCollectAllUpdates(t *testing.T) {
 		},
 		{
 			name:          testutil.TestScenarioNoDeps,
-			setupFunc:     setupWithActionContent(testutil.TestMinimalAction),
+			setupFunc:     setupWithActionContent(testutil.MustReadFixture(testutil.TestFixtureActionMinimal)),
 			wantUpdateCnt: 0,
 		},
 	}
@@ -2687,22 +2736,21 @@ func TestApplyUpdates(t *testing.T) {
 		}
 	})
 
-	// Test that default StdinReader is used when reader is nil
-	t.Run("defaults to StdinReader when reader is nil", func(t *testing.T) {
+	// Test that automatic mode never consults the input reader (which is why a nil
+	// reader is safe): pass a spy reader and confirm it is left untouched.
+	t.Run("automatic mode does not read from the input reader", func(t *testing.T) {
 		t.Parallel()
 
-		// This test verifies the nil check works, but can't test actual stdin
-		// Just verify the function accepts nil and doesn't panic
-
+		reader := &TestInputReader{responses: []string{appconstants.InputYes}}
 		analyzer := dependencies.NewAnalyzer(nil, git.RepoInfo{}, nil)
 		output := createOutputManager(true)
 		updates := []dependencies.PinnedUpdate{{OldUses: "old", NewUses: "new"}}
 
-		// With automatic=true and nil reader, should not prompt
-		err := applyUpdates(output, analyzer, updates, true, nil)
+		_ = applyUpdates(output, analyzer, updates, true, reader)
 
-		// May error, but shouldn't panic from nil reader
-		_ = err
+		if reader.index != 0 {
+			t.Errorf("automatic mode must not read input, but reader index = %d", reader.index)
+		}
 	})
 }
 
