@@ -24,6 +24,17 @@ if echo "$basename_lower" | grep -qE "\.(pem|key|p12|pfx|p8|der)$" 2>/dev/null; 
   exit 1
 fi
 
+# Block extensionless credential files (SSH keys, direnv, netrc). These have no
+# extension, so the code-ext exemption below would otherwise never reach them —
+# but check first so an unlucky name can never slip through.
+case "$basename_lower" in
+id_rsa | id_dsa | id_ecdsa | id_ed25519 | id_rsa.* | .envrc | .netrc | .pgpass | .npmrc)
+  echo "BLOCKED: $(basename "$file_path") commonly holds credentials. Edit manually outside Claude."
+  exit 1
+  ;;
+*) ;; # intentional fall-through
+esac
+
 # Block secret-store config/data files by name using word-boundary matching.
 # Code files are exempt — they handle secrets programmatically, not store them.
 case "$basename_lower" in

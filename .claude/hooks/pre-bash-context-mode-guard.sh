@@ -44,11 +44,10 @@ fi
 
 cmd_flat=$(printf '%s' "$cmd" | tr '\n' ' ')
 
-# Allowlist first: state mutation, short OBSERVE, installs, navigation, and
-# interactive commands run direct. A leading allowed verb short-circuits so a
-# gather verb appearing later as an argument (e.g. a commit message) is ignored.
-# Built by concatenation to keep each source line within the line-length limit;
-# the assembled pattern is identical to the original single-line regex.
+# Allowlist: state mutation, short OBSERVE, installs, navigation, and
+# interactive commands run direct. A leading allowed verb short-circuits only
+# ITS OWN segment (evaluated below), so a gather verb in a later segment of a
+# chained command is still caught.
 allow_re='^[[:space:]]*('
 allow_re+='git[[:space:]]+(status|add|commit|push|pull|fetch|checkout|switch|branch|merge|rebase|reset|restore|stash|rm|mv|tag|init|clone|config|remote|worktree|rev-parse)'
 allow_re+='|mkdir|mv|cp|rm|touch|chmod|chown|ln|cd|pwd|whoami|echo|printf|export|which|command[[:space:]]+-v'
@@ -56,16 +55,37 @@ allow_re+='|go[[:space:]]+(build|install|mod|fmt|generate)'
 allow_re+='|npm[[:space:]]+(install|ci|run[[:space:]]+build)'
 allow_re+='|make[[:space:]]+(build|install|clean))'
 allow_re+='([[:space:]]|$)'
-if printf '%s' "$cmd_flat" | grep -qE "$allow_re" 2>/dev/null; then
-  exit 0
-fi
 
-# Denylist: context-producing / gather-and-analyze verbs the rule names.
-if printf '%s' "$cmd_flat" | grep -qE \
-  "(^|[[:space:]|(&;])((grep|egrep|rg|find|cat|awk|sed|nl|ls[[:space:]]+-[a-zA-Z]*R)[[:space:]]|go[[:space:]]+(test|vet)([[:space:]]|$)|git[[:space:]]+(log|diff|show|blame)([[:space:]]|$)|make[[:space:]]+(test|lint|security|coverage|mutation))" \
-  2>/dev/null ||
-  printf '%s' "$cmd_flat" | grep -qE "\|[[:space:]]*(head|tail|wc)([[:space:]]|$)" 2>/dev/null; then
-  deny "context-mode-required.md: route this through the context-mode tool (ctx_execute / ctx_batch_execute / ctx_execute_file) so raw output stays in the sandbox. Do NOT bypass with '# ctx-ok' — the rule forbids it for context-producing commands."
-fi
+# Denylist: context-producing / gather-and-analyze verbs. Applied PER SEGMENT so
+# a leading allowed verb (cd . && go test > out) cannot exempt a later
+# context-producer. head/tail/wc are denied even without a pipe.
+# The verb-boundary class includes / " ' so path-qualified (/bin/cat), quoted,
+# and wrapper forms (eval "grep …", bash -c "cat …") are still caught.
+# Residual (not regex-closable): a leading backslash (\grep) to skip an alias.
+deny_re='(^|[[:space:]|(&;/"'\''])('
+deny_re+='(grep|egrep|fgrep|rg|find|cat|awk|sed|nl|jq|sort|uniq|less|more|bat|tree|head|tail|wc|column|xxd|hexdump|od)[[:space:]]'
+deny_re+='|ls[[:space:]]+-[a-zA-Z]*R'
+deny_re+='|go[[:space:]]+(test|vet)([[:space:]]|$)'
+deny_re+='|git[[:space:]]+(log|diff|show|blame)([[:space:]]|$)'
+deny_re+='|make[[:space:]]+(test|lint|security|coverage|mutation)'
+deny_re+='|(docker|kubectl)[[:space:]]+logs'
+deny_re+='|(python3?|node|ruby|perl)[[:space:]]+-[ce][[:space:]].*(open|read|cat|readfile|file_get)'
+deny_re+=')'
+
+deny_msg='context-mode-required.md: route this through the context-mode tool (ctx_execute / ctx_batch_execute / ctx_execute_file) so raw output stays in the sandbox instead of the conversation.'
+
+# Split the command into segments on shell operators (&& || ; | &) and evaluate
+# each independently. awk handles the \n replacement portably (BSD sed does not).
+segments=$(printf '%s' "$cmd_flat" | awk '{gsub(/\|\||&&|[;|&]/,"\n"); print}')
+while IFS= read -r seg; do
+  [[ -z "${seg//[[:space:]]/}" ]] && continue
+  # A leading allowed verb exempts only this segment.
+  printf '%s' "$seg" | grep -qE "$allow_re" 2>/dev/null && continue
+  if printf '%s' "$seg" | grep -qE "$deny_re" 2>/dev/null; then
+    deny "$deny_msg"
+  fi
+done <<EOF
+$segments
+EOF
 
 exit 0
