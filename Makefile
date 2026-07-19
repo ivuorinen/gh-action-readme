@@ -31,6 +31,8 @@ YAMLFMT_VERSION := v0.21.0
 GOIMPORTS_VERSION := v0.48.0
 # renovate: datasource=go depName=github.com/go-gremlins/gremlins
 GREMLINS_VERSION := v0.6.0
+# renovate: datasource=go depName=github.com/google/go-licenses
+GO_LICENSES_VERSION := v1.6.0
 
 # Tool command shortcuts (avoids long lines in recipes)
 EC_MODULE := github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker
@@ -41,6 +43,7 @@ YAMLFMT_MODULE := github.com/google/yamlfmt/cmd/yamlfmt
 GOIMPORTS_MODULE := golang.org/x/tools/cmd/goimports
 GO_MOD_UPGRADE_MODULE := github.com/oligot/go-mod-upgrade
 GREMLINS_MODULE := github.com/go-gremlins/gremlins/cmd/gremlins
+GO_LICENSES_MODULE := github.com/google/go-licenses
 
 EC := go run $(EC_MODULE)@$(EDITORCONFIG_CHECKER_VERSION)
 GOLANGCI := go run $(GOLANGCI_MODULE)@$(GOLANGCI_LINT_VERSION)
@@ -50,6 +53,10 @@ YAMLFMT := go run $(YAMLFMT_MODULE)@$(YAMLFMT_VERSION)
 GOIMPORTS := go run $(GOIMPORTS_MODULE)@$(GOIMPORTS_VERSION)
 GO_MOD_UPGRADE := go run $(GO_MOD_UPGRADE_MODULE)@$(GO_MOD_UPGRADE_VERSION)
 GREMLINS := go run $(GREMLINS_MODULE)@$(GREMLINS_VERSION)
+GO_LICENSES := go run $(GO_LICENSES_MODULE)@$(GO_LICENSES_VERSION)
+
+# Permissive SPDX licenses allowed for bundled dependencies (repo itself is MIT).
+ALLOWED_LICENSES := Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MIT,MPL-2.0,Unlicense,0BSD
 
 help: ## Show this help message
 	@echo "GitHub Action README Generator - Available Make Targets:"
@@ -172,6 +179,14 @@ pre-commit-update: ## Update pre-commit hooks to latest versions
 
 build: ## Build the application
 	go build -o gh-action-readme .
+
+.PHONY: licenses
+licenses: ## Verify permissive deps and regenerate THIRD_PARTY_LICENSES.md
+	$(GO_LICENSES) check ./... --allowed_licenses=$(ALLOWED_LICENSES)
+	rm -rf .licenses-tmp
+	$(GO_LICENSES) save ./... --save_path=.licenses-tmp --force
+	go run scripts/gen-third-party-licenses.go .licenses-tmp THIRD_PARTY_LICENSES.md
+	rm -rf .licenses-tmp
 
 config-verify: ## Verify golangci-lint configuration
 	$(GOLANGCI) config verify --verbose

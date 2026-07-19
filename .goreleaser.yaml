@@ -12,6 +12,8 @@ before:
     - go test ./...
     # Ensure dependencies are tidy
     - go mod tidy
+    # Verify permissive deps and regenerate the bundled license attribution
+    - make licenses
 
 builds:
   - id: gh-action-readme
@@ -55,6 +57,7 @@ archives:
     files:
       - README.md
       - LICENSE*
+      - THIRD_PARTY_LICENSES.md
       - CHANGELOG.md
       - docs/*.md
       - schemas/*.json
