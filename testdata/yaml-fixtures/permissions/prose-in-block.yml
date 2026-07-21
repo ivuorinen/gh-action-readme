@@ -1,0 +1,8 @@
+# permissions:
+#   contents: read
+#   Note: also needs network access to reach the registry
+name: Prose In Permissions Block
+description: A prose line with a colon sits inside the permissions comment block.
+runs:
+  using: composite
+  steps: []

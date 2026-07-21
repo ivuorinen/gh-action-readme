@@ -63,6 +63,11 @@ type Generator struct {
 	// "Build", or "foo/bar" vs "foo:bar") get a "-N" suffix instead of silently
 	// overwriting each other in a shared --output-dir. Non-nil only during a batch.
 	usedNames map[string]int
+
+	// depRes holds the GitHub client and dependency cache shared across a batch,
+	// so cache.json is read/rewritten once per run instead of once per action
+	// file. Non-nil only during a batch when dependency analysis is enabled.
+	depRes *depResources
 }
 
 // isUnitTestEnvironment detects if we're running unit tests (not integration tests).
@@ -148,20 +153,16 @@ func (g *Generator) CreateDependencyAnalyzer() (*dependencies.Analyzer, error) {
 		depCache = nil
 	}
 
-	// Create cache adapter
-	var cacheAdapter dependencies.DependencyCache
+	// Attach the cache directly: *cache.Cache implements DependencyCache. When
+	// creation failed, leave it a nil interface — the analyzer's nil-guards treat
+	// that as "caching disabled" (assigning the typed-nil pointer would defeat
+	// those guards, so only assign when non-nil).
+	var depCacheIface dependencies.DependencyCache
 	if depCache != nil {
-		cacheAdapter = dependencies.NewCacheAdapter(depCache)
-	} else {
-		cacheAdapter = dependencies.NewNoOpCache()
+		depCacheIface = depCache
 	}
 
-	return dependencies.NewAnalyzer(githubClient, *gitInfo, cacheAdapter), nil
-}
-
-// GenerateFromFile processes a single action.yml file and generates documentation.
-func (g *Generator) GenerateFromFile(actionPath string) error {
-	return g.generateFromFile(actionPath, false)
+	return dependencies.NewAnalyzer(githubClient, *gitInfo, depCacheIface), nil
 }
 
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory
@@ -251,6 +252,17 @@ func (g *Generator) ProcessBatch(paths []string) error {
 	// Reset the per-batch filename map so collisions are disambiguated across this
 	// run's actions (see disambiguateName).
 	g.usedNames = make(map[string]int)
+
+	// Build the shared GitHub client + dependency cache once for the whole batch
+	// (only when dependency analysis is enabled) and release them once at the end,
+	// instead of reconstructing the cache/client for every action file.
+	if g.Config.AnalyzeDependencies {
+		g.depRes = newDepResources(g.Config)
+		defer func() {
+			_ = g.depRes.Close()
+			g.depRes = nil
+		}()
+	}
 
 	bar := g.Progress.CreateProgressBarForFiles("Processing files", paths)
 	parseErrors, successCount := g.processFiles(paths, bar)
@@ -364,20 +376,33 @@ func (g *Generator) validateTheme() error {
 	return nil
 }
 
+// repoRootForAction resolves the repository root from the ACTION file's location,
+// not the output directory. Deriving it from the output dir silently degrades git
+// info and the monorepo uses: path whenever --output-dir points outside the repo
+// (e.g. a /tmp target); the action file is always inside the repo it documents.
+func (g *Generator) repoRootForAction(actionPath string) string {
+	repoRoot, err := git.FindRepositoryRoot(filepath.Dir(actionPath))
+	if err != nil && g.Config.Verbose {
+		g.Output.Info("could not determine repository root for %s: %v", actionPath, err)
+	}
+
+	return repoRoot
+}
+
 // renderTemplateForAction builds template data and renders it using the specified options.
 // It finds the repository root for git information, builds comprehensive template data,
 // and renders the template. Returns the rendered content or an error.
 func (g *Generator) renderTemplateForAction(
 	action *ActionYML,
-	outputDir string,
 	actionPath string,
 	opts TemplateOptions,
 ) (string, error) {
-	// Find repository root for git information
-	repoRoot, _ := git.FindRepositoryRoot(outputDir)
+	repoRoot := g.repoRootForAction(actionPath)
 
-	// Build comprehensive template data
-	templateData := BuildTemplateData(action, g.Config, repoRoot, actionPath)
+	// Build comprehensive template data, reusing the batch-shared cache+client
+	// (g.depRes is nil outside a batch or when dependency analysis is disabled,
+	// in which case buildTemplateData falls back to per-call resources).
+	templateData := buildTemplateData(action, g.Config, repoRoot, actionPath, g.depRes)
 
 	// Render template with data
 	content, err := RenderReadme(templateData, opts)
@@ -413,7 +438,7 @@ func (g *Generator) generateSimpleFormat(
 		Format:       format,
 	}
 
-	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
+	content, err := g.renderTemplateForAction(action, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render %s template: %w", format, err)
 	}
@@ -477,7 +502,7 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Format:       "html",
 	}
 
-	content, err := g.renderTemplateForAction(action, outputDir, actionPath, opts)
+	content, err := g.renderTemplateForAction(action, actionPath, opts)
 	if err != nil {
 		return fmt.Errorf("failed to render HTML template: %w", err)
 	}
@@ -516,8 +541,16 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 // uniqueNames is set (multiple actions sharing one output directory), the file is
 // named per action instead of the fixed action-docs.json so the outputs do not
 // overwrite each other.
-func (g *Generator) generateJSON(action *ActionYML, outputDir string, uniqueNames bool) error {
+func (g *Generator) generateJSON(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	writer := NewJSONWriter(g.Config)
+
+	// Resolve the real uses: reference and repository URL from git so the JSON
+	// output matches the markdown output instead of emitting your-org/@v1 stubs.
+	td := buildTemplateData(action, g.Config, g.repoRootForAction(actionPath), actionPath, g.depRes)
+	writer.usesStatement = td.UsesStatement
+	if td.Git.Organization != "" && td.Git.Repository != "" {
+		writer.repoURL = fmt.Sprintf("%s/%s/%s", appconstants.GitHubBaseURL, td.Git.Organization, td.Git.Repository)
+	}
 
 	jsonFilename := appconstants.ActionDocsJSON
 	if uniqueNames {
@@ -732,7 +765,7 @@ func (g *Generator) generateByFormat(action *ActionYML, outputDir, actionPath st
 	case appconstants.OutputFormatHTML:
 		return g.generateHTML(action, outputDir, actionPath, uniqueNames)
 	case appconstants.OutputFormatJSON:
-		return g.generateJSON(action, outputDir, uniqueNames)
+		return g.generateJSON(action, outputDir, actionPath, uniqueNames)
 	case appconstants.OutputFormatASCIIDoc:
 		return g.generateASCIIDoc(action, outputDir, actionPath, uniqueNames)
 	default:

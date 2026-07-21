@@ -30,7 +30,7 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 			"Add 'description: Brief description of what your action does' for better documentation",
 		)
 	}
-	if len(action.Runs) == 0 {
+	if action.Runs.IsEmpty() {
 		result.MissingFields = append(result.MissingFields, appconstants.FieldRuns)
 		result.Suggestions = append(
 			result.Suggestions,
@@ -38,7 +38,7 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 		)
 	} else {
 		// Validate the runs section content
-		if using, ok := action.Runs["using"].(string); ok {
+		if using := action.Runs.Using; using != "" {
 			if !isValidRuntime(using) {
 				result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
 				result.Suggestions = append(
@@ -59,7 +59,7 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 						),
 					)
 				}
-				validateRunsRequiredField(using, action.Runs, &result)
+				validateRunsRequiredField(using, &action.Runs, &result)
 			}
 		} else {
 			result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
@@ -95,45 +95,31 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 // for docker, steps for composite. Without this, ValidateActionYML reports
 // "all validations passed" for an action GitHub would reject (e.g. a node action
 // with no main).
-func validateRunsRequiredField(using string, runs map[string]any, result *ValidationResult) {
+func validateRunsRequiredField(using string, runs *ActionRuns, result *ValidationResult) {
 	normalized := strings.TrimSpace(strings.ToLower(using))
 
-	var key, field, suggestion string
+	var field, suggestion string
+	var empty bool
 	switch {
 	case strings.HasPrefix(normalized, "node"):
-		key, field = appconstants.RunsKeyMain, appconstants.FieldRunsMain
+		field = appconstants.FieldRunsMain
 		suggestion = "Add 'main:' (the JavaScript entry point, e.g. index.js) to the runs section"
+		empty = strings.TrimSpace(runs.Main) == ""
 	case normalized == appconstants.ActionTypeDocker:
-		key, field = appconstants.RunsKeyImage, appconstants.FieldRunsImage
+		field = appconstants.FieldRunsImage
 		suggestion = "Add 'image:' (a Dockerfile path or a docker:// image) to the runs section"
+		empty = strings.TrimSpace(runs.Image) == ""
 	case normalized == appconstants.ActionTypeComposite:
-		key, field = appconstants.RunsKeySteps, appconstants.FieldRunsSteps
+		field = appconstants.FieldRunsSteps
 		suggestion = "Add 'steps:' to the runs section for a composite action"
+		empty = len(runs.Steps) == 0
 	default:
 		return
 	}
 
-	if val, ok := runs[key]; !ok || isEmptyRuntimeValue(val) {
+	if empty {
 		result.MissingFields = append(result.MissingFields, field)
 		result.Suggestions = append(result.Suggestions, suggestion)
-	}
-}
-
-// isEmptyRuntimeValue reports whether a present runs.* entry carries no usable
-// value (runs.main:, runs.image: "", runs.steps: with no items). GitHub rejects
-// such actions even though the key exists, so key presence alone is insufficient.
-func isEmptyRuntimeValue(v any) bool {
-	switch val := v.(type) {
-	case nil:
-		return true
-	case string:
-		return strings.TrimSpace(val) == ""
-	case []any:
-		return len(val) == 0
-	case map[string]any:
-		return len(val) == 0
-	default:
-		return false
 	}
 }
 

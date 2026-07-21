@@ -80,10 +80,10 @@ type AppConfig struct {
 
 // DefaultValues stores configurable default values for all fields (legacy support).
 type DefaultValues struct {
-	Name        string         `yaml:"name"`
-	Description string         `yaml:"description"`
-	Runs        map[string]any `yaml:"runs"`
-	Branding    Branding       `yaml:"branding"`
+	Name        string     `yaml:"name"`
+	Description string     `yaml:"description"`
+	Runs        ActionRuns `yaml:"runs"`
+	Branding    Branding   `yaml:"branding"`
 }
 
 // GitHubClient wraps the GitHub API client with rate limiting.
@@ -147,7 +147,7 @@ func FillMissing(action *ActionYML, defs DefaultValues) {
 	if action.Description == "" {
 		action.Description = defs.Description
 	}
-	if len(action.Runs) == 0 && len(defs.Runs) > 0 {
+	if action.Runs.IsEmpty() && !defs.Runs.IsEmpty() {
 		action.Runs = defs.Runs
 	}
 	if action.Branding == nil && defs.Branding.Icon != "" {
@@ -260,7 +260,7 @@ func DefaultAppConfig() *AppConfig {
 		Defaults: DefaultValues{
 			Name:        appconstants.LabelGitHubAction,
 			Description: "A reusable GitHub Action.",
-			Runs:        map[string]any{},
+			Runs:        ActionRuns{},
 			Branding: Branding{
 				Icon:  appconstants.ActivityWorkflowType,
 				Color: "blue",
@@ -271,7 +271,7 @@ func DefaultAppConfig() *AppConfig {
 
 // MergeConfigs merges a source config into a destination config, excluding security-sensitive fields.
 func MergeConfigs(dst *AppConfig, src *AppConfig, allowTokens bool) {
-	mergeStringFields(dst, src)
+	mergeStringFields(dst, src, allowTokens)
 	mergeDefaultsFields(dst, src)
 	mergeMapFields(dst, src)
 	mergeSliceFields(dst, src)
@@ -290,7 +290,7 @@ func mergeDefaultsFields(dst *AppConfig, src *AppConfig) {
 	if src.Defaults.Description != "" {
 		dst.Defaults.Description = src.Defaults.Description
 	}
-	if len(src.Defaults.Runs) > 0 {
+	if !src.Defaults.Runs.IsEmpty() {
 		dst.Defaults.Runs = src.Defaults.Runs
 	}
 	if src.Defaults.Branding.Icon != "" {
@@ -302,7 +302,10 @@ func mergeDefaultsFields(dst *AppConfig, src *AppConfig) {
 }
 
 // mergeStringFields merges simple string fields from src to dst if non-empty.
-func mergeStringFields(dst *AppConfig, src *AppConfig) {
+// Template/Header/Footer name local files that ReadTemplate opens, so they are
+// trusted-only (allowTokens): copied from global config, never from an untrusted
+// processed-repo/action config, which could otherwise point them at arbitrary files.
+func mergeStringFields(dst *AppConfig, src *AppConfig, allowTokens bool) {
 	stringFields := []struct {
 		dst *string
 		src string
@@ -314,9 +317,6 @@ func mergeStringFields(dst *AppConfig, src *AppConfig) {
 		{&dst.OutputFormat, src.OutputFormat},
 		{&dst.OutputDir, src.OutputDir},
 		{&dst.OutputFilename, src.OutputFilename},
-		{&dst.Template, src.Template},
-		{&dst.Header, src.Header},
-		{&dst.Footer, src.Footer},
 		{&dst.Schema, src.Schema},
 	}
 
@@ -324,6 +324,24 @@ func mergeStringFields(dst *AppConfig, src *AppConfig) {
 		if field.src != "" {
 			*field.dst = field.src
 		}
+	}
+
+	if allowTokens {
+		mergeTrustedPathFields(dst, src)
+	}
+}
+
+// mergeTrustedPathFields merges the local-file-path string fields that are only
+// safe to accept from a trusted source (global config).
+func mergeTrustedPathFields(dst *AppConfig, src *AppConfig) {
+	if src.Template != "" {
+		dst.Template = src.Template
+	}
+	if src.Header != "" {
+		dst.Header = src.Header
+	}
+	if src.Footer != "" {
+		dst.Footer = src.Footer
 	}
 }
 
@@ -487,16 +505,6 @@ func DetectRepositoryName(repoRoot string) string {
 	}
 
 	return info.GetRepositoryName()
-}
-
-// InitConfig initializes the global configuration using Viper with XDG compliance.
-func InitConfig(configFile string) (*AppConfig, error) {
-	v, err := initializeViperInstance()
-	if err != nil {
-		return nil, err
-	}
-
-	return loadAndUnmarshalConfig(configFile, v)
 }
 
 // WriteDefaultConfig writes a default configuration file to the XDG config directory.

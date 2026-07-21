@@ -207,8 +207,6 @@ func TestNullOutputInterfaceCompliance(t *testing.T) {
 
 	var _ CompleteOutput = (*NullOutput)(nil)
 	var _ MessageLogger = (*NullOutput)(nil)
-	var _ ErrorReporter = (*NullOutput)(nil)
-	var _ ErrorFormatter = (*NullOutput)(nil)
 	var _ ProgressReporter = (*NullOutput)(nil)
 	var _ QuietChecker = (*NullOutput)(nil)
 }

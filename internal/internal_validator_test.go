@@ -15,7 +15,7 @@ func TestValidateActionYMLRequired(t *testing.T) {
 	a := &ActionYML{
 		Name:        "",
 		Description: "",
-		Runs:        map[string]any{},
+		Runs:        ActionRuns{},
 	}
 	res := ValidateActionYML(a)
 	if len(res.MissingFields) == 0 {
@@ -28,7 +28,7 @@ func TestValidateActionYMLValid(t *testing.T) {
 	a := &ActionYML{
 		Name:        testutil.TestActionNameMyAction,
 		Description: testGenShortDesc,
-		Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20, "main": "index.js"},
+		Runs:        ActionRuns{Using: appconstants.NodeRuntimeNode20, Main: "index.js"},
 	}
 	res := ValidateActionYML(a)
 	if len(res.MissingFields) != 0 {
@@ -62,7 +62,7 @@ func TestValidateActionYML_DeprecatedRuntime(t *testing.T) {
 			a := &ActionYML{
 				Name:        testGenActionName,
 				Description: testGenShortDesc,
-				Runs:        map[string]any{testGenRunsUsing: runtime, "main": "index.js"},
+				Runs:        ActionRuns{Using: runtime, Main: "index.js"},
 			}
 			res := ValidateActionYML(a)
 
@@ -102,7 +102,7 @@ func TestValidateActionYMLMissingRuntimeFields(t *testing.T) {
 			a := &ActionYML{
 				Name:        testGenActionName,
 				Description: testGenShortDesc,
-				Runs:        map[string]any{testGenRunsUsing: tt.using},
+				Runs:        ActionRuns{Using: tt.using},
 			}
 			res := ValidateActionYML(a)
 
@@ -136,7 +136,7 @@ func TestValidateActionYML_BrandingWarning(t *testing.T) {
 		return &ActionYML{
 			Name:        testGenActionName,
 			Description: testGenShortDesc,
-			Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+			Runs:        ActionRuns{Using: appconstants.NodeRuntimeNode20},
 		}
 	}
 
@@ -173,7 +173,7 @@ func TestValidateActionYML_InputsWarning(t *testing.T) {
 		return &ActionYML{
 			Name:        testGenActionName,
 			Description: testGenShortDesc,
-			Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+			Runs:        ActionRuns{Using: appconstants.NodeRuntimeNode20},
 			Branding:    &Branding{Icon: appconstants.ActivityWorkflowType},
 		}
 	}
@@ -210,7 +210,7 @@ func TestValidateActionYML_OutputsWarning(t *testing.T) {
 		return &ActionYML{
 			Name:        testGenActionName,
 			Description: testGenShortDesc,
-			Runs:        map[string]any{testGenRunsUsing: appconstants.NodeRuntimeNode20},
+			Runs:        ActionRuns{Using: appconstants.NodeRuntimeNode20},
 			Branding:    &Branding{Icon: appconstants.ActivityWorkflowType},
 			Inputs:      map[string]ActionInput{testGenTokenKey: {Description: "A token"}},
 		}

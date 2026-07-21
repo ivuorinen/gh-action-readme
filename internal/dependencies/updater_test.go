@@ -57,7 +57,7 @@ func TestAnalyzerClose(t *testing.T) {
 
 	t.Run("no-op cache closes cleanly", func(t *testing.T) {
 		t.Parallel()
-		a := &Analyzer{Cache: NewNoOpCache()}
+		a := &Analyzer{Cache: nil}
 		if err := a.Close(); err != nil {
 			t.Errorf("Close() with no-op cache = %v, want nil", err)
 		}
@@ -67,7 +67,7 @@ func TestAnalyzerClose(t *testing.T) {
 		t.Parallel()
 		c, err := cache.NewCache(isolatedCacheConfig(t))
 		testutil.AssertNoError(t, err)
-		a := &Analyzer{Cache: NewCacheAdapter(c)}
+		a := &Analyzer{Cache: c}
 		if err := a.Close(); err != nil {
 			t.Errorf("Close() with real cache = %v, want nil", err)
 		}
@@ -84,7 +84,7 @@ func newTestAnalyzer(t *testing.T) (*Analyzer, func()) {
 	testutil.AssertNoError(t, err)
 
 	analyzer := &Analyzer{
-		Cache: NewCacheAdapter(cacheInstance),
+		Cache: cacheInstance,
 	}
 
 	return analyzer, testutil.CleanupCache(t, cacheInstance)
@@ -537,7 +537,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 
 				return &Analyzer{
 					GitHubClient: mockClient,
-					Cache:        NewCacheAdapter(cacheInstance),
+					Cache:        cacheInstance,
 				}
 			},
 			owner:       testUpdaterOwner,
@@ -566,7 +566,7 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 
 				return &Analyzer{
 					GitHubClient: mockClient,
-					Cache:        NewCacheAdapter(cacheInstance),
+					Cache:        cacheInstance,
 				}
 			},
 			owner:       testUpdaterOwner,
@@ -583,8 +583,8 @@ func TestGetLatestTagEdgeCases(t *testing.T) {
 			if analyzer.Cache != nil {
 				// Clean up cache if it exists
 				defer func() {
-					if ca, ok := analyzer.Cache.(*CacheAdapter); ok {
-						_ = ca.cache.Close()
+					if c, ok := analyzer.Cache.(*cache.Cache); ok {
+						_ = c.Close()
 					}
 				}()
 			}
@@ -640,7 +640,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 				testutil.AssertNoError(t, err)
 				_ = c.Set(testutil.CacheTestKey, "invalid-string")
 
-				return &Analyzer{Cache: NewCacheAdapter(c)}, testutil.CleanupCache(t, c)
+				return &Analyzer{Cache: c}, testutil.CleanupCache(t, c)
 			},
 			cacheKey: testutil.CacheTestKey,
 		},
@@ -651,7 +651,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 				c, err := cache.NewCache(isolatedCacheConfig(t))
 				testutil.AssertNoError(t, err)
 
-				return &Analyzer{Cache: NewCacheAdapter(c)}, testutil.CleanupCache(t, c)
+				return &Analyzer{Cache: c}, testutil.CleanupCache(t, c)
 			},
 			cacheKey: "nonexistent-key",
 		},
@@ -682,7 +682,7 @@ func TestCacheVersionEdgeCases(t *testing.T) {
 		testutil.AssertNoError(t, err)
 		defer testutil.CleanupCache(t, cacheInstance)()
 
-		analyzer := &Analyzer{Cache: NewCacheAdapter(cacheInstance)}
+		analyzer := &Analyzer{Cache: cacheInstance}
 
 		// Cache a version
 		analyzer.cacheVersion(testutil.CacheTestKey, testutil.TestVersionSemantic, "def456")

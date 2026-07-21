@@ -103,9 +103,12 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 			critical: true,
 		},
 		{
-			name:     "colon_in_value_preserved",
+			// The value "read:write" is not a real permission level, so it is
+			// rejected. SplitN's colon-preserving behavior is covered directly by
+			// TestParsePermissionLineMutationResistance.
+			name:     "colon_in_value_rejected",
 			yaml:     testutil.MustReadFixture(fixtureDir + "colon-in-value-preserved.yaml"),
-			expected: map[string]string{testutil.PermissionContents: "read:write"},
+			expected: map[string]string{},
 			critical: true,
 		},
 		{
@@ -127,9 +130,12 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 			critical: true,
 		},
 		{
-			name:     "multiple_colons_splits_at_first",
+			// A value containing colons (a URL) is never a valid permission level, so
+			// it is rejected rather than recorded. SplitN's split-at-first-colon
+			// mechanic is covered directly by TestParsePermissionLineMutationResistance.
+			name:     "colon_value_rejected",
 			yaml:     testutil.MustReadFixture(fixtureDir + "multiple-colons-splits-at-first.yaml"),
-			expected: map[string]string{"url": "https://example.com:8080"},
+			expected: map[string]string{},
 			critical: true,
 		},
 		{
@@ -156,7 +162,7 @@ func buildPermissionParsingTestCases() []permissionParsingTestCase {
 		{
 			name:     "minimal_valid_permission",
 			yaml:     testutil.MustReadFixture(fixtureDir + "minimal-valid-permission.yaml"),
-			expected: map[string]string{"x": "y"},
+			expected: map[string]string{"x": testutil.PermissionRead},
 			critical: true,
 		},
 		{

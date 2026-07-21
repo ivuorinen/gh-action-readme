@@ -33,12 +33,12 @@ Cobra commands, coordination only
 Evidence:
 
 - `internal/interfaces.go` defines focused interfaces: `MessageLogger`, `ErrorReporter`, `ErrorFormatter`,
-`ProgressReporter`, `QuietChecker`, `ProgressManager`, `OutputWriter`, `ErrorManager`, `MessagingOutput`
+`ProgressReporter`, `QuietChecker`, `ProgressManager`, `OutputWriter`
 - `CompleteOutput` composite interface explicitly documented as backward-compat escape hatch
 - `DependencyCache` interface in `internal/dependencies/analyzer.go`
 - `InputReader` interface in `cmd_deps.go` for stdin abstraction
 - `executableTemplate` interface in `internal/template.go`
-- Wizard constructors accept narrowest interface (`internal.MessageLogger` / `internal.MessagingOutput`), not
+- Wizard constructors accept narrowest interface (`internal.MessageLogger`), not
 concrete `*ColoredOutput` — confirmed in `detector.go`, `exporter.go`, `validator.go`, `wizard.go`
 
 ### Dependency Injection — High confidence
@@ -129,7 +129,7 @@ entrypoints. May import its subpackages and `appconstants`.
 - `internal/validation/` — action.yml validation. Imports `appconstants`, `internal/git`. Must not import `internal`.
 - `internal/helpers/` — small helpers. Imports `internal/git` only. Must not import `internal`.
 - `internal/wizard/` — interactive config wizard. Imports `appconstants`, `internal`, `internal/git`,
-`internal/helpers`. NOTE: it imports parent `internal` for `AppConfig` and `MessageLogger`/`MessagingOutput` —
+`internal/helpers`. NOTE: it imports parent `internal` for `AppConfig` and `MessageLogger` —
 a documented, accepted coupling (see Ambiguities).
 - `templates_embed/` — embedded template FS. Imports only `appconstants`.
 - `testutil/` — test-only helpers. Imports only `appconstants`. Must be imported solely from test files.

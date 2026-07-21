@@ -33,6 +33,7 @@
     "testdata/yaml-fixtures/invalid-action\\.yml$",
     "testdata/yaml-fixtures/.*-template\\.yml$",
     "cr\\.md$",
-    "docs/superpowers/"
+    "docs/superpowers/",
+    "docs/audit/findings/"
   ]
 }

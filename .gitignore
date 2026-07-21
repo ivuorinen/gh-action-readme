@@ -1,5 +1,7 @@
 # Binaries
 /dist/
+# go-licenses save scratch dir (see `make licenses`)
+/.licenses-tmp/
 *.exe
 *.dll
 *.so
@@ -39,3 +41,7 @@ coverage.*
 /megalinter-reports/
 cr.txt
 pr.txt
+
+!docs/audit/**
+!**/.claude/*
+.claude/settings.local.json

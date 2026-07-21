@@ -48,6 +48,7 @@ func cacheClearHandler(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
+	defer func() { _ = cacheInstance.Close() }()
 
 	if err := cacheInstance.Clear(); err != nil {
 		return fmt.Errorf("failed to clear cache: %w", err)
@@ -66,6 +67,7 @@ func cacheStatsHandler(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
+	defer func() { _ = cacheInstance.Close() }()
 
 	stats := cacheInstance.Stats()
 
@@ -74,18 +76,20 @@ func cacheStatsHandler(_ *cobra.Command, _ []string) error {
 		cacheDir = appconstants.CachePathUnknown
 	}
 
+	// The "Cache Statistics:" heading is decorative and honors --quiet, but the
+	// statistics themselves are this command's primary output and print
+	// unconditionally so `--quiet cache stats` is still usable in scripts.
 	output.Bold("Cache Statistics:")
-	output.Printf("Cache location: %s\n", cacheDir)
-	output.Printf("Total entries: %d\n", stats["total_entries"])
-	output.Printf("Expired entries: %d\n", stats["expired_count"])
 
 	// Format size nicely
 	totalSize, ok := stats["total_size"].(int64)
 	if !ok {
 		totalSize = 0
 	}
-	sizeStr := formatSize(totalSize)
-	output.Printf("Total size: %s\n", sizeStr)
+	_, _ = fmt.Fprintf(os.Stdout, "Cache location: %s\n", cacheDir)
+	_, _ = fmt.Fprintf(os.Stdout, "Total entries: %d\n", stats["total_entries"])
+	_, _ = fmt.Fprintf(os.Stdout, "Expired entries: %d\n", stats["expired_count"])
+	_, _ = fmt.Fprintf(os.Stdout, "Total size: %s\n", formatSize(totalSize))
 
 	return nil
 }
@@ -98,6 +102,7 @@ func cachePathHandler(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return wrapError(appconstants.ErrFailedToAccessCache, err)
 	}
+	defer func() { _ = cacheInstance.Close() }()
 
 	stats := cacheInstance.Stats()
 	cachePath, ok := stats[appconstants.CacheStatsKeyDir].(string)
@@ -105,8 +110,11 @@ func cachePathHandler(_ *cobra.Command, _ []string) error {
 		cachePath = appconstants.CachePathUnknown
 	}
 
+	// The heading is decorative and honors --quiet; the path is the command's
+	// primary output and prints unconditionally so `--quiet cache path` still
+	// yields the path for scripting.
 	output.Bold("Cache Directory:")
-	output.Printf("%s\n", cachePath)
+	_, _ = fmt.Fprintln(os.Stdout, cachePath)
 
 	// Only stat a real path. The sentinel is not a filesystem path, so statting
 	// it would resolve a bogus relative path in the current directory.

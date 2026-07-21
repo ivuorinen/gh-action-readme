@@ -50,12 +50,6 @@ func newDepsCmd() *cobra.Command {
 		Run:   wrapHandlerWithErrorHandling(depsOutdatedHandler),
 	})
 
-	cmd.AddCommand(&cobra.Command{
-		Use:   "graph",
-		Short: "Generate dependency graph",
-		Run:   wrapHandlerWithErrorHandling(depsGraphHandler),
-	})
-
 	upgradeCmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Upgrade dependencies with interactive or CI mode",
@@ -382,9 +376,6 @@ func displayOutdatedResults(output internal.MessageLogger, allOutdated []depende
 			outdated.Current.Version,
 			outdated.LatestVersion,
 			outdated.UpdateType)
-		if outdated.IsSecurityUpdate {
-			output.Warning("    🔒 Potential security update")
-		}
 	}
 
 	output.Info("\nRun 'gh-action-readme deps upgrade' to update dependencies")
@@ -414,8 +405,14 @@ func depsUpgradeHandler(cmd *cobra.Command, _ []string) error {
 
 	showUpgradeMode(output, ciMode, isPinCmd)
 
-	// Collect all updates
-	allUpdates := collectAllUpdates(output, analyzer, actionFiles)
+	// Collect updates. `pin` pins each floating ref to its CURRENT SHA (no upgrade);
+	// `upgrade` resolves the latest release for outdated deps.
+	var allUpdates []dependencies.PinnedUpdate
+	if isPinCmd {
+		allUpdates = collectPinUpdates(output, analyzer, actionFiles)
+	} else {
+		allUpdates = collectAllUpdates(output, analyzer, actionFiles)
+	}
 	if len(allUpdates) == 0 {
 		output.Success("✅ No updates needed - all dependencies are current and pinned!")
 
@@ -527,6 +524,41 @@ func collectAllUpdates(
 	return allUpdates
 }
 
+// collectPinUpdates gathers pin-in-place updates: each floating dependency pinned to
+// the SHA of its CURRENT ref, without upgrading. Deps that are already pinned, local,
+// shell, or non-semver are skipped (GeneratePinInPlace returns nil for them).
+func collectPinUpdates(
+	output internal.MessageLogger,
+	analyzer *dependencies.Analyzer,
+	actionFiles []string,
+) []dependencies.PinnedUpdate {
+	var allUpdates []dependencies.PinnedUpdate
+
+	for _, actionFile := range actionFiles {
+		deps, err := analyzer.AnalyzeActionFile(actionFile)
+		if err != nil {
+			output.Warning(appconstants.ErrErrorAnalyzing, actionFile, err)
+
+			continue
+		}
+
+		for _, dep := range deps {
+			update, err := analyzer.GeneratePinInPlace(actionFile, dep)
+			if err != nil {
+				output.Warning("Error pinning %s: %v", dep.Name, err)
+
+				continue
+			}
+			if update == nil {
+				continue // not a floating remote-action semver ref
+			}
+			allUpdates = append(allUpdates, *update)
+		}
+	}
+
+	return allUpdates
+}
+
 // showPendingUpdates displays what updates will be applied.
 func showPendingUpdates(
 	output internal.MessageLogger,
@@ -589,15 +621,6 @@ func applyUpdates(
 		}
 		output.Success("✅ Successfully updated %d dependencies", len(allUpdates))
 	}
-
-	return nil
-}
-
-func depsGraphHandler(_ *cobra.Command, _ []string) error {
-	output := createOutputManager(globalConfig.Quiet)
-	output.Bold("Dependency Graph:")
-	output.Info("Generating visual dependency graph...")
-	output.Printf("This feature is not yet implemented\n")
 
 	return nil
 }

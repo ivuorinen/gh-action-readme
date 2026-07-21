@@ -337,7 +337,7 @@ func TestCovAnalyzerEnrichWithGitHubData(t *testing.T) {
 	t.Run("cache hit returns stored description", func(t *testing.T) {
 		t.Parallel()
 
-		analyzer := &Analyzer{Cache: NewCacheAdapter(newIsolatedCache(t))}
+		analyzer := &Analyzer{Cache: newIsolatedCache(t)}
 		cacheKey := appconstants.CacheKeyRepo + fmt.Sprintf("%s/%s", testDepOwnerActions, testDepRepoCheckout)
 		testutil.AssertNoError(t, analyzer.Cache.Set(cacheKey, covRepoDesc))
 
@@ -352,7 +352,7 @@ func TestCovAnalyzerEnrichWithGitHubData(t *testing.T) {
 
 		analyzer := &Analyzer{
 			GitHubClient: testutil.MockGitHubClient(testutil.MockGitHubResponses()),
-			Cache:        NewCacheAdapter(newIsolatedCache(t)),
+			Cache:        newIsolatedCache(t),
 		}
 
 		dep := &Dependency{}

@@ -61,12 +61,12 @@ func testJSONGeneration(t *testing.T) {
 
 	testFormatGeneration(
 		t,
-		func(g *Generator, a *ActionYML, out, _ string) error {
-			return g.generateJSON(a, out, false)
+		func(g *Generator, a *ActionYML, out, path string) error {
+			return g.generateJSON(a, out, path, false)
 		},
 		"action-docs.json",
 		"JSON",
-		false, // doesn't need actionPath
+		true, // needs actionPath to resolve the uses: reference
 	)
 }
 
@@ -90,7 +90,7 @@ func createTestAction() *ActionYML {
 	return &ActionYML{
 		Name:        testutil.TestActionName,
 		Description: testutil.TestActionDesc,
-		Runs:        map[string]any{testGenRunsUsing: appconstants.ActionTypeComposite},
+		Runs:        ActionRuns{Using: appconstants.ActionTypeComposite},
 	}
 }
 

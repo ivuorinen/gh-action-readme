@@ -102,45 +102,6 @@ func New(code appconstants.ErrorCode, message string) *ContextualError {
 	}
 }
 
-// Wrap wraps an existing error with contextual information.
-func Wrap(err error, code appconstants.ErrorCode, context string) *ContextualError {
-	if err == nil {
-		return nil
-	}
-
-	// If already a ContextualError, preserve existing info by creating a copy
-	if ce, ok := err.(*ContextualError); ok {
-		// Create a copy to avoid mutating the original
-		errCopy := &ContextualError{
-			Code:    ce.Code,
-			Err:     ce.Err,
-			Context: ce.Context,
-			// Clone the slice so a later WithSuggestions append on the copy cannot
-			// write into the original's backing array (the comment above promises
-			// the original is not mutated).
-			Suggestions: slices.Clone(ce.Suggestions),
-			HelpURL:     ce.HelpURL,
-			Details:     maps.Clone(ce.Details),
-		}
-
-		// Only update if not already set
-		if errCopy.Code == appconstants.ErrCodeUnknown {
-			errCopy.Code = code
-		}
-		if errCopy.Context == "" {
-			errCopy.Context = context
-		}
-
-		return errCopy
-	}
-
-	return &ContextualError{
-		Code:    code,
-		Err:     err,
-		Context: context,
-	}
-}
-
 // WithSuggestions adds suggestions to a ContextualError.
 func (ce *ContextualError) WithSuggestions(suggestions ...string) *ContextualError {
 	ce.Suggestions = append(ce.Suggestions, suggestions...)

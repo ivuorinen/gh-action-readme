@@ -2,6 +2,7 @@ package dependencies
 
 import (
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -49,7 +50,7 @@ func runAnalyzeActionFileTest(t *testing.T, tt analyzeActionFileTestCase) {
 
 	analyzer := &Analyzer{
 		GitHubClient: githubClient,
-		Cache:        NewCacheAdapter(cacheInstance),
+		Cache:        cacheInstance,
 	}
 
 	deps, err := analyzer.AnalyzeActionFile(actionPath)
@@ -226,7 +227,7 @@ func TestAnalyzerParseUsesStatement(t *testing.T) {
 			uses:            "octocat/hello-world@main",
 			expectedOwner:   "octocat",
 			expectedRepo:    "hello-world",
-			expectedVersion: "main",
+			expectedVersion: appconstants.GitDefaultBranch,
 			expectedType:    BranchName,
 		},
 		{
@@ -305,7 +306,7 @@ func TestAnalyzerVersionChecking(t *testing.T) {
 		},
 		{
 			name:        "branch reference",
-			version:     "main",
+			version:     appconstants.GitDefaultBranch,
 			isPinned:    false,
 			isCommitSHA: false,
 			isSemantic:  false,
@@ -607,6 +608,17 @@ func TestAnalyzerOutdatedUpdateType(t *testing.T) {
 			latestSHA:      sha,
 			want:           appconstants.UpdateTypeMajor,
 		},
+		{
+			// A branch ref (e.g. @main) tracks a moving target; it must NOT be
+			// semver-compared and reported as a major update, which would rewrite
+			// @main into a SHA pin and destroy branch-tracking.
+			name:           "branch ref is never reported as an update",
+			versionType:    BranchName,
+			currentVersion: appconstants.GitDefaultBranch,
+			latestVersion:  testutil.TestVersionV4_1_1,
+			latestSHA:      sha,
+			want:           appconstants.UpdateTypeNone,
+		},
 	}
 
 	for _, tt := range tests {
@@ -616,6 +628,48 @@ func TestAnalyzerOutdatedUpdateType(t *testing.T) {
 			got := analyzer.outdatedUpdateType(tt.versionType, tt.currentVersion, tt.latestVersion, tt.latestSHA)
 			testutil.AssertEqual(t, tt.want, got)
 		})
+	}
+}
+
+// TestUpdateActionFilePreservesExistingBackup verifies that applying an update to
+// an action file does NOT overwrite or delete a pre-existing "<file>.backup" that
+// the user maintains. The backup is now written to a unique temp file, so a
+// user-owned .backup must survive an update untouched.
+func TestUpdateActionFilePreservesExistingBackup(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	actionPath := testutil.WriteActionFixtureAs(
+		t, dir, appconstants.ActionFileNameYML, testutil.TestFixtureCompositeWithDeps,
+	)
+
+	// A backup file the user keeps, colliding with the old hard-coded backup name.
+	userBackup := actionPath + appconstants.BackupExtension
+	const sentinel = "user's own backup - must not be touched"
+	testutil.WriteTestFile(t, userBackup, sentinel)
+
+	analyzer := &Analyzer{}
+	err := analyzer.ApplyPinnedUpdates([]PinnedUpdate{{
+		FilePath: actionPath,
+		OldUses:  testutil.TestActionCheckoutV4,
+		NewUses:  "actions/checkout@" + testutil.TestSHAForTesting + " # v4.1.1",
+	}})
+	testutil.AssertNoError(t, err)
+
+	// The pre-existing backup must be byte-for-byte intact.
+	got, readErr := os.ReadFile(userBackup) // #nosec G304 -- test-controlled path
+	testutil.AssertNoError(t, readErr)
+	testutil.AssertEqual(t, sentinel, string(got))
+
+	// The update must actually have applied to the action file.
+	updated, readErr := os.ReadFile(actionPath) // #nosec G304 -- test-controlled path
+	testutil.AssertNoError(t, readErr)
+	testutil.AssertStringContains(t, string(updated), "actions/checkout@"+testutil.TestSHAForTesting)
+
+	// No stray temp backup should be left behind on success.
+	leftovers, _ := filepath.Glob(actionPath + ".bak-*")
+	if len(leftovers) != 0 {
+		t.Errorf("expected temp backup to be removed on success, found: %v", leftovers)
 	}
 }
 
@@ -674,7 +728,7 @@ func TestAnalyzerWithCache(t *testing.T) {
 
 	// Test that caching works properly
 	mockResponses := testutil.MockGitHubResponses()
-	githubClient := testutil.MockGitHubClient(mockResponses)
+	githubClient, spy := testutil.MockGitHubClientWithSpy(mockResponses)
 	cacheInstance := newIsolatedCache(t)
 
 	analyzer := &Analyzer{
@@ -685,6 +739,10 @@ func TestAnalyzerWithCache(t *testing.T) {
 	// First call should hit the API
 	version1, sha1, err1 := analyzer.getLatestVersion(testDepOwnerActions, testDepRepoCheckout)
 	testutil.AssertNoError(t, err1)
+	requestsAfterFirst := len(spy.Requests)
+	if requestsAfterFirst == 0 {
+		t.Fatal("expected first getLatestVersion call to make at least one upstream request")
+	}
 
 	// Second call should hit the cache
 	version2, sha2, err2 := analyzer.getLatestVersion(testDepOwnerActions, testDepRepoCheckout)
@@ -693,6 +751,13 @@ func TestAnalyzerWithCache(t *testing.T) {
 	// Results should be identical
 	testutil.AssertEqual(t, version1, version2)
 	testutil.AssertEqual(t, sha1, sha2)
+
+	// The cache must serve the second call with zero additional upstream requests;
+	// otherwise the test would pass even if the cache never stored anything.
+	if got := len(spy.Requests); got != requestsAfterFirst {
+		t.Errorf("cached call made %d extra upstream request(s); want the count to stay at %d",
+			got-requestsAfterFirst, requestsAfterFirst)
+	}
 }
 
 func TestAnalyzerRateLimitHandling(t *testing.T) {
@@ -801,14 +866,14 @@ func TestNewAnalyzer(t *testing.T) {
 			name:         "creates analyzer with all dependencies",
 			client:       githubClient,
 			repoInfo:     repoInfo,
-			cache:        NewCacheAdapter(cacheInstance),
+			cache:        cacheInstance,
 			expectNotNil: true,
 		},
 		{
 			name:         "creates analyzer with nil client",
 			client:       nil,
 			repoInfo:     repoInfo,
-			cache:        NewCacheAdapter(cacheInstance),
+			cache:        cacheInstance,
 			expectNotNil: true,
 		},
 		{
@@ -822,7 +887,7 @@ func TestNewAnalyzer(t *testing.T) {
 			name:         "creates analyzer with empty repo info",
 			client:       githubClient,
 			repoInfo:     git.RepoInfo{},
-			cache:        NewCacheAdapter(cacheInstance),
+			cache:        cacheInstance,
 			expectNotNil: true,
 		},
 	}
@@ -851,65 +916,6 @@ func TestNewAnalyzer(t *testing.T) {
 	}
 }
 
-// TestNoOpCache tests the no-op cache implementation.
-func TestNoOpCache(t *testing.T) {
-	t.Parallel()
-
-	noc := NewNoOpCache()
-	if noc == nil {
-		t.Fatal("NewNoOpCache() returned nil")
-	}
-
-	// Test Get - should always return false
-	val, ok := noc.Get(testutil.CacheTestKey)
-	if ok {
-		t.Error("NoOpCache.Get() should return false")
-	}
-	if val != nil {
-		t.Error("NoOpCache.Get() should return nil value")
-	}
-
-	// Test Set - should not error
-	err := noc.Set(testutil.CacheTestKey, testutil.CacheTestValue)
-	if err != nil {
-		t.Errorf("NoOpCache.Set() returned error: %v", err)
-	}
-
-	// Test SetWithTTL - should not error
-	err = noc.SetWithTTL(testutil.CacheTestKey, testutil.CacheTestValue, time.Hour)
-	if err != nil {
-		t.Errorf("NoOpCache.SetWithTTL() returned error: %v", err)
-	}
-}
-
-// TestCacheAdapterSet tests the cache adapter Set method.
-func TestCacheAdapterSet(t *testing.T) {
-	t.Parallel()
-
-	c, err := cache.NewCache(isolatedCacheConfig(t))
-	if err != nil {
-		t.Fatalf("failed to create cache: %v", err)
-	}
-	defer testutil.CleanupCache(t, c)()
-
-	adapter := NewCacheAdapter(c)
-
-	// Test Set
-	err = adapter.Set(testutil.CacheTestKey, testutil.CacheTestValue)
-	if err != nil {
-		t.Errorf("CacheAdapter.Set() returned error: %v", err)
-	}
-
-	// Verify value was set
-	val, ok := adapter.Get(testutil.CacheTestKey)
-	if !ok {
-		t.Error("CacheAdapter.Get() should return true after Set")
-	}
-	if val != testutil.CacheTestValue {
-		t.Errorf("CacheAdapter.Get() = %v, want %q", val, testutil.CacheTestValue)
-	}
-}
-
 // TestIsCompositeAction tests composite action detection.
 func TestValidateActionType(t *testing.T) {
 	t.Parallel()
@@ -933,68 +939,6 @@ func TestValidateActionType(t *testing.T) {
 
 	if err := analyzer.validateActionType("node18"); err == nil {
 		t.Error("validateActionType(\"node18\") expected error, got nil")
-	}
-}
-
-func TestIsCompositeAction(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		fixture string
-		want    bool
-		wantErr bool
-	}{
-		{
-			name:    testutil.TestCaseNameCompositeAction,
-			fixture: testutil.TestFixtureCompositeActionAnalyzer,
-			want:    true,
-			wantErr: false,
-		},
-		{
-			name:    "docker action",
-			fixture: "docker-action.yml",
-			want:    false,
-			wantErr: false,
-		},
-		{
-			name:    testutil.TestCaseNameJavaScriptAction,
-			fixture: "javascript-action.yml",
-			want:    false,
-			wantErr: false,
-		},
-		{
-			name:    testutil.TestCaseNameInvalidYAML,
-			fixture: "invalid.yml",
-			want:    false,
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Read fixture content using safe helper
-			yamlContent := testutil.MustReadAnalyzerFixture(tt.fixture)
-
-			// Create temp file with action YAML
-			tmpDir, cleanup := testutil.TempDir(t)
-			defer cleanup()
-
-			actionPath := filepath.Join(tmpDir, appconstants.ActionFileNameYML)
-			testutil.WriteTestFile(t, actionPath, yamlContent)
-
-			got, err := IsCompositeAction(actionPath)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("IsCompositeAction() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
-			if got != tt.want {
-				t.Errorf("IsCompositeAction() = %v, want %v", got, tt.want)
-			}
-		})
 	}
 }
 
@@ -1077,6 +1021,59 @@ func TestGetCommitSHAForTag_AnnotatedTagDerefFailure(t *testing.T) {
 	}
 }
 
+// TestGeneratePinInPlace verifies that pin resolves a floating ref to the SHA of its
+// CURRENT tag (not the latest release, which would silently upgrade) and skips deps
+// that are not floating remote-action semver refs.
+func TestGeneratePinInPlace(t *testing.T) {
+	t.Parallel()
+
+	const (
+		curTag    = "v4"
+		commitSHA = "3333333333333333333333333333333333333333"
+	)
+
+	base := "GET https://api.github.com/repos/pinorg/pinrepo"
+	refJSON := `{"ref":"refs/tags/` + curTag + `","object":{"type":"commit","sha":"` + commitSHA + `"}}`
+	mockResponses := map[string]string{
+		base + "/git/ref/tags/" + curTag: refJSON,
+	}
+
+	analyzer := &Analyzer{
+		GitHubClient: testutil.MockGitHubClient(mockResponses),
+		Cache:        newIsolatedCache(t),
+	}
+
+	update, err := analyzer.GeneratePinInPlace("action.yml", Dependency{Uses: "pinorg/pinrepo@" + curTag})
+	if err != nil {
+		t.Fatalf("GeneratePinInPlace returned error: %v", err)
+	}
+	if update == nil {
+		t.Fatal("GeneratePinInPlace returned nil for a floating ref; want a pin")
+	}
+
+	wantUses := "pinorg/pinrepo@" + commitSHA + " # " + curTag
+	if update.NewUses != wantUses {
+		t.Errorf("NewUses = %q, want %q (pin must use the current ref's SHA, not upgrade)", update.NewUses, wantUses)
+	}
+	if update.Version != curTag {
+		t.Errorf("Version = %q, want %q (pin must not upgrade the version)", update.Version, curTag)
+	}
+
+	// Deps that are not floating remote-action semver refs yield (nil, nil).
+	skips := map[string]Dependency{
+		"already pinned": {Uses: "pinorg/pinrepo@v4", IsPinned: true},
+		"local action":   {Uses: "./local", IsLocalAction: true},
+		"shell script":   {Uses: "run.sh", IsShellScript: true},
+		"branch ref":     {Uses: "pinorg/pinrepo@main"},
+	}
+	for name, dep := range skips {
+		u, err := analyzer.GeneratePinInPlace("action.yml", dep)
+		if err != nil || u != nil {
+			t.Errorf("GeneratePinInPlace(%s) = (%v, %v), want (nil, nil)", name, u, err)
+		}
+	}
+}
+
 // TestGeneratePinnedUpdate_RejectsInjection verifies that a malformed/injection-
 // bearing SHA or version tag (e.g. from a compromised/proxied API) is refused
 // rather than written verbatim into the user's action.yml.
@@ -1106,7 +1103,7 @@ func TestGeneratePinnedUpdate_RejectsInjection(t *testing.T) {
 func TestGetCachedVersionTreatsPartialDataAsMiss(t *testing.T) {
 	t.Parallel()
 
-	analyzer := &Analyzer{Cache: NewCacheAdapter(newIsolatedCache(t))}
+	analyzer := &Analyzer{Cache: newIsolatedCache(t)}
 
 	const wantVer, wantSHA = "v1", "abc"
 	partial := map[string]map[string]any{

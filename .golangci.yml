@@ -30,9 +30,11 @@ linters:
     - bodyclose
     - canonicalheader
     - contextcheck
+    - depguard
     - dupl
     - errname
     - exhaustive
+    - forbidigo
     - forcetypeassert
     - funcorder
     - goconst
@@ -77,6 +79,37 @@ linters:
     goconst:
       min-len: 2
       min-occurrences: 3
+    # github-token-accessor.md: read the token via internal.GetGitHubToken(config).
+    # Direct config.GitHubToken field access is forbidden outside the loader/merge/
+    # redaction sites exempted under linters.exclusions.rules below.
+    forbidigo:
+      forbid:
+        - pattern: 'config\.GitHubToken'
+          msg: "read the token via internal.GetGitHubToken(config); direct config.GitHubToken access is restricted (github-token-accessor.md)"
+    # no-testutil-in-production.md: testutil is test-only.
+    depguard:
+      rules:
+        no-testutil-in-prod:
+          files:
+            - "!$test"
+          deny:
+            - pkg: github.com/ivuorinen/gh-action-readme/testutil
+              desc: "testutil is test-only; import it only from _test.go files (no-testutil-in-production.md)"
+
+  # forbidigo: exempt the config loader/merge/redaction/wizard sites that
+  # legitimately set or scrub the GitHubToken field, plus tests (which write the
+  # field to arrange state and cannot use the read-only accessor).
+  exclusions:
+    rules:
+      - path: 'internal/(config|configuration_loader)\.go'
+        linters:
+          - forbidigo
+      - path: 'internal/wizard/wizard\.go'
+        linters:
+          - forbidigo
+      - path: '_test\.go$'
+        linters:
+          - forbidigo
 
 formatters:
   enable:

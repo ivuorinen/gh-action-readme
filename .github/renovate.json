@@ -48,7 +48,8 @@
       ],
       "automerge": true,
       "automergeType": "pr",
-      "ignoreTests": false
+      "ignoreTests": false,
+      "minimumReleaseAge": "3 days"
     },
     {
       "groupName": "golang.org/x packages",

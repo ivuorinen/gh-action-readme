@@ -1,0 +1,8 @@
+# permissions:
+#   contents: read
+name: Scalar None With Comment
+description: Header comment declares contents read but YAML permissions is the scalar none.
+permissions: none
+runs:
+  using: composite
+  steps: []

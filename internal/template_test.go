@@ -887,6 +887,42 @@ func TestRenderReadme_HTMLHeaderFooter(t *testing.T) {
 	})
 }
 
+// TestRenderReadme_HTMLHeaderPlaceholders is a regression test: the HTML header and
+// footer must be executed as templates, not emitted verbatim, so {{.Name}} resolves
+// instead of leaking literally into the <title> (previously every HTML file shipped a
+// literal "{{.Name}} GitHub Action" title).
+func TestRenderReadme_HTMLHeaderPlaceholders(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	testutil.SetupTestTemplates(t, tmpDir)
+	tmplPath := filepath.Join(tmpDir, "templates", testutil.TestTemplateReadme)
+
+	headerPath := filepath.Join(tmpDir, "header-tmpl.html")
+	if err := os.WriteFile(headerPath, []byte("<title>{{.Name}}</title>"), 0o600); err != nil {
+		t.Fatalf("write header: %v", err)
+	}
+
+	opts := TemplateOptions{
+		TemplatePath: tmplPath,
+		HeaderPath:   headerPath,
+		Format:       appconstants.OutputFormatHTML,
+	}
+
+	out, err := RenderReadme(&ActionYML{Name: "HTMLAction", Description: "html test"}, opts)
+	if err != nil {
+		t.Fatalf("RenderReadme failed: %v", err)
+	}
+
+	if !strings.Contains(out, "<title>HTMLAction</title>") {
+		t.Errorf("header {{.Name}} not rendered; got: %q", out)
+	}
+
+	if strings.Contains(out, "{{.Name}}") {
+		t.Errorf("header still contains literal {{.Name}}; got: %q", out)
+	}
+}
+
 // TestAnalyzeDependencies tests the analyzeDependencies function.
 // prepareTestActionFile prepares a test action file for analyzeDependencies tests.
 func prepareTestActionFile(t *testing.T, actionPath string) string {
@@ -967,7 +1003,7 @@ func TestAnalyzeDependencies(t *testing.T) {
 				Repository:   testTplTestRepo,
 			}
 
-			result := analyzeDependencies(actionPath, tt.config, gitInfo)
+			result := analyzeDependencies(actionPath, tt.config, gitInfo, nil)
 
 			if tt.expectNil && result != nil {
 				t.Errorf("analyzeDependencies() expected nil, got %v", result)
@@ -977,6 +1013,36 @@ func TestAnalyzeDependencies(t *testing.T) {
 				t.Error("analyzeDependencies() returned nil, expected non-nil slice")
 			}
 		})
+	}
+}
+
+// TestAnalyzeDependenciesSharedResources verifies that a shared, caller-owned
+// depResources is reused across multiple action files (the cache/client are not
+// reconstructed per call) and that both files still yield dependency results.
+func TestAnalyzeDependenciesSharedResources(t *testing.T) {
+	t.Parallel()
+
+	config := &AppConfig{}
+	res := newDepResources(config)
+
+	defer func() {
+		if err := res.Close(); err != nil {
+			t.Errorf("depResources.Close() returned error: %v", err)
+		}
+	}()
+
+	gitInfo := git.RepoInfo{Organization: testTplTestOrg, Repository: testTplTestRepo}
+
+	for _, fixture := range []string{
+		"../../testdata/analyzer/composite-action.yml",
+		"../../testdata/analyzer/docker-action.yml",
+	} {
+		actionPath := prepareTestActionFile(t, fixture)
+
+		result := analyzeDependencies(actionPath, config, gitInfo, res)
+		if result == nil {
+			t.Errorf("analyzeDependencies(%s) returned nil, expected non-nil slice", fixture)
+		}
 	}
 }
 

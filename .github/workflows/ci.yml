@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel superseded in-progress runs for the same PR; never cancel main or
+# other event runs (a push to main should always complete).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions: {}
 
 jobs:
@@ -31,7 +37,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install EditorConfig tools
-        run: npm install -g eclint
+        run: npm install -g --ignore-scripts eclint@2.8.1
       - name: Check EditorConfig compliance
         run: eclint check .
       - name: Run unit tests

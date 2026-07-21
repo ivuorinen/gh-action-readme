@@ -24,18 +24,3 @@ func FindGitRepoRoot(currentDir string) string {
 
 	return repoRoot
 }
-
-// GetGitRepoRootAndInfo gets git repository root and info with error handling.
-func GetGitRepoRootAndInfo(startPath string) (string, *git.RepoInfo, error) {
-	repoRoot, err := git.FindRepositoryRoot(startPath)
-	if err != nil {
-		return "", nil, err
-	}
-
-	gitInfo, err := git.DetectRepository(repoRoot)
-	if err != nil {
-		return repoRoot, nil, err
-	}
-
-	return repoRoot, gitInfo, nil
-}

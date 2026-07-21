@@ -52,7 +52,7 @@ func (m *MockMessageLogger) recordCall(callSlice *[]string, format string, args 
 	*callSlice = append(*callSlice, fmt.Sprintf(format, args...))
 }
 
-// MockErrorReporter implements ErrorReporter for testing.
+// MockErrorReporter records error-reporting calls for testing.
 type MockErrorReporter struct {
 	ErrorCalls                []string
 	ErrorWithSuggestionsCalls []string
@@ -200,8 +200,8 @@ func TestFocusedInterfacesGeneratorWithDependencyInjection(t *testing.T) {
 
 type mockCompleteOutput struct {
 	logger    MessageLogger
-	reporter  ErrorReporter
-	formatter ErrorFormatter
+	reporter  *MockErrorReporter
+	formatter *errorFormatterWrapper
 	progress  ProgressReporter
 	config    QuietChecker
 }

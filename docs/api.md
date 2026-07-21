@@ -139,13 +139,15 @@ gh-action-readme gen --theme github --quiet
 ### Basic Syntax
 
 ```bash
-gh-action-readme validate [flags]
+gh-action-readme validate [path] [flags]
 ```
 
 ### Arguments
 
-The `validate` command takes no positional arguments. Any path argument is ignored —
-validation always runs recursively from the current working directory.
+- **`[path]`** - Optional file or directory to validate
+  - Defaults to the current working directory when omitted
+  - A nonexistent path is an error (the command does not silently fall back to the current directory)
+  - Validation always runs recursively from the resolved path
 
 ### Flags
 
@@ -156,6 +158,9 @@ The `validate` command has no own flags. Validation always runs recursively. Use
 ```bash
 # Validate the current directory tree
 gh-action-readme validate
+
+# Validate a specific directory
+gh-action-readme validate ./actions/checkout/
 
 # Verbose validation with suggestions
 gh-action-readme validate --verbose
@@ -238,6 +243,104 @@ gh-action-readme config wizard [flags]
 gh-action-readme config wizard --format json --output config.json
 ```
 
+## 📦 Dependency Commands
+
+```bash
+gh-action-readme deps [subcommand] [flags]
+```
+
+Analyze and manage the GitHub Actions referenced (`uses:`) by composite action files,
+discovered recursively from the current working directory. Most subcommands require a
+GitHub token (see [GitHub Integration](#github-integration)).
+
+### Subcommands
+
+#### `list` - List all dependencies
+
+```bash
+gh-action-readme deps list
+```
+
+Lists every dependency found in discovered action files, marking pinned versus floating versions.
+
+#### `security` - Analyze dependency security
+
+```bash
+gh-action-readme deps security
+```
+
+Reports how many dependencies are pinned (to commit SHAs) versus floating, and lists the floating ones that should be pinned.
+
+#### `outdated` - Check for outdated dependencies
+
+```bash
+gh-action-readme deps outdated
+```
+
+Checks each dependency against the latest available release.
+
+#### `upgrade` - Upgrade dependencies
+
+```bash
+gh-action-readme deps upgrade [flags]
+```
+
+**⚠️ Destructive:** applies changes by rewriting your `action.yml`/`action.yaml` files.
+Use `--dry-run` to preview first.
+
+| Flag | Type | Default | Description |
+| ------ | ------ | --------- | ------------- |
+| `--ci` | boolean | `false` | CI/CD mode: automatically pin all updates to commit SHAs |
+| `--all` | boolean | `false` | Update all outdated dependencies without prompts |
+| `--dry-run` | boolean | `false` | Show what would be updated without making changes |
+
+#### `pin` - Pin floating versions
+
+```bash
+gh-action-readme deps pin [flags]
+```
+
+**⚠️ Destructive:** converts floating versions (like `@v4`) to pinned commit SHAs with
+version comments, rewriting your action files. Use `--dry-run` to preview first.
+
+| Flag | Type | Default | Description |
+| ------ | ------ | --------- | ------------- |
+| `--all` | boolean | `false` | Pin all floating dependencies |
+| `--dry-run` | boolean | `false` | Show what would be pinned without making changes |
+
+## 🗃️ Cache Commands
+
+```bash
+gh-action-readme cache [subcommand]
+```
+
+Manage the XDG-compliant dependency analysis cache.
+
+### Subcommands
+
+#### `clear` - Clear the cache
+
+```bash
+gh-action-readme cache clear
+```
+
+#### `stats` - Show cache statistics
+
+```bash
+gh-action-readme cache stats
+```
+
+Prints cache location, total entries, expired entries, and total size.
+
+#### `path` - Show the cache directory path
+
+```bash
+gh-action-readme cache path
+```
+
+> Note: `cache stats` and `cache path` intentionally print their primary output (the
+> statistics and the path) even under `--quiet`, so they remain usable in scripts.
+
 ## ℹ️ Information Commands
 
 ### Version Command
@@ -281,8 +384,12 @@ These flags are available for all commands:
 | ------ | ------- | ------ | --------- | ------------- |
 | `--config` | | string | | Custom configuration file path |
 | `--help` | `-h` | boolean | `false` | Show help for command |
-| `--quiet` | `-q` | boolean | `false` | Suppress non-error output |
+| `--quiet` | `-q` | boolean | `false` | Suppress non-error output (but `cache stats` and `cache path` still emit their primary output — see note below) |
 | `--verbose` | `-v` | boolean | `false` | Enable verbose logging |
+
+> Note: `--quiet` suppresses decorative/informational messages, but the `cache stats` and
+> `cache path` subcommands deliberately print their primary output (statistics and path) even
+> under `--quiet` so they stay usable in scripts.
 
 ## 📊 Exit Codes
 

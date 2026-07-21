@@ -36,7 +36,7 @@ type Cache struct {
 	saveWG     sync.WaitGroup   // Wait group for pending save operations
 	saveMutex  sync.Mutex       // Serializes disk writes in saveToDisk
 	closed     bool             // Set under mutex by Close; gates new async saves
-	clearGen   uint64           // Bumped by Clear under mutex; stale saves skip their rename
+	dirty      bool             // Set under mutex on mutation; flushed on tick/Close
 }
 
 // Config represents cache configuration.
@@ -137,8 +137,9 @@ func (c *Cache) SetWithTTL(key string, value any, ttl time.Duration) error {
 
 	c.data[key] = entry
 
-	// Persist to disk asynchronously
-	c.saveToDiskAsync()
+	// Mark dirty; the flush happens on the cleanup tick or on Close, not on every
+	// write (which would rewrite the whole cache file O(M) times per batch).
+	c.dirty = true
 
 	return nil
 }
@@ -168,26 +169,22 @@ func (c *Cache) Delete(key string) {
 	defer c.mutex.Unlock()
 
 	delete(c.data, key)
-	// Use the tracked async save so Close()'s saveWG.Wait() waits for this
-	// persist to finish; a bare goroutine would race past Close and be lost.
-	c.saveToDiskAsync()
+	// Mark dirty; flushed on the next cleanup tick or on Close (Close always
+	// persists), so no bare goroutine can race past Close and be lost.
+	c.dirty = true
 }
 
 // Clear removes all entries from the cache.
 func (c *Cache) Clear() error {
 	c.mutex.Lock()
 	c.data = make(map[string]Entry)
-	// Bump the generation so any async save that cloned the map before this Clear
-	// skips its rename instead of resurrecting cache.json with the stale entries.
-	c.clearGen++
+	c.dirty = false
 	c.mutex.Unlock()
 
-	// Serialize the removal with saveToDisk's check→rename critical section. The
-	// clearGen bump above is published before we take saveMutex, so a save still
-	// inside that section sees the new generation and skips its rename; a save that
-	// already holds saveMutex finishes its rename first, then this Remove deletes
-	// the file it wrote. Without this lock the Remove could land between a save's
-	// stale check and its rename, resurrecting (or deleting a fresh) cache.json.
+	// Serialize the removal with saveToDisk's clone→rename critical section. An
+	// in-flight save either finished its rename before this Remove (then Remove
+	// deletes it) or it starts after and clones the now-empty map (then it writes
+	// an empty file) — never a resurrection of the cleared entries.
 	c.saveMutex.Lock()
 	defer c.saveMutex.Unlock()
 	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
@@ -256,25 +253,6 @@ func (c *Cache) Close() error {
 	return c.saveToDisk()
 }
 
-// GetOrSet retrieves a value from cache or sets it if not found.
-func (c *Cache) GetOrSet(key string, getter func() (any, error)) (any, error) {
-	// Try to get from cache first
-	if value, exists := c.Get(key); exists {
-		return value, nil
-	}
-
-	// Not in cache, get from source
-	value, err := getter()
-	if err != nil {
-		return nil, err
-	}
-
-	// Store in cache
-	_ = c.Set(key, value) // Log error but don't fail - we have the value
-
-	return value, nil
-}
-
 // cleanupLoop runs periodically to remove expired entries.
 func (c *Cache) cleanupLoop() {
 	for {
@@ -294,8 +272,12 @@ func (c *Cache) cleanup() {
 
 	c.pruneLocked()
 
-	// Save to disk after cleanup
-	c.saveToDiskAsync()
+	// Flush accumulated writes (from Set/Delete) and any prune deletions on the
+	// tick. Skip the disk write when nothing changed since the last flush.
+	if c.dirty {
+		c.dirty = false
+		c.saveToDiskAsync()
+	}
 }
 
 // pruneLocked removes expired entries then enforces the MaxSize bound. The caller
@@ -305,6 +287,7 @@ func (c *Cache) pruneLocked() {
 	for key, entry := range c.data {
 		if now.After(entry.ExpiresAt) {
 			delete(c.data, key)
+			c.dirty = true
 		}
 	}
 
@@ -328,20 +311,24 @@ func (c *Cache) evictToMaxSize() {
 		return
 	}
 
-	// Evict the entry with the earliest ExpiresAt repeatedly until under the
-	// bound. O(n^2) worst case, but the cache holds few entries and eviction is
-	// rare (cleanup interval + tiny entries).
-	for total > c.maxSize && len(c.data) > 0 {
-		var oldestKey string
-		var oldestExp time.Time
-		first := true
-		for key, entry := range c.data {
-			if first || entry.ExpiresAt.Before(oldestExp) {
-				oldestKey, oldestExp, first = key, entry.ExpiresAt, false
-			}
+	// Evict entries in ascending ExpiresAt order until under the bound. Sorting
+	// the keys once is O(n log n), versus the previous repeated earliest-entry
+	// scan which was O(n^2).
+	keys := make([]string, 0, len(c.data))
+	for key := range c.data {
+		keys = append(keys, key)
+	}
+	slices.SortFunc(keys, func(a, b string) int {
+		return c.data[a].ExpiresAt.Compare(c.data[b].ExpiresAt)
+	})
+
+	for _, key := range keys {
+		if total <= c.maxSize {
+			break
 		}
-		total -= c.data[oldestKey].Size
-		delete(c.data, oldestKey)
+		total -= c.data[key].Size
+		delete(c.data, key)
+		c.dirty = true
 	}
 }
 
@@ -370,9 +357,17 @@ func (c *Cache) loadFromDisk() error {
 
 // saveToDisk persists cache data to disk.
 func (c *Cache) saveToDisk() error {
+	// Serialize concurrent writers (the cleanup tick's async save + Close) and
+	// stage the write through a temp file + rename so a concurrent reader or a
+	// crash mid-write never observes a torn cache.json.
+	c.saveMutex.Lock()
+	defer c.saveMutex.Unlock()
+
+	// Clone the snapshot inside the saveMutex section so a save that acquires the
+	// lock later always persists a state at least as new as an earlier one —
+	// flushes can never land out of order (fixes the stale-snapshot race).
 	c.mutex.RLock()
 	data := maps.Clone(c.data)
-	gen := c.clearGen
 	c.mutex.RUnlock()
 
 	jsonData, err := json.MarshalIndent(data, "", "  ")
@@ -381,21 +376,6 @@ func (c *Cache) saveToDisk() error {
 	}
 
 	cacheFile := filepath.Join(c.path, appconstants.CacheJSON)
-
-	// Serialize concurrent writers (Set/Delete/cleanup each spawn an async save)
-	// and stage the write through a temp file + rename so a concurrent reader or
-	// a crash mid-write never observes a torn cache.json.
-	c.saveMutex.Lock()
-	defer c.saveMutex.Unlock()
-
-	// If Clear() ran after we cloned the map, this snapshot is stale; writing it
-	// would resurrect the removed cache.json with old entries. Skip the persist.
-	c.mutex.RLock()
-	stale := c.clearGen != gen
-	c.mutex.RUnlock()
-	if stale {
-		return nil
-	}
 
 	tmp, err := os.CreateTemp(c.path, appconstants.CacheJSON+".tmp-*")
 	if err != nil {

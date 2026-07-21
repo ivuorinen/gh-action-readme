@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -13,8 +14,9 @@ import (
 
 func newValidateCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   appconstants.CommandValidate,
+		Use:   appconstants.CommandValidate + " [path]",
 		Short: "Validate action.yml files.",
+		Args:  cobra.MaximumNArgs(1),
 		Run:   wrapHandlerWithErrorHandling(validateHandler),
 	}
 }
@@ -27,15 +29,15 @@ func newSchemaCmd() *cobra.Command {
 	}
 }
 
-func validateHandler(_ *cobra.Command, _ []string) error {
-	currentDir, err := helpers.GetCurrentDir()
+func validateHandler(_ *cobra.Command, args []string) error {
+	target, err := validateTargetDir(args)
 	if err != nil {
-		return fmt.Errorf("unable to determine current directory: %w", err)
+		return err
 	}
 
 	generator := internal.NewGenerator(globalConfig)
 	actionFiles, err := generator.DiscoverActionFilesWithValidation(
-		currentDir,
+		target,
 		true,
 		globalConfig.IgnoredDirectories,
 		"validation",
@@ -52,6 +54,27 @@ func validateHandler(_ *cobra.Command, _ []string) error {
 	generator.Output.Success("\nAll validations passed successfully!")
 
 	return nil
+}
+
+// validateTargetDir resolves the directory to validate: the first positional
+// argument when given (which must exist), otherwise the current directory. A
+// nonexistent path is an error rather than a silent fall-through to the CWD.
+func validateTargetDir(args []string) (string, error) {
+	if len(args) == 0 {
+		currentDir, err := helpers.GetCurrentDir()
+		if err != nil {
+			return "", fmt.Errorf("unable to determine current directory: %w", err)
+		}
+
+		return currentDir, nil
+	}
+
+	target := args[0]
+	if _, err := os.Stat(target); err != nil {
+		return "", fmt.Errorf("cannot validate %q: %w", target, err)
+	}
+
+	return target, nil
 }
 
 func schemaHandler(_ *cobra.Command, _ []string) error {

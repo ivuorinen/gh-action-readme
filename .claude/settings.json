@@ -11,6 +11,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/pre-readme-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-test-inline-yaml-guard.sh"
           }
         ]
       },
@@ -20,6 +24,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/pre-bash-dangerous-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-bash-context-mode-guard.sh"
           }
         ]
       }

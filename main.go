@@ -52,19 +52,6 @@ func formatSize(totalSize int64) string {
 	}
 }
 
-// createErrorHandler creates an error handler for the given output manager.
-func createErrorHandler(output *internal.ColoredOutput) *internal.ErrorHandler {
-	return internal.NewErrorHandler(output)
-}
-
-// setupOutputAndErrorHandling creates output manager and error handler for commands.
-func setupOutputAndErrorHandling() (*internal.ColoredOutput, *internal.ErrorHandler) {
-	output := createOutputManager(globalConfig.Quiet)
-	errorHandler := createErrorHandler(output)
-
-	return output, errorHandler
-}
-
 // createAnalyzer builds the dependency analyzer used by the deps handlers. It is
 // a var so tests can inject an analyzer backed by a mock GitHub client and
 // exercise the outdated/security result-rendering branches without live network.

@@ -1142,39 +1142,58 @@ func TestPromptSensitiveEdgeCases(t *testing.T) {
 	})
 }
 
-// TestDisplayThemeOptions tests theme display (verifies no panic).
+// TestDisplayThemeOptions verifies every available theme name is rendered.
 func TestDisplayThemeOptions(t *testing.T) {
 	wizard := testWizard(t, "")
+	// testWizard uses quiet output; swap in a capturable, non-quiet writer.
+	wizard.output = &internal.ColoredOutput{NoColor: true}
 	themes := wizard.getAvailableThemes()
 
-	// Should not panic
+	// The panic guard is a secondary check; the real assertion is on the output.
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("displayThemeOptions() panicked: %v", r)
 		}
 	}()
 
-	wizard.displayThemeOptions(themes)
+	out := testutil.CaptureStdout(func() {
+		wizard.displayThemeOptions(themes)
+	})
+
+	if len(themes) == 0 {
+		t.Fatal("expected at least one available theme")
+	}
+	for _, theme := range themes {
+		testutil.AssertStringContains(t, out, theme.name)
+	}
 }
 
-// TestDisplayFormatOptions tests format display (verifies no panic).
+// TestDisplayFormatOptions verifies each output-format name is rendered.
 func TestDisplayFormatOptions(t *testing.T) {
 	wizard := testWizard(t, "")
+	// testWizard uses quiet output; swap in a capturable, non-quiet writer.
+	wizard.output = &internal.ColoredOutput{NoColor: true}
 	formats := []string{
 		appconstants.OutputFormatMarkdown,
 		appconstants.OutputFormatHTML,
 		appconstants.OutputFormatJSON,
-		"asciidoc",
+		appconstants.OutputFormatASCIIDoc,
 	}
 
-	// Should not panic
+	// The panic guard is a secondary check; the real assertion is on the output.
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("displayFormatOptions() panicked: %v", r)
 		}
 	}()
 
-	wizard.displayFormatOptions(formats)
+	out := testutil.CaptureStdout(func() {
+		wizard.displayFormatOptions(formats)
+	})
+
+	for _, format := range formats {
+		testutil.AssertStringContains(t, out, format)
+	}
 }
 
 // TestConfirmConfiguration tests configuration confirmation.

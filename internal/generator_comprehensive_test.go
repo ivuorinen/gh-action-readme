@@ -178,7 +178,9 @@ func TestGeneratorByActionType(t *testing.T) {
 
 			fixtures := testutil.GetFixturesByActionType(actionType)
 			if len(fixtures) == 0 {
-				t.Skipf("no fixtures available for action type %s", actionType)
+				// Fixtures are committed and always present; an empty result means a
+				// broken loader, not an environmental gap — fail loudly rather than skip.
+				t.Fatalf("no fixtures available for action type %s (loader regression?)", actionType)
 			}
 
 			// Test the first fixture of this type

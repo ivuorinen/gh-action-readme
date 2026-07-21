@@ -16,8 +16,6 @@ type NullOutput struct{}
 // Compile-time interface checks.
 var (
 	_ MessageLogger    = (*NullOutput)(nil)
-	_ ErrorReporter    = (*NullOutput)(nil)
-	_ ErrorFormatter   = (*NullOutput)(nil)
 	_ ProgressReporter = (*NullOutput)(nil)
 	_ QuietChecker     = (*NullOutput)(nil)
 	_ CompleteOutput   = (*NullOutput)(nil)

@@ -62,13 +62,13 @@ func TestCovIntCfgMergeDefaultsFieldsRunsBranding(t *testing.T) {
 	dst := &AppConfig{}
 	const wantColor = "green"
 	src := &AppConfig{Defaults: DefaultValues{
-		Runs:     map[string]any{"using": "composite"},
+		Runs:     ActionRuns{Using: appconstants.ActionTypeComposite},
 		Branding: Branding{Icon: appconstants.ActivityWorkflowType, Color: wantColor},
 	}}
 
 	MergeConfigs(dst, src, false)
 
-	if len(dst.Defaults.Runs) != 1 {
+	if dst.Defaults.Runs.Using != appconstants.ActionTypeComposite {
 		t.Fatalf("expected Runs merged, got %v", dst.Defaults.Runs)
 	}
 	testutil.AssertEqual(t, appconstants.ActivityWorkflowType, dst.Defaults.Branding.Icon)
@@ -146,18 +146,14 @@ func TestCovIntCfgLoadGlobalConfig(t *testing.T) {
 	testutil.AssertEqual(t, testutil.TestThemeGitHub, config.Theme)
 }
 
-// TestCovIntCfgLoadConfigurationDefaultsOnly exercises LoadConfiguration with
-// only the defaults source enabled, driving the disabled-source short-circuit in
-// loadGlobalStep and loadConfigStep.
-func TestCovIntCfgLoadConfigurationDefaultsOnly(t *testing.T) {
+// TestCovIntCfgLoadConfigurationDefaultsToDefaults exercises LoadConfiguration
+// end-to-end with an empty global config file and directories that hold no
+// config files, so every source runs but defaults win.
+func TestCovIntCfgLoadConfigurationDefaultsToDefaults(t *testing.T) {
 	tmpDir, cleanup := testutil.SetupTestEnvironment(t)
 	defer cleanup()
 
-	loader := NewConfigurationLoaderWithOptions(ConfigurationOptions{
-		EnabledSources: []appconstants.ConfigurationSource{appconstants.SourceDefaults},
-	})
-
-	config, err := loader.LoadConfiguration("", tmpDir, tmpDir)
+	config, err := NewConfigurationLoader().LoadConfiguration("", tmpDir, tmpDir)
 	testutil.AssertNoError(t, err)
 	testutil.AssertEqual(t, testutil.TestThemeDefault, config.Theme)
 }

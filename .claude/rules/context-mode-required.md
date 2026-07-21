@@ -1,12 +1,26 @@
 # Context-Mode Tools Required
 
-Always run context-producing commands (e.g. `go test`, builds, large output) through the
-context-mode tool `mcp__plugin_context-mode_context-mode__ctx_execute` so output stays in the
-sandbox and only a summary enters context.
+Route context-producing commands through the context-mode tool
+(`ctx_execute` / `ctx_batch_execute` / `ctx_execute_file`) so raw output stays
+in the sandbox and only a derived summary enters the conversation.
 
-Never bypass it with the `# ctx-ok` Bash escape just to avoid context-mode. The escape exists
-only for genuinely non-context-producing commands.
+The `.claude/hooks/pre-bash-context-mode-guard.sh` hook blocks these verbs in
+raw Bash:
 
-When running a `/goal` (or any goal-driven task): if the context-mode tools are not available in
-the session, treat the task as **failed** and stop. Do not fall back to `# ctx-ok` or raw Bash to
-keep going. Report the unavailability as the failure reason.
+- File readers and scanners: `grep`, `egrep`, `rg`, `find`, `cat`, `awk`,
+  `sed`, `nl`, `jq`, `sort`, `uniq`, `less`, `more`, `bat`, `tree`, `head`,
+  `tail`, `wc`, `column`, `xxd`, `hexdump`, `od`, and `ls -R`.
+- Go analysis: `go test`, `go vet`.
+- Git history: `git log`, `git diff`, `git show`, `git blame`.
+- Make targets: `make test`, `make lint`, `make security`, `make coverage`,
+  `make mutation`.
+- Log dumps: `docker logs`, `kubectl logs`, and interpreter one-liners that
+  read files (`python3 -c '... open(...).read() ...'`).
+
+The hook evaluates each segment of a chained command independently, so a
+leading state-mutation verb (`cd . && go test`) does not exempt a later
+context-producer.
+
+When running a `/goal` (or any goal-driven task): if the context-mode tools are
+not available in the session, treat the task as **failed** and stop. Report the
+unavailability as the failure reason.

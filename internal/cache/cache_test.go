@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -143,70 +142,14 @@ func TestCacheTTL(t *testing.T) {
 	}
 	testutil.AssertEqual(t, "value", value)
 
-	// Wait for expiration
-	time.Sleep(shortTTL + 50*time.Millisecond)
+	// Force expiry deterministically by rewriting ExpiresAt into the past under
+	// the lock, instead of sleeping on the wall clock (flaky under load).
+	expireEntryInPast(t, cache, testutil.CacheShortLivedKey)
 
 	// Should not exist after TTL
 	_, exists = cache.Get(testutil.CacheShortLivedKey)
 	if exists {
 		t.Error("expected value to be expired")
-	}
-}
-
-func TestCacheGetOrSet(t *testing.T) {
-	tmpDir, cleanup := testutil.TempDir(t)
-	defer cleanup()
-
-	cache := createTestCache(t, tmpDir)
-	defer testutil.CleanupCache(t, cache)()
-
-	// Use unique key to avoid interference from other tests
-	testKey := fmt.Sprintf("test-key-%d", time.Now().UnixNano())
-
-	callCount := 0
-	getter := func() (any, error) {
-		callCount++
-
-		return fmt.Sprintf("generated-value-%d", callCount), nil
-	}
-
-	// First call should invoke getter
-	value1, err := cache.GetOrSet(testKey, getter)
-	testutil.AssertNoError(t, err)
-	testutil.AssertEqual(t, "generated-value-1", value1)
-	testutil.AssertEqual(t, 1, callCount)
-
-	// Second call should use cached value
-	value2, err := cache.GetOrSet(testKey, getter)
-	testutil.AssertNoError(t, err)
-	testutil.AssertEqual(t, "generated-value-1", value2) // Same value
-	testutil.AssertEqual(t, 1, callCount)                // Getter not called again
-}
-
-func TestCacheGetOrSetError(t *testing.T) {
-	tmpDir, cleanup := testutil.TempDir(t)
-	defer cleanup()
-
-	cache := createTestCache(t, tmpDir)
-	defer testutil.CleanupCache(t, cache)()
-
-	// Getter that returns error
-	getter := func() (any, error) {
-		return nil, errors.New("getter error")
-	}
-
-	value, err := cache.GetOrSet("error-key", getter)
-	testutil.AssertError(t, err)
-	testutil.AssertStringContains(t, err.Error(), "getter error")
-
-	if value != nil {
-		t.Errorf("expected nil value on error, got: %v", value)
-	}
-
-	// Verify nothing was cached
-	_, exists := cache.Get("error-key")
-	if exists {
-		t.Error("expected no value to be cached on error")
 	}
 }
 
@@ -460,12 +403,17 @@ func TestCacheCleanupExpiredEntries(t *testing.T) {
 		t.Fatal("expected entry to exist initially")
 	}
 
-	// Wait for cleanup to run
-	time.Sleep(config.DefaultTTL + config.CleanupInterval + 20*time.Millisecond)
+	// Force expiry deterministically, then run cleanup directly instead of waiting
+	// on the wall-clock ticker (flaky under load). cleanup() removes expired
+	// entries from the map under the lock, exactly as the ticker goroutine does.
+	expireEntryInPast(t, cache, testutil.CacheExpiringKey)
+	cache.cleanup()
 
-	// Entry should be cleaned up
-	_, exists = cache.Get(testutil.CacheExpiringKey)
-	if exists {
+	// Entry should be cleaned up (removed from the map, not merely hidden by Get).
+	cache.mutex.RLock()
+	_, stillPresent := cache.data[testutil.CacheExpiringKey]
+	cache.mutex.RUnlock()
+	if stillPresent {
 		t.Error("expected expired entry to be cleaned up")
 	}
 }
@@ -508,27 +456,29 @@ func TestCacheErrorHandling(t *testing.T) {
 	}
 }
 
-func TestCacheAsyncSaveErrorHandling(t *testing.T) {
+// TestCacheAsyncSavePersistsToDisk verifies that a Set is actually flushed to
+// disk. After Close (which waits on the save WaitGroup), a cache reopened from
+// the same directory must reload the value from disk. The previous version only
+// read the value back from memory after a fixed sleep, so it passed even if the
+// async save wrote nothing.
+func TestCacheAsyncSavePersistsToDisk(t *testing.T) {
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 
 	cache := createTestCache(t, tmpDir)
-	defer testutil.CleanupCache(t, cache)()
+	testutil.AssertNoError(t, cache.Set(testutil.CacheTestKey, testutil.CacheTestValue))
 
-	// This tests our new saveToDiskAsync error handling
-	// Set a value to trigger async save
-	err := cache.Set(testutil.CacheTestKey, testutil.CacheTestValue)
-	testutil.AssertNoError(t, err)
+	// Close flushes pending async writes (waits on saveWG) and stops the cache.
+	testutil.AssertNoError(t, cache.Close())
 
-	// Give some time for async save to complete
-	time.Sleep(100 * time.Millisecond)
+	// Reopen from the same XDG_CACHE_HOME: the value must load from disk, proving
+	// the async save persisted rather than only living in memory.
+	reopened := createTestCache(t, tmpDir)
+	defer testutil.CleanupCache(t, reopened)()
 
-	// The async save should have completed without panicking
-	// We can't easily test the error logging without capturing logs,
-	// but we can verify the cache still works
-	value, exists := cache.Get(testutil.CacheTestKey)
+	value, exists := reopened.Get(testutil.CacheTestKey)
 	if !exists {
-		t.Error("expected value to exist after async save")
+		t.Fatal("expected value to be reloaded from disk after Close")
 	}
 	testutil.AssertEqual(t, testutil.CacheTestValue, value)
 }
@@ -602,6 +552,21 @@ func TestCacheClose_NilTicker(t *testing.T) {
 	if err != nil {
 		t.Errorf("Close() with nil ticker unexpected error: %v", err)
 	}
+}
+
+// expireEntryInPast rewrites a live entry's ExpiresAt to the past under the lock
+// so expiry is deterministic and no wall-clock sleep is needed.
+func expireEntryInPast(t *testing.T, cache *Cache, key string) {
+	t.Helper()
+
+	cache.mutex.Lock()
+	defer cache.mutex.Unlock()
+	entry, ok := cache.data[key]
+	if !ok {
+		t.Fatalf("entry %q not present; cannot expire it", key)
+	}
+	entry.ExpiresAt = time.Now().Add(-time.Hour)
+	cache.data[key] = entry
 }
 
 // createTestCache creates a cache instance for testing.

@@ -1,0 +1,8 @@
+# permissions:
+#   contents: write
+name: Scalar Read-All With Comment
+description: Header comment declares contents write but YAML permissions is the scalar read-all.
+permissions: read-all
+runs:
+  using: composite
+  steps: []
