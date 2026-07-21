@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install EditorConfig tools
-        run: npm install -g eclint@2.8.1
+        run: npm install -g --ignore-scripts eclint@2.8.1
       - name: Check EditorConfig compliance
         run: eclint check .
       - name: Run unit tests
