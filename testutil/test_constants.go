@@ -130,7 +130,7 @@ const (
 	TestFixtureRepoConfig                  = "repo-config.yml"
 	TestFixtureActionSimple                = "actions/simple/action.yml"
 	TestFixtureActionMinimal               = "actions/minimal/action.yml"
-	TestFixtureActionNameOnly              = "actions/name-only/action.yml"
+	TestFixtureActionNameOnly              = "actions/name-only/name-only.yml"
 
 	// Composite action stub fixtures (name+description, field-missing, and
 	// dependency-step variants) replacing inline YAML literals in tests.
