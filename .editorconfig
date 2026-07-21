@@ -35,6 +35,12 @@ tab_width = 2
 [{go.sum,go.mod}]
 max_line_length = 300
 
+# Machine-managed nitpicker findings store (append-only JSONL ledger + finding
+# files); one JSON object per line inherently exceeds the length limit. Mirrors
+# the docs/audit/findings/ exclude in .editorconfig-checker.json so eclint agrees.
+[docs/audit/findings/**]
+max_line_length = off
+
 # Test fixture that intentionally contains trailing whitespace
 [testdata/yaml-fixtures/configs/permissions/mutation/whitespace-only-value-not-parsed.yaml]
 trim_trailing_whitespace = false
