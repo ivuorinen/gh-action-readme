@@ -7,7 +7,7 @@
 {{- if .License}} ![License](https://img.shields.io/badge/license-
 {{- .License | badgeSegment}}-green){{end}}
 
-> {{.Description}}
+> {{.Description | mdCell}}
 
 ## 🚀 Quick Start
 
@@ -160,7 +160,7 @@ This action uses the following dependencies:
 
 ### Same Repository Dependencies
 {{range .Dependencies}}{{if .IsLocalAction}}
-- [{{.Name}}]({{.SourceURL}}) - {{.Description}}
+- [{{.Name}}]({{.SourceURL}}) - {{.Description | mdCell}}
 {{end}}{{end}}
 {{- end}}
 

@@ -174,29 +174,31 @@ func (a *Analyzer) AnalyzeActionFileWithProgress(
 }
 
 // actionFileRef returns the action file's path relative to its repository root,
-// with forward slashes (e.g. "actions/build/action.yaml"). It falls back to the
-// bare file name when the repo root cannot be determined or the file resolves
-// outside it, so a generated blob URL never points at a path that does not exist.
+// with forward slashes (e.g. "actions/build/action.yaml"), or "" when it cannot be
+// made repository-relative.
+//
+// It deliberately does not fall back to the bare file name: for a nested action that
+// would name a repo-root action.yaml that need not exist, which is the same class of
+// wrong-but-plausible link this function was written to eliminate. Callers treat ""
+// as "no link".
 func actionFileRef(actionPath string) string {
-	base := filepath.Base(actionPath)
-
 	repoRoot, err := git.FindRepositoryRoot(filepath.Dir(actionPath))
 	if err != nil || repoRoot == "" {
-		return base
+		return ""
 	}
 
 	absAction, err := filepath.Abs(actionPath)
 	if err != nil {
-		return base
+		return ""
 	}
 
 	rel, err := filepath.Rel(repoRoot, absAction)
 	if err != nil {
-		return base
+		return ""
 	}
 	// Escaping the repo root means we cannot build a valid blob path.
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return base
+		return ""
 	}
 
 	return filepath.ToSlash(rel)
@@ -533,15 +535,16 @@ func (a *Analyzer) analyzeShellScript(step CompositeStep, stepNumber int, action
 	// from the real action file (honoring action.yaml and monorepo subdirectories)
 	// rather than assuming a repo-root "action.yml".
 	scriptURL := ""
-	if a.RepoInfo.Organization != "" && a.RepoInfo.Repository != "" &&
-		a.RepoInfo.DefaultBranch != "" && actionPath != "" {
+	if ref := actionFileRef(actionPath); ref != "" &&
+		a.RepoInfo.Organization != "" && a.RepoInfo.Repository != "" &&
+		a.RepoInfo.DefaultBranch != "" {
 		scriptURL = fmt.Sprintf(
 			"%s/%s/%s/blob/%s/%s",
 			appconstants.GitHubBaseURL,
 			a.RepoInfo.Organization,
 			a.RepoInfo.Repository,
 			a.RepoInfo.DefaultBranch,
-			actionFileRef(actionPath),
+			ref,
 		)
 	}
 

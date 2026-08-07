@@ -44,7 +44,7 @@ analyze_dependencies: false # default is false; set true to opt in
 | -------- | ------ | --------- | ------------- |
 | `github_token` | string | `""` | GitHub personal access token |
 | `analyze_dependencies` | boolean | `false` | Enable dependency analysis |
-| `show_security_info` | boolean | `false` | Reserved — accepted but not yet consumed (see [Legacy and Reserved Settings](#legacy-and-reserved-settings)) |
+| `show_security_info` | boolean | `false` | Add a Security section reporting dependency pinning (needs `analyze_dependencies`) |
 
 ### Legacy and Reserved Settings
 
@@ -132,8 +132,8 @@ features but do **not** affect output in the current release:
 | `template` | Legacy custom-template path. Ignored while a `theme` is set, and `default` is set out of the box. Set `theme: ""` to use the `template` path instead. |
 | `schema` | Informational only. The `schema` command and key print/record the schema path, but the tool does not validate `action.yml` against a JSON schema — validation is structural. |
 
-> Note: the `permissions:` block *inside* an `action.yml` file is parsed and rendered
-> separately — only the config key of the same name has no effect.
+> Note: the `permissions:` block *inside* an `action.yml` file always wins. The config
+> key of the same name is a fallback, used only when the action declares none.
 
 ## 🌍 Environment Variables
 

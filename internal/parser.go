@@ -330,6 +330,21 @@ type headerScanState struct {
 // indent measurement) and content is that line with the leading "#" and surrounding
 // whitespace removed.
 func (s *headerScanState) consume(line, content string, result *headerComments) {
+	// A dedent ends the permissions block, and the line that caused it belongs to
+	// whatever follows — so it is re-offered to this function rather than consumed
+	// by the block that just closed. Without the retry, `# license:` written after
+	// an indented permission entry was silently dropped.
+	for range 2 {
+		if !s.consumeOnce(line, content, result) {
+			return
+		}
+	}
+}
+
+// consumeOnce folds one line into result and reports whether the line closed a
+// permissions block without being consumed, meaning the caller should offer it again
+// now that the block state is cleared.
+func (s *headerScanState) consumeOnce(line, content string, result *headerComments) bool {
 	// Check for permissions block start.
 	if content == "permissions:" {
 		s.inPermissionsBlock = true
@@ -337,7 +352,7 @@ func (s *headerScanState) consume(line, content string, result *headerComments) 
 		// first item, so reset it here.
 		s.expectedItemIndent = -1
 
-		return
+		return false
 	}
 
 	// A `license:` line is only recognized outside a permissions block, so an
@@ -347,7 +362,7 @@ func (s *headerScanState) consume(line, content string, result *headerComments) 
 		if v, ok := parseHeaderScalar(content, appconstants.HeaderFieldLicense); ok {
 			result.License = v
 
-			return
+			return false
 		}
 	}
 
@@ -355,12 +370,17 @@ func (s *headerScanState) consume(line, content string, result *headerComments) 
 	if s.inPermissionsBlock && content != "" {
 		if processPermissionEntry(line, content, &s.expectedItemIndent, result.Permissions) {
 			// A dedent ends the current permissions block but must NOT abort the whole
-			// header scan — a later "# permissions:" block (caught above) or trailing
-			// comment would otherwise be silently dropped.
+			// header scan — a later "# permissions:" block or a `# license:` line would
+			// otherwise be silently dropped. The line was not consumed as a permission,
+			// so ask the caller to re-offer it now that the block is closed.
 			s.inPermissionsBlock = false
 			s.expectedItemIndent = -1
+
+			return true
 		}
 	}
+
+	return false
 }
 
 // parseHeaderScalar matches a `<field>: <value>` comment line, case-insensitively on

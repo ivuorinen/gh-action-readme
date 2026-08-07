@@ -1,17 +1,21 @@
 # {{.Name}}
-{{- if .Branding}}
+{{- if or .Branding .License}}
 
 <div align="center">
-  <img src="https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}" alt="{{.Branding.Icon}}" />
+{{- if .Branding}}
+  <img src="https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-
+{{- .Branding.Color | badgeSegment}}" alt="{{.Branding.Icon}}" />
   <img src="https://img.shields.io/badge/status-stable-brightgreen" alt="Status" />
-{{if .License}}  <img src="https://img.shields.io/badge/license-{{.License | badgeSegment}}-blue" alt="{{.License}} License" />
+{{- end}}
+{{- if .License}}
+  <img src="https://img.shields.io/badge/license-{{.License | badgeSegment}}-blue" alt="{{.License}} License" />
 {{- end}}
 </div>
 {{- end}}
 
 ## Overview
 
-{{.Description}}
+{{.Description | trim}}
 
 This GitHub Action provides a robust solution for your CI/CD pipeline with comprehensive configuration options and detailed output information.
 
@@ -236,7 +240,7 @@ This action uses the following dependencies:
 
 ### Same Repository Dependencies
 {{range .Dependencies}}{{if .IsLocalAction}}
-- [{{.Name}}]({{.SourceURL}}) - {{.Description}}
+- [{{.Name}}]({{.SourceURL}}) - {{.Description | mdCell}}
 {{end}}{{end}}
 {{- end}}
 

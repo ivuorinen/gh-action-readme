@@ -180,6 +180,10 @@ const (
 	TestFixtureLicenseYAMLKeyWins   = "license/yaml-key-wins.yml"
 	TestFixtureLicenseQuoted        = "license/quoted-and-inline-comment.yml"
 	TestFixtureLicenseNone          = "license/no-license.yml"
+	// TestFixtureLicenseAfterPermissions places `# license:` after an indented
+	// permissions entry, so the license line is the one that dedents out of the
+	// block — it must still be read, not consumed by the closing block.
+	TestFixtureLicenseAfterPermissions = "license/after-permissions-block.yml"
 
 	// Permission test fixtures for parser tests.
 	TestFixturePermissionsDashSingle    = "permissions/dash-format-single.yml"

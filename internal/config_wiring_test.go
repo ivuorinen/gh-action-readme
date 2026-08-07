@@ -133,6 +133,36 @@ func TestConfigVariable(t *testing.T) {
 	testutil.AssertEqual(t, "", configVariable("not template data", "support_url"))
 }
 
+// TestLicenseBadgeRendersWithoutBranding guards the professional theme's badge
+// container: the license image used to sit inside {{if .Branding}}, so a licensed
+// action with no branding silently lost its badge. Rendered directly rather than
+// through the CLI because FillMissing injects a default branding icon, which masks
+// the coupling end-to-end.
+func TestLicenseBadgeRendersWithoutBranding(t *testing.T) {
+	t.Parallel()
+
+	td := &TemplateData{
+		ActionYML: &ActionYML{Name: "NoBrand", Description: "d"},
+		Config:    DefaultAppConfig(),
+		License:   appconstants.SPDXMIT,
+	}
+
+	out, err := RenderReadme(td, TemplateOptions{
+		TemplatePath: "templates/themes/professional/readme.tmpl",
+		Format:       "md",
+	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+
+	if !strings.Contains(out, "badge/license-MIT") {
+		t.Errorf("license badge missing for a licensed action without branding:\n%s", out[:400])
+	}
+	if strings.Contains(out, "badge/icon-") {
+		t.Error("icon badge rendered for an action with no branding")
+	}
+}
+
 // TestShowSecurityInfoRendersSection covers the `show_security_info` config key: it
 // gates a Security section that reports dependency pinning, and is silent when off.
 func TestShowSecurityInfoRendersSection(t *testing.T) {

@@ -48,6 +48,13 @@ func TestParseLicenseFromHeaderAndYAML(t *testing.T) {
 		},
 		{"quoted value with inline comment", testutil.TestFixtureLicenseQuoted, appconstants.SPDXMPL2},
 		{"no license declared", testutil.TestFixtureLicenseNone, ""},
+		{
+			// Regression: the license line is what dedents out of the permissions
+			// block, so it must be re-offered to the scanner rather than swallowed
+			// by the block it closed.
+			"license after an indented permissions entry",
+			testutil.TestFixtureLicenseAfterPermissions, appconstants.SPDXApache2,
+		},
 	}
 
 	for _, tt := range tests {
@@ -176,6 +183,37 @@ func TestResolveLicensePrecedence(t *testing.T) {
 			config := &AppConfig{License: tt.configLicense}
 			testutil.AssertEqual(t, tt.want, resolveLicense(action, config, repoRoot))
 		})
+	}
+}
+
+// TestResolveRepoFilePathRejectsEscapes guards the repoFile contract: the name comes
+// from a template, which may be a user-supplied --template, so it must not be able to
+// resolve a file outside the repository and emit a link to it.
+func TestResolveRepoFilePathRejectsEscapes(t *testing.T) {
+	t.Parallel()
+
+	repoRoot := t.TempDir()
+	writeLicenseFile(t, repoRoot, licFileLICENSE, licBodyMIT)
+	// A real file outside the repo that an escape would otherwise resolve.
+	outside := t.TempDir()
+	writeLicenseFile(t, outside, "SECRET.md", "top secret\n")
+
+	escapes := []string{
+		"../SECRET.md",
+		"../../etc/passwd",
+		filepath.Join(outside, "SECRET.md"), // absolute
+		"./LICENSE",                         // changes under Clean
+		"sub/../../SECRET.md",
+	}
+	for _, name := range escapes {
+		if got := resolveRepoFilePath(repoRoot, name); got != "" {
+			t.Errorf("resolveRepoFilePath(%q) = %q, want empty (escapes the repository)", name, got)
+		}
+	}
+
+	// A legitimate in-repo name still resolves.
+	if got := resolveRepoFilePath(repoRoot, licFileLICENSE); got == "" {
+		t.Error("resolveRepoFilePath(LICENSE) returned empty for a file that exists")
 	}
 }
 

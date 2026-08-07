@@ -17,4 +17,14 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 python3 "${hook_dir}/inline_yaml_scan.py" --stdin-content
-exit $?
+rc=$?
+
+# Only exit 1 means "violation found". Any other non-zero status is the scanner
+# itself failing — missing file, syntax error, unhandled exception — and must not
+# block an unrelated edit. Fail open, loudly, like the missing-python3 branch above.
+if [[ $rc -ne 0 && $rc -ne 1 ]]; then
+  echo "Warning: inline-YAML scan failed (exit $rc); allowing the edit." >&2
+  exit 0
+fi
+
+exit $rc

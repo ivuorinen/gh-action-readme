@@ -1,0 +1,10 @@
+# permissions:
+#   - contents: read
+# license: Apache-2.0
+name: Licence After Permissions
+description: Declares the licence after an indented permissions entry, which dedents out of the block.
+runs:
+  using: composite
+  steps:
+    - run: echo hi
+      shell: bash

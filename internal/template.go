@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	texttemplate "text/template"
 
@@ -94,6 +95,11 @@ func templateFuncs() texttemplate.FuncMap {
 		"runsOn":        runsOnValue,
 		"var":           configVariable,
 		"add1":          func(n int) int { return n + 1 },
+		// A block-scalar description ("description: |") keeps its trailing newline,
+		// which lands on top of the template's own blank line and yields a doubled
+		// blank (markdownlint MD012). Used where the value is rendered as a plain
+		// paragraph rather than through mdCell.
+		"trim": strings.TrimSpace,
 	}
 }
 
@@ -202,14 +208,28 @@ func isWithin(root, path string) bool {
 // resolveRepoFilePath returns the real path of a repository-root file, or "" when it
 // does not exist. The LICENSE family is matched through findLicenseFile so naming
 // variants resolve; any other name is matched exactly.
+// The name is supplied by a template, which may be a user-provided --template, so it
+// is not trusted to stay inside the repository. Reject absolute paths and anything
+// that changes under Clean or walks upward before touching the filesystem; the
+// function's contract is "a file in this repository", and a link to /etc/passwd is
+// not one.
 func resolveRepoFilePath(repoRoot, name string) string {
-	if strings.EqualFold(name, "LICENSE") {
+	if filepath.IsAbs(name) {
+		return ""
+	}
+	cleaned := filepath.Clean(name)
+	if cleaned != name || cleaned == appconstants.PathParent ||
+		slices.Contains(strings.Split(filepath.ToSlash(cleaned), "/"), appconstants.PathParent) {
+		return ""
+	}
+
+	if strings.EqualFold(cleaned, "LICENSE") {
 		path, _ := findLicenseFile(repoRoot)
 
 		return path
 	}
 
-	path := filepath.Join(repoRoot, name)
+	path := filepath.Join(repoRoot, cleaned)
 	if _, err := os.Stat(path); err != nil {
 		return ""
 	}
