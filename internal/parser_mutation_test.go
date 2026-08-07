@@ -209,10 +209,11 @@ func testPermissionParsingCase(t *testing.T, yaml string, expected map[string]st
 	testutil.WriteTestFile(t, testFile, yaml)
 
 	// Parse permissions
-	result, err := parsePermissionsFromComments(testFile)
+	hc, err := scanHeaderComments(testFile)
 	if err != nil {
-		t.Fatalf("parsePermissionsFromComments() error = %v", err)
+		t.Fatalf("scanHeaderComments() error = %v", err)
 	}
+	result := hc.Permissions
 
 	// Verify expected permissions
 	if len(result) != len(expected) {
