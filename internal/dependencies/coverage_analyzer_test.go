@@ -2,6 +2,8 @@ package dependencies
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
@@ -145,7 +147,10 @@ func TestCovAnalyzerAnalyzeShellScript(t *testing.T) {
 			DefaultBranch: testutil.TestBranchMain,
 		}}
 
-		dep := analyzer.analyzeShellScript(CompositeStep{Name: "Build", Run: covShellRun}, 2)
+		// A path outside any git repository, so actionFileRef falls back to the
+		// bare file name and the expected URL is fully deterministic.
+		actionPath := filepath.Join(t.TempDir(), appconstants.ActionFileNameYAML)
+		dep := analyzer.analyzeShellScript(CompositeStep{Name: "Build", Run: covShellRun}, 2, actionPath)
 		if dep == nil {
 			t.Fatal("expected non-nil shell script dependency")
 		}
@@ -153,8 +158,14 @@ func TestCovAnalyzerAnalyzeShellScript(t *testing.T) {
 		if !dep.IsShellScript || !dep.IsLocalAction {
 			t.Error("shell script dependency should be marked shell + local")
 		}
-		if dep.ScriptURL == "" {
-			t.Error("expected a script URL when RepoInfo is populated")
+		// The URL must name the real action file (action.yaml here, not a
+		// hardcoded action.yml) and must carry no guessed #L line anchor.
+		// SourceURL is the rendered field; the redundant write-only ScriptURL
+		// that used to duplicate it was removed.
+		want := "https://github.com/actions/checkout/blob/main/action.yaml"
+		testutil.AssertEqual(t, want, dep.SourceURL)
+		if strings.Contains(dep.SourceURL, "#L") {
+			t.Errorf("source URL must not contain a guessed line anchor: %q", dep.SourceURL)
 		}
 	})
 
@@ -162,13 +173,29 @@ func TestCovAnalyzerAnalyzeShellScript(t *testing.T) {
 		t.Parallel()
 
 		analyzer := &Analyzer{}
-		dep := analyzer.analyzeShellScript(CompositeStep{Run: covShellRun}, 3)
+		dep := analyzer.analyzeShellScript(CompositeStep{Run: covShellRun}, 3, "action.yml")
 		if dep == nil {
 			t.Fatal("expected non-nil shell script dependency")
 		}
 		testutil.AssertEqual(t, "Shell Script #3", dep.Name)
-		if dep.ScriptURL != "" {
-			t.Errorf("expected empty script URL without RepoInfo, got %q", dep.ScriptURL)
+		if dep.SourceURL != "" {
+			t.Errorf("expected empty source URL without RepoInfo, got %q", dep.SourceURL)
+		}
+	})
+
+	t.Run("no script URL when default branch is unknown", func(t *testing.T) {
+		t.Parallel()
+
+		analyzer := &Analyzer{RepoInfo: git.RepoInfo{
+			Organization: testDepOwnerActions,
+			Repository:   testDepRepoCheckout,
+		}}
+		dep := analyzer.analyzeShellScript(CompositeStep{Run: covShellRun}, 1, "action.yml")
+		if dep == nil {
+			t.Fatal("expected non-nil shell script dependency")
+		}
+		if dep.SourceURL != "" {
+			t.Errorf("expected empty source URL without a default branch, got %q", dep.SourceURL)
 		}
 	})
 }
@@ -213,7 +240,7 @@ func TestCovAnalyzerProcessStep(t *testing.T) {
 
 	t.Run("uses step yields dependency", func(t *testing.T) {
 		t.Parallel()
-		dep := analyzer.processStep(CompositeStep{Uses: "./local"}, 1)
+		dep := analyzer.processStep(CompositeStep{Uses: "./local"}, 1, "action.yml")
 		if dep == nil {
 			t.Fatal("expected dependency for uses step")
 		}
@@ -222,7 +249,7 @@ func TestCovAnalyzerProcessStep(t *testing.T) {
 
 	t.Run("run step yields shell dependency", func(t *testing.T) {
 		t.Parallel()
-		dep := analyzer.processStep(CompositeStep{Run: covShellRun}, 1)
+		dep := analyzer.processStep(CompositeStep{Run: covShellRun}, 1, "action.yml")
 		if dep == nil {
 			t.Fatal("expected dependency for run step")
 		}
@@ -233,7 +260,7 @@ func TestCovAnalyzerProcessStep(t *testing.T) {
 
 	t.Run("empty step yields nil", func(t *testing.T) {
 		t.Parallel()
-		if dep := analyzer.processStep(CompositeStep{}, 1); dep != nil {
+		if dep := analyzer.processStep(CompositeStep{}, 1, "action.yml"); dep != nil {
 			t.Errorf("expected nil for empty step, got %+v", dep)
 		}
 	})

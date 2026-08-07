@@ -67,12 +67,6 @@ const (
 	CacheKeyTagSHA = "tagsha:"
 )
 
-// Miscellaneous analysis constants.
-const (
-	// ScriptLineEstimate is the estimated lines per script step.
-	ScriptLineEstimate = 10
-)
-
 // Scope level constants.
 const (
 	// ScopeGlobal is the global scope.
