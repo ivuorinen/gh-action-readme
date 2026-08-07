@@ -1,6 +1,11 @@
 # {{.Name}}
 
-{{if .Branding}}![{{.Branding.Icon}}](https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}) {{end}}![GitHub](https://img.shields.io/badge/GitHub%20Action-{{.Name | badgeSegment}}-blue){{if .License}} ![License](https://img.shields.io/badge/license-{{.License | badgeSegment}}-green){{end}}
+{{/* Badges render on one output line; the source is wrapped to stay under 200 chars. */ -}}
+{{if .Branding}}![{{.Branding.Icon}}](https://img.shields.io/badge/icon-
+{{- .Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}) {{end -}}
+![GitHub](https://img.shields.io/badge/GitHub%20Action-{{.Name | badgeSegment}}-blue)
+{{- if .License}} ![License](https://img.shields.io/badge/license-
+{{- .License | badgeSegment}}-green){{end}}
 
 > {{.Description}}
 

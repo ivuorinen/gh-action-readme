@@ -103,8 +103,8 @@ The license shown in generated docs is resolved highest-priority-first:
 1. the `license` config key;
 2. a top-level `license:` key in `action.yml`;
 3. a `# license: <id>` header comment in `action.yml`;
-4. detection from the repository's `LICENSE` / `LICENCE` / `COPYING` file
-   (an `SPDX-License-Identifier:` tag wins over title matching).
+4. detection from the repository's `LICENSE` / `LICENCE` / `COPYING` file, where an
+    `SPDX-License-Identifier:` tag wins over title matching.
 
 If none resolve, **no license section or badge is rendered**. The tool documents
 actions it does not own, so it never asserts a license it cannot verify.

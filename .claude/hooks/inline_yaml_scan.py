@@ -4,9 +4,9 @@
 Enforces .claude/rules/no-inline-yaml-in-tests.md. Shared by two callers so a
 missed agent-hook invocation is still caught before a commit lands:
 
-  * .claude/hooks/pre-test-inline-yaml-guard.sh  -- PreToolUse(Edit|Write), scans
+- .claude/hooks/pre-test-inline-yaml-guard.sh -- PreToolUse(Edit|Write), scanning
     the pending content on stdin via --stdin-content.
-  * .pre-commit-config.yaml                      -- scans staged files by path.
+- .pre-commit-config.yaml -- scanning staged files by path.
 
 Exit status: 0 clean, 1 violation found (message on stdout).
 
