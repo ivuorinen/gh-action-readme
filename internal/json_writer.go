@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ivuorinen/gh-action-readme/appconstants"
+	"github.com/ivuorinen/gh-action-readme/internal/dependencies"
 	"github.com/ivuorinen/gh-action-readme/internal/validation"
 )
 
@@ -54,6 +55,10 @@ type JSONOutput struct {
 	Documentation DocumentationInfo `json:"documentation"`
 	Examples      []ExampleInfo     `json:"examples"`
 	Generated     GeneratedInfo     `json:"generated"`
+	// Dependencies mirrors the Dependencies section the Markdown themes render.
+	// omitempty keeps the key absent when dependency analysis is disabled, so
+	// consumers written against the previous output are unaffected.
+	Dependencies []dependencies.Dependency `json:"dependencies,omitempty"`
 }
 
 // MetaInfo contains metadata about the documentation generation.
@@ -73,6 +78,10 @@ type ActionYMLForJSON struct {
 	Runs        ActionRuns                     `json:"runs,omitempty"`
 	Branding    *BrandingForJSON               `json:"branding,omitempty"`
 	Permissions map[string]string              `json:"permissions,omitempty"`
+	// License is the resolved license identifier. Machine consumers read this
+	// rather than reverse-engineering the shields.io badge URL. Omitted when the
+	// license is unknown, matching the render-nothing-when-unknown rule.
+	License string `json:"license,omitempty"`
 }
 
 // ActionInputForJSON represents an input parameter in JSON format.
@@ -142,6 +151,12 @@ type JSONWriter struct {
 	// works without a repository context (e.g. in isolated unit tests).
 	usesStatement string
 	repoURL       string
+	// license is the resolved license identifier, or "" when unknown. Empty means no
+	// license badge is emitted — the writer must not assert a license it cannot see.
+	license string
+	// dependencies is the analyzed dependency list, populated by the caller from the
+	// template data. Nil when analysis is disabled, which omits the JSON key.
+	dependencies []dependencies.Dependency
 }
 
 // NewJSONWriter creates a new JSON writer.
@@ -222,12 +237,16 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 			URL:  "https://img.shields.io/badge/GitHub%20Action-" + shieldsBadgeEncode(action.Name) + "-blue",
 			Alt:  appconstants.LabelGitHubAction,
 		},
-		BadgeInfo{
-			Name: "License",
-			URL:  "https://img.shields.io/badge/license-MIT-green",
-			Alt:  "MIT License",
-		},
 	)
+	// Only emit a license badge when the license is actually known. A hardcoded MIT
+	// badge asserted a license for actions the tool merely documents.
+	if jw.license != "" {
+		badges = append(badges, BadgeInfo{
+			Name: "License",
+			URL:  "https://img.shields.io/badge/license-" + shieldsBadgeEncode(jw.license) + "-green",
+			Alt:  jw.license + " License",
+		})
+	}
 
 	// Generate examples
 	examples := []ExampleInfo{
@@ -265,6 +284,7 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 	}
 
 	return &JSONOutput{
+		Dependencies: jw.dependencies,
 		Meta: MetaInfo{
 			Version:   "1.0.0",
 			Format:    "gh-action-readme-json",
@@ -279,6 +299,7 @@ func (jw *JSONWriter) convertToJSONOutput(action *ActionYML) *JSONOutput {
 			Runs:        action.Runs,
 			Branding:    branding,
 			Permissions: map[string]string(action.Permissions),
+			License:     jw.license,
 		},
 		Documentation: DocumentationInfo{
 			Title:       action.Name,

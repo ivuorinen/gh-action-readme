@@ -5,6 +5,8 @@ import (
 	"fmt"
 	htmltemplate "html/template"
 	"io"
+	"maps"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -26,6 +28,10 @@ type TemplateOptions struct {
 	HeaderPath   string
 	FooterPath   string
 	Format       string // md or html
+	// OutputDir is the directory the rendered document is written to. It is needed
+	// to resolve links to repository files (see the repoFile template func), which
+	// are relative to the document, not to the action file.
+	OutputDir string
 }
 
 // TemplateData represents all data available to templates.
@@ -45,6 +51,22 @@ type TemplateData struct {
 	// Path information for subdirectory extraction
 	ActionPath string `json:"action_path,omitempty"`
 	RepoRoot   string `json:"repo_root,omitempty"`
+
+	// OutputDir is the directory the rendered document is written to. Links to
+	// repository files are resolved relative to it (see the repoFile template func),
+	// so a monorepo action documented into its own directory links correctly.
+	OutputDir string `json:"output_dir,omitempty"`
+
+	// License is the resolved license identifier, or "" when unknown. Templates must
+	// guard on it — rendering a license the action did not declare is a false claim
+	// about someone else's terms.
+	License string `json:"license,omitempty"`
+
+	// Permissions shadows the embedded ActionYML.Permissions with the resolved set:
+	// the action's own declaration, falling back to the config-level `permissions:`
+	// block when the action declares none. It is a separate field rather than a
+	// mutation of ActionYML so the parsed action stays untouched across formats.
+	Permissions PermissionMap `json:"permissions,omitempty"`
 
 	// Dependencies (populated by dependency analysis)
 	Dependencies []dependencies.Dependency `json:"dependencies,omitempty"`
@@ -67,7 +89,142 @@ func templateFuncs() texttemplate.FuncMap {
 		"adocCode":      adocCode,
 		"badgeSegment":  shieldsBadgeEncode,
 		"hasDefault":    hasDefault,
+		"yamlComment":   yamlComment,
+		"repoFile":      repoFileLink,
+		"runsOn":        runsOnValue,
+		"var":           configVariable,
+		"add1":          func(n int) int { return n + 1 },
 	}
+}
+
+// runsOnValue renders the configured `runs_on` runners as a YAML `runs-on:` value for
+// the workflow examples: a bare scalar for one runner, a flow sequence for several
+// (both valid GitHub Actions syntax). Falls back to the built-in default runner when
+// the config is empty, so examples are never left with a blank runner.
+func runsOnValue(data any) string {
+	td, ok := data.(*TemplateData)
+	if !ok || td.Config == nil || len(td.Config.RunsOn) == 0 {
+		return appconstants.RunnerUbuntuLatest
+	}
+
+	runners := td.Config.RunsOn
+	if len(runners) == 1 {
+		return runners[0]
+	}
+
+	return "[" + strings.Join(runners, ", ") + "]"
+}
+
+// configVariable looks up a custom template variable declared under `variables:` in
+// config. Returns "" for an unknown key so a template can use {{with var . "k"}} to
+// render a block only when the variable is set.
+func configVariable(data any, key string) string {
+	td, ok := data.(*TemplateData)
+	if !ok || td.Config == nil {
+		return ""
+	}
+
+	return td.Config.Variables[key]
+}
+
+// repoFileLink returns a link target for a repository-root file (LICENSE,
+// CONTRIBUTING.md, …), relative to the directory the document is being written to.
+// An action at actions/foo documented into actions/foo/README.md gets "../../LICENSE".
+//
+// It returns "" when the repo root is unknown or the file does not exist, so
+// templates can guard with {{with repoFile . "LICENSE"}} and omit the link rather
+// than emitting one that 404s. "LICENSE" additionally matches the conventional
+// variants (LICENSE.md, LICENSE, COPYING) via findLicenseFile.
+func repoFileLink(data any, name string) string {
+	td, ok := data.(*TemplateData)
+	if !ok || td.RepoRoot == "" || name == "" {
+		return ""
+	}
+
+	target := resolveRepoFilePath(td.RepoRoot, name)
+	if target == "" {
+		return ""
+	}
+
+	absOut := resolveSymlinkedAbs(documentDir(td))
+	absTarget := resolveSymlinkedAbs(target)
+	if absOut == "" || absTarget == "" {
+		return ""
+	}
+
+	// A document written outside the repository (an absolute --output, or an
+	// --output-dir pointing elsewhere) cannot reach a repo file by any sensible
+	// relative path. Emit nothing rather than a link that climbs out of the tree.
+	if !isWithin(resolveSymlinkedAbs(td.RepoRoot), absOut) {
+		return ""
+	}
+
+	rel, err := filepath.Rel(absOut, absTarget)
+	if err != nil {
+		return ""
+	}
+
+	return filepath.ToSlash(rel)
+}
+
+// documentDir returns the directory the rendered document is written to. OutputDir is
+// set by the generator from the fully resolved output path; the ActionPath fallback
+// covers template data built outside a generation run (e.g. direct BuildTemplateData
+// use in tests).
+func documentDir(td *TemplateData) string {
+	if td.OutputDir != "" {
+		return td.OutputDir
+	}
+	if td.ActionPath == "" {
+		return ""
+	}
+
+	return filepath.Dir(td.ActionPath)
+}
+
+// isWithin reports whether path is root itself or lives underneath it. Both are
+// expected to be absolute and symlink-resolved.
+func isWithin(root, path string) bool {
+	if root == "" || path == "" {
+		return false
+	}
+
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false
+	}
+
+	return rel == "." ||
+		(rel != appconstants.PathParent &&
+			!strings.HasPrefix(rel, appconstants.PathParent+string(filepath.Separator)))
+}
+
+// resolveRepoFilePath returns the real path of a repository-root file, or "" when it
+// does not exist. The LICENSE family is matched through findLicenseFile so naming
+// variants resolve; any other name is matched exactly.
+func resolveRepoFilePath(repoRoot, name string) string {
+	if strings.EqualFold(name, "LICENSE") {
+		path, _ := findLicenseFile(repoRoot)
+
+		return path
+	}
+
+	path := filepath.Join(repoRoot, name)
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+
+	return path
+}
+
+// yamlComment flattens v onto a single line so it stays inside the `#` comment it
+// is interpolated into. An action.yml description is commonly a block scalar
+// (`description: |`), whose second and later lines would otherwise land at column 0
+// inside a rendered ```yaml fence — un-commented, and no longer valid YAML. Unlike
+// mdCell (which emits <br> for a Markdown table cell), a YAML comment has no line
+// break to escape to, so runs of whitespace collapse to single spaces.
+func yamlComment(v any) string {
+	return strings.Join(strings.Fields(fmt.Sprintf("%v", v)), " ")
 }
 
 // hasDefault reports whether an action input declared a default value. ActionInput.
@@ -352,14 +509,29 @@ func getActionVersion(data any) string {
 	return appconstants.VersionTagV1
 }
 
-// BuildTemplateData constructs comprehensive template data from action and configuration.
-func BuildTemplateData(action *ActionYML, config *AppConfig, repoRoot, actionPath string) *TemplateData {
-	return buildTemplateData(action, config, repoRoot, actionPath, nil)
+// resolvePermissions returns the permission set to document. The action's own
+// declaration (YAML plus header comments, already merged by the parser) wins; the
+// config-level `permissions:` block is a fallback for actions that declare none,
+// which is the only reading under which that config key can affect output.
+func resolvePermissions(action *ActionYML, config *AppConfig) PermissionMap {
+	if action != nil && len(action.Permissions) > 0 {
+		return action.Permissions
+	}
+	if config == nil || len(config.Permissions) == 0 {
+		return nil
+	}
+
+	resolved := make(PermissionMap, len(config.Permissions))
+	maps.Copy(resolved, config.Permissions)
+
+	return resolved
 }
 
-// buildTemplateData is the implementation behind BuildTemplateData. When res is
-// non-nil, dependency analysis reuses the caller-owned shared cache+client
-// (read/written once per run); nil preserves the standalone per-call behavior.
+// buildTemplateData constructs comprehensive template data from action and
+// configuration. When res is non-nil, dependency analysis reuses the caller-owned
+// shared cache+client (read/written once per run); nil gives standalone per-call
+// behavior. The nil-res convenience wrapper is test-only and lives in
+// deadcode_wrappers_test.go.
 func buildTemplateData(
 	action *ActionYML,
 	config *AppConfig,
@@ -377,6 +549,12 @@ func buildTemplateData(
 		Config:     config,
 		ActionPath: actionPath,
 		RepoRoot:   repoRoot,
+		// Resolved once here so every format agrees. Shadows the embedded
+		// ActionYML.License (depth 0 wins over depth 1), which holds only the
+		// action-declared value; this is the full config > yaml > comment > detected
+		// chain. "" means unknown and templates must render no license section.
+		License:     resolveLicense(action, config, repoRoot),
+		Permissions: resolvePermissions(action, config),
 	}
 
 	// Populate Git information
@@ -501,10 +679,14 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 
 	var buf bytes.Buffer
 
-	if opts.Format == appconstants.OutputFormatHTML && opts.HeaderPath != "" {
+	// Header/footer partials apply to every text format, not just HTML: the caller
+	// (Generator.resolveHeaderFooter) is responsible for only supplying a partial
+	// appropriate to the format, so the built-in HTML scaffolding is never injected
+	// into Markdown.
+	if opts.HeaderPath != "" {
 		rendered, e := renderPartial(opts.HeaderPath, opts.Format, action)
 		if e != nil {
-			return "", fmt.Errorf("HTML header %q: %w", opts.HeaderPath, e)
+			return "", fmt.Errorf("header %q: %w", opts.HeaderPath, e)
 		}
 		buf.WriteString(rendered)
 	}
@@ -513,10 +695,10 @@ func RenderReadme(action any, opts TemplateOptions) (string, error) {
 		return "", err
 	}
 
-	if opts.Format == appconstants.OutputFormatHTML && opts.FooterPath != "" {
+	if opts.FooterPath != "" {
 		rendered, e := renderPartial(opts.FooterPath, opts.Format, action)
 		if e != nil {
-			return "", fmt.Errorf("HTML footer %q: %w", opts.FooterPath, e)
+			return "", fmt.Errorf("footer %q: %w", opts.FooterPath, e)
 		}
 		buf.WriteString(rendered)
 	}

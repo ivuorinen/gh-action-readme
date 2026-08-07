@@ -1,0 +1,8 @@
+# license: "MPL-2.0"  # quoted, with a trailing inline comment
+name: Quoted Licence Action
+description: Licence value is quoted and followed by an inline comment.
+runs:
+  using: composite
+  steps:
+    - run: echo hi
+      shell: bash

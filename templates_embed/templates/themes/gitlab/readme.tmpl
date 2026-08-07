@@ -1,6 +1,6 @@
 # {{.Name}}
 
-{{if .Branding}}**{{.Branding.Icon}}** {{end}}**{{.Description}}**
+> {{if .Branding}}{{.Branding.Icon}} — {{end}}{{.Description}}
 
 ---
 
@@ -36,47 +36,57 @@ steps:
 
 ## Configuration
 
-{{if .Inputs}}
+{{- if .Inputs}}
+
 ### Input Parameters
 
-{{range $key, $input := .Inputs}}
+{{- range $key, $input := .Inputs}}
+
 #### `{{$key}}`
+
 - **Description**: {{$input.Description}}
 - **Type**: String{{if $input.Required}}
 - **Required**: Yes{{else}}
 - **Required**: No{{end}}{{if hasDefault $input.Default}}
 - **Default**: {{$input.Default | mdCode}}{{end}}
 
-{{end}}
-{{end}}
+{{- end}}
+{{- end}}
 
-{{if .Outputs}}
+{{- if .Outputs}}
+
 ### Output Parameters
 
-{{range $key, $output := .Outputs}}
+{{- range $key, $output := .Outputs}}
+
 #### `{{$key}}`
+
 - **Description**: {{$output.Description}}
 
-{{end}}
-{{end}}
+{{- end}}
+{{- end}}
 
-{{if and .Permissions (gt (len .Permissions) 0)}}
+{{- if and .Permissions (gt (len .Permissions) 0)}}
+
 ### Required Permissions
 
-{{range $key, $value := .Permissions}}
+{{- range $key, $value := .Permissions}}
+
 #### `{{$key}}`
+
 - **Access Level**: `{{$value}}`
 
-{{end}}
+{{- end}}
 
-**GitHub Actions Workflow:**
+#### GitHub Actions Workflow
+
 ```yaml
 permissions:
 {{- range $key, $value := .Permissions}}
   {{$key}}: {{$value}}
 {{- end}}
 ```
-{{end}}
+{{- end}}
 
 ## Usage Examples
 
@@ -103,9 +113,12 @@ For more complex scenarios, refer to the [action.yml](./action.yml) specificatio
 - [Usage examples](./examples/)
 - [Contributing guidelines](./CONTRIBUTING.md)
 
+{{- if .License}}
+
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the {{.License}} License.{{with repoFile . "LICENSE"}} See [LICENSE]({{.}}).{{end}}
+{{- end}}
 
 ---
 

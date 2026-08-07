@@ -403,6 +403,7 @@ func (g *Generator) renderTemplateForAction(
 	// (g.depRes is nil outside a batch or when dependency analysis is disabled,
 	// in which case buildTemplateData falls back to per-call resources).
 	templateData := buildTemplateData(action, g.Config, repoRoot, actionPath, g.depRes)
+	templateData.OutputDir = opts.OutputDir
 
 	// Render template with data
 	content, err := RenderReadme(templateData, opts)
@@ -433,16 +434,6 @@ func (g *Generator) generateSimpleFormat(
 		}
 	}
 
-	opts := TemplateOptions{
-		TemplatePath: templatePath,
-		Format:       format,
-	}
-
-	content, err := g.renderTemplateForAction(action, actionPath, opts)
-	if err != nil {
-		return fmt.Errorf("failed to render %s template: %w", format, err)
-	}
-
 	// When multiple actions share one output directory, derive a per-action
 	// filename (keeping the default's extension) so the fixed README name does not
 	// overwrite earlier outputs.
@@ -451,10 +442,28 @@ func (g *Generator) generateSimpleFormat(
 		filename = g.disambiguateName(safeActionFilename(action, filepath.Ext(defaultFilename)))
 	}
 
+	// Resolve the destination BEFORE rendering: links to repository files are
+	// relative to the document, and --output may add directory depth or be absolute,
+	// in which case outputDir is not where the file lands.
 	outputPath, err := g.resolveOutputPath(outputDir, filename)
 	if err != nil {
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
 	}
+
+	header, footer := g.resolveHeaderFooter(format)
+	opts := TemplateOptions{
+		TemplatePath: templatePath,
+		HeaderPath:   header,
+		FooterPath:   footer,
+		Format:       format,
+		OutputDir:    filepath.Dir(outputPath),
+	}
+
+	content, err := g.renderTemplateForAction(action, actionPath, opts)
+	if err != nil {
+		return fmt.Errorf("failed to render %s template: %w", format, err)
+	}
+
 	if err := ensureParentDir(outputPath); err != nil {
 		return err
 	}
@@ -479,6 +488,49 @@ func writeFileTightMode(path string, data []byte, perm os.FileMode) error {
 	return os.Chmod(path, perm) // #nosec G302 -- output file permissions
 }
 
+// resolveHeaderFooter picks the header and footer partials for a render, resolving
+// each part independently so overriding one keeps the other. Priority per part:
+//
+//  1. an explicitly configured Config.Header / Config.Footer;
+//  2. the selected theme's partials/{header,footer}.tmpl, when it ships one;
+//  3. for HTML only, the built-in HTML partials — they are an HTML document's
+//     <head>/<body> scaffolding and would be nonsense injected into Markdown.
+//
+// "Explicitly configured" means different from the built-in default: DefaultAppConfig
+// seeds Header/Footer with the HTML partial paths, and WriteDefaultConfig has written
+// those into user config files, so a bare equality check against the default is what
+// separates a real user choice from the inherited default. This mirrors the same
+// treatment in wizard/exporter.go.
+func (g *Generator) resolveHeaderFooter(format string) (header, footer string) {
+	defaults := DefaultAppConfig()
+
+	header = g.resolvePartial(
+		g.Config.Header, defaults.Header, appconstants.ThemePartialHeader, format,
+	)
+	footer = g.resolvePartial(
+		g.Config.Footer, defaults.Footer, appconstants.ThemePartialFooter, format,
+	)
+
+	return header, footer
+}
+
+// resolvePartial implements the per-part precedence described on resolveHeaderFooter.
+func (g *Generator) resolvePartial(configured, builtinDefault, partialName, format string) string {
+	if configured != "" && configured != builtinDefault {
+		return configured
+	}
+
+	if themePartial := resolveThemePartial(g.Config.Theme, partialName); themePartial != "" {
+		return themePartial
+	}
+
+	if format == appconstants.OutputFormatHTML {
+		return builtinDefault
+	}
+
+	return ""
+}
+
 // generateMarkdown creates a README.md file using the template.
 func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	return g.generateSimpleFormat(
@@ -495,11 +547,28 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		return err
 	}
 
+	// Per-action filename so multiple actions written to one output directory do
+	// not collide (and to avoid path separators / Windows-reserved characters in
+	// the action name resolving into a bad path). In a shared-dir batch, also
+	// disambiguate names that sanitize to the same string.
+	defaultFilename := safeActionFilename(action, ".html")
+	if uniqueNames {
+		defaultFilename = g.disambiguateName(defaultFilename)
+	}
+
+	// Resolve the destination BEFORE rendering — see generateSimpleFormat.
+	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
+	if err != nil {
+		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
+	}
+
+	header, footer := g.resolveHeaderFooter(appconstants.OutputFormatHTML)
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
-		HeaderPath:   g.Config.Header,
-		FooterPath:   g.Config.Footer,
-		Format:       "html",
+		HeaderPath:   header,
+		FooterPath:   footer,
+		Format:       appconstants.OutputFormatHTML,
+		OutputDir:    filepath.Dir(outputPath),
 	}
 
 	content, err := g.renderTemplateForAction(action, actionPath, opts)
@@ -513,18 +582,6 @@ func (g *Generator) generateHTML(action *ActionYML, outputDir, actionPath string
 		Footer: "",
 	}
 
-	// Per-action filename so multiple actions written to one output directory do
-	// not collide (and to avoid path separators / Windows-reserved characters in
-	// the action name resolving into a bad path). In a shared-dir batch, also
-	// disambiguate names that sanitize to the same string.
-	defaultFilename := safeActionFilename(action, ".html")
-	if uniqueNames {
-		defaultFilename = g.disambiguateName(defaultFilename)
-	}
-	outputPath, err := g.resolveOutputPath(outputDir, defaultFilename)
-	if err != nil {
-		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
-	}
 	if err := ensureParentDir(outputPath); err != nil {
 		return err
 	}
@@ -548,6 +605,8 @@ func (g *Generator) generateJSON(action *ActionYML, outputDir, actionPath string
 	// output matches the markdown output instead of emitting your-org/@v1 stubs.
 	td := buildTemplateData(action, g.Config, g.repoRootForAction(actionPath), actionPath, g.depRes)
 	writer.usesStatement = td.UsesStatement
+	writer.license = td.License
+	writer.dependencies = td.Dependencies
 	if td.Git.Organization != "" && td.Git.Repository != "" {
 		writer.repoURL = fmt.Sprintf("%s/%s/%s", appconstants.GitHubBaseURL, td.Git.Organization, td.Git.Repository)
 	}
@@ -636,27 +695,48 @@ func (g *Generator) reportResults(successCount int, parseErrors []string) {
 	}
 }
 
+// coreRequiredFields are the action.yml fields that FillMissing cannot synthesize a
+// usable value for; a file missing any of them is rejected rather than defaulted.
+var coreRequiredFields = []string{
+	appconstants.FieldName,
+	appconstants.FieldDescription,
+	appconstants.FieldRuns,
+	appconstants.FieldRunsUsing,
+}
+
+// hasMissingCoreField reports whether any missing field is a core required field.
+func hasMissingCoreField(missing []string) bool {
+	for _, field := range missing {
+		if slices.Contains(coreRequiredFields, field) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // parseAndValidateAction parses and validates an action.yml file.
 func (g *Generator) parseAndValidateAction(actionPath string) (*ActionYML, error) {
-	action, err := ParseActionYML(actionPath)
+	action, warnings, err := ParseActionYMLWithWarnings(actionPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse action file %s: %w", actionPath, err)
 	}
 
+	// Surface non-fatal parse warnings (e.g. a header-comment permission block that
+	// could not be scanned) instead of silently dropping the affected section.
+	for _, warning := range warnings {
+		g.Output.Warning("%s", warning)
+	}
+
 	validationResult := ValidateActionYML(action)
 	if len(validationResult.MissingFields) > 0 {
-		// Check for critical validation errors that cannot be fixed with defaults
-		for _, field := range validationResult.MissingFields {
-			// All core required fields should cause validation failure
-			if field == appconstants.FieldName || field == appconstants.FieldDescription ||
-				field == appconstants.FieldRuns || field == appconstants.FieldRunsUsing {
-				// Required fields missing - cannot be fixed with defaults, must fail
-				return nil, fmt.Errorf(
-					"action file %s has invalid configuration, missing required field(s): %v",
-					actionPath,
-					validationResult.MissingFields,
-				)
-			}
+		// Core required fields cannot be fixed with defaults, so they must fail.
+		if hasMissingCoreField(validationResult.MissingFields) {
+			return nil, fmt.Errorf(
+				"action file %s has invalid configuration, missing required field(s): %v",
+				actionPath,
+				validationResult.MissingFields,
+			)
 		}
 
 		if g.Config.Verbose {
@@ -729,7 +809,8 @@ func (g *Generator) resolveOutputPath(outputDir, defaultFilename string) (string
 	// Outside the output directory iff the first path component is "..". Match the
 	// whole "..") component, not a ".." prefix, so a legitimate directory whose name
 	// merely starts with ".." (e.g. "..reports/readme.md") is not falsely rejected.
-	if relPath == ".." || strings.HasPrefix(filepath.ToSlash(relPath), "../") {
+	if relPath == appconstants.PathParent ||
+		strings.HasPrefix(filepath.ToSlash(relPath), appconstants.PathParent+"/") {
 		return "", fmt.Errorf(appconstants.ErrPathTraversal, filename, outputDir)
 	}
 
