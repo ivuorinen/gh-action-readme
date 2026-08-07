@@ -12,11 +12,17 @@ import (
 
 // Local constants to avoid duplicate string literals across these tests.
 const (
-	covActionContent = "name: Coverage Action\ndescription: cov\n"
-	covFileName      = "cov.yml"
-	covWarningText   = "deprecated input detected"
-	covErrText       = "boom"
+	covFileName    = "cov.yml"
+	covWarningText = "deprecated input detected"
+	covErrText     = "boom"
 )
+
+// covActionContent returns the action body these tests write and read back. It is a
+// function reading a fixture rather than a Go string constant because
+// no-inline-yaml-in-tests.md forbids embedding action metadata in test source.
+func covActionContent() string {
+	return MustReadFixture(TestFixtureMinimalAction)
+}
 
 // covFakeCache implements the interface required by CleanupCache.
 type covFakeCache struct {
@@ -39,7 +45,7 @@ func skipIfNoGit(t *testing.T) {
 
 func TestCovWriteFileInDir(t *testing.T) {
 	dir := t.TempDir()
-	path := WriteFileInDir(t, dir, covFileName, covActionContent)
+	path := WriteFileInDir(t, dir, covFileName, covActionContent())
 	if path != filepath.Join(dir, covFileName) {
 		t.Fatalf("unexpected path: %q", path)
 	}
@@ -65,7 +71,7 @@ func TestCovWriteActionFixtureAs(t *testing.T) {
 }
 
 func TestCovCreateActionInTempDir(t *testing.T) {
-	tmpDir, actionPath := CreateActionInTempDir(t, covActionContent)
+	tmpDir, actionPath := CreateActionInTempDir(t, covActionContent())
 	if tmpDir == "" {
 		t.Fatal("expected non-empty tmpDir")
 	}
@@ -74,7 +80,7 @@ func TestCovCreateActionInTempDir(t *testing.T) {
 
 func TestCovCreateNestedAction(t *testing.T) {
 	base := t.TempDir()
-	dirPath, actionPath := CreateNestedAction(t, base, filepath.Join("actions", "build"), covActionContent)
+	dirPath, actionPath := CreateNestedAction(t, base, filepath.Join("actions", "build"), covActionContent())
 	if dirPath != filepath.Join(base, "actions", "build") {
 		t.Fatalf("unexpected dirPath: %q", dirPath)
 	}
@@ -114,18 +120,18 @@ func TestCovValidateTestPath(t *testing.T) {
 
 func TestCovSafeReadFile(t *testing.T) {
 	dir := t.TempDir()
-	path := WriteFileInDir(t, dir, covFileName, covActionContent)
+	path := WriteFileInDir(t, dir, covFileName, covActionContent())
 	got := SafeReadFile(t, path, dir)
-	if string(got) != covActionContent {
+	if string(got) != covActionContent() {
 		t.Fatalf("unexpected content: %q", string(got))
 	}
 }
 
 func TestCovCreateTempActionFile(t *testing.T) {
-	path := CreateTempActionFile(t, covActionContent)
+	path := CreateTempActionFile(t, covActionContent())
 	AssertFileExists(t, path)
 	got := SafeReadFile(t, path, filepath.Dir(path))
-	if string(got) != covActionContent {
+	if string(got) != covActionContent() {
 		t.Fatalf("unexpected content: %q", string(got))
 	}
 }

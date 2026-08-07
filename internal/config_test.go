@@ -178,10 +178,8 @@ func TestLoadConfiguration(t *testing.T) {
 				t.Setenv("GITHUB_TOKEN", "fallback-token")
 
 				// Create config file
-				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML, `
-theme: minimal
-github_token: config-token
-`)
+				testutil.WriteFileInDir(t, tempDir, testutil.TestPathConfigYML,
+					testutil.MustReadFixture(testutil.TestConfigMinimalWithConfigToken))
 				configPath := filepath.Join(tempDir, testutil.TestPathConfigYML)
 
 				return configPath, tempDir, tempDir
