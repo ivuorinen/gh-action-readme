@@ -195,8 +195,9 @@ cp -r templates/themes/github templates/themes/my-theme
 # Main template
 vim templates/themes/my-theme/readme.tmpl
 
-# Optional partials
+# Optional partials (only header.tmpl and footer.tmpl are loaded)
 vim templates/themes/my-theme/partials/header.tmpl
+vim templates/themes/my-theme/partials/footer.tmpl
 ```
 
 1. **Use custom theme:**
@@ -210,16 +211,18 @@ gh-action-readme gen --theme my-theme
 ```text
 templates/themes/my-theme/
 ├── readme.tmpl           # Main template (required)
-├── partials/            # Partial templates (optional)
-│   ├── header.tmpl      # Header section
-│   ├── inputs.tmpl      # Inputs table
-│   ├── outputs.tmpl     # Outputs table
-│   ├── examples.tmpl    # Usage examples
-│   └── footer.tmpl      # Footer section
-└── assets/              # Theme assets (optional)
-    ├── styles.css       # Custom CSS
-    └── images/          # Theme images
+└── partials/             # Optional; only these two names are loaded
+    ├── header.tmpl       # Rendered before the body
+    └── footer.tmpl       # Rendered after the body
 ```
+
+Only `partials/header.tmpl` and `partials/footer.tmpl` are recognised. There is no
+section-level partial mechanism (inputs, outputs, examples) and no theme `assets/`
+directory — a theme is one `readme.tmpl` plus, optionally, those two partials.
+
+A theme partial is used unless the `header` / `footer` config key overrides that
+part; see [Header and footer partials](configuration.md#header-and-footer-partials)
+for the full precedence.
 
 ### Template Variables
 

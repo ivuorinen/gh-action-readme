@@ -48,15 +48,89 @@ analyze_dependencies: false # default is false; set true to opt in
 
 ### Legacy and Reserved Settings
 
+### Header and footer partials
+
+`header` and `footer` name template files wrapped around the rendered body. They
+apply to **every text output format** (Markdown, AsciiDoc, HTML) — JSON is unaffected.
+
+Each part is resolved independently, so overriding one keeps the other:
+
+1. an explicitly configured `header` / `footer`;
+2. the selected theme's `partials/header.tmpl` / `partials/footer.tmpl`, if it ships one;
+3. for HTML only, the built-in HTML partials (the `<head>`/`<body>` scaffolding).
+
+Setting only `footer` therefore replaces the footer while leaving the theme's header
+in place. The built-in HTML partials are never injected into Markdown or AsciiDoc.
+
+### Permissions, runners, security info, and custom variables
+
+| Key | Effect on output |
+| --- | --- |
+| `permissions` | Rendered in the Permissions section **when the action declares none of its own**. An `action.yml` declaration (YAML or `# permissions:` header comment) always wins. |
+| `runs_on` | Supplies the `runs-on:` value in the generated workflow examples. One runner renders as a scalar, several as a YAML flow sequence (`[ubuntu-latest, macos-latest]`). |
+| `show_security_info` | When true *and* dependency analysis is on, adds a Security section reporting how many dependencies are pinned and listing the floating ones. |
+| `variables` | Custom values reachable from any template as `{{var . "key"}}`. Unknown keys return `""`, so `{{with var . "key"}}…{{end}}` renders a block only when the variable is set. |
+
+```yaml
+permissions:
+  contents: read
+runs_on: [ubuntu-latest, macos-latest]
+show_security_info: true
+variables:
+  support_url: https://example.com/support
+```
+
+### Dependency analysis in JSON output
+
+With `analyze_dependencies: true`, `-f json` emits a top-level `dependencies` array
+mirroring the Dependencies section the Markdown themes render. The key is omitted
+entirely when analysis is disabled, so consumers written against earlier output are
+unaffected.
+
+```json
+{
+  "action": { "...": "..." },
+  "dependencies": [
+    { "name": "actions/checkout", "uses": "actions/checkout@v4", "version": "v4", "...": "..." }
+  ]
+}
+```
+
+### License
+
+The license shown in generated docs is resolved highest-priority-first:
+
+1. the `license` config key;
+2. a top-level `license:` key in `action.yml`;
+3. a `# license: <id>` header comment in `action.yml`;
+4. detection from the repository's `LICENSE` / `LICENCE` / `COPYING` file
+   (an `SPDX-License-Identifier:` tag wins over title matching).
+
+If none resolve, **no license section or badge is rendered**. The tool documents
+actions it does not own, so it never asserts a license it cannot verify.
+
+```yaml
+# action.yml
+# license: Apache-2.0
+name: My Action
+```
+
+In JSON output the resolved value appears as `action.license` (omitted when unknown),
+alongside the human-facing licence badge.
+
+Links to repository files (`LICENSE` and friends) are emitted relative to the
+generated **document**, so a monorepo action documented into `actions/foo/` links to
+`../../LICENSE`, and `--output nested/README.md` links to `../../../LICENSE`. The link
+is omitted when the file does not exist, and when the document is written outside the
+repository (an absolute `--output`), since no relative path could reach it.
+
 Some configuration keys are accepted for backward compatibility or planned
 features but do **not** affect output in the current release:
 
 | Key | Status |
 | --- | --- |
 | `template` | Legacy custom-template path. Ignored while a `theme` is set, and `default` is set out of the box. Set `theme: ""` to use the `template` path instead. |
-| `header` / `footer` | Applied to **HTML output only** (`--output-format html`). Markdown, AsciiDoc, and JSON output ignore them. |
 | `schema` | Informational only. The `schema` command and key print/record the schema path, but the tool does not validate `action.yml` against a JSON schema — validation is structural. |
-| `permissions`, `runs_on`, `show_security_info`, `variables` | Accepted and merged from config but not consumed by any generator or template, so they have no effect on output. |
 
 > Note: the `permissions:` block *inside* an `action.yml` file is parsed and rendered
 > separately — only the config key of the same name has no effect.
