@@ -159,6 +159,32 @@ const (
 	TestJSONPackageFull        = "json-fixtures/package-full.json"
 	TestJSONPackageVersionOnly = "json-fixtures/package-version-only.json"
 
+	// TestConfigMinimalWithConfigToken pairs a minimal theme with a config-file token,
+	// for asserting that an environment token overrides the config value.
+	TestConfigMinimalWithConfigToken = "configs/minimal-with-config-token.yml" // #nosec G101 -- fixture path
+	// TestConfigRepoProfessionalHTML is a repo-level config selecting the
+	// professional theme with HTML output.
+	TestConfigRepoProfessionalHTML = "configs/repo-config-professional-html.yml"
+
+	// TestFixtureMinimalComposite is a smallest-valid composite action, used where a
+	// test needs a well-formed action file whose content is irrelevant (e.g. varying
+	// only the file name).
+	TestFixtureMinimalComposite = "actions/minimal-composite.yml"
+
+	// License test fixtures for the header-comment / YAML-key precedence chain.
+	// TestFixtureLicenseHeaderComment declares the license only in a `# license:`
+	// header comment; TestFixtureLicenseYAMLKeyWins additionally sets the top-level
+	// `license:` key, which must win; TestFixtureLicenseQuoted uses a quoted value
+	// with a trailing inline comment; TestFixtureLicenseNone declares none at all.
+	TestFixtureLicenseHeaderComment = "license/header-comment.yml"
+	TestFixtureLicenseYAMLKeyWins   = "license/yaml-key-wins.yml"
+	TestFixtureLicenseQuoted        = "license/quoted-and-inline-comment.yml"
+	TestFixtureLicenseNone          = "license/no-license.yml"
+	// TestFixtureLicenseAfterPermissions places `# license:` after an indented
+	// permissions entry, so the license line is the one that dedents out of the
+	// block — it must still be read, not consumed by the closing block.
+	TestFixtureLicenseAfterPermissions = "license/after-permissions-block.yml"
+
 	// Permission test fixtures for parser tests.
 	TestFixturePermissionsDashSingle    = "permissions/dash-format-single.yml"
 	TestFixturePermissionsDashMultiple  = "permissions/dash-format-multiple.yml"

@@ -1900,7 +1900,7 @@ func TestLoadGenConfigIntegration(t *testing.T) {
 			name: "loads repo-specific config",
 			setupFunc: func(t *testing.T, tmpDir string) (string, string) {
 				t.Helper()
-				configContent := "theme: professional\noutput_format: html\n"
+				configContent := testutil.MustReadFixture(testutil.TestConfigRepoProfessionalHTML)
 				testutil.WriteTestFile(t, filepath.Join(tmpDir, ".ghreadme.yaml"), configContent)
 
 				return tmpDir, tmpDir

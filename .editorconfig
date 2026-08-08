@@ -23,6 +23,13 @@ indent_style = space
 indent_size = 2
 max_line_length = 200
 
+# Python (repo-rule enforcement scripts under .claude/hooks). PEP 8 mandates
+# 4-space indentation, so the tab default in [*] cannot apply here.
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
 [*.{tmpl,adoc}]
 indent_style = space
 indent_size = 2

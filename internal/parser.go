@@ -21,6 +21,12 @@ type ActionYML struct {
 	Runs        ActionRuns              `yaml:"runs"`
 	Branding    *Branding               `yaml:"branding,omitempty"`
 	Permissions PermissionMap           `yaml:"permissions,omitempty"`
+	// License is the action's license identifier (e.g. "MIT", "Apache-2.0"). It is
+	// not part of GitHub's action.yml schema; it is accepted as a top-level key and
+	// as a `# license:` header comment, and can be detected from a repository
+	// LICENSE file. Empty means unknown — templates then render no license section
+	// rather than asserting one.
+	License string `yaml:"license,omitempty"`
 	// Add more fields as the schema evolves
 }
 
@@ -168,19 +174,36 @@ type Branding struct {
 	Color string `yaml:"color"`
 }
 
-// ParseActionYML reads and parses action.yml from given path.
+// ParseActionYML reads and parses action.yml from given path. Warnings from the
+// header-comment permission scan are discarded; use ParseActionYMLWithWarnings to
+// surface them.
 func ParseActionYML(path string) (*ActionYML, error) {
-	// Parse permissions from header comments FIRST
-	commentPermissions, err := parsePermissionsFromComments(path)
+	action, _, err := ParseActionYMLWithWarnings(path)
+
+	return action, err
+}
+
+// ParseActionYMLWithWarnings reads and parses action.yml, additionally returning
+// non-fatal warnings. A failure to scan header-comment permissions (an unreadable
+// file, or a comment line past bufio.Scanner's 64 KiB token limit) must not fail the
+// whole parse, but it silently drops every comment-declared permission — so the
+// caller gets a warning it can log instead of the section vanishing unannounced.
+func ParseActionYMLWithWarnings(path string) (*ActionYML, []string, error) {
+	var warnings []string
+
+	// Scan the header comment block FIRST (permissions + license conventions).
+	header, err := scanHeaderComments(path)
 	if err != nil {
-		// Don't fail if comment parsing fails, just log and continue
-		commentPermissions = nil
+		warnings = append(warnings,
+			fmt.Sprintf("could not parse header comments in %s: %v", path, err))
+		header = headerComments{}
 	}
+	commentPermissions := header.Permissions
 
 	// Standard YAML parsing
 	f, err := os.Open(path) // #nosec G304 -- path from function parameter
 	if err != nil {
-		return nil, err
+		return nil, warnings, err
 	}
 	defer func() {
 		_ = f.Close() // Ignore close error in defer
@@ -188,13 +211,18 @@ func ParseActionYML(path string) (*ActionYML, error) {
 	var a ActionYML
 	dec := yaml.NewDecoder(f)
 	if err := dec.Decode(&a); err != nil {
-		return nil, err
+		return nil, warnings, err
 	}
 
 	// Merge permissions: YAML permissions override comment permissions
 	mergePermissions(&a, commentPermissions)
 
-	return &a, nil
+	// The YAML key wins over the header comment, matching the permissions precedence.
+	if a.License == "" {
+		a.License = header.License
+	}
+
+	return &a, warnings, nil
 }
 
 // mergePermissions combines comment and YAML permissions.
@@ -227,26 +255,42 @@ func mergePermissions(action *ActionYML, commentPerms map[string]string) {
 	}
 }
 
-// parsePermissionsFromComments extracts permissions from header comments.
-// Looks for lines like:
+// headerComments holds the metadata recovered from an action file's leading comment
+// block. GitHub's action.yml schema has no place for these, so they are expressed as
+// a comment convention and scanned here.
+type headerComments struct {
+	Permissions map[string]string
+	License     string
+}
+
+// scanHeaderComments reads the leading comment block of an action file once and
+// extracts every supported convention from it.
+//
+// A single-line `license:` declaration:
+//
+//	# license: Apache-2.0
+//
+// and a `permissions:` block, in either the dash or the plain mapping form, with
+// optional trailing inline comments:
 //
 //	# permissions:
 //	#   - contents: read  # Required for checking out repository
 //	#   contents: read    # Alternative format without dash
-func parsePermissionsFromComments(path string) (map[string]string, error) {
+//
+// Scanning stops at the first non-comment line, so only the file header is read.
+func scanHeaderComments(path string) (headerComments, error) {
+	result := headerComments{Permissions: make(map[string]string)}
+
 	file, err := os.Open(path) // #nosec G304 -- path from function parameter
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	defer func() {
 		_ = file.Close() // Ignore close error in defer
 	}()
 
-	permissions := make(map[string]string)
 	scanner := bufio.NewScanner(file)
-
-	inPermissionsBlock := false
-	var expectedItemIndent int
+	state := headerScanState{expectedItemIndent: -1}
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -265,34 +309,114 @@ func parsePermissionsFromComments(path string) (map[string]string, error) {
 		content := strings.TrimPrefix(trimmed, "#")
 		content = strings.TrimSpace(content)
 
-		// Check for permissions block start
-		if content == "permissions:" {
-			inPermissionsBlock = true
-			// Calculate expected indent for permission items (after the # and any spaces)
-			// We expect items to be indented relative to the content
-			expectedItemIndent = -1 // Will be set on first item
-
-			continue
-		}
-
-		// Parse permission entries
-		if inPermissionsBlock && content != "" {
-			blockEnded := processPermissionEntry(line, content, &expectedItemIndent, permissions)
-			if blockEnded {
-				// A dedent ends the current permissions block but must NOT abort the
-				// whole header scan — a later "# permissions:" block (caught above)
-				// or trailing comment would otherwise be silently dropped.
-				inPermissionsBlock = false
-				expectedItemIndent = -1
-			}
-		}
+		state.consume(line, content, &result)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return result, err
 	}
 
-	return permissions, nil
+	return result, nil
+}
+
+// headerScanState carries the cross-line state of the header comment scan: whether
+// we are inside a `permissions:` block and the indent its items established.
+type headerScanState struct {
+	inPermissionsBlock bool
+	expectedItemIndent int
+}
+
+// consume folds one header comment line into result. line is the raw line (needed for
+// indent measurement) and content is that line with the leading "#" and surrounding
+// whitespace removed.
+func (s *headerScanState) consume(line, content string, result *headerComments) {
+	// A dedent ends the permissions block, and the line that caused it belongs to
+	// whatever follows — so it is re-offered to this function rather than consumed
+	// by the block that just closed. Without the retry, `# license:` written after
+	// an indented permission entry was silently dropped.
+	for range 2 {
+		if !s.consumeOnce(line, content, result) {
+			return
+		}
+	}
+}
+
+// consumeOnce folds one line into result and reports whether the line closed a
+// permissions block without being consumed, meaning the caller should offer it again
+// now that the block state is cleared.
+func (s *headerScanState) consumeOnce(line, content string, result *headerComments) bool {
+	// Check for permissions block start.
+	if content == "permissions:" {
+		s.inPermissionsBlock = true
+		// Items are indented relative to the content; the indent is learned from the
+		// first item, so reset it here.
+		s.expectedItemIndent = -1
+
+		return false
+	}
+
+	// A `license:` line is only recognized outside a permissions block, so an
+	// (invalid) "license" permission scope cannot be mistaken for a declaration.
+	// First declaration wins.
+	if !s.inPermissionsBlock && result.License == "" {
+		if v, ok := parseHeaderScalar(content, appconstants.HeaderFieldLicense); ok {
+			result.License = v
+
+			return false
+		}
+	}
+
+	// Parse permission entries.
+	if s.inPermissionsBlock && content != "" {
+		if processPermissionEntry(line, content, &s.expectedItemIndent, result.Permissions) {
+			// A dedent ends the current permissions block but must NOT abort the whole
+			// header scan — a later "# permissions:" block or a `# license:` line would
+			// otherwise be silently dropped. The line was not consumed as a permission,
+			// so ask the caller to re-offer it now that the block is closed.
+			s.inPermissionsBlock = false
+			s.expectedItemIndent = -1
+
+			return true
+		}
+	}
+
+	return false
+}
+
+// parseHeaderScalar matches a `<field>: <value>` comment line, case-insensitively on
+// the field name, strips any trailing inline comment, and returns the trimmed value.
+// An empty value reports false so a bare `# license:` is treated as absent.
+func parseHeaderScalar(content, field string) (string, bool) {
+	prefix := field + ":"
+	if len(content) < len(prefix) || !strings.EqualFold(content[:len(prefix)], prefix) {
+		return "", false
+	}
+
+	value := content[len(prefix):]
+	if idx := strings.Index(value, "#"); idx >= 0 {
+		value = value[:idx]
+	}
+
+	// Tolerate a quoted value (`# license: "MIT"`).
+	value = unquoteYAMLScalarValue(strings.TrimSpace(value))
+	if value == "" {
+		return "", false
+	}
+
+	return value, true
+}
+
+// unquoteYAMLScalarValue strips one matching pair of surrounding single or double
+// quotes from a scalar; otherwise returns the input unchanged.
+func unquoteYAMLScalarValue(s string) string {
+	if len(s) >= 2 {
+		first, last := s[0], s[len(s)-1]
+		if (first == '"' && last == '"') || (first == '\'' && last == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+
+	return s
 }
 
 // parsePermissionLine extracts key-value from a permission line.
@@ -404,12 +528,20 @@ func (w *actionFileWalker) walkFunc(path string, info os.FileInfo, err error) er
 	}
 
 	// Check for action.yml or action.yaml files
-	filename := strings.ToLower(info.Name())
-	if filename == appconstants.ActionFileNameYML || filename == appconstants.ActionFileNameYAML {
+	if isActionFileName(info.Name()) {
 		w.actionFiles = append(w.actionFiles, path)
 	}
 
 	return nil
+}
+
+// isActionFileName reports whether name is a GitHub Actions metadata file name.
+// The match is case-SENSITIVE on purpose: GitHub only loads lowercase action.yml /
+// action.yaml, so treating "Action.YML" as an action would generate documentation —
+// and a uses: statement — for a file GitHub will never resolve. Both discovery paths
+// share this predicate so recursive and non-recursive runs agree on the action set.
+func isActionFileName(name string) bool {
+	return name == appconstants.ActionFileNameYML || name == appconstants.ActionFileNameYAML
 }
 
 // DiscoverActionFiles finds action.yml and action.yaml files in the given directory.

@@ -1,0 +1,9 @@
+# license: Apache-2.0
+name: Yaml Key Wins Action
+description: The top-level license key must beat the header comment.
+license: BSD-3-Clause
+runs:
+  using: composite
+  steps:
+    - run: echo hi
+      shell: bash

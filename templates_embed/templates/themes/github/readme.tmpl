@@ -1,10 +1,13 @@
 # {{.Name}}
 
-{{if .Branding}}![{{.Branding.Icon}}](https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}) {{end}}
+{{/* Badges render on one output line; the source is wrapped to stay under 200 chars. */ -}}
+{{if .Branding}}![{{.Branding.Icon}}](https://img.shields.io/badge/icon-
+{{- .Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}) {{end -}}
 ![GitHub](https://img.shields.io/badge/GitHub%20Action-{{.Name | badgeSegment}}-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+{{- if .License}} ![License](https://img.shields.io/badge/license-
+{{- .License | badgeSegment}}-green){{end}}
 
-> {{.Description}}
+> {{.Description | mdCell}}
 
 ## 🚀 Quick Start
 
@@ -14,7 +17,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: {{runsOn .}}
     steps:
       - uses: actions/checkout@v4
       - name: {{.Name}}
@@ -25,7 +28,8 @@ jobs:
         {{- end}}{{end}}
 ```
 
-{{if .Inputs}}
+{{- if .Inputs}}
+
 ## 📥 Inputs
 
 | Parameter | Description | Required | Default |
@@ -33,9 +37,10 @@ jobs:
 {{- range $key, $input := .Inputs}}
 | `{{$key}}` | {{$input.Description | mdCell}} | {{if $input.Required}}✅{{else}}❌{{end}} | {{if hasDefault $input.Default}}{{$input.Default | mdCode}}{{else}}-{{end}} |
 {{- end}}
-{{end}}
+{{- end}}
 
-{{if .Outputs}}
+{{- if .Outputs}}
+
 ## 📤 Outputs
 
 | Parameter | Description |
@@ -43,9 +48,10 @@ jobs:
 {{- range $key, $output := .Outputs}}
 | `{{$key}}` | {{$output.Description | mdCell}} |
 {{- end}}
-{{end}}
+{{- end}}
 
-{{if .Permissions}}
+{{- if .Permissions}}
+
 ## 🔐 Permissions
 
 This action requires the following permissions:
@@ -56,14 +62,32 @@ This action requires the following permissions:
 | `{{$key}}` | `{{$value}}` |
 {{- end}}
 
-**Usage in workflow:**
+### Usage in workflow
+
 ```yaml
 permissions:
 {{- range $key, $value := .Permissions}}
   {{$key}}: {{$value}}
 {{- end}}
 ```
-{{end}}
+{{- end}}
+
+{{- if and .Config.ShowSecurityInfo .Dependencies}}
+{{- $pinned := 0}}
+{{- $floating := 0}}
+{{- range .Dependencies}}{{if .IsPinned}}{{$pinned = add1 $pinned}}{{else}}{{$floating = add1 $floating}}{{end}}{{end}}
+
+## 🛡️ Security
+
+{{$pinned}} of {{len .Dependencies}} dependencies are pinned to an immutable reference.
+{{- if gt $floating 0}}
+
+A floating reference can be moved by its owner, so the code that runs may change without
+any change here. Pin them to a commit SHA with `gh-action-readme deps pin`:
+{{range .Dependencies}}{{if not .IsPinned}}
+- `{{.Uses | mdCell}}`{{end}}{{end}}
+{{- end}}
+{{- end}}
 
 ## 💡 Examples
 
@@ -78,6 +102,7 @@ permissions:
     {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"example-value"{{end}}
   {{- end}}{{end}}
 ```
+
 </details>
 
 <details>
@@ -91,9 +116,11 @@ permissions:
     {{$key}}: {{if $val.Default}}"{{$val.Default}}"{{else}}"custom-value"{{end}}
   {{- end}}{{end}}
 ```
+
 </details>
 
-{{if .Dependencies}}
+{{- if .Dependencies}}
+
 ## 📦 Dependencies
 
 This action uses the following dependencies:
@@ -108,18 +135,16 @@ This action uses the following dependencies:
 <details>
 <summary>📋 Dependency Details</summary>
 
-{{range .Dependencies}}
+{{- range .Dependencies}}
+
 ### {{.Name}}{{if .Version}} @ {{.Version}}{{end}}
 
-{{if .IsPinned}}
-- 🔒 **Pinned Version**: Locked to specific version for security
-{{else}}
-- 📌 **Floating Version**: Using latest version (consider pinning for security)
-{{end}}
-- 👤 **Author**: [{{.Author}}](https://github.com/{{.Author}})
+{{if .IsPinned}}- 🔒 **Pinned Version**: Locked to specific version for security
+{{else}}- 📌 **Floating Version**: Using latest version (consider pinning for security)
+{{end}}- 👤 **Author**: [{{.Author}}](https://github.com/{{.Author}})
 {{if .MarketplaceURL}}- 🏪 **Marketplace**: [View on GitHub Marketplace]({{.MarketplaceURL}}){{end}}
 {{if .SourceURL}}- 📂 **Source**: [View Source]({{.SourceURL}}){{end}}
-{{if .WithParams}}
+{{- if .WithParams}}
 - **Configuration**:
   ```yaml
   with:
@@ -127,29 +152,31 @@ This action uses the following dependencies:
     {{$key}}: {{$value}}
   {{- end}}
   ```
-{{end}}
+{{- end}}
+{{- end}}
+{{- $hasLocalDeps := false}}
+{{- range .Dependencies}}{{if .IsLocalAction}}{{$hasLocalDeps = true}}{{end}}{{end}}
+{{- if $hasLocalDeps}}
 
-{{end}}
-
-{{$hasLocalDeps := false}}
-{{range .Dependencies}}{{if .IsLocalAction}}{{$hasLocalDeps = true}}{{end}}{{end}}
-{{if $hasLocalDeps}}
 ### Same Repository Dependencies
 {{range .Dependencies}}{{if .IsLocalAction}}
-- [{{.Name}}]({{.SourceURL}}) - {{.Description}}
+- [{{.Name}}]({{.SourceURL}}) - {{.Description | mdCell}}
 {{end}}{{end}}
-{{end}}
+{{- end}}
 
 </details>
-{{end}}
+{{- end}}
 
 ## 🔧 Development
 
 See the [action.yml](./action.yml) for the complete action specification.
 
+{{- if .License}}
+
 ## 📄 License
 
-This action is distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+This action is distributed under the {{.License}} License.{{with repoFile . "LICENSE"}} See [LICENSE]({{.}}) for more information.{{end}}
+{{- end}}
 
 ## 🤝 Contributing
 

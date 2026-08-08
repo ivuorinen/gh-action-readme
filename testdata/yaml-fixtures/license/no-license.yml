@@ -1,0 +1,9 @@
+# permissions:
+#   - contents: read
+name: No Licence Action
+description: Declares no licence anywhere.
+runs:
+  using: composite
+  steps:
+    - run: echo hi
+      shell: bash

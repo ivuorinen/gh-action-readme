@@ -12,9 +12,31 @@ const (
 	ActionFileNameYML = "action.yml"
 	// ActionFileNameYAML is the alternative action file name.
 	ActionFileNameYAML = "action.yaml"
+	// HeaderFieldLicense is the action header-comment field declaring the action's
+	// license (e.g. "# license: Apache-2.0"). GitHub's action.yml schema has no
+	// license field, so this is a comment convention.
+	HeaderFieldLicense = "license"
+
+	// SPDX identifiers emitted by license detection. Shared with tests so a
+	// detection result and its assertion cannot drift apart.
+	SPDXMIT        = "MIT"
+	SPDXApache2    = "Apache-2.0"
+	SPDXGPL3       = "GPL-3.0"
+	SPDXGPL2       = "GPL-2.0"
+	SPDXAGPL3      = "AGPL-3.0"
+	SPDXLGPL3      = "LGPL-3.0"
+	SPDXMPL2       = "MPL-2.0"
+	SPDXBSD3Clause = "BSD-3-Clause"
+	SPDXBSD2Clause = "BSD-2-Clause"
+	SPDXUnlicense  = "Unlicense"
+	SPDXISC        = "ISC"
 
 	// ActionFilenamePrefix is the filename prefix for GitHub Action files.
 	ActionFilenamePrefix = "action"
+
+	// PathParent is the parent-directory path component. Used in containment checks,
+	// where a leading ".." is what proves a resolved path escapes its root.
+	PathParent = ".."
 )
 
 // File permission constants.

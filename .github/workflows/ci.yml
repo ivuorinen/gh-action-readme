@@ -40,10 +40,14 @@ jobs:
         run: npm install -g --ignore-scripts eclint@2.8.1
       - name: Check EditorConfig compliance
         run: eclint check .
-      - name: Run unit tests
-        run: go test ./...
+      - name: Run unit tests with coverage gate
+        run: make test-coverage-check
+      - name: Run unit tests under the race detector
+        run: make test-race
       - name: Run property-based tests
         run: make test-property
+      - name: Verify dependency licences and third-party notices
+        run: make licenses
       - name: Example Action Readme Generation
         run: |
           go run . gen testdata/example-action --output example-README.md

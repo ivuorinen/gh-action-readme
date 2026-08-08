@@ -63,6 +63,21 @@ repos:
     hooks:
       - id: shfmt
 
+  # Shell script static analysis (covers .claude/hooks/, which enforce repo rules)
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+
+  # Repo-rule enforcement that must not depend on an agent hook firing.
+  - repo: local
+    hooks:
+      - id: no-inline-yaml-in-tests
+        name: no inline YAML in tests
+        entry: python3 .claude/hooks/inline_yaml_scan.py
+        language: system
+        files: _test\.go$
+
   # GitHub Actions linting
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12

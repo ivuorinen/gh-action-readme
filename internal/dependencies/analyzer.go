@@ -78,7 +78,6 @@ type Dependency struct {
 	WithParams     map[string]string `json:"with_params,omitempty"`
 	IsLocalAction  bool              `json:"is_local_action"` // Same repo dependency
 	IsShellScript  bool              `json:"is_shell_script"`
-	ScriptURL      string            `json:"script_url,omitempty"` // Link to script line
 }
 
 // OutdatedDependency represents a dependency that has newer versions available.
@@ -171,7 +170,38 @@ func (a *Analyzer) AnalyzeActionFileWithProgress(
 	}
 
 	// Process composite action steps
-	return a.processCompositeSteps(action.Runs.Steps, progressCallback)
+	return a.processCompositeSteps(action.Runs.Steps, actionPath, progressCallback)
+}
+
+// actionFileRef returns the action file's path relative to its repository root,
+// with forward slashes (e.g. "actions/build/action.yaml"), or "" when it cannot be
+// made repository-relative.
+//
+// It deliberately does not fall back to the bare file name: for a nested action that
+// would name a repo-root action.yaml that need not exist, which is the same class of
+// wrong-but-plausible link this function was written to eliminate. Callers treat ""
+// as "no link".
+func actionFileRef(actionPath string) string {
+	repoRoot, err := git.FindRepositoryRoot(filepath.Dir(actionPath))
+	if err != nil || repoRoot == "" {
+		return ""
+	}
+
+	absAction, err := filepath.Abs(actionPath)
+	if err != nil {
+		return ""
+	}
+
+	rel, err := filepath.Rel(repoRoot, absAction)
+	if err != nil {
+		return ""
+	}
+	// Escaping the repo root means we cannot build a valid blob path.
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return ""
+	}
+
+	return filepath.ToSlash(rel)
 }
 
 // outdatedConcurrency bounds the number of dependencies whose latest version is
@@ -375,6 +405,7 @@ func (a *Analyzer) validateActionType(usingType string) error {
 // processCompositeSteps processes steps in a composite action.
 func (a *Analyzer) processCompositeSteps(
 	steps []CompositeStep,
+	actionPath string,
 	progressCallback func(current, total int, message string),
 ) ([]Dependency, error) {
 	var dependencies []Dependency
@@ -385,7 +416,7 @@ func (a *Analyzer) processCompositeSteps(
 			progressCallback(i, totalSteps, fmt.Sprintf("Analyzing step %d/%d", i+1, totalSteps))
 		}
 
-		dep := a.processStep(step, i+1)
+		dep := a.processStep(step, i+1, actionPath)
 		if dep != nil {
 			dependencies = append(dependencies, *dep)
 		}
@@ -399,7 +430,7 @@ func (a *Analyzer) processCompositeSteps(
 }
 
 // processStep processes a single step and returns dependency if found.
-func (a *Analyzer) processStep(step CompositeStep, stepNumber int) *Dependency {
+func (a *Analyzer) processStep(step CompositeStep, stepNumber int, actionPath string) *Dependency {
 	if step.Uses != "" {
 		// This is an action dependency
 		dep, err := a.analyzeActionDependency(step, stepNumber)
@@ -411,7 +442,7 @@ func (a *Analyzer) processStep(step CompositeStep, stepNumber int) *Dependency {
 		return dep
 	} else if step.Run != "" {
 		// This is a shell script step
-		return a.analyzeShellScript(step, stepNumber)
+		return a.analyzeShellScript(step, stepNumber, actionPath)
 	}
 
 	return nil
@@ -491,25 +522,30 @@ func (a *Analyzer) analyzeActionDependency(step CompositeStep, _ int) (*Dependen
 }
 
 // analyzeShellScript analyzes a shell script step.
-func (a *Analyzer) analyzeShellScript(step CompositeStep, stepNumber int) *Dependency {
+func (a *Analyzer) analyzeShellScript(step CompositeStep, stepNumber int, actionPath string) *Dependency {
 	// Create a shell script dependency
 	name := step.Name
 	if name == "" {
 		name = fmt.Sprintf("Shell Script #%d", stepNumber)
 	}
 
-	// Try to create a link to the script in the repository
+	// Link to the action file the step lives in. The exact line is not tracked by
+	// the parser, so no #L anchor is emitted — a guessed line number would render
+	// as a precise deep link to an arbitrary place in the file. The path is derived
+	// from the real action file (honoring action.yaml and monorepo subdirectories)
+	// rather than assuming a repo-root "action.yml".
 	scriptURL := ""
-	if a.RepoInfo.Organization != "" && a.RepoInfo.Repository != "" {
-		// This would ideally link to the specific line in the action.yml file
+	if ref := actionFileRef(actionPath); ref != "" &&
+		a.RepoInfo.Organization != "" && a.RepoInfo.Repository != "" &&
+		a.RepoInfo.DefaultBranch != "" {
 		scriptURL = fmt.Sprintf(
-			"%s/%s/%s/blob/%s/action.yml#L%d",
+			"%s/%s/%s/blob/%s/%s",
 			appconstants.GitHubBaseURL,
 			a.RepoInfo.Organization,
 			a.RepoInfo.Repository,
 			a.RepoInfo.DefaultBranch,
-			stepNumber*appconstants.ScriptLineEstimate,
-		) // Rough estimate
+			ref,
+		)
 	}
 
 	return &Dependency{
@@ -524,7 +560,6 @@ func (a *Analyzer) analyzeShellScript(step CompositeStep, stepNumber int) *Depen
 		WithParams:    map[string]string{},
 		IsLocalAction: true,
 		IsShellScript: true,
-		ScriptURL:     scriptURL,
 	}
 }
 

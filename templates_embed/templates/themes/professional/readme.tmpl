@@ -1,16 +1,21 @@
 # {{.Name}}
+{{- if or .Branding .License}}
 
-{{if .Branding}}
 <div align="center">
-  <img src="https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-{{.Branding.Color | badgeSegment}}" alt="{{.Branding.Icon}}" />
+{{- if .Branding}}
+  <img src="https://img.shields.io/badge/icon-{{.Branding.Icon | badgeSegment}}-
+{{- .Branding.Color | badgeSegment}}" alt="{{.Branding.Icon}}" />
   <img src="https://img.shields.io/badge/status-stable-brightgreen" alt="Status" />
-  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
+{{- end}}
+{{- if .License}}
+  <img src="https://img.shields.io/badge/license-{{.License | badgeSegment}}-blue" alt="{{.License}} License" />
+{{- end}}
 </div>
-{{end}}
+{{- end}}
 
 ## Overview
 
-{{.Description}}
+{{.Description | trim}}
 
 This GitHub Action provides a robust solution for your CI/CD pipeline with comprehensive configuration options and detailed output information.
 
@@ -18,13 +23,21 @@ This GitHub Action provides a robust solution for your CI/CD pipeline with compr
 
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
-{{if .Inputs}}- [Input Parameters](#input-parameters){{end}}
-{{if .Outputs}}- [Output Parameters](#output-parameters){{end}}
+{{- if .Inputs}}
+- [Input Parameters](#input-parameters)
+{{- end}}
+{{- if .Outputs}}
+- [Output Parameters](#output-parameters)
+{{- end}}
 - [Examples](#examples)
-{{if .Dependencies}}- [Dependencies](#-dependencies){{end}}
+{{- if .Dependencies}}
+- [Dependencies](#-dependencies)
+{{- end}}
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+{{- if .License}}
 - [License](#license)
+{{- end}}
 
 ## Quick Start
 
@@ -40,7 +53,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: {{runsOn .}}
 
     steps:
       - name: Checkout Repository
@@ -58,7 +71,8 @@ jobs:
 
 This action supports various configuration options to customize its behavior according to your needs.
 
-{{if .Inputs}}
+{{- if .Inputs}}
+
 ### Input Parameters
 
 | Parameter | Description | Type | Required | Default Value |
@@ -69,7 +83,8 @@ This action supports various configuration options to customize its behavior acc
 
 #### Parameter Details
 
-{{range $key, $input := .Inputs}}
+{{- range $key, $input := .Inputs}}
+
 ##### `{{$key}}`
 
 {{$input.Description}}
@@ -83,10 +98,11 @@ with:
   {{$key}}: {{if $input.Default}}"{{$input.Default}}"{{else}}"your-value-here"{{end}}
 ```
 
-{{end}}
-{{end}}
+{{- end}}
+{{- end}}
 
-{{if .Outputs}}
+{{- if .Outputs}}
+
 ### Output Parameters
 
 This action provides the following outputs that can be used in subsequent workflow steps:
@@ -110,9 +126,10 @@ This action provides the following outputs that can be used in subsequent workfl
     echo "{{$key}}: \${{"{{"}} steps.action-step.outputs.{{$key}} {{"}}"}}"
   {{- end}}
 ```
-{{end}}
+{{- end}}
 
-{{if .Permissions}}
+{{- if .Permissions}}
+
 ## 🔐 Required Permissions
 
 This action requires specific GitHub permissions to function correctly. Ensure your workflow includes these permissions:
@@ -136,13 +153,13 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: {{runsOn .}}
     steps:
       - uses: {{gitUsesString .}}
 ```
 
 **Note:** If your workflow doesn't specify permissions, GitHub uses default permissions which may not include all required permissions above.
-{{end}}
+{{- end}}
 
 ## Examples
 
@@ -182,7 +199,8 @@ jobs:
   {{- end}}{{end}}
 ```
 
-{{if .Dependencies}}
+{{- if .Dependencies}}
+
 ## 📦 Dependencies
 
 This action uses the following dependencies:
@@ -197,18 +215,16 @@ This action uses the following dependencies:
 <details>
 <summary>📋 Dependency Details</summary>
 
-{{range .Dependencies}}
+{{- range .Dependencies}}
+
 ### {{.Name}}{{if .Version}} @ {{.Version}}{{end}}
 
-{{if .IsPinned}}
-- 🔒 **Pinned Version**: Locked to specific version for security
-{{else}}
-- 📌 **Floating Version**: Using latest version (consider pinning for security)
-{{end}}
-- 👤 **Author**: [{{.Author}}](https://github.com/{{.Author}})
+{{if .IsPinned}}- 🔒 **Pinned Version**: Locked to specific version for security
+{{else}}- 📌 **Floating Version**: Using latest version (consider pinning for security)
+{{end}}- 👤 **Author**: [{{.Author}}](https://github.com/{{.Author}})
 {{if .MarketplaceURL}}- 🏪 **Marketplace**: [View on GitHub Marketplace]({{.MarketplaceURL}}){{end}}
 {{if .SourceURL}}- 📂 **Source**: [View Source]({{.SourceURL}}){{end}}
-{{if .WithParams}}
+{{- if .WithParams}}
 - **Configuration**:
   ```yaml
   with:
@@ -216,21 +232,20 @@ This action uses the following dependencies:
     {{$key}}: {{$value}}
   {{- end}}
   ```
-{{end}}
+{{- end}}
+{{- end}}
+{{- $hasLocalDeps := false}}
+{{- range .Dependencies}}{{if .IsLocalAction}}{{$hasLocalDeps = true}}{{end}}{{end}}
+{{- if $hasLocalDeps}}
 
-{{end}}
-
-{{$hasLocalDeps := false}}
-{{range .Dependencies}}{{if .IsLocalAction}}{{$hasLocalDeps = true}}{{end}}{{end}}
-{{if $hasLocalDeps}}
 ### Same Repository Dependencies
 {{range .Dependencies}}{{if .IsLocalAction}}
-- [{{.Name}}]({{.SourceURL}}) - {{.Description}}
+- [{{.Name}}]({{.SourceURL}}) - {{.Description | mdCell}}
 {{end}}{{end}}
-{{end}}
+{{- end}}
 
 </details>
-{{end}}
+{{- end}}
 
 ## Troubleshooting
 
@@ -258,9 +273,12 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 4. Add tests if applicable
 5. Submit a pull request
 
+{{- if .License}}
+
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the {{.License}} License.{{with repoFile . "LICENSE"}} See the [LICENSE]({{.}}) file for details.{{end}}
+{{- end}}
 
 ## Support
 

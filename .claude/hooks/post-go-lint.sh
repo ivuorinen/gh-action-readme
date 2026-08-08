@@ -23,7 +23,7 @@ if [[ -z "$GOLANGCI_VERSION" ]]; then
   exit 0
 fi
 
-rel_dir=$(dirname "${file_path#${REPO_ROOT}/}")
+rel_dir=$(dirname "${file_path#"${REPO_ROOT}"/}")
 if [[ "$rel_dir" == "." ]]; then
   pkg="./..."
 else

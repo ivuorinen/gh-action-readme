@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-coverage test-coverage-html test-coverage-check \
+.PHONY: help test test-quick test-race test-coverage test-coverage-html test-coverage-check \
 	test-mutation test-mutation-parser test-mutation-validation \
 	test-property test-property-validation test-property-parser \
 	lint build run example clean readme config-verify \
@@ -10,8 +10,9 @@
 all: help
 
 # Coverage threshold (align with SonarCloud)
-# Note: SonarCloud checks NEW code coverage (≥80%), this checks overall coverage
-# Current overall coverage: 73.7% - working towards 80% target
+# Note: SonarCloud checks NEW code coverage (≥80%), this checks overall coverage.
+# The threshold is a floor, not the current state — run `make test-coverage-check`
+# for the live figure rather than trusting a number hardcoded in this comment.
 COVERAGE_THRESHOLD := 72.0
 
 # Tool versions (managed by Renovate)
@@ -89,6 +90,10 @@ test: ## Run all tests (standard and property-based)
 
 test-quick: ## Run only standard unit tests (fast)
 	go test ./...
+
+test-race: ## Run tests under the race detector (concurrency regression guard)
+	@echo "Running tests with the race detector..."
+	@go test -race ./...
 
 test-coverage: ## Run tests with coverage and display in CLI
 	@echo "Running tests with coverage analysis..."

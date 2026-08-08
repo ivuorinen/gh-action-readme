@@ -1,0 +1,10 @@
+# license: Apache-2.0
+# permissions:
+#   - contents: read
+name: Header Licence Action
+description: Declares its licence in a header comment.
+runs:
+  using: composite
+  steps:
+    - run: echo hi
+      shell: bash

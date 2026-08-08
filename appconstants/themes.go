@@ -51,6 +51,13 @@ const (
 	TemplatePathASCIIDoc = "templates/themes/asciidoc/readme.adoc"
 	// TemplateNameReadme is the template name used in template.New().
 	TemplateNameReadme = "readme"
+	// ThemePartialsDir is the per-theme directory holding optional header/footer
+	// partials, relative to the theme's own directory.
+	ThemePartialsDir = "partials"
+	// ThemePartialHeader is the file name of a theme's optional header partial.
+	ThemePartialHeader = "header.tmpl"
+	// ThemePartialFooter is the file name of a theme's optional footer partial.
+	ThemePartialFooter = "footer.tmpl"
 )
 
 // Output format constants.

@@ -24,6 +24,36 @@ func parseActionFromContent(t *testing.T, content string) (*ActionYML, error) {
 	return ParseActionYML(actionPath)
 }
 
+// TestDiscoverActionFilesIsCaseSensitive pins the discovery contract: GitHub only
+// loads lowercase action.yml / action.yaml, so a mixed-case file must be found by
+// NEITHER the recursive walker nor the non-recursive lookup. The two paths
+// previously disagreed — the walker lowercased the name, the direct lookup did not.
+func TestDiscoverActionFilesIsCaseSensitive(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"Action.YML", "ACTION.YAML", "Action.yaml"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir := t.TempDir()
+			testutil.WriteActionFixtureAs(t, tmpDir, name, testutil.TestFixtureMinimalComposite)
+
+			recursive, err := DiscoverActionFiles(tmpDir, true, nil)
+			if err != nil {
+				t.Fatalf("recursive discovery: %v", err)
+			}
+			if len(recursive) != 0 {
+				t.Errorf("recursive discovery matched %q, want no matches: %v", name, recursive)
+			}
+
+			nonRecursive := DiscoverActionFilesNonRecursive(tmpDir)
+			if len(nonRecursive) != 0 {
+				t.Errorf("non-recursive discovery matched %q, want no matches: %v", name, nonRecursive)
+			}
+		})
+	}
+}
+
 // validateDiscoveredFiles checks if discovered files match expected count and paths.
 func validateDiscoveredFiles(t *testing.T, files []string, wantCount int, wantPaths []string) {
 	t.Helper()
@@ -349,16 +379,17 @@ func TestParsePermissionsFromComments(t *testing.T) {
 			t.Parallel()
 
 			actionPath := testutil.CreateTempActionFile(t, tt.content)
-			got, err := parsePermissionsFromComments(actionPath)
+			hc, err := scanHeaderComments(actionPath)
+			got := hc.Permissions
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parsePermissionsFromComments() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("scanHeaderComments() error = %v, wantErr %v", err, tt.wantErr)
 
 				return
 			}
 
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parsePermissionsFromComments() = %v, want %v", got, tt.want)
+				t.Errorf("scanHeaderComments().Permissions = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -821,14 +852,15 @@ func TestParsePermissionsFromCommentsEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actionPath := testutil.CreateTempActionFile(t, tt.content)
-			perms, err := parsePermissionsFromComments(actionPath)
+			hc, err := scanHeaderComments(actionPath)
+			perms := hc.Permissions
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parsePermissionsFromComments() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("scanHeaderComments() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if !reflect.DeepEqual(perms, tt.wantPerms) {
-				t.Errorf("parsePermissionsFromComments() = %v, want %v (%s)", perms, tt.wantPerms, tt.description)
+				t.Errorf("scanHeaderComments().Permissions = %v, want %v (%s)", perms, tt.wantPerms, tt.description)
 			}
 		})
 	}

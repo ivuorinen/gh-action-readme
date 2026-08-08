@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/adrg/xdg"
@@ -25,9 +26,14 @@ type AppConfig struct {
 	GitHubToken string `mapstructure:"github_token" yaml:"github_token,omitempty"` // Only in global config
 
 	// Repository Information (auto-detected, overridable)
-	Organization     string `mapstructure:"organization"       yaml:"organization,omitempty"`
-	Repository       string `mapstructure:"repository"         yaml:"repository,omitempty"`
-	Version          string `mapstructure:"version"            yaml:"version,omitempty"`
+	Organization string `mapstructure:"organization" yaml:"organization,omitempty"`
+	Repository   string `mapstructure:"repository"   yaml:"repository,omitempty"`
+	Version      string `mapstructure:"version"      yaml:"version,omitempty"`
+	// License overrides the license shown in generated docs. Highest priority in the
+	// chain: config > action.yml `license:` > `# license:` header comment > detection
+	// from a repository LICENSE file. Empty at every level means unknown, and
+	// templates then render no license section.
+	License          string `mapstructure:"license"            yaml:"license,omitempty"`
 	UseDefaultBranch bool   `mapstructure:"use_default_branch" yaml:"use_default_branch"`
 	// useDefaultBranchSet records whether a loaded source explicitly set
 	// use_default_branch. UseDefaultBranch defaults to true, so a plain bool
@@ -217,6 +223,27 @@ func resolveThemeTemplate(theme string) string {
 	return ""
 }
 
+// resolveThemePartial returns the path to a theme's optional partial
+// (partials/header.tmpl or partials/footer.tmpl), or "" when the theme is unknown or
+// ships no such partial. A theme's directory is derived from its readme template, so
+// a theme added to themeTemplates gains partial support automatically.
+func resolveThemePartial(theme, partialName string) string {
+	tmpl, ok := themeTemplates[theme]
+	if !ok {
+		return ""
+	}
+
+	// Theme paths are slash-separated embed paths, not OS paths.
+	themeDir := path.Dir(tmpl)
+	partial := path.Join(themeDir, appconstants.ThemePartialsDir, partialName)
+
+	if !templatesembed.IsEmbeddedTemplateAvailable(partial) {
+		return ""
+	}
+
+	return partial
+}
+
 // DefaultAppConfig returns the default application configuration.
 func DefaultAppConfig() *AppConfig {
 	return &AppConfig{
@@ -313,6 +340,7 @@ func mergeStringFields(dst *AppConfig, src *AppConfig, allowTokens bool) {
 		{&dst.Organization, src.Organization},
 		{&dst.Repository, src.Repository},
 		{&dst.Version, src.Version},
+		{&dst.License, src.License},
 		{&dst.Theme, src.Theme},
 		{&dst.OutputFormat, src.OutputFormat},
 		{&dst.OutputDir, src.OutputDir},
