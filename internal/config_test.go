@@ -437,14 +437,10 @@ func TestConfigTokenHierarchy(t *testing.T) {
 	}
 }
 
+// The base-token assertion below reads from the global config file, which the
+// token environment variables outrank. TestMain clears them for the whole
+// package; the env layer itself is covered by TestConfigTokenHierarchy.
 func TestConfigMerging(t *testing.T) {
-	// Isolate the token environment variables. They outrank config-file values in
-	// the documented hierarchy, so a developer with GITHUB_TOKEN exported would see
-	// the base-token assertion below fail. This test covers file merging, not the
-	// env layer, which TestConfigTokenHierarchy owns.
-	t.Setenv(appconstants.EnvGitHubToken, "")
-	t.Setenv(appconstants.EnvGitHubTokenStandard, "")
-
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 

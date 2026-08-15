@@ -710,6 +710,30 @@ func SetupTokenEnv(t *testing.T, toolToken, standardToken string) {
 	t.Setenv(appconstants.EnvGitHubTokenStandard, standardToken)
 }
 
+// ClearGitHubTokenEnv removes both GitHub token variables from the process
+// environment. It is for TestMain only — process-wide setup before any test
+// runs — which is why it uses os.Unsetenv rather than t.Setenv.
+//
+// Environment variables outrank config-file values in the token resolution
+// hierarchy, so a developer with GITHUB_TOKEN exported would otherwise see
+// config-precedence tests fail on a clean checkout, with nothing in the failure
+// pointing at their shell. CI never hits this: GitHub Actions does not export
+// GITHUB_TOKEN into run steps by default.
+//
+// Tests that exercise the environment layer set what they need with t.Setenv,
+// which restores afterwards and so is unaffected by this.
+//
+// Example:
+//
+//	func TestMain(m *testing.M) {
+//		testutil.ClearGitHubTokenEnv()
+//		os.Exit(m.Run())
+//	}
+func ClearGitHubTokenEnv() {
+	_ = os.Unsetenv(appconstants.EnvGitHubToken)
+	_ = os.Unsetenv(appconstants.EnvGitHubTokenStandard)
+}
+
 // SetupXDGEnv sets XDG_CONFIG_HOME and HOME environment variables.
 // Pass an empty string to explicitly clear (unset) that variable.
 //

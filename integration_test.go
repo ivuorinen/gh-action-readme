@@ -26,6 +26,11 @@ var (
 
 // TestMain handles setup and cleanup for all tests.
 func TestMain(m *testing.M) {
+	// Token env vars outrank config-file values, so an exported GITHUB_TOKEN
+	// would otherwise leak into config-precedence assertions. See
+	// testutil.ClearGitHubTokenEnv.
+	testutil.ClearGitHubTokenEnv()
+
 	// Run all tests
 	code := m.Run()
 
