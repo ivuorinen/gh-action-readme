@@ -310,7 +310,7 @@ func MergeConfigs(dst *AppConfig, src *AppConfig, allowTokens bool) {
 // Runs/Branding) from src into dst, field by field, when the src value is set.
 // Without this, a `defaults:` block in a repo/action config is parsed but then
 // silently dropped by the merge, leaving the built-in defaults in effect.
-func mergeDefaultsFields(dst *AppConfig, src *AppConfig) {
+func mergeDefaultsFields(dst, src *AppConfig) {
 	if src.Defaults.Name != "" {
 		dst.Defaults.Name = src.Defaults.Name
 	}
@@ -361,7 +361,7 @@ func mergeStringFields(dst *AppConfig, src *AppConfig, allowTokens bool) {
 
 // mergeTrustedPathFields merges the local-file-path string fields that are only
 // safe to accept from a trusted source (global config).
-func mergeTrustedPathFields(dst *AppConfig, src *AppConfig) {
+func mergeTrustedPathFields(dst, src *AppConfig) {
 	if src.Template != "" {
 		dst.Template = src.Template
 	}
@@ -387,7 +387,7 @@ func mergeStringMap(src map[string]string, dst *map[string]string) {
 }
 
 // mergeMapFields merges map fields from src to dst if non-empty.
-func mergeMapFields(dst *AppConfig, src *AppConfig) {
+func mergeMapFields(dst, src *AppConfig) {
 	mergeStringMap(src.Permissions, &dst.Permissions)
 	mergeStringMap(src.Variables, &dst.Variables)
 }
@@ -401,7 +401,7 @@ func copySliceIfNotEmpty(dst *[]string, src []string) {
 	}
 }
 
-func mergeSliceFields(dst *AppConfig, src *AppConfig) {
+func mergeSliceFields(dst, src *AppConfig) {
 	copySliceIfNotEmpty(&dst.RunsOn, src.RunsOn)
 	copySliceIfNotEmpty(&dst.IgnoredDirectories, src.IgnoredDirectories)
 }
@@ -413,7 +413,7 @@ func mergeSliceFields(dst *AppConfig, src *AppConfig) {
 // higher-priority source can override a lower-priority true with an explicit
 // false. Verbose and Quiet are CLI-flag style and intentionally OR-merged (any
 // scope that turns them on wins).
-func mergeBooleanFields(dst *AppConfig, src *AppConfig) {
+func mergeBooleanFields(dst, src *AppConfig) {
 	if src.analyzeDependenciesSet {
 		dst.AnalyzeDependencies = src.AnalyzeDependencies
 		dst.analyzeDependenciesSet = true

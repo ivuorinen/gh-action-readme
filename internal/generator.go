@@ -414,18 +414,27 @@ func (g *Generator) renderTemplateForAction(
 	return content, nil
 }
 
+// simpleFormatSpec describes the format-specific half of a generateSimpleFormat
+// render: what is written, under which name, and what to report on success.
+type simpleFormatSpec struct {
+	Format          string
+	DefaultFilename string
+	SuccessMsg      string
+	// TemplateOverride forces a specific template (used by AsciiDoc, whose template
+	// is selected by output format, not by --theme). Empty falls back to the
+	// theme-resolved template.
+	TemplateOverride string
+}
+
 // generateSimpleFormat is a helper for generating simple text-based formats (Markdown, AsciiDoc).
 // It consolidates the common pattern of template rendering, file writing, and success messaging.
 func (g *Generator) generateSimpleFormat(
 	action *ActionYML,
 	outputDir, actionPath string,
-	format, defaultFilename, successMsg, templateOverride string,
+	spec simpleFormatSpec,
 	uniqueNames bool,
 ) error {
-	// templateOverride forces a specific template (used by AsciiDoc, whose template
-	// is selected by output format, not by --theme). When empty, fall back to the
-	// theme-resolved template.
-	templatePath := templateOverride
+	templatePath := spec.TemplateOverride
 	if templatePath == "" {
 		var err error
 		templatePath, err = g.resolveTemplatePathForFormat()
@@ -437,9 +446,9 @@ func (g *Generator) generateSimpleFormat(
 	// When multiple actions share one output directory, derive a per-action
 	// filename (keeping the default's extension) so the fixed README name does not
 	// overwrite earlier outputs.
-	filename := defaultFilename
+	filename := spec.DefaultFilename
 	if uniqueNames {
-		filename = g.disambiguateName(safeActionFilename(action, filepath.Ext(defaultFilename)))
+		filename = g.disambiguateName(safeActionFilename(action, filepath.Ext(spec.DefaultFilename)))
 	}
 
 	// Resolve the destination BEFORE rendering: links to repository files are
@@ -450,28 +459,28 @@ func (g *Generator) generateSimpleFormat(
 		return fmt.Errorf(appconstants.ErrFailedToResolveOutputPath, err)
 	}
 
-	header, footer := g.resolveHeaderFooter(format)
+	header, footer := g.resolveHeaderFooter(spec.Format)
 	opts := TemplateOptions{
 		TemplatePath: templatePath,
 		HeaderPath:   header,
 		FooterPath:   footer,
-		Format:       format,
+		Format:       spec.Format,
 		OutputDir:    filepath.Dir(outputPath),
 	}
 
 	content, err := g.renderTemplateForAction(action, actionPath, opts)
 	if err != nil {
-		return fmt.Errorf("failed to render %s template: %w", format, err)
+		return fmt.Errorf("failed to render %s template: %w", spec.Format, err)
 	}
 
 	if err := ensureParentDir(outputPath); err != nil {
 		return err
 	}
 	if err := writeFileTightMode(outputPath, []byte(content), appconstants.FilePermDefault); err != nil {
-		return fmt.Errorf("failed to write %s to %s: %w", format, outputPath, err)
+		return fmt.Errorf("failed to write %s to %s: %w", spec.Format, outputPath, err)
 	}
 
-	g.Output.Success("%s: %s", successMsg, outputPath)
+	g.Output.Success("%s: %s", spec.SuccessMsg, outputPath)
 
 	return nil
 }
@@ -535,7 +544,11 @@ func (g *Generator) resolvePartial(configured, builtinDefault, partialName, form
 func (g *Generator) generateMarkdown(action *ActionYML, outputDir, actionPath string, uniqueNames bool) error {
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
-		appconstants.OutputFormatMarkdown, appconstants.ReadmeMarkdown, "Generated README.md", "",
+		simpleFormatSpec{
+			Format:          appconstants.OutputFormatMarkdown,
+			DefaultFilename: appconstants.ReadmeMarkdown,
+			SuccessMsg:      "Generated README.md",
+		},
 		uniqueNames,
 	)
 }
@@ -644,8 +657,12 @@ func (g *Generator) generateASCIIDoc(action *ActionYML, outputDir, actionPath st
 
 	return g.generateSimpleFormat(
 		action, outputDir, actionPath,
-		"asciidoc", appconstants.ReadmeASCIIDoc, "Generated AsciiDoc",
-		override,
+		simpleFormatSpec{
+			Format:           "asciidoc",
+			DefaultFilename:  appconstants.ReadmeASCIIDoc,
+			SuccessMsg:       "Generated AsciiDoc",
+			TemplateOverride: override,
+		},
 		uniqueNames,
 	)
 }
