@@ -531,11 +531,16 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			Name: "GITHUB_TOKEN as fallback",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				_ = os.Unsetenv(appconstants.EnvGitHubToken)
+				// t.Setenv("") rather than os.Unsetenv: the token lookups read via
+				// os.Getenv and test `!= ""`, so empty and unset are equivalent to
+				// the code under test — but only t.Setenv restores the caller's
+				// value afterwards. os.Unsetenv leaks into sibling subtests and
+				// every later test in the binary.
+				t.Setenv(appconstants.EnvGitHubToken, "")
 				t.Setenv(appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
 				return func() {
-					// No cleanup required: t.Setenv restores GITHUB_TOKEN when the test ends.
+					// No cleanup required: t.Setenv restores both variables when the test ends.
 				}
 			},
 			ExpectedToken: appconstants.TokenFallback,
@@ -544,11 +549,13 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			Name: "no environment variables",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				_ = os.Unsetenv(appconstants.EnvGitHubToken)
-				_ = os.Unsetenv(appconstants.EnvGitHubTokenStandard)
+				// Empty rather than unset, for the reason given above: the lookups
+				// cannot tell the difference, and t.Setenv restores afterwards.
+				t.Setenv(appconstants.EnvGitHubToken, "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
 
 				return func() {
-					// No cleanup required: environment variables explicitly unset for this scenario.
+					// No cleanup required: t.Setenv restores both variables when the test ends.
 				}
 			},
 			ExpectedToken: "",

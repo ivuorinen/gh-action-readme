@@ -402,7 +402,9 @@ func TestResolveThemeTemplate(t *testing.T) {
 			}
 
 			if path == "" {
-				t.Error("expected non-empty path")
+				// Stop here: the containment check below would report a second,
+				// misleading failure for this one root cause.
+				t.Fatal("expected non-empty path")
 			}
 
 			if tt.expectedPath != "" {
@@ -436,6 +438,13 @@ func TestConfigTokenHierarchy(t *testing.T) {
 }
 
 func TestConfigMerging(t *testing.T) {
+	// Isolate the token environment variables. They outrank config-file values in
+	// the documented hierarchy, so a developer with GITHUB_TOKEN exported would see
+	// the base-token assertion below fail. This test covers file merging, not the
+	// env layer, which TestConfigTokenHierarchy owns.
+	t.Setenv(appconstants.EnvGitHubToken, "")
+	t.Setenv(appconstants.EnvGitHubTokenStandard, "")
+
 	tmpDir, cleanup := testutil.TempDir(t)
 	defer cleanup()
 

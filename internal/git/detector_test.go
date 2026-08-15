@@ -115,6 +115,11 @@ func assertRepositoryRoot(t *testing.T, repoRoot string, expectEmpty bool) {
 
 	if repoRoot == "" {
 		t.Error("expected non-empty repository root")
+
+		// Stop here: filepath.Join("", ".git") is the relative path ".git", so the
+		// check below would resolve against the package directory and report a
+		// second, misleading failure for this one root cause.
+		return
 	}
 
 	// Verify the returned path contains a .git directory or file

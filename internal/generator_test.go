@@ -1443,7 +1443,12 @@ func TestGeneratorIsUnitTestEnvironment(t *testing.T) {
 // TestCreateDependencyAnalyzer_TokenGuard verifies the GitHub client is only
 // created when a non-empty token is provided (line 104: token != "" guard).
 func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
-	t.Parallel()
+	// Not parallel: CreateDependencyAnalyzer resolves the token via
+	// GetGitHubToken, which reads the environment before the config. The token
+	// variables must be cleared for the empty-token case to mean anything, and
+	// t.Setenv forbids a parallel ancestor.
+	t.Setenv(appconstants.EnvGitHubToken, "")
+	t.Setenv(appconstants.EnvGitHubTokenStandard, "")
 
 	tests := []struct {
 		name          string
@@ -1456,8 +1461,7 @@ func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
+			// Not parallel: inherits the env isolation set up by the parent.
 			config := defaultTestConfig()
 			config.GitHubToken = tt.token
 			gen := NewGenerator(config)
@@ -1466,7 +1470,9 @@ func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 
 			testutil.AssertNoError(t, err)
 			if analyzer == nil {
-				t.Error("expected analyzer to be non-nil")
+				// Fatal, not Error: the dereferences below would panic and take
+				// the whole test binary down instead of failing this subtest.
+				t.Fatal("expected analyzer to be non-nil")
 			}
 			if tt.wantClientNil && analyzer.GitHubClient != nil {
 				t.Error("expected GitHubClient to be nil for empty token")
