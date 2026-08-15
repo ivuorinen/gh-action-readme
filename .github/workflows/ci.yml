@@ -42,6 +42,18 @@ jobs:
         run: eclint check .
       - name: Run unit tests with coverage gate
         run: make test-coverage-check
+      # Publishes coverage.out (written by the step above) to SonarCloud. This
+      # requires CI-based analysis: SonarCloud's Automatic Analysis cannot import
+      # coverage, so sonar.go.coverage.reportPaths is ignored under it and the
+      # "Coverage on New Code >= 80%" gate condition never evaluates. Automatic
+      # Analysis must be OFF in the project's Analysis Method settings or this
+      # step fails with "You are running CI analysis while Automatic Analysis is
+      # enabled". Skipped on fork PRs, where secrets are unavailable.
+      - name: SonarCloud scan
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       - name: Run unit tests under the race detector
         run: make test-race
       - name: Run property-based tests
