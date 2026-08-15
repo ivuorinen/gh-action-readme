@@ -19,11 +19,14 @@
 # silently allowing, so a parse failure never opens the gap it guards.
 set -uo pipefail
 
+# Emits the deny payload for the given reason. It only REPORTS: every call site
+# must be followed immediately by `exit 0`, or the command falls open.
 deny() {
-  # $1 = reason shown to the agent
+  local reason="$1"
   printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' \
-    "$(printf '%s' "$1" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"context-mode routing required"')"
-  exit 0
+    "$(printf '%s' "$reason" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"context-mode routing required"')"
+
+  return 0
 }
 
 input=$(cat)
@@ -38,6 +41,7 @@ parse_status=$?
 if [[ $parse_status -ne 0 ]]; then
   [[ -z "$input" ]] && exit 0
   deny "context-mode guard could not parse the Bash command (failing closed). Re-run through ctx_execute or report the hook error."
+  exit 0
 fi
 
 [[ -z "$cmd" ]] && exit 0
@@ -83,6 +87,7 @@ while IFS= read -r seg; do
   printf '%s' "$seg" | grep -qE "$allow_re" 2>/dev/null && continue
   if printf '%s' "$seg" | grep -qE "$deny_re" 2>/dev/null; then
     deny "$deny_msg"
+    exit 0
   fi
 done <<EOF
 $segments
