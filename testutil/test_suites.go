@@ -547,7 +547,7 @@ func containsString(slice any, item string) bool {
 
 // DetectGeneratedFiles finds files that were generated in the output directory.
 // This is exported so tests in other packages can use it.
-func DetectGeneratedFiles(outputDir string, outputFormat string) []string {
+func DetectGeneratedFiles(outputDir, outputFormat string) []string {
 	var files []string
 
 	// Different output formats create different files:

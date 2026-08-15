@@ -27,67 +27,73 @@ const (
 func TestCovGenResolveAndValidateTargetPath(t *testing.T) {
 	// Not parallel: a subtest uses t.Chdir, which forbids a parallel ancestor.
 
-	t.Run("existing directory resolves and reports IsDir", func(t *testing.T) {
-		t.Parallel()
-		tmpDir, cleanup := testutil.TempDir(t)
-		defer cleanup()
+	t.Run("existing directory resolves and reports IsDir", covGenTargetPathDirectory)
+	t.Run("existing file resolves and reports not IsDir", covGenTargetPathFile)
+	t.Run("nonexistent path returns does-not-exist error", covGenTargetPathMissing)
+	t.Run("empty args falls back to current directory", covGenTargetPathEmptyArgs)
+}
 
-		absPath, info, err := resolveAndValidateTargetPath([]string{tmpDir})
-		if err != nil {
-			t.Fatalf("resolveAndValidateTargetPath() unexpected error: %v", err)
-		}
-		if !info.IsDir() {
-			t.Errorf("expected info.IsDir() to be true for a directory, got false")
-		}
-		if !filepath.IsAbs(absPath) {
-			t.Errorf("expected absolute path, got %q", absPath)
-		}
-	})
+func covGenTargetPathDirectory(t *testing.T) {
+	t.Parallel()
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
 
-	t.Run("existing file resolves and reports not IsDir", func(t *testing.T) {
-		t.Parallel()
-		tmpDir, cleanup := testutil.TempDir(t)
-		defer cleanup()
-		filePath := filepath.Join(tmpDir, covGenNonYamlFile)
-		testutil.WriteTestFile(t, filePath, covGenNotYamlContent)
+	absPath, info, err := resolveAndValidateTargetPath([]string{tmpDir})
+	if err != nil {
+		t.Fatalf("resolveAndValidateTargetPath() unexpected error: %v", err)
+	}
+	if !info.IsDir() {
+		t.Errorf("expected info.IsDir() to be true for a directory, got false")
+	}
+	if !filepath.IsAbs(absPath) {
+		t.Errorf("expected absolute path, got %q", absPath)
+	}
+}
 
-		_, info, err := resolveAndValidateTargetPath([]string{filePath})
-		if err != nil {
-			t.Fatalf("resolveAndValidateTargetPath() unexpected error: %v", err)
-		}
-		if info.IsDir() {
-			t.Errorf("expected info.IsDir() to be false for a regular file, got true")
-		}
-	})
+func covGenTargetPathFile(t *testing.T) {
+	t.Parallel()
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	filePath := filepath.Join(tmpDir, covGenNonYamlFile)
+	testutil.WriteTestFile(t, filePath, covGenNotYamlContent)
 
-	t.Run("nonexistent path returns does-not-exist error", func(t *testing.T) {
-		t.Parallel()
-		tmpDir, cleanup := testutil.TempDir(t)
-		defer cleanup()
+	_, info, err := resolveAndValidateTargetPath([]string{filePath})
+	if err != nil {
+		t.Fatalf("resolveAndValidateTargetPath() unexpected error: %v", err)
+	}
+	if info.IsDir() {
+		t.Errorf("expected info.IsDir() to be false for a regular file, got true")
+	}
+}
 
-		_, _, err := resolveAndValidateTargetPath([]string{filepath.Join(tmpDir, "missing-target")})
-		if err == nil {
-			t.Fatal("expected an error for a nonexistent path")
-		}
-		if !strings.Contains(err.Error(), "does not exist") {
-			t.Errorf("expected 'does not exist' error, got: %v", err)
-		}
-	})
+func covGenTargetPathMissing(t *testing.T) {
+	t.Parallel()
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
 
-	t.Run("empty args falls back to current directory", func(t *testing.T) {
-		// Not parallel: uses t.Chdir to control the working directory.
-		tmpDir, cleanup := testutil.TempDir(t)
-		defer cleanup()
-		t.Chdir(tmpDir)
+	_, _, err := resolveAndValidateTargetPath([]string{filepath.Join(tmpDir, "missing-target")})
+	if err == nil {
+		t.Fatal("expected an error for a nonexistent path")
+	}
+	if !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("expected 'does not exist' error, got: %v", err)
+	}
+}
 
-		_, info, err := resolveAndValidateTargetPath([]string{})
-		if err != nil {
-			t.Fatalf("resolveAndValidateTargetPath() unexpected error: %v", err)
-		}
-		if !info.IsDir() {
-			t.Errorf("expected current-directory fallback to be a directory")
-		}
-	})
+// covGenTargetPathEmptyArgs is not parallel: it uses t.Chdir to control the
+// working directory.
+func covGenTargetPathEmptyArgs(t *testing.T) {
+	tmpDir, cleanup := testutil.TempDir(t)
+	defer cleanup()
+	t.Chdir(tmpDir)
+
+	_, info, err := resolveAndValidateTargetPath([]string{})
+	if err != nil {
+		t.Fatalf("resolveAndValidateTargetPath() unexpected error: %v", err)
+	}
+	if !info.IsDir() {
+		t.Errorf("expected current-directory fallback to be a directory")
+	}
 }
 
 // TestCovGenHandlerRejectsNonYamlFile covers genHandler's file branch where a

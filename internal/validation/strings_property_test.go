@@ -183,7 +183,7 @@ func TestSanitizeActionNameProperties(t *testing.T) {
 	// Property 5: Spaces become hyphens
 	properties.Property("spaces are converted to hyphens",
 		prop.ForAll(
-			func(word1 string, word2 string) bool {
+			func(word1, word2 string) bool {
 				// Only test when words are non-empty and don't contain spaces
 				if word1 == "" || word2 == "" ||
 					strings.Contains(word1, " ") ||

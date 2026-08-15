@@ -521,7 +521,9 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 				t.Setenv(appconstants.EnvGitHubToken, "priority-token")
 				t.Setenv(appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
-				return func() {}
+				return func() {
+					// No cleanup required: t.Setenv restores both variables when the test ends.
+				}
 			},
 			ExpectedToken: "priority-token",
 		},
@@ -532,7 +534,9 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 				_ = os.Unsetenv(appconstants.EnvGitHubToken)
 				t.Setenv(appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
-				return func() {}
+				return func() {
+					// No cleanup required: t.Setenv restores GITHUB_TOKEN when the test ends.
+				}
 			},
 			ExpectedToken: appconstants.TokenFallback,
 		},

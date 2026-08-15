@@ -212,7 +212,7 @@ func TestResolveRepoFilePathRejectsEscapes(t *testing.T) {
 	}
 
 	// A legitimate in-repo name still resolves.
-	if got := resolveRepoFilePath(repoRoot, licFileLICENSE); got == "" {
+	if resolveRepoFilePath(repoRoot, licFileLICENSE) == "" {
 		t.Error("resolveRepoFilePath(LICENSE) returned empty for a file that exists")
 	}
 }
