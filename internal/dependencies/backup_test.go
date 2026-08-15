@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gh-action-readme/testutil"
 )
 
 const backupTestFile = "action.yml"
@@ -18,7 +20,7 @@ func TestCreateBackupWritesContent(t *testing.T) {
 
 	dir := t.TempDir()
 	target := filepath.Join(dir, backupTestFile)
-	content := []byte("name: original\nruns:\n  using: composite\n")
+	content := []byte(testutil.MustReadFixture(testutil.TestFixtureCompositeWithDeps))
 
 	backupPath, err := createBackup(target, content)
 	if err != nil {
