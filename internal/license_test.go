@@ -31,6 +31,49 @@ func writeLicenseFile(t *testing.T, dir, name, body string) {
 	}
 }
 
+// TestLicenseFileRankOrdering pins the ordering contract licenseFileRank exists to
+// provide: LICENSE outranks COPYING, and a bare name outranks a suffixed one. The
+// ranks must be strictly ordered, not merely distinct — findLicenseFile sorts on
+// them, so an inverted pair silently changes which file a repository advertises.
+func TestLicenseFileRankOrdering(t *testing.T) {
+	t.Parallel()
+
+	// Ascending order of preference: every entry must rank strictly below the next.
+	ordered := []string{
+		licFileLICENSE,          // bare LICENSE — the most preferred
+		"LICENSE.md",            // suffixed LICENSE
+		licFileCOPYING,          // bare COPYING loses to any LICENSE
+		licFileCOPYING + ".txt", // suffixed COPYING — least preferred
+	}
+
+	for i := 0; i < len(ordered)-1; i++ {
+		lo, hi := licenseFileRank(ordered[i]), licenseFileRank(ordered[i+1])
+		if lo >= hi {
+			t.Errorf("licenseFileRank(%q) = %d must sort before licenseFileRank(%q) = %d",
+				ordered[i], lo, ordered[i+1], hi)
+		}
+	}
+}
+
+// TestLicenseFileRankIsCaseInsensitive guards the lowercasing step: a repository
+// using lowercase names must rank identically to the uppercase form, or the
+// COPYING-loses-to-LICENSE rule silently stops applying to it.
+func TestLicenseFileRankIsCaseInsensitive(t *testing.T) {
+	t.Parallel()
+
+	pairs := [][2]string{
+		{licFileLICENSE, "license"},
+		{licFileCOPYING, "copying"},
+		{"LICENSE.md", "license.MD"},
+	}
+
+	for _, p := range pairs {
+		if got, want := licenseFileRank(p[1]), licenseFileRank(p[0]); got != want {
+			t.Errorf("licenseFileRank(%q) = %d, want %d (same as %q)", p[1], got, want, p[0])
+		}
+	}
+}
+
 // TestParseLicenseFromHeaderAndYAML pins the two in-file license sources and their
 // precedence: the top-level `license:` key beats the `# license:` header comment.
 func TestParseLicenseFromHeaderAndYAML(t *testing.T) {
@@ -212,7 +255,7 @@ func TestResolveRepoFilePathRejectsEscapes(t *testing.T) {
 	}
 
 	// A legitimate in-repo name still resolves.
-	if got := resolveRepoFilePath(repoRoot, licFileLICENSE); got == "" {
+	if resolveRepoFilePath(repoRoot, licFileLICENSE) == "" {
 		t.Error("resolveRepoFilePath(LICENSE) returned empty for a file that exists")
 	}
 }

@@ -14,7 +14,7 @@ file_path=$(echo "$input" | python3 -c \
 
 REPO_ROOT=$(git -C "$(dirname "$file_path")" rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$REPO_ROOT" || {
-  echo "Error: cannot cd to repo root: $REPO_ROOT"
+  echo "Error: cannot cd to repo root: $REPO_ROOT" >&2
   exit 1
 }
 

@@ -1442,6 +1442,9 @@ func TestGeneratorIsUnitTestEnvironment(t *testing.T) {
 
 // TestCreateDependencyAnalyzer_TokenGuard verifies the GitHub client is only
 // created when a non-empty token is provided (line 104: token != "" guard).
+// The empty-token case only means anything with the token environment cleared,
+// since CreateDependencyAnalyzer resolves through GetGitHubToken, which reads the
+// environment before the config. TestMain clears it for the whole package.
 func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 	t.Parallel()
 
@@ -1466,7 +1469,9 @@ func TestCreateDependencyAnalyzer_TokenGuard(t *testing.T) {
 
 			testutil.AssertNoError(t, err)
 			if analyzer == nil {
-				t.Error("expected analyzer to be non-nil")
+				// Fatal, not Error: the dereferences below would panic and take
+				// the whole test binary down instead of failing this subtest.
+				t.Fatal("expected analyzer to be non-nil")
 			}
 			if tt.wantClientNil && analyzer.GitHubClient != nil {
 				t.Error("expected GitHubClient to be nil for empty token")

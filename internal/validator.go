@@ -30,45 +30,7 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 			"Add 'description: Brief description of what your action does' for better documentation",
 		)
 	}
-	if action.Runs.IsEmpty() {
-		result.MissingFields = append(result.MissingFields, appconstants.FieldRuns)
-		result.Suggestions = append(
-			result.Suggestions,
-			"Add 'runs:' section with 'using: node20' or 'using: docker' and specify the main file",
-		)
-	} else {
-		// Validate the runs section content
-		if using := action.Runs.Using; using != "" {
-			if !isValidRuntime(using) {
-				result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
-				result.Suggestions = append(
-					result.Suggestions,
-					fmt.Sprintf(
-						"Invalid runtime '%s'. Valid runtimes: node20, node24, docker, composite",
-						using,
-					),
-				)
-			} else {
-				if isDeprecatedRuntime(using) {
-					result.Warnings = append(result.Warnings, appconstants.FieldRunsUsing)
-					result.Suggestions = append(
-						result.Suggestions,
-						fmt.Sprintf(
-							"Runtime '%s' is deprecated and no longer supported by GitHub Actions; migrate to %s",
-							using, appconstants.NodeRuntimeNode24,
-						),
-					)
-				}
-				validateRunsRequiredField(using, &action.Runs, &result)
-			}
-		} else {
-			result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
-			result.Suggestions = append(
-				result.Suggestions,
-				"Missing 'using' field in runs section. Specify 'using: node20', 'using: docker', or 'using: composite'",
-			)
-		}
-	}
+	validateRunsSection(action, &result)
 
 	// Add warnings for optional but recommended fields
 	if action.Branding == nil {
@@ -88,6 +50,55 @@ func ValidateActionYML(action *ActionYML) ValidationResult {
 	}
 
 	return result
+}
+
+// validateRunsSection validates the `runs:` block: it must exist, declare a
+// `using:` runtime that GitHub still supports, and carry the entry point that
+// runtime requires.
+func validateRunsSection(action *ActionYML, result *ValidationResult) {
+	if action.Runs.IsEmpty() {
+		result.MissingFields = append(result.MissingFields, appconstants.FieldRuns)
+		result.Suggestions = append(
+			result.Suggestions,
+			"Add 'runs:' section with 'using: node20' or 'using: docker' and specify the main file",
+		)
+
+		return
+	}
+
+	using := action.Runs.Using
+	if using == "" {
+		result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
+		result.Suggestions = append(
+			result.Suggestions,
+			"Missing 'using' field in runs section. Specify 'using: node20', 'using: docker', or 'using: composite'",
+		)
+
+		return
+	}
+
+	if !isValidRuntime(using) {
+		result.MissingFields = append(result.MissingFields, appconstants.FieldRunsUsing)
+		result.Suggestions = append(
+			result.Suggestions,
+			fmt.Sprintf("Invalid runtime '%s'. Valid runtimes: node20, node24, docker, composite", using),
+		)
+
+		return
+	}
+
+	if isDeprecatedRuntime(using) {
+		result.Warnings = append(result.Warnings, appconstants.FieldRunsUsing)
+		result.Suggestions = append(
+			result.Suggestions,
+			fmt.Sprintf(
+				"Runtime '%s' is deprecated and no longer supported by GitHub Actions; migrate to %s",
+				using, appconstants.NodeRuntimeNode24,
+			),
+		)
+	}
+
+	validateRunsRequiredField(using, &action.Runs, result)
 }
 
 // validateRunsRequiredField appends a MissingField when the runs section lacks

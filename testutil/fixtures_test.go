@@ -613,7 +613,7 @@ func TestMustReadAnalyzerFixture(t *testing.T) {
 	t.Run("panics on missing fixture", func(t *testing.T) {
 		t.Parallel()
 		defer func() {
-			if r := recover(); r == nil {
+			if recover() == nil {
 				t.Error("expected panic but got none")
 			}
 		}()
@@ -623,7 +623,7 @@ func TestMustReadAnalyzerFixture(t *testing.T) {
 	t.Run("panics on invalid filename", func(t *testing.T) {
 		t.Parallel()
 		defer func() {
-			if r := recover(); r == nil {
+			if recover() == nil {
 				t.Error("expected panic for invalid filename")
 			}
 		}()

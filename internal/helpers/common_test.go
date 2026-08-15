@@ -17,7 +17,9 @@ func TestGetCurrentDir(t *testing.T) {
 		testutil.AssertNoError(t, err)
 
 		if currentDir == "" {
-			t.Error("expected non-empty current directory")
+			// Stop here: the path checks below would each report a second,
+			// misleading failure for this one root cause.
+			t.Fatal("expected non-empty current directory")
 		}
 
 		// Verify it's an absolute path
@@ -90,7 +92,9 @@ func TestFindGitRepoRoot(t *testing.T) {
 
 			if tt.expectGit {
 				if repoRoot == "" {
-					t.Error("expected to find git repository root, got empty string")
+					// Stop here: the containment check below would report a second,
+					// misleading failure for this one root cause.
+					t.Fatal("expected to find git repository root, got empty string")
 				}
 				if !strings.Contains(repoRoot, tmpDir) {
 					t.Errorf("expected repo root to be within %s, got %s", tmpDir, repoRoot)

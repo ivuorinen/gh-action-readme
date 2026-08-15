@@ -806,16 +806,8 @@ func TestRenderReadme_HTMLHeaderFooter(t *testing.T) {
 	// Write header and footer as absolute-path files so ReadTemplate uses os.ReadFile
 	headerContent := "<html-header>"
 	footerContent := "<html-footer>"
-	headerPath := filepath.Join(tmpDir, "header.html")
-	footerPath := filepath.Join(tmpDir, "footer.html")
-
-	if err := os.WriteFile(headerPath, []byte(headerContent), 0o600); err != nil {
-		t.Fatalf("write header: %v", err)
-	}
-
-	if err := os.WriteFile(footerPath, []byte(footerContent), 0o600); err != nil {
-		t.Fatalf("write footer: %v", err)
-	}
+	headerPath := writeHTMLPartial(t, tmpDir, "header.html", headerContent)
+	footerPath := writeHTMLPartial(t, tmpDir, "footer.html", footerContent)
 
 	tmplPath := filepath.Join(tmpDir, "templates", testutil.TestTemplateReadme)
 
@@ -827,47 +819,21 @@ func TestRenderReadme_HTMLHeaderFooter(t *testing.T) {
 	t.Run("with header and footer", func(t *testing.T) {
 		t.Parallel()
 
-		opts := TemplateOptions{
+		assertRenderedFragments(t, action, TemplateOptions{
 			TemplatePath: tmplPath,
 			HeaderPath:   headerPath,
 			FooterPath:   footerPath,
 			Format:       appconstants.OutputFormatHTML,
-		}
-
-		out, err := RenderReadme(action, opts)
-		if err != nil {
-			t.Fatalf("RenderReadme failed: %v", err)
-		}
-
-		if !strings.Contains(out, headerContent) {
-			t.Errorf("output missing header content %q; got: %q", headerContent, out)
-		}
-
-		if !strings.Contains(out, footerContent) {
-			t.Errorf("output missing footer content %q; got: %q", footerContent, out)
-		}
+		}, true, headerContent, footerContent)
 	})
 
 	t.Run("without header and footer", func(t *testing.T) {
 		t.Parallel()
 
-		opts := TemplateOptions{
+		assertRenderedFragments(t, action, TemplateOptions{
 			TemplatePath: tmplPath,
 			Format:       appconstants.OutputFormatHTML,
-		}
-
-		out, err := RenderReadme(action, opts)
-		if err != nil {
-			t.Fatalf("RenderReadme failed: %v", err)
-		}
-
-		if strings.Contains(out, headerContent) {
-			t.Errorf("output should not contain header content %q when HeaderPath is empty", headerContent)
-		}
-
-		if strings.Contains(out, footerContent) {
-			t.Errorf("output should not contain footer content %q when FooterPath is empty", footerContent)
-		}
+		}, false, headerContent, footerContent)
 	})
 
 	t.Run("missing header path surfaces an error", func(t *testing.T) {
@@ -885,6 +851,42 @@ func TestRenderReadme_HTMLHeaderFooter(t *testing.T) {
 			t.Error("expected an error for a missing HTML header path, got nil")
 		}
 	})
+}
+
+// writeHTMLPartial writes an HTML header/footer fragment into dir as an absolute
+// path (so ReadTemplate takes the os.ReadFile branch) and returns that path.
+func writeHTMLPartial(t *testing.T, dir, name, content string) string {
+	t.Helper()
+
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write %s: %v", name, err)
+	}
+
+	return path
+}
+
+// assertRenderedFragments renders action with opts and asserts every fragment is
+// present in the output when wantPresent is true, or absent when it is false.
+func assertRenderedFragments(
+	t *testing.T,
+	action *ActionYML,
+	opts TemplateOptions,
+	wantPresent bool,
+	fragments ...string,
+) {
+	t.Helper()
+
+	out, err := RenderReadme(action, opts)
+	if err != nil {
+		t.Fatalf("RenderReadme failed: %v", err)
+	}
+
+	for _, fragment := range fragments {
+		if strings.Contains(out, fragment) != wantPresent {
+			t.Errorf("fragment %q: present=%v, want present=%v; got: %q", fragment, !wantPresent, wantPresent, out)
+		}
+	}
 }
 
 // TestRenderReadme_HTMLHeaderPlaceholders is a regression test: the HTML header and

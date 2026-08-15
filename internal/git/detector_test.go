@@ -95,22 +95,35 @@ func TestFindRepositoryRoot(t *testing.T) {
 			}
 
 			testutil.AssertNoError(t, err)
-
-			if tt.expectEmpty {
-				if repoRoot != "" {
-					t.Errorf("expected empty repository root, got: %s", repoRoot)
-				}
-			} else {
-				if repoRoot == "" {
-					t.Error("expected non-empty repository root")
-				}
-
-				// Verify the returned path contains a .git directory or file
-				gitPath := filepath.Join(repoRoot, appconstants.DirGit)
-				testutil.AssertFileExists(t, gitPath)
-			}
+			assertRepositoryRoot(t, repoRoot, tt.expectEmpty)
 		})
 	}
+}
+
+// assertRepositoryRoot checks a successful FindRepositoryRoot result: either it
+// must be empty, or it must point at a directory that actually holds a .git entry.
+func assertRepositoryRoot(t *testing.T, repoRoot string, expectEmpty bool) {
+	t.Helper()
+
+	if expectEmpty {
+		if repoRoot != "" {
+			t.Errorf("expected empty repository root, got: %s", repoRoot)
+		}
+
+		return
+	}
+
+	if repoRoot == "" {
+		t.Error("expected non-empty repository root")
+
+		// Stop here: filepath.Join("", ".git") is the relative path ".git", so the
+		// check below would resolve against the package directory and report a
+		// second, misleading failure for this one root cause.
+		return
+	}
+
+	// Verify the returned path contains a .git directory or file
+	testutil.AssertFileExists(t, filepath.Join(repoRoot, appconstants.DirGit))
 }
 
 func TestDetectGitRepository(t *testing.T) {

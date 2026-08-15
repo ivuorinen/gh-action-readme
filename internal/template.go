@@ -668,14 +668,14 @@ func analyzeDependencies(
 	return deps
 }
 
-// executableTemplate is a common interface for html/template and text/template.
-type executableTemplate interface {
+// templateExecuter is a common interface for html/template and text/template.
+type templateExecuter interface {
 	Execute(io.Writer, any) error
 }
 
 // parseReadmeTemplate parses raw template content into an executable template.
 // HTML format uses html/template for automatic XSS-safe escaping.
-func parseReadmeTemplate(content []byte, format string) (executableTemplate, error) {
+func parseReadmeTemplate(content []byte, format string) (templateExecuter, error) {
 	if format == appconstants.OutputFormatHTML {
 		funcs := htmltemplate.FuncMap(templateFuncs())
 

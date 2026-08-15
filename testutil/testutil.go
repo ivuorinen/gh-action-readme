@@ -521,7 +521,9 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 				t.Setenv(appconstants.EnvGitHubToken, "priority-token")
 				t.Setenv(appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
-				return func() {}
+				return func() {
+					// No cleanup required: t.Setenv restores both variables when the test ends.
+				}
 			},
 			ExpectedToken: "priority-token",
 		},
@@ -529,10 +531,17 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			Name: "GITHUB_TOKEN as fallback",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				_ = os.Unsetenv(appconstants.EnvGitHubToken)
+				// t.Setenv("") rather than os.Unsetenv: the token lookups read via
+				// os.Getenv and test `!= ""`, so empty and unset are equivalent to
+				// the code under test — but only t.Setenv restores the caller's
+				// value afterwards. os.Unsetenv leaks into sibling subtests and
+				// every later test in the binary.
+				t.Setenv(appconstants.EnvGitHubToken, "")
 				t.Setenv(appconstants.EnvGitHubTokenStandard, appconstants.TokenFallback)
 
-				return func() {}
+				return func() {
+					// No cleanup required: t.Setenv restores both variables when the test ends.
+				}
 			},
 			ExpectedToken: appconstants.TokenFallback,
 		},
@@ -540,11 +549,13 @@ func GetGitHubTokenHierarchyTests() []GitHubTokenTestCase {
 			Name: "no environment variables",
 			SetupFunc: func(t *testing.T) func() {
 				t.Helper()
-				_ = os.Unsetenv(appconstants.EnvGitHubToken)
-				_ = os.Unsetenv(appconstants.EnvGitHubTokenStandard)
+				// Empty rather than unset, for the reason given above: the lookups
+				// cannot tell the difference, and t.Setenv restores afterwards.
+				t.Setenv(appconstants.EnvGitHubToken, "")
+				t.Setenv(appconstants.EnvGitHubTokenStandard, "")
 
 				return func() {
-					// No cleanup required: environment variables explicitly unset for this scenario.
+					// No cleanup required: t.Setenv restores both variables when the test ends.
 				}
 			},
 			ExpectedToken: "",
@@ -697,6 +708,30 @@ func SetupTokenEnv(t *testing.T, toolToken, standardToken string) {
 	t.Helper()
 	t.Setenv(appconstants.EnvGitHubToken, toolToken)
 	t.Setenv(appconstants.EnvGitHubTokenStandard, standardToken)
+}
+
+// ClearGitHubTokenEnv removes both GitHub token variables from the process
+// environment. It is for TestMain only — process-wide setup before any test
+// runs — which is why it uses os.Unsetenv rather than t.Setenv.
+//
+// Environment variables outrank config-file values in the token resolution
+// hierarchy, so a developer with GITHUB_TOKEN exported would otherwise see
+// config-precedence tests fail on a clean checkout, with nothing in the failure
+// pointing at their shell. CI never hits this: GitHub Actions does not export
+// GITHUB_TOKEN into run steps by default.
+//
+// Tests that exercise the environment layer set what they need with t.Setenv,
+// which restores afterwards and so is unaffected by this.
+//
+// Example:
+//
+//	func TestMain(m *testing.M) {
+//		testutil.ClearGitHubTokenEnv()
+//		os.Exit(m.Run())
+//	}
+func ClearGitHubTokenEnv() {
+	_ = os.Unsetenv(appconstants.EnvGitHubToken)
+	_ = os.Unsetenv(appconstants.EnvGitHubTokenStandard)
 }
 
 // SetupXDGEnv sets XDG_CONFIG_HOME and HOME environment variables.

@@ -14,69 +14,73 @@ import (
 func TestGitHelpers(t *testing.T) {
 	t.Parallel()
 
-	t.Run("SetupGitDirectory", func(t *testing.T) {
-		t.Parallel()
-		tmpDir, cleanup := TempDir(t)
-		defer cleanup()
+	t.Run("SetupGitDirectory", testSetupGitDirectory)
+	t.Run("CreateGitConfigWithRemote", testCreateGitConfigWithRemote)
+	t.Run("WriteGitConfigFile", testWriteGitConfigFile)
+}
 
-		gitDir := SetupGitDirectory(t, tmpDir)
+func testSetupGitDirectory(t *testing.T) {
+	t.Parallel()
+	tmpDir, cleanup := TempDir(t)
+	defer cleanup()
 
-		expectedGitDir := filepath.Join(tmpDir, appconstants.DirGit)
-		if gitDir != expectedGitDir {
-			t.Errorf("SetupGitDirectory() = %v, want %v", gitDir, expectedGitDir)
-		}
+	gitDir := SetupGitDirectory(t, tmpDir)
 
-		if _, err := os.Stat(gitDir); os.IsNotExist(err) {
-			t.Errorf("SetupGitDirectory() did not create .git directory")
-		}
-	})
+	expectedGitDir := filepath.Join(tmpDir, appconstants.DirGit)
+	if gitDir != expectedGitDir {
+		t.Errorf("SetupGitDirectory() = %v, want %v", gitDir, expectedGitDir)
+	}
 
-	t.Run("CreateGitConfigWithRemote", func(t *testing.T) {
-		t.Parallel()
-		tmpDir, cleanup := TempDir(t)
-		defer cleanup()
+	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+		t.Errorf("SetupGitDirectory() did not create .git directory")
+	}
+}
 
-		gitDir := SetupGitDirectory(t, tmpDir)
-		configPath := CreateGitConfigWithRemote(t, gitDir, "https://github.com/test/repo.git", "main")
+func testCreateGitConfigWithRemote(t *testing.T) {
+	t.Parallel()
+	tmpDir, cleanup := TempDir(t)
+	defer cleanup()
 
-		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			t.Error("CreateGitConfigWithRemote() did not create config file")
-		}
+	gitDir := SetupGitDirectory(t, tmpDir)
+	configPath := CreateGitConfigWithRemote(t, gitDir, "https://github.com/test/repo.git", "main")
 
-		content, err := os.ReadFile(configPath) // #nosec G304 -- test file path from helper
-		if err != nil {
-			t.Fatalf("failed to read config file: %v", err)
-		}
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Error("CreateGitConfigWithRemote() did not create config file")
+	}
 
-		if !strings.Contains(string(content), "https://github.com/test/repo.git") {
-			t.Error("config file should contain remote URL")
-		}
-		if !strings.Contains(string(content), "main") {
-			t.Error("config file should contain branch name")
-		}
-	})
+	content, err := os.ReadFile(configPath) // #nosec G304 -- test file path from helper
+	if err != nil {
+		t.Fatalf("failed to read config file: %v", err)
+	}
 
-	t.Run("WriteGitConfigFile", func(t *testing.T) {
-		t.Parallel()
-		tmpDir, cleanup := TempDir(t)
-		defer cleanup()
+	if !strings.Contains(string(content), "https://github.com/test/repo.git") {
+		t.Error("config file should contain remote URL")
+	}
+	if !strings.Contains(string(content), "main") {
+		t.Error("config file should contain branch name")
+	}
+}
 
-		configContent := `[remote "origin"]
+func testWriteGitConfigFile(t *testing.T) {
+	t.Parallel()
+	tmpDir, cleanup := TempDir(t)
+	defer cleanup()
+
+	configContent := `[remote "origin"]
 	url = https://github.com/test/repo.git`
-		configPath := WriteGitConfigFile(t, tmpDir, configContent)
+	configPath := WriteGitConfigFile(t, tmpDir, configContent)
 
-		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			t.Error("WriteGitConfigFile() did not create config file")
-		}
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Error("WriteGitConfigFile() did not create config file")
+	}
 
-		content, err := os.ReadFile(configPath) // #nosec G304 -- test file path from helper
-		if err != nil {
-			t.Fatalf("failed to read config: %v", err)
-		}
-		if string(content) != configContent {
-			t.Errorf("unexpected config content: %q", string(content))
-		}
-	})
+	content, err := os.ReadFile(configPath) // #nosec G304 -- test file path from helper
+	if err != nil {
+		t.Fatalf("failed to read config: %v", err)
+	}
+	if string(content) != configContent {
+		t.Errorf("unexpected config content: %q", string(content))
+	}
 }
 
 // TestCapturedOutputMethods tests CapturedOutput methods.

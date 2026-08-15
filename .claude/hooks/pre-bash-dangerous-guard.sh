@@ -22,9 +22,13 @@ cmd_flat=$(echo "$cmd" | tr '\n' ' ')
 # Lowercased copy for case-insensitive filename/trailer matching (macOS APFS).
 cmd_lower=$(printf '%s' "$cmd_flat" | tr '[:upper:]' '[:lower:]')
 
+# Reports the block reason. It only REPORTS: every call site must be followed
+# immediately by `exit 1`, or the prohibited command falls open.
 block() {
-  echo "BLOCKED: $1"
-  exit 1
+  local reason="$1"
+  echo "BLOCKED: $reason"
+
+  return 0
 }
 
 # --- git-conduct.md ------------------------------------------------------------
@@ -35,10 +39,12 @@ block() {
 if echo "$cmd_flat" | grep -qE "git[[:space:]]+(commit|push)([[:space:]]|$)" 2>/dev/null &&
   echo "$cmd_flat" | grep -qE "(^|[[:space:]])--no-ver[a-z-]*([[:space:]]|=|$)" 2>/dev/null; then
   block "--no-verify skips required git hooks (git-conduct.md). Fix the underlying hook failure instead."
+  exit 1
 fi
 if echo "$cmd_flat" | grep -qE "git[[:space:]]+commit([[:space:]]|$)" 2>/dev/null &&
   echo "$cmd_flat" | grep -qE "(^|[[:space:]])-[a-zA-Z]*n[a-zA-Z]*([[:space:]]|$)" 2>/dev/null; then
   block "git commit -n/-nm skips required hooks (git-conduct.md). Fix the underlying hook failure instead."
+  exit 1
 fi
 
 # core.hooksPath override points git at an alternate/empty hooks dir, either via
@@ -47,12 +53,14 @@ fi
 if echo "$cmd_lower" | grep -qE "git[[:space:]]+-c[[:space:]]+core\.hookspath" 2>/dev/null ||
   echo "$cmd_lower" | grep -qE "(git_config_key_[0-9]+=core\.hookspath|git_config_(global|system)=)" 2>/dev/null; then
   block "overriding core.hooksPath (via git -c or GIT_CONFIG_* env) bypasses required git hooks (git-conduct.md)."
+  exit 1
 fi
 
 # Force-push: --force, -f, --force-with-lease, or a +refspec (git push origin +main).
 if echo "$cmd_flat" | grep -qE "git[[:space:]]+push([[:space:]]|$)" 2>/dev/null &&
   echo "$cmd_flat" | grep -qE "(^|[[:space:]])(--for[a-z-]*|-[a-zA-Z]*f[a-zA-Z]*|\+[^[:space:]]+)([[:space:]]|$)" 2>/dev/null; then
   block "force-push is prohibited (git-conduct.md). Use a new branch or a revert commit."
+  exit 1
 fi
 
 # --- no-commit-bylines.md ------------------------------------------------------
@@ -60,12 +68,14 @@ fi
 if echo "$cmd_flat" | grep -qE "git[[:space:]]+commit([[:space:]]|$)" 2>/dev/null &&
   echo "$cmd_lower" | grep -qE "(co-authored-by|signed-off-by|co-committed-by)[[:space:]]*:" 2>/dev/null; then
   block "commit attribution trailers are prohibited (no-commit-bylines.md). Remove Co-Authored-By/Signed-off-by lines."
+  exit 1
 fi
 # -s / --signoff (incl. short-flag clusters like -sm) makes git GENERATE a
 # Signed-off-by trailer with no literal trailer text in the command.
 if echo "$cmd_flat" | grep -qE "git[[:space:]]+commit([[:space:]]|$)" 2>/dev/null &&
   echo "$cmd_flat" | grep -qE "(^|[[:space:]])(--signoff|-[a-zA-Z]*s[a-zA-Z]*)([[:space:]]|$)" 2>/dev/null; then
   block "-s/--signoff generates a Signed-off-by trailer (no-commit-bylines.md). Remove it."
+  exit 1
 fi
 
 # --- readme-protection.md ------------------------------------------------------
@@ -76,6 +86,7 @@ if echo "$cmd_lower" | grep -qE "readme\.md" 2>/dev/null &&
     "(>>?[[:space:]]*[^|&;]*readme\.md|(cp|mv|tee|install|sed[[:space:]]+-i|dd|ln|truncate)[[:space:]][^|&;]*readme\.md|git[[:space:]]+(checkout|restore)[[:space:]][^|&;]*readme\.md)" \
     2>/dev/null; then
   block "README.md is protected (readme-protection.md). Do not write it from Bash; use /tmp/ or testdata/."
+  exit 1
 fi
 
 # --- sensitive-file write guard (Bash counterpart) -----------------------------
@@ -87,6 +98,7 @@ if echo "$cmd_lower" | grep -qE \
   "(>>?[[:space:]]*[^|&;]*${sens}([[:space:]\"']|$)|(cp|mv|tee|install)[[:space:]][^|&;]*${sens}([[:space:]\"']|$))" \
   2>/dev/null; then
   block "writing a credential/secret file from Bash is blocked (pre-sensitive-file-guard.sh). Edit manually."
+  exit 1
 fi
 
 # --- filesystem destruction ----------------------------------------------------
@@ -103,6 +115,7 @@ rm_target+='|/users/[a-z0-9._-]+([[:space:]"]|$)' # home root, not a subpath
 rm_target+=')'
 if echo "$cmd_lower" | grep -qE "${rm_prefix}${rm_target}" 2>/dev/null; then
   block "destructive rm on a root/home/cwd/system path is not allowed."
+  exit 1
 fi
 
 # find rooted at /, ~, $HOME, or . combined with -delete / -exec rm.
@@ -110,6 +123,7 @@ if echo "$cmd_lower" | grep -qE \
   "find[[:space:]]+(\"?/\"?|~|\"?\$\{?home\}?\"?|\.)[[:space:]].*(-delete|-exec[[:space:]]+rm)" \
   2>/dev/null; then
   block "find ... -delete/-exec rm on a root/home path is not allowed."
+  exit 1
 fi
 
 exit 0

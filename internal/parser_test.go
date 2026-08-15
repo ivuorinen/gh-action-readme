@@ -523,7 +523,7 @@ func TestParseActionYMLScalarPermissions(t *testing.T) {
 		t.Fatalf("ParseActionYML must accept the scalar permissions form, got: %v", err)
 	}
 
-	if got := action.Permissions["all"]; got != testutil.PermissionRead {
+	if action.Permissions["all"] != testutil.PermissionRead {
 		t.Errorf("permissions: read-all should parse to all: read, got %v", action.Permissions)
 	}
 }
