@@ -29,7 +29,7 @@ GOSEC_VERSION := v2.28.0
 # renovate: datasource=go depName=github.com/google/yamlfmt
 YAMLFMT_VERSION := v0.21.0
 # renovate: datasource=go depName=golang.org/x/tools
-GOIMPORTS_VERSION := v0.48.0
+GOIMPORTS_VERSION := v0.49.0
 # renovate: datasource=go depName=github.com/go-gremlins/gremlins
 GREMLINS_VERSION := v0.6.0
 # renovate: datasource=go depName=github.com/google/go-licenses
