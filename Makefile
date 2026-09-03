@@ -19,7 +19,7 @@ COVERAGE_THRESHOLD := 72.0
 # renovate: datasource=go depName=golang.org/x/vuln
 GOVULNCHECK_VERSION := v1.7.0
 # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2
-GOLANGCI_LINT_VERSION := v2.13.1
+GOLANGCI_LINT_VERSION := v2.13.2
 # renovate: datasource=go depName=github.com/editorconfig-checker/editorconfig-checker/v3
 EDITORCONFIG_CHECKER_VERSION := v3.11.2
 # renovate: datasource=go depName=github.com/oligot/go-mod-upgrade
