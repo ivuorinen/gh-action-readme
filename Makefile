@@ -23,7 +23,7 @@ GOLANGCI_LINT_VERSION := v2.15.0
 # renovate: datasource=go depName=github.com/editorconfig-checker/editorconfig-checker/v3
 EDITORCONFIG_CHECKER_VERSION := v3.11.3
 # renovate: datasource=go depName=github.com/oligot/go-mod-upgrade
-GO_MOD_UPGRADE_VERSION := v0.12.0
+GO_MOD_UPGRADE_VERSION := v0.13.0
 # renovate: datasource=go depName=github.com/securego/gosec/v2
 GOSEC_VERSION := v2.29.0
 # renovate: datasource=go depName=github.com/google/yamlfmt
