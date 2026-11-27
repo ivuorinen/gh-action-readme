@@ -51,7 +51,7 @@ jobs:
       # enabled". Skipped on fork PRs, where secrets are unavailable.
       - name: SonarCloud scan
         if: ${{ !github.event.pull_request.head.repo.fork }}
-        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5
+        uses: SonarSource/sonarqube-scan-action@70bad232163b09d998ea0707ee80c0ec80798c16 # v8.5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       - name: Run unit tests under the race detector
